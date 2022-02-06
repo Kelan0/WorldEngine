@@ -8,10 +8,12 @@
 
 struct GraphicsPipelineConfiguration {
 	std::shared_ptr<vkr::Device> device;
-	uint32_t width;
-	uint32_t height;
+	uint32_t framebufferWidth = 0;
+	uint32_t framebufferHeight = 0;
 	std::optional<std::string> vertexShader;
 	std::optional<std::string> fragmentShader;
+	std::vector<vk::VertexInputBindingDescription> vertexInputBindings;
+	std::vector<vk::VertexInputAttributeDescription> vertexInputAttributes;
 };
 
 class GraphicsPipeline {

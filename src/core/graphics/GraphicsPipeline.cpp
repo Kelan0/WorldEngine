@@ -29,8 +29,8 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
 	vk::Viewport viewport;
 	viewport.x = 0.0F;
 	viewport.y = 0.0F;
-	viewport.width = graphicsPipelineConfiguration.width == 0 ? Application::instance()->graphics()->getResolution().x : graphicsPipelineConfiguration.width;
-	viewport.height = graphicsPipelineConfiguration.height == 0 ? Application::instance()->graphics()->getResolution().y : graphicsPipelineConfiguration.height;
+	viewport.width = graphicsPipelineConfiguration.framebufferWidth == 0 ? Application::instance()->graphics()->getResolution().x : graphicsPipelineConfiguration.framebufferWidth;
+	viewport.height = graphicsPipelineConfiguration.framebufferHeight == 0 ? Application::instance()->graphics()->getResolution().y : graphicsPipelineConfiguration.framebufferHeight;
 	viewport.minDepth = 0.0F;
 	viewport.maxDepth = 1.0F;
 
@@ -85,8 +85,8 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
 	fragmentShaderStageCreateInfo.setPSpecializationInfo(NULL); // TODO
 
 	vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo;
-	vertexInputStateCreateInfo.setVertexBindingDescriptionCount(0); // TODO
-	vertexInputStateCreateInfo.setVertexAttributeDescriptionCount(0);
+	vertexInputStateCreateInfo.setVertexBindingDescriptions(graphicsPipelineConfiguration.vertexInputBindings);
+	vertexInputStateCreateInfo.setVertexAttributeDescriptions(graphicsPipelineConfiguration.vertexInputAttributes);
 
 	vk::PipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo;
 	inputAssemblyStateCreateInfo.setTopology(vk::PrimitiveTopology::eTriangleList);

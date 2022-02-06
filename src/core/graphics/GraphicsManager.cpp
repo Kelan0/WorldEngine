@@ -2,6 +2,8 @@
 #include "../Application.h"
 #include "GraphicsPipeline.h"
 #include "CommandPool.h"
+#include "GPUMemory.h"
+#include "Mesh.h"
 
 
 enum QueueType {
@@ -30,6 +32,7 @@ GraphicsManager::GraphicsManager() {
 	m_swapchain.currentFrameIndex = 0;
 	m_pipeline = NULL;
 	m_commandPool = NULL;
+	m_gpuMemory = NULL;
 	m_debugMessenger = NULL;
 
 }
@@ -41,6 +44,7 @@ GraphicsManager::~GraphicsManager() {
 	m_swapchain.framebuffers.clear();
 	m_swapchain.imageViews.clear();
 
+	delete m_gpuMemory;
 	delete m_commandPool;
 	delete m_pipeline;
 }
@@ -63,13 +67,26 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
 	std::vector<const char*> deviceLayers;
 	std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 	std::unordered_map<std::string, uint32_t> queueLayout;
-	queueLayout.insert(std::make_pair("graphics_main", QUEUE_TYPE_GRAPHICS_BIT | QUEUE_TYPE_PRESENT_BIT));
-	queueLayout.insert(std::make_pair("compute_main", QUEUE_TYPE_COMPUTE_BIT));
-	queueLayout.insert(std::make_pair("transfer_main", QUEUE_TYPE_TRANSFER_BIT));
+	queueLayout.insert(std::make_pair(QUEUE_GRAPHICS_MAIN, QUEUE_TYPE_GRAPHICS_BIT | QUEUE_TYPE_PRESENT_BIT));
+	queueLayout.insert(std::make_pair(QUEUE_COMPUTE_MAIN, QUEUE_TYPE_COMPUTE_BIT));
+	queueLayout.insert(std::make_pair(QUEUE_TRANSFER_MAIN, QUEUE_TYPE_TRANSFER_BIT));
 
 	if (!createLogicalDevice(deviceLayers, deviceExtensions, NULL, queueLayout)) {
 		return false;
 	}
+
+	//GPUMemoryConfiguration memoryConfig;
+	//memoryConfig.device = m_device.device;
+	//memoryConfig.size = (size_t)(6.0 * 1024 * 1024 * 1024); // Allocate 8 GiB
+	////memoryConfig.memoryPropertyFlags = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+	//memoryConfig.memoryTypeBits = 0;
+	//for (int i = 0; i < m_device.memoryProperties.memoryTypeCount; ++i)
+	//	memoryConfig.memoryTypeBits |= (1 << i); // Enable all memory types
+	//
+	//m_gpuMemory = GPUMemory::create(memoryConfig);
+	//if (m_gpuMemory == NULL) {
+	//	return false;
+	//}
 
 	CommandPoolConfiguration commandPoolConfig;
 	commandPoolConfig.device = m_device.device;
@@ -77,6 +94,8 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
 	commandPoolConfig.resetCommandBuffer = true;
 	commandPoolConfig.transient = false;
 	m_commandPool = CommandPool::create(commandPoolConfig);
+
+	m_commandPool->allocateCommandBuffer("transfer_buffer", { vk::CommandBufferLevel::ePrimary });
 
 	if (!recreateSwapchain()) {
 		return false;
@@ -409,6 +428,8 @@ bool GraphicsManager::selectPhysicalDevice() {
 		return false;
 	}
 
+	m_device.memoryProperties = m_device.physicalDevice->getMemoryProperties();
+
 	printf("Graphics engine selected physical device \"%s\"\n", m_device.physicalDevice->getProperties().deviceName.data());
 
 	return true;
@@ -595,10 +616,12 @@ bool GraphicsManager::recreateSwapchain() {
 
 	GraphicsPipelineConfiguration pipelineConfig;
 	pipelineConfig.device = m_device.device;
-	pipelineConfig.width = 0;
-	pipelineConfig.height = 0;
+	pipelineConfig.framebufferWidth = 0;
+	pipelineConfig.framebufferHeight = 0;
 	pipelineConfig.vertexShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.vert";
 	pipelineConfig.fragmentShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.frag";
+	pipelineConfig.vertexInputBindings = Vertex::getBindingDescriptions();
+	pipelineConfig.vertexInputAttributes = Vertex::getAttributeDescriptions();
 	m_pipeline = GraphicsPipeline::create(pipelineConfig);
 	if (m_pipeline == NULL) {
 		return false;
@@ -804,12 +827,28 @@ std::shared_ptr<vkr::Device> GraphicsManager::getDevice() const {
 	return m_device.device;
 }
 
+const vk::PhysicalDevice& GraphicsManager::getPhysicalDevice() const {
+	return **m_device.physicalDevice;
+}
+
+const vk::PhysicalDeviceMemoryProperties& GraphicsManager::getDeviceMemoryProperties() const {
+	return m_device.memoryProperties;
+}
+
 const vk::CommandBuffer& GraphicsManager::getCurrentCommandBuffer() const {
 	return **m_swapchain.commandBuffers[m_swapchain.currentFrameIndex];
 }
 
 const vk::Framebuffer& GraphicsManager::getCurrentFramebuffer() const {
 	return **m_swapchain.framebuffers[m_swapchain.currentImageIndex];
+}
+
+std::shared_ptr<vkr::Queue> GraphicsManager::getQueue(const std::string& name) const {
+	return m_queues.queues.at(name);
+}
+
+bool GraphicsManager::hasQueue(const std::string& name) const {
+	return m_queues.queues.count(name) > 0;
 }
 
 GraphicsPipeline& GraphicsManager::pipeline() {
@@ -830,6 +869,10 @@ const vk::Extent2D& GraphicsManager::getImageExtent() const {
 
 vk::Format GraphicsManager::getColourFormat() const {
 	return m_surface.surfaceFormat.format;
+}
+
+GPUMemory& GraphicsManager::gpuMemory() {
+	return *m_gpuMemory;
 }
 
 vk::ColorSpaceKHR GraphicsManager::getColourSpace() const {

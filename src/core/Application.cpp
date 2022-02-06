@@ -1,6 +1,7 @@
 #include "Application.h"
 #include "graphics/GraphicsManager.h"
 #include "graphics/GraphicsPipeline.h"
+#include "graphics/Mesh.h"
 #include <chrono>
 
 Application* Application::s_instance = NULL;
@@ -70,6 +71,21 @@ void Application::start() {
 	auto lastDebug = std::chrono::high_resolution_clock::now();
 	//auto lastFrame = std::chrono::high_resolution_clock::now();
 
+	MeshConfiguration testMeshConfig;
+	testMeshConfig.device = m_graphics->getDevice();
+	testMeshConfig.vertices = {
+		{ glm::vec3(-0.5F, -0.5F, 0.0F), glm::vec3(0.0F), glm::vec2(0.0F) },
+		{ glm::vec3(+0.5F, -0.5F, 0.0F), glm::vec3(0.0F), glm::vec2(0.0F) },
+		{ glm::vec3(+0.5F, +0.5F, 0.0F), glm::vec3(0.0F), glm::vec2(0.0F) },
+		{ glm::vec3(-0.5F, +0.5F, 0.0F), glm::vec3(0.0F), glm::vec2(0.0F) }
+	};
+
+	testMeshConfig.indices = {
+		0, 1, 2, 0, 2, 3
+	};
+
+	Mesh* testMesh = Mesh::create(testMeshConfig);
+
 	while (running) {
 		auto frameStart = std::chrono::high_resolution_clock::now();
 
@@ -102,7 +118,10 @@ void Application::start() {
 
 			commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 			pipeline.bind(commandBuffer);
-			commandBuffer.draw(3, 1, 0, 0);
+			//commandBuffer.draw(3, 1, 0, 0);
+
+			testMesh->draw(commandBuffer);
+
 			commandBuffer.endRenderPass();
 
 			m_graphics->endFrame();
@@ -122,6 +141,8 @@ void Application::start() {
 	}
 
 	m_graphics->getDevice()->waitIdle();
+
+	delete testMesh;
 }
 
 Application* Application::instance() {

@@ -6,10 +6,15 @@
 #include <SDL.h>
 #include <SDL_vulkan.h>
 
+#define QUEUE_GRAPHICS_MAIN "graphics_main"
+#define QUEUE_COMPUTE_MAIN "compute_main"
+#define QUEUE_TRANSFER_MAIN "transfer_main"
+
 namespace vkr = vk::raii;
 
 class GraphicsPipeline;
 class CommandPool;
+class GPUMemory;
 
 struct QueueDetails {
 	union {
@@ -32,6 +37,7 @@ struct QueueDetails {
 struct DeviceDetails {
 	std::unique_ptr<vkr::PhysicalDevice> physicalDevice;
 	std::shared_ptr<vkr::Device> device;
+	vk::PhysicalDeviceMemoryProperties memoryProperties;
 };
 
 struct SurfaceDetails {
@@ -102,13 +108,23 @@ public:
 
 	std::shared_ptr<vkr::Device> getDevice() const;
 
+	const vk::PhysicalDevice& getPhysicalDevice() const;
+
+	const vk::PhysicalDeviceMemoryProperties& getDeviceMemoryProperties() const;
+
 	const vk::CommandBuffer& getCurrentCommandBuffer() const;
 
 	const vk::Framebuffer& getCurrentFramebuffer() const;
 
+	std::shared_ptr<vkr::Queue> getQueue(const std::string& name) const;
+
+	bool hasQueue(const std::string& name) const;
+
 	GraphicsPipeline& pipeline();
 
 	CommandPool& commandPool();
+
+	GPUMemory& gpuMemory();
 
 	glm::ivec2 getResolution() const;
 
@@ -128,6 +144,7 @@ private:
 	SwapchainDetails m_swapchain;
 	GraphicsPipeline* m_pipeline;
 	CommandPool* m_commandPool;
+	GPUMemory* m_gpuMemory;
 
 	std::unique_ptr<vkr::DebugUtilsMessengerEXT> m_debugMessenger;
 
