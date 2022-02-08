@@ -3,7 +3,7 @@
 #include "CommandPool.h"
 #include "../Application.h"
 
-Buffer::Buffer(std::shared_ptr<vkr::Device> device, std::unique_ptr<vkr::Buffer> buffer, std::shared_ptr<vkr::DeviceMemory> deviceMemory, size_t size, vk::MemoryPropertyFlags memoryProperties):
+Buffer::Buffer(std::shared_ptr<vkr::Device> device, std::unique_ptr<vkr::Buffer> buffer, std::shared_ptr<vkr::DeviceMemory> deviceMemory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties):
 	m_device(std::move(device)),
 	m_buffer(std::move(buffer)),
 	m_deviceMemory(std::move(deviceMemory)),
@@ -84,7 +84,7 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
 	return returnBuffer;
 }
 
-bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, size_t size, size_t srcOffset, size_t dstOffset) {
+bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset, vk::DeviceSize dstOffset) {
 #if _DEBUG
 	if (srcBuffer == NULL || dstBuffer == NULL) {
 		printf("Unable to copy NULL buffers\n");
@@ -138,11 +138,11 @@ const vk::Buffer& Buffer::getBuffer() const {
 	return **m_buffer;
 }
 
-size_t Buffer::getSize() const {
+vk::DeviceSize Buffer::getSize() const {
 	return m_size;
 }
 
-bool Buffer::upload(size_t offset, size_t size, void* data) {
+bool Buffer::upload(vk::DeviceSize offset, vk::DeviceSize size, void* data) {
 #if _DEBUG
 	if (offset + size > m_size) {
 		printf("Unable to upload data to buffer out of allocated range\n");

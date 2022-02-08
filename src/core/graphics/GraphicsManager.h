@@ -5,16 +5,18 @@
 #include <vulkan/vulkan_raii.hpp>
 #include <SDL.h>
 #include <SDL_vulkan.h>
+#include "GraphicsPipeline.h"
+#include "DescriptorSet.h"
 
 #define QUEUE_GRAPHICS_MAIN "graphics_main"
 #define QUEUE_COMPUTE_MAIN "compute_main"
 #define QUEUE_TRANSFER_MAIN "transfer_main"
 
-namespace vkr = vk::raii;
-
 class GraphicsPipeline;
 class CommandPool;
 class GPUMemory;
+class DescriptorAllocator;
+class DescriptorLayoutCache;
 
 struct QueueDetails {
 	union {
@@ -134,6 +136,7 @@ public:
 
 	vk::ColorSpaceKHR getColourSpace() const;
 
+	void initializeGraphicsPipeline(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration);
 
 private:
 	vkr::Context m_context;
@@ -148,5 +151,7 @@ private:
 
 	std::unique_ptr<vkr::DebugUtilsMessengerEXT> m_debugMessenger;
 
+	GraphicsPipelineConfiguration m_pipelineConfig;
+	bool m_recreateSwapchain;
 };
 

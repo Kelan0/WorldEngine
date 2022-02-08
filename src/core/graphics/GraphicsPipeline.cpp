@@ -1,5 +1,6 @@
 #include "GraphicsPipeline.h"
 #include "../Application.h"
+#include "GraphicsManager.h"
 #include <fstream>
 #include <filesystem>
 
@@ -139,7 +140,7 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
 	dynamicStateCreateInfo.setDynamicStates(dynamicStates);
 
 	vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
-	pipelineLayoutCreateInfo.setSetLayoutCount(0);
+	pipelineLayoutCreateInfo.setSetLayouts(graphicsPipelineConfiguration.descriptorSetLayous);
 	pipelineLayoutCreateInfo.setPushConstantRangeCount(0);
 
 	std::unique_ptr<vkr::PipelineLayout> pipelineLayout = std::make_unique<vkr::PipelineLayout>(*device, pipelineLayoutCreateInfo);
@@ -215,16 +216,16 @@ void GraphicsPipeline::bind(const vk::CommandBuffer& commandBuffer) {
 	commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, **m_pipeline);
 }
 
-const vkr::Pipeline& GraphicsPipeline::get() const {
-	return *m_pipeline;
+const vk::Pipeline& GraphicsPipeline::getPipeline() const {
+	return **m_pipeline;
 }
 
-const vkr::RenderPass& GraphicsPipeline::getRenderPass() const {
-	return *m_renderPass;
+const vk::RenderPass& GraphicsPipeline::getRenderPass() const {
+	return **m_renderPass;
 }
 
-const vkr::PipelineLayout& GraphicsPipeline::getPipelineLayout() {
-	return *m_pipelineLayout;
+const vk::PipelineLayout& GraphicsPipeline::getPipelineLayout() {
+	return **m_pipelineLayout;
 }
 
 bool GraphicsPipeline::loadShaderStage(std::string filePath, std::vector<char>& bytecode) {

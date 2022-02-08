@@ -4,6 +4,7 @@
 #include "CommandPool.h"
 #include "GPUMemory.h"
 #include "Mesh.h"
+#include "DescriptorSet.h"
 
 
 enum QueueType {
@@ -39,6 +40,8 @@ GraphicsManager::GraphicsManager() {
 
 GraphicsManager::~GraphicsManager() {
 	printf("Uninitializing graphics engine\n");
+
+	DescriptorSetLayout::clearCache();
 
 	m_swapchain.commandBuffers.clear();
 	m_swapchain.framebuffers.clear();
@@ -97,11 +100,7 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
 
 	m_commandPool->allocateCommandBuffer("transfer_buffer", { vk::CommandBufferLevel::ePrimary });
 
-	if (!recreateSwapchain()) {
-		return false;
-	}
-
-
+	m_recreateSwapchain = true;
 	return true;
 }
 
@@ -557,6 +556,7 @@ bool GraphicsManager::initSurfaceDetails() {
 }
 
 bool GraphicsManager::recreateSwapchain() {
+	m_recreateSwapchain = false;
 	m_device.device->waitIdle();
 
 	m_swapchain.commandBuffers.clear();
@@ -581,7 +581,7 @@ bool GraphicsManager::recreateSwapchain() {
 		imageCount = glm::min(imageCount, m_surface.capabilities.maxImageCount);
 	}
 
-	m_swapchain.maxFramesInFlight = 2;
+	m_swapchain.maxFramesInFlight = 4;
 
 	vk::SwapchainCreateInfoKHR createInfo;
 	createInfo.setSurface(**m_surface.surface);
@@ -614,15 +614,7 @@ bool GraphicsManager::recreateSwapchain() {
 		return false;
 	}
 
-	GraphicsPipelineConfiguration pipelineConfig;
-	pipelineConfig.device = m_device.device;
-	pipelineConfig.framebufferWidth = 0;
-	pipelineConfig.framebufferHeight = 0;
-	pipelineConfig.vertexShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.vert";
-	pipelineConfig.fragmentShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.frag";
-	pipelineConfig.vertexInputBindings = Vertex::getBindingDescriptions();
-	pipelineConfig.vertexInputAttributes = Vertex::getAttributeDescriptions();
-	m_pipeline = GraphicsPipeline::create(pipelineConfig);
+	m_pipeline = GraphicsPipeline::create(m_pipelineConfig);
 	if (m_pipeline == NULL) {
 		return false;
 	}
@@ -697,7 +689,7 @@ bool GraphicsManager::createSwapchainFramebuffers() {
 	for (int i = 0; i < m_swapchain.imageViews.size(); ++i) {
 		vk::ImageView colourAttachment = **m_swapchain.imageViews[i];
 		vk::FramebufferCreateInfo framebufferCreateInfo;
-		framebufferCreateInfo.setRenderPass(*m_pipeline->getRenderPass());
+		framebufferCreateInfo.setRenderPass(m_pipeline->getRenderPass());
 		framebufferCreateInfo.setPAttachments(&colourAttachment);
 		framebufferCreateInfo.setAttachmentCount(1);
 		framebufferCreateInfo.setWidth(m_swapchain.imageExtent.width);
@@ -711,6 +703,17 @@ bool GraphicsManager::createSwapchainFramebuffers() {
 
 bool GraphicsManager::beginFrame(vk::CommandBuffer& outCommandBuffer, vk::Framebuffer& outFramebuffer) {
 
+	if (m_recreateSwapchain) {
+		bool recreated = recreateSwapchain();
+#if _DEBUG
+		if (!recreated) {
+			printf("Failed to recreate swapchain\n");
+			assert(false);
+		}
+#endif
+		return false; // Skip this frame
+	}
+
 	const vk::Device& device = **m_device.device;
 	const vk::Semaphore& imageAvailableSemaphore = **m_swapchain.imageAvailableSemaphores[m_swapchain.currentFrameIndex];
 	const vk::Fence& frameFence = **m_swapchain.inFlightFences[m_swapchain.currentFrameIndex];
@@ -720,31 +723,26 @@ bool GraphicsManager::beginFrame(vk::CommandBuffer& outCommandBuffer, vk::Frameb
 
 	if (m_swapchain.imageExtent.width != Application::instance()->getWindowSize().x ||
 		m_swapchain.imageExtent.height != Application::instance()->getWindowSize().y) {
-		bool recreated = recreateSwapchain();
-#if _DEBUG
-		if (!recreated) {
-			printf("Failed to recreate swapchain\n");
-			assert(false);
-		}
-#endif
+		m_recreateSwapchain = true;
 		return false;
 	}
 
-	VkResult result;
-	result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &m_swapchain.currentImageIndex);
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-		bool recreated = recreateSwapchain();
-#if _DEBUG
-		if (!recreated) {
-			printf("Failed to recreate swapchain\n");
-			assert(false);
-		}
-#endif
-	} 
-	
-	if (result != VK_SUCCESS) {
+	vk::AcquireNextImageInfoKHR acquireInfo;
+	acquireInfo.setDeviceMask(1); // I can't find any information in the documentation about deviceMask... Presumably setting bit 0 means select device 0
+	acquireInfo.setSwapchain(swapchain);
+	acquireInfo.setTimeout(UINT64_MAX);
+	acquireInfo.setSemaphore(imageAvailableSemaphore);
+	acquireInfo.setFence(VK_NULL_HANDLE);
+	vk::ResultValue<uint32_t> acquireNextImageResult = device.acquireNextImage2KHR(acquireInfo);
+	if (acquireNextImageResult.result == vk::Result::eErrorOutOfDateKHR || acquireNextImageResult.result == vk::Result::eSuboptimalKHR) {
+		m_recreateSwapchain = true;
+		return false;
+
+	} else if (acquireNextImageResult.result != vk::Result::eSuccess) {
 		return false;
 	}
+
+	m_swapchain.currentImageIndex = acquireNextImageResult.value;
 
 	vk::CommandBuffer commandBuffer = getCurrentCommandBuffer();
 	vk::Framebuffer framebuffer = getCurrentFramebuffer();
@@ -805,19 +803,11 @@ void GraphicsManager::endFrame() {
 	presentInfo.setPSwapchains(&swapchain);
 	presentInfo.setPImageIndices(&m_swapchain.currentImageIndex);
 
-	VkResult result = vkQueuePresentKHR(queue, reinterpret_cast<const VkPresentInfoKHR*>(&presentInfo));
+	vk::Result result = queue.presentKHR(presentInfo);
 
-	// Rather frustratingly, vk::raii::Queue::presentKHR throws an exception on vk::Result::eErrorOutOfDateKHR, but we need that result to recreate the swapchain.
-	// vk::Result result = queue.presentKHR(presentInfo);
-
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-		bool recreated = recreateSwapchain();
-#if _DEBUG
-		if (!recreated) {
-			printf("Failed to recreate swapchain\n");
-			assert(false);
-		}
-#endif
+	if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eErrorOutOfDateKHR) {
+		m_recreateSwapchain = true;
+		return;
 	}
 
 	m_swapchain.currentFrameIndex = (m_swapchain.currentFrameIndex + 1) % m_swapchain.maxFramesInFlight;
@@ -849,6 +839,14 @@ std::shared_ptr<vkr::Queue> GraphicsManager::getQueue(const std::string& name) c
 
 bool GraphicsManager::hasQueue(const std::string& name) const {
 	return m_queues.queues.count(name) > 0;
+}
+
+void GraphicsManager::initializeGraphicsPipeline(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration) {
+	m_pipelineConfig = graphicsPipelineConfiguration;
+	m_pipelineConfig.device = m_device.device;
+	m_pipelineConfig.framebufferWidth = m_swapchain.imageExtent.width;
+	m_pipelineConfig.framebufferHeight = m_swapchain.imageExtent.height;
+	m_recreateSwapchain = true;
 }
 
 GraphicsPipeline& GraphicsManager::pipeline() {

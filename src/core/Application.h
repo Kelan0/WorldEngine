@@ -7,12 +7,12 @@ class GraphicsManager;
 
 class Application {
 	NO_COPY(Application);
-private:
+
+public:
 	Application();
 
 	~Application();
 
-public:
 	static bool create();
 
 	static void destroy();

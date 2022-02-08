@@ -1,10 +1,6 @@
 #pragma once
 
 #include "../core.h"
-#include <vulkan/vulkan.h>
-#include <vulkan/vulkan_raii.hpp>
-
-#include "GraphicsManager.h"
 
 struct GraphicsPipelineConfiguration {
 	std::shared_ptr<vkr::Device> device;
@@ -14,6 +10,7 @@ struct GraphicsPipelineConfiguration {
 	std::optional<std::string> fragmentShader;
 	std::vector<vk::VertexInputBindingDescription> vertexInputBindings;
 	std::vector<vk::VertexInputAttributeDescription> vertexInputAttributes;
+	std::vector<vk::DescriptorSetLayout> descriptorSetLayous;
 };
 
 class GraphicsPipeline {
@@ -32,11 +29,11 @@ public:
 
 	void bind(const vk::CommandBuffer& commandBuffer);
 
-	const vkr::Pipeline& get() const;
+	const vk::Pipeline& getPipeline() const;
 
-	const vkr::RenderPass& getRenderPass() const;
+	const vk::RenderPass& getRenderPass() const;
 	
-	const vkr::PipelineLayout& getPipelineLayout();
+	const vk::PipelineLayout& getPipelineLayout();
 
 private:
 	static bool loadShaderStage(std::string filePath, std::vector<char>& bytecode);

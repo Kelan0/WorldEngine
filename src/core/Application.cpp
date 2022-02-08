@@ -4,6 +4,12 @@
 #include "graphics/Mesh.h"
 #include <chrono>
 
+Buffer* ubo = NULL;
+std::shared_ptr<DescriptorSet> uboDescriptorSet;
+std::shared_ptr<DescriptorPool> descriptorPool;
+
+
+
 Application* Application::s_instance = NULL;
 
 
@@ -68,6 +74,35 @@ void Application::start() {
 
 	uint32_t frameCount = 0;
 
+
+	BufferConfiguration uboConfiguration;
+	uboConfiguration.device = m_graphics->getDevice();
+	uboConfiguration.size = sizeof(glm::mat4) * 1;
+	uboConfiguration.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+	uboConfiguration.usage = vk::BufferUsageFlagBits::eUniformBuffer;
+	ubo = Buffer::create(uboConfiguration);
+
+	DescriptorPoolConfiguration descriptorPoolConfig;
+	descriptorPoolConfig.device = m_graphics->getDevice();
+	descriptorPoolConfig.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
+	descriptorPool = DescriptorPool::create(descriptorPoolConfig);
+
+	std::vector<vk::DescriptorSetLayoutBinding> bindings;
+	bindings.emplace_back().setBinding(0).setDescriptorType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(1).setStageFlags(vk::ShaderStageFlagBits::eAllGraphics);
+
+	vk::DescriptorSetLayoutCreateInfo layoutCreateInfo;
+	layoutCreateInfo.setBindings(bindings);
+	uboDescriptorSet = DescriptorSet::get(layoutCreateInfo, descriptorPool);
+	DescriptorSetWriter(uboDescriptorSet).writeBuffer(0, ubo).write();
+
+	GraphicsPipelineConfiguration pipelineConfig;
+	pipelineConfig.vertexShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.vert";
+	pipelineConfig.fragmentShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.frag";
+	pipelineConfig.vertexInputBindings = Vertex::getBindingDescriptions();
+	pipelineConfig.vertexInputAttributes = Vertex::getAttributeDescriptions();
+	pipelineConfig.descriptorSetLayous.push_back(uboDescriptorSet->getLayout()->getDescriptorSetLayout());
+	m_graphics->initializeGraphicsPipeline(pipelineConfig);
+
 	auto lastDebug = std::chrono::high_resolution_clock::now();
 	//auto lastFrame = std::chrono::high_resolution_clock::now();
 
@@ -85,6 +120,8 @@ void Application::start() {
 	};
 
 	Mesh* testMesh = Mesh::create(testMeshConfig);
+
+	float x = 0.0F;
 
 	while (running) {
 		auto frameStart = std::chrono::high_resolution_clock::now();
@@ -109,7 +146,7 @@ void Application::start() {
 			clearValue.color.setFloat32({ 0.0F, 0.0F, 0.0F, 1.0F });
 
 			vk::RenderPassBeginInfo renderPassBeginInfo;
-			renderPassBeginInfo.setRenderPass(*pipeline.getRenderPass());
+			renderPassBeginInfo.setRenderPass(pipeline.getRenderPass());
 			renderPassBeginInfo.setFramebuffer(framebuffer);
 			renderPassBeginInfo.renderArea.setOffset({ 0, 0 });
 			renderPassBeginInfo.renderArea.setExtent(m_graphics->getImageExtent());
@@ -119,6 +156,12 @@ void Application::start() {
 			commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 			pipeline.bind(commandBuffer);
 			//commandBuffer.draw(3, 1, 0, 0);
+
+			glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0F), glm::vec3(glm::sin(x), 0.0F, 0.0F));
+			x += 1.0F / 8000.0F;
+			ubo->upload(0, 1, &modelMatrix);
+
+			commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,pipeline.getPipelineLayout(), 0, 1, &uboDescriptorSet->getDescriptorSet(), 0, NULL);
 
 			testMesh->draw(commandBuffer);
 
@@ -143,6 +186,9 @@ void Application::start() {
 	m_graphics->getDevice()->waitIdle();
 
 	delete testMesh;
+	delete ubo;
+	uboDescriptorSet.reset();
+	descriptorPool.reset();
 }
 
 Application* Application::instance() {

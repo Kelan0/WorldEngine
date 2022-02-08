@@ -1,0 +1,154 @@
+#pragma once
+
+#include "../core.h"
+
+class Buffer;
+
+struct DescriptorPoolConfiguration {
+	std::shared_ptr<vkr::Device> device;
+	vk::DescriptorPoolCreateFlags flags;
+	uint32_t maxSets = 1000;
+
+	std::unordered_map<vk::DescriptorType, uint32_t> poolSizes = {
+		{ vk::DescriptorType::eSampler, 500 },
+		{ vk::DescriptorType::eCombinedImageSampler, 4000 },
+		{ vk::DescriptorType::eSampledImage, 4000 },
+		{ vk::DescriptorType::eStorageImage, 1000 },
+		{ vk::DescriptorType::eUniformTexelBuffer, 1000 },
+		{ vk::DescriptorType::eStorageTexelBuffer, 1000 },
+		{ vk::DescriptorType::eUniformBuffer, 2000 },
+		{ vk::DescriptorType::eStorageBuffer, 2000 },
+		{ vk::DescriptorType::eUniformBufferDynamic, 1000 },
+		{ vk::DescriptorType::eStorageBufferDynamic, 1000 },
+		{ vk::DescriptorType::eInputAttachment, 500 }
+	};
+};
+
+
+class DescriptorSetLayout {
+	NO_COPY(DescriptorSetLayout);
+
+public:
+	struct Key : public vk::DescriptorSetLayoutCreateInfo {
+		Key(const vk::DescriptorSetLayoutCreateInfo& rhs);
+
+		bool operator==(const Key& rhs) const;
+	};
+
+	struct KeyHasher {
+		size_t operator()(const Key& descriptorSetLayoutKey) const;
+	};
+
+	typedef std::unordered_map<Key, std::shared_ptr<DescriptorSetLayout>, KeyHasher> Cache;
+
+private:
+	DescriptorSetLayout(std::shared_ptr<vkr::Device> device, vk::DescriptorSetLayout descriptorSetLayout, Key key);
+
+public:
+	~DescriptorSetLayout();
+
+	static std::shared_ptr<DescriptorSetLayout> get(std::shared_ptr<vkr::Device> device, const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo);
+
+	static void clearCache();
+
+	std::shared_ptr<vkr::Device> getDevice() const;
+
+	const vk::DescriptorSetLayout& getDescriptorSetLayout() const;
+
+	std::vector<vk::DescriptorSetLayoutBinding> getBindings() const;
+
+	bool hasBinding(uint32_t binding) const;
+
+	const vk::DescriptorSetLayoutBinding& getBinding(uint32_t binding) const;
+
+	bool operator==(const DescriptorSetLayout& rhs) const;
+
+	bool operator!=(const DescriptorSetLayout& rhs) const;
+
+private:
+	std::shared_ptr<vkr::Device> m_device;
+	vk::DescriptorSetLayout m_descriptorSetLayout;
+	Key m_key;
+
+	static Cache s_descriptorSetLayoutCache;
+};
+
+
+
+class DescriptorPool {
+	NO_COPY(DescriptorPool);
+private:
+	DescriptorPool(std::shared_ptr<vkr::Device> device, vk::DescriptorPool descriptorPool, bool canFreeDescriptorSets);
+
+public:
+	~DescriptorPool();
+
+	static std::shared_ptr<DescriptorPool> create(const DescriptorPoolConfiguration& descriptorPoolConfiguration);
+
+	std::shared_ptr<vkr::Device> getDevice() const;
+
+	const vk::DescriptorPool& getDescriptorPool() const;
+
+	bool allocate(const vk::DescriptorSetLayout& descriptorSetLayout, vk::DescriptorSet& outDescriptorSet) const;
+
+	void free(const vk::DescriptorSet& descriptorSet);
+
+	bool canFreeDescriptorSets() const;
+
+private:
+	std::shared_ptr<vkr::Device> m_device;
+	vk::DescriptorPool m_descriptorPool;
+	bool m_canFreeDescriptorSets;
+};
+
+
+
+class DescriptorSet {
+	NO_COPY(DescriptorSet);
+private:
+	DescriptorSet(std::shared_ptr<vkr::Device> device, std::shared_ptr<DescriptorPool> pool, std::shared_ptr<DescriptorSetLayout> layout, vk::DescriptorSet descriptorSet);
+
+public:
+	~DescriptorSet();
+
+	static std::shared_ptr<DescriptorSet> get(const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, std::shared_ptr<DescriptorPool> descriptorPool);
+
+	static std::shared_ptr<DescriptorSet> get(std::shared_ptr<DescriptorSetLayout> descriptorSetLayout, std::shared_ptr<DescriptorPool> descriptorPool);
+
+	const vk::DescriptorSet& getDescriptorSet() const;
+
+	std::shared_ptr<vkr::Device> getDevice() const;
+
+	std::shared_ptr<DescriptorPool> getPool() const;
+
+	std::shared_ptr<DescriptorSetLayout> getLayout() const;
+
+private:
+	std::shared_ptr<vkr::Device> m_device;
+	std::shared_ptr<DescriptorPool> m_pool;
+	std::shared_ptr<DescriptorSetLayout> m_layout;
+	vk::DescriptorSet m_descriptorSet;
+};
+
+
+class DescriptorSetWriter {
+	NO_COPY(DescriptorSetWriter);
+public:
+	DescriptorSetWriter(std::shared_ptr<DescriptorSet> descriptorSet);
+
+	~DescriptorSetWriter();
+
+	DescriptorSetWriter& writeBuffer(uint32_t binding, const vk::DescriptorBufferInfo& bufferInfo);
+
+	DescriptorSetWriter& writeBuffer(uint32_t binding, vk::Buffer buffer, vk::DeviceSize offset = 0, vk::DeviceSize range = VK_WHOLE_SIZE);
+
+	DescriptorSetWriter& writeBuffer(uint32_t binding, Buffer* buffer, vk::DeviceSize offset = 0, vk::DeviceSize range = VK_WHOLE_SIZE);
+
+	bool write();
+
+private:
+	std::vector<vk::WriteDescriptorSet> m_writes;
+	std::shared_ptr<DescriptorSet> m_descriptorSet;
+
+	std::vector<vk::DescriptorBufferInfo> m_tempBufferInfo;
+};
