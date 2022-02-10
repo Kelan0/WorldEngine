@@ -3,21 +3,31 @@
 #include "CommandPool.h"
 #include "../Application.h"
 
-Buffer::Buffer(std::shared_ptr<vkr::Device> device, std::unique_ptr<vkr::Buffer> buffer, std::shared_ptr<vkr::DeviceMemory> deviceMemory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties):
+Buffer::Buffer(std::shared_ptr<vkr::Device> device, vk::Buffer buffer, vk::DeviceMemory deviceMemory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties):
 	m_device(std::move(device)),
-	m_buffer(std::move(buffer)),
-	m_deviceMemory(std::move(deviceMemory)),
+	m_buffer(buffer),
+	m_deviceMemory(deviceMemory),
 	m_size(size),
 	m_memoryProperties(memoryProperties) {
 }
 
+//Buffer::Buffer(Buffer&& buffer) {
+//	m_device = vkr::exchange(buffer.m_device, {});
+//	m_buffer = vkr::exchange(buffer.m_buffer, {});
+//	m_deviceMemory = vkr::exchange(buffer.m_deviceMemory, {});
+//	m_size = vkr::exchange(buffer.m_size, 0);
+//	m_memoryProperties = vkr::exchange(buffer.m_memoryProperties, {});
+//}
+
 Buffer::~Buffer() {
-	m_buffer.reset();
-	m_deviceMemory.reset();
+	(**m_device).destroyBuffer(m_buffer);
+	(**m_device).freeMemory(m_deviceMemory);
 }
 
 Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
 	vk::BufferUsageFlags usage = bufferConfiguration.usage;
+
+	const vk::Device& device = **bufferConfiguration.device;
 
 	if (bufferConfiguration.data != NULL && !(bufferConfiguration.memoryProperties & vk::MemoryPropertyFlagBits::eHostVisible)) {
 		// We have data to upload but the buffer is not visible to the host, so we need to allow this 
@@ -29,19 +39,20 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
 	bufferCreateInfo.setUsage(usage);
 	bufferCreateInfo.setSize(bufferConfiguration.size);
 	bufferCreateInfo.setSharingMode(bufferConfiguration.sharingMode);
-	std::unique_ptr<vkr::Buffer> buffer = NULL;
+	vk::Buffer buffer = VK_NULL_HANDLE;
 
 	try {
-		buffer = std::make_unique<vkr::Buffer>(*bufferConfiguration.device, bufferCreateInfo);
+		buffer = device.createBuffer(bufferCreateInfo);
 	} catch (std::exception e) {
 		printf("Failed to create buffer: %s\n", e.what());
 	}
 
-	if (buffer == NULL) {
+	if (!buffer) {
 		return NULL;
 	}
 
-	const vk::MemoryRequirements& memoryRequirements = buffer->getMemoryRequirements();
+	;
+	const vk::MemoryRequirements& memoryRequirements = device.getBufferMemoryRequirements(buffer);
 
 	uint32_t memoryTypeIndex;
 	if (!GPUMemory::selectMemoryType(memoryRequirements.memoryTypeBits, bufferConfiguration.memoryProperties, memoryTypeIndex)) {
@@ -53,30 +64,25 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
 	allocateInfo.setAllocationSize(memoryRequirements.size);
 	allocateInfo.setMemoryTypeIndex(memoryTypeIndex);
 
-	std::shared_ptr<vkr::DeviceMemory> deviceMemory = NULL;
+	vk::DeviceMemory deviceMemory = VK_NULL_HANDLE;
+
 	try {
-		deviceMemory = std::make_shared<vkr::DeviceMemory>(*bufferConfiguration.device, allocateInfo);
+		deviceMemory = device.allocateMemory(allocateInfo);
 	} catch (std::exception e) {
 		printf("Failed to allocate device memory for buffer: %s\n", e.what());
 	}
 
-	if (deviceMemory == NULL) {
+	if (!deviceMemory) {
 		return NULL;
 	}
 
-	vk::BindBufferMemoryInfo bindBufferMemoryInfo;
-	bindBufferMemoryInfo.setBuffer(**buffer);
-	bindBufferMemoryInfo.setMemory(**deviceMemory);
-	bindBufferMemoryInfo.setMemoryOffset(0);
+	device.bindBufferMemory(buffer, deviceMemory, 0);
 
-	bufferConfiguration.device->bindBufferMemory2({ bindBufferMemoryInfo });
-
-	Buffer* returnBuffer = new Buffer(bufferConfiguration.device, std::move(buffer), std::move(deviceMemory), bufferConfiguration.size, bufferConfiguration.memoryProperties);
+	Buffer* returnBuffer = new Buffer(bufferConfiguration.device, buffer, deviceMemory, bufferConfiguration.size, bufferConfiguration.memoryProperties);
 	
 	if (bufferConfiguration.data != NULL) {
 		if (!returnBuffer->upload(0, bufferConfiguration.size, bufferConfiguration.data)) {
 			printf("Failed to upload buffer data\n");
-			delete returnBuffer;
 			return NULL;
 		}
 	}
@@ -135,7 +141,7 @@ bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk:
 }
 
 const vk::Buffer& Buffer::getBuffer() const {
-	return **m_buffer;
+	return m_buffer;
 }
 
 vk::DeviceSize Buffer::getSize() const {
@@ -183,22 +189,22 @@ bool Buffer::upload(vk::DeviceSize offset, vk::DeviceSize size, void* data) {
 
 		if (!Buffer::copy(stagingBuffer, this, size, 0, offset)) {
 			printf("Failed to copy data from staging buffer\n");
+			delete stagingBuffer;
 			return false;
 		}
 
 		delete stagingBuffer;
-
 		return true;
 
 	} else {
-		void* mappedBuffer = m_deviceMemory->mapMemory(offset, size);
+		void* mappedBuffer = (**m_device).mapMemory(m_deviceMemory, offset, size);
 		if (mappedBuffer == NULL) {
 			printf("Failed to map buffer memory\n");
 			return false;
 		}
 
 		memcpy(mappedBuffer, data, size);
-		m_deviceMemory->unmapMemory();
+		(**m_device).unmapMemory(m_deviceMemory);
 
 		return true;
 	}

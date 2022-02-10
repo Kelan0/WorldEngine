@@ -104,7 +104,7 @@ private:
 	bool createSwapchainFramebuffers();
 public:
 
-	bool beginFrame(vk::CommandBuffer& commandBuffer, vk::Framebuffer& framebuffer);
+	bool beginFrame();
 
 	void endFrame();
 

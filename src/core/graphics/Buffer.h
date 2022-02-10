@@ -16,9 +16,11 @@ struct BufferConfiguration {
 class Buffer {
 	NO_COPY(Buffer);
 private:
-	Buffer(std::shared_ptr<vkr::Device> device, std::unique_ptr<vkr::Buffer> buffer, std::shared_ptr<vkr::DeviceMemory> deviceMemory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties);
+	Buffer(std::shared_ptr<vkr::Device> device, vk::Buffer buffer, vk::DeviceMemory deviceMemory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties);
 
 public:
+	//Buffer(Buffer&& buffer);
+
 	~Buffer();
 
 	static Buffer* create(const BufferConfiguration& bufferConfiguration);
@@ -39,8 +41,8 @@ public:
 
 private:
 	std::shared_ptr<vkr::Device> m_device;
-	std::unique_ptr<vkr::Buffer> m_buffer;
-	std::shared_ptr<vkr::DeviceMemory> m_deviceMemory;
+	vk::Buffer m_buffer;
+	vk::DeviceMemory m_deviceMemory;
 	vk::MemoryPropertyFlags m_memoryProperties;
 	vk::DeviceSize m_size;
 };

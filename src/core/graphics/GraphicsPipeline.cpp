@@ -224,7 +224,7 @@ const vk::RenderPass& GraphicsPipeline::getRenderPass() const {
 	return **m_renderPass;
 }
 
-const vk::PipelineLayout& GraphicsPipeline::getPipelineLayout() {
+const vk::PipelineLayout& GraphicsPipeline::getPipelineLayout() const {
 	return **m_pipelineLayout;
 }
 

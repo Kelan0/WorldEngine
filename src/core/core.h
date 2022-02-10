@@ -13,10 +13,12 @@
 #include <glm/matrix.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <memory>
+
+#define VULKAN_HPP_NO_SPACESHIP_OPERATOR 
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_raii.hpp>
 
-#define VULKAN_HPP_NO_SPACESHIP_OPERATOR 
+#include <stb_image.h>
 
 namespace vkr = vk::raii;
 

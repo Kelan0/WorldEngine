@@ -701,7 +701,7 @@ bool GraphicsManager::createSwapchainFramebuffers() {
 	return true;
 }
 
-bool GraphicsManager::beginFrame(vk::CommandBuffer& outCommandBuffer, vk::Framebuffer& outFramebuffer) {
+bool GraphicsManager::beginFrame() {
 
 	if (m_recreateSwapchain) {
 		bool recreated = recreateSwapchain();
@@ -744,19 +744,15 @@ bool GraphicsManager::beginFrame(vk::CommandBuffer& outCommandBuffer, vk::Frameb
 
 	m_swapchain.currentImageIndex = acquireNextImageResult.value;
 
-	vk::CommandBuffer commandBuffer = getCurrentCommandBuffer();
-	vk::Framebuffer framebuffer = getCurrentFramebuffer();
+	const vk::CommandBuffer& commandBuffer = getCurrentCommandBuffer();
+	const vk::Framebuffer& framebuffer = getCurrentFramebuffer();
 
 	if (!commandBuffer || !framebuffer) {
 		return false;
 	}
 
-
 	vk::CommandBufferBeginInfo beginInfo;
 	commandBuffer.begin(beginInfo);
-
-	outCommandBuffer = commandBuffer;
-	outFramebuffer = framebuffer;
 
 	return true;
 }

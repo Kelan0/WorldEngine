@@ -33,7 +33,7 @@ public:
 
 	const vk::RenderPass& getRenderPass() const;
 	
-	const vk::PipelineLayout& getPipelineLayout();
+	const vk::PipelineLayout& getPipelineLayout() const;
 
 private:
 	static bool loadShaderStage(std::string filePath, std::vector<char>& bytecode);

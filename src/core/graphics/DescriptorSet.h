@@ -59,7 +59,13 @@ public:
 
 	bool hasBinding(uint32_t binding) const;
 
-	const vk::DescriptorSetLayoutBinding& getBinding(uint32_t binding) const;
+	int findBindingIndex(uint32_t binding) const;
+
+	const vk::DescriptorSetLayoutBinding& findBinding(uint32_t binding) const;
+
+	const vk::DescriptorSetLayoutBinding& getBinding(int index) const;
+
+	uint32_t getBindingCount() const;
 
 	bool operator==(const DescriptorSetLayout& rhs) const;
 

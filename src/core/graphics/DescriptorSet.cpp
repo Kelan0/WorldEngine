@@ -74,24 +74,33 @@ std::vector<vk::DescriptorSetLayoutBinding> DescriptorSetLayout::getBindings() c
 }
 
 bool DescriptorSetLayout::hasBinding(uint32_t binding) const {
-	for (int i = 0; i < m_key.bindingCount; ++i) {
-		if (m_key.pBindings[i].binding == binding) {
-			return true;
-		}
-	}
-
-	return false;
+	return findBindingIndex(binding) >= 0;
 }
 
-const vk::DescriptorSetLayoutBinding& DescriptorSetLayout::getBinding(uint32_t binding) const {
+int DescriptorSetLayout::findBindingIndex(uint32_t binding) const {
 	for (int i = 0; i < m_key.bindingCount; ++i) {
 		if (m_key.pBindings[i].binding == binding) {
-			return m_key.pBindings[i];
+			return i;
 		}
 	}
 
-	assert(false);
-	return {};
+	return -1;
+}
+
+const vk::DescriptorSetLayoutBinding& DescriptorSetLayout::findBinding(uint32_t binding) const {
+	int index = findBindingIndex(binding);
+	if (index < 0)
+		return {};
+	return getBinding(index);
+}
+
+const vk::DescriptorSetLayoutBinding& DescriptorSetLayout::getBinding(int index) const {
+	assert(index >= 0 && index < m_key.bindingCount);
+	return m_key.pBindings[index];
+}
+
+uint32_t DescriptorSetLayout::getBindingCount() const {
+	return m_key.bindingCount;
 }
 
 bool DescriptorSetLayout::operator==(const DescriptorSetLayout& rhs) const {
@@ -235,8 +244,10 @@ DescriptorSetWriter::~DescriptorSetWriter() {
 }
 
 DescriptorSetWriter& DescriptorSetWriter::writeBuffer(uint32_t binding, const vk::DescriptorBufferInfo& bufferInfo) {
-	assert(m_descriptorSet->getLayout()->hasBinding(binding));
-	const auto& bindingInfo = m_descriptorSet->getLayout()->getBinding(binding);
+	int bindingIndex = m_descriptorSet->getLayout()->findBindingIndex(binding);
+	assert(bindingIndex >= 0);
+
+	const auto& bindingInfo = m_descriptorSet->getLayout()->getBinding(bindingIndex);
 
 	assert(bindingInfo.descriptorCount == 1);
 
