@@ -1,4 +1,5 @@
 #include "Application.h"
+#include "InputHandler.h"
 #include "../graphics/GraphicsManager.h"
 #include "../graphics/GraphicsPipeline.h"
 #include "../graphics/Mesh.h"
@@ -13,6 +14,7 @@ Application::Application() {
 }
 
 Application::~Application() {
+	delete m_inputHandler;
 	delete m_graphics;
 
 	printf("Destroying window\n");
@@ -47,6 +49,8 @@ bool Application::initInternal() {
 		return false;
 	}
 
+	m_inputHandler = new InputHandler(m_windowHandle);
+
 	init();
 }
 
@@ -70,17 +74,20 @@ void Application::start() {
 	while (running) {
 		auto frameStart = std::chrono::high_resolution_clock::now();
 
-		SDL_Event event;
+		m_inputHandler->update();
 
-		while (running && SDL_PollEvent(&event)) {
+		SDL_Event event;
+		while (SDL_PollEvent(&event)) {
 
 			if (event.type == SDL_QUIT) {
 				running = false;
 			}
-		
+
+			m_inputHandler->processEvent(event);
 		}
 
 		render();
+		SDL_GL_SwapWindow(m_windowHandle);
 
 		++frameCount;
 
@@ -106,6 +113,10 @@ Application* Application::instance() {
 
 GraphicsManager* Application::graphics() {
 	return m_graphics;
+}
+
+InputHandler* Application::input() {
+	return m_inputHandler;
 }
 
 glm::ivec2 Application::getWindowSize() const {

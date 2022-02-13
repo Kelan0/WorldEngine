@@ -1,5 +1,6 @@
 
 #include "core/application/Application.h"
+#include "core/application/InputHandler.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Buffer.h"
@@ -103,6 +104,10 @@ class App : public Application {
 			camera.setFovDegrees(90.0F);
 			camera.lookAt(0.0F, 0.0F, 0.5F * glm::sin(x) + 0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F);
 			camera.update();
+
+			if (Application::input()->keyPressed(SDL_SCANCODE_ESCAPE)) {
+				Application::input()->toggleMouseGrabbed();
+			}
 
 			auto& commandBuffer = graphics()->getCurrentCommandBuffer();
 			auto& framebuffer = graphics()->getCurrentFramebuffer();

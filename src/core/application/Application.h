@@ -4,6 +4,7 @@
 #include <SDL.h>
 
 class GraphicsManager;
+class InputHandler;
 
 class Application {
 	NO_COPY(Application);
@@ -28,6 +29,8 @@ public:
 
 	GraphicsManager* graphics();
 
+	InputHandler* input();
+
 	glm::ivec2 getWindowSize() const;
 
 private:
@@ -42,6 +45,7 @@ private:
 
 	SDL_Window* m_windowHandle;
 	GraphicsManager* m_graphics;
+	InputHandler* m_inputHandler;
 };
 
 template<class T>
