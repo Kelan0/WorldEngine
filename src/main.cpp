@@ -27,6 +27,8 @@ class App : public Application {
 	Image2D* testImage = NULL;
 	Texture2D* testTexture = NULL;
 	Camera camera;
+	float cameraPitch = 0.0F;
+	float cameraYaw = 0.0F;
 	
 
 	float x = 0.0F;
@@ -85,6 +87,8 @@ class App : public Application {
 		pipelineConfig.vertexInputAttributes = Vertex::getAttributeDescriptions();
 		ubo->initPipelineConfiguration(pipelineConfig);
 		graphics()->initializeGraphicsPipeline(pipelineConfig);
+
+		camera.setPosition(0.0F, 0.0F, 2.0F);
     }
 
 	void cleanup() override {
@@ -95,19 +99,54 @@ class App : public Application {
 		descriptorPool.reset();
 	}
 
+	void handleUserInput() {
+		if (input()->keyPressed(SDL_SCANCODE_ESCAPE)) {
+			input()->toggleMouseGrabbed();
+		}
+
+		if (input()->isMouseGrabbed()) {
+			glm::ivec2 dMouse = input()->getRelativeMouseState();
+			cameraPitch += dMouse.y * 0.001F;
+			cameraYaw -= dMouse.x * 0.001F;
+			if (cameraYaw > +M_PI) cameraYaw -= M_PI * 2.0;
+			if (cameraYaw < -M_PI) cameraYaw += M_PI * 2.0;
+			if (cameraPitch > +M_PI * 0.5) cameraPitch = +M_PI * 0.5;
+			if (cameraPitch < -M_PI * 0.5) cameraPitch = -M_PI * 0.5;
+			glm::quat yaw = glm::normalize(glm::angleAxis(cameraYaw, glm::vec3(0.0, 1.0, 0.0)));
+			glm::quat pitch = glm::normalize(angleAxis(cameraPitch, glm::vec3(
+				1.0F - 2.0F * ((yaw.y * yaw.y) + (yaw.z * yaw.z)),
+				2.0F * ((yaw.x * yaw.y) + (yaw.w * yaw.z)),
+				2.0F * ((yaw.x * yaw.z) - (yaw.w * yaw.y))
+			)));
+
+			camera.setRotation(pitch * yaw);
+
+
+			float movementSpeed = 1.0F / 4000.0F;
+			glm::vec3 movementDir(0.0F);
+
+			if (input()->keyDown(SDL_SCANCODE_W)) movementDir.z--;
+			if (input()->keyDown(SDL_SCANCODE_S)) movementDir.z++;
+			if (input()->keyDown(SDL_SCANCODE_A)) movementDir.x--;
+			if (input()->keyDown(SDL_SCANCODE_D)) movementDir.x++;
+
+			if (glm::dot(movementDir, movementDir) > 0.5F) {
+				movementDir = camera.getRotationMatrix() * glm::normalize(movementDir);
+				camera.setPosition(camera.getPosition() + movementDir * movementSpeed);
+			}
+		}
+	}
+
     void render() override {
 
 		if (graphics()->beginFrame()) {
 
-			camera.setAspect(graphics()->getAspectRatio());
-			camera.setClipppingPlanes(0.001F, 10.0F);
-			camera.setFovDegrees(90.0F);
-			camera.lookAt(0.0F, 0.0F, 0.5F * glm::sin(x) + 0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F);
-			camera.update();
+			handleUserInput();
 
-			if (Application::input()->keyPressed(SDL_SCANCODE_ESCAPE)) {
-				Application::input()->toggleMouseGrabbed();
-			}
+			camera.setAspect(graphics()->getAspectRatio());
+			camera.setClipppingPlanes(0.01F, 500.0F);
+			camera.setFovDegrees(90.0F);
+			camera.update();
 
 			auto& commandBuffer = graphics()->getCurrentCommandBuffer();
 			auto& framebuffer = graphics()->getCurrentFramebuffer();

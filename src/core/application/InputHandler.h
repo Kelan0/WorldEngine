@@ -40,6 +40,8 @@ public:
 
 	bool setMouseScreenCoord(glm::dvec2 coord);
 
+	bool didWarpMouse() const;
+
 	glm::ivec2 getMousePixelCoord();
 
 	glm::ivec2 getLastMousePixelCoord();
@@ -83,4 +85,5 @@ private:
 	glm::ivec2 m_currMousePixelMotion;
 	glm::ivec2 m_prevMousePixelMotion;
 	bool m_mouseGrabbed;
+	bool m_didWarpMouse;
 };

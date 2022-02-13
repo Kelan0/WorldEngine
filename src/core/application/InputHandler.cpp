@@ -24,6 +24,7 @@ InputHandler::InputHandler(SDL_Window* windowHandle) {
 	m_currMousePixelMotion = glm::ivec2(0, 0);
 	m_prevMousePixelMotion = glm::ivec2(0, 0);
 	m_mouseGrabbed = false;
+	m_didWarpMouse = false;
 }
 
 InputHandler::~InputHandler() {}
@@ -46,6 +47,8 @@ void InputHandler::update() {
 	if (m_mouseGrabbed) {
 		this->setMouseScreenCoord(glm::dvec2(0.5, 0.5));
 	}
+
+	m_didWarpMouse = false;
 }
 
 void InputHandler::processEvent(SDL_Event event) {
@@ -126,6 +129,7 @@ void InputHandler::setMouseGrabbed(bool grabbed) {
 		m_prevMousePixelMotion = glm::ivec2(0);
 		SDL_ShowCursor(!grabbed);
 		SDL_SetRelativeMouseMode(grabbed ? SDL_TRUE : SDL_FALSE);
+		this->getRelativeMouseState(); // Pops the warp caused by this grab from the SDL event queue.
 	}
 }
 
@@ -144,11 +148,16 @@ bool InputHandler::setMousePixelCoord(glm::ivec2 coord) {
 	SDL_WarpMouseGlobal(x + coord.x, y + coord.y);
 	//SDL_WarpMouseInWindow(m_windowHandle, coord.x, coord.y);
 	m_currMousePixelCoord = glm::ivec2(coord);
+	m_didWarpMouse = true;
 	return true;
 }
 
 bool InputHandler::setMouseScreenCoord(glm::dvec2 coord) {
 	return this->setMousePixelCoord(glm::ivec2(coord * glm::dvec2(Application::instance()->getWindowSize())));
+}
+
+bool InputHandler::didWarpMouse() const {
+	return m_didWarpMouse;
 }
 
 glm::ivec2 InputHandler::getMousePixelCoord() {
