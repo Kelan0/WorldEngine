@@ -4,7 +4,7 @@
 #include "GraphicsManager.h"
 
 struct CommandPoolConfiguration {
-	std::shared_ptr<vkr::Device> device;
+	std::weak_ptr<vkr::Device> device;
 	uint32_t queueFamilyIndex;
 	bool transient = false; // Hint that command buffers are rerecorded with new commands very often
 	bool resetCommandBuffer = false; // Allow command buffers to be rerecorded individually, without this flag they all have to be reset together
@@ -17,7 +17,7 @@ struct CommandBufferConfiguration {
 class CommandPool {
 	NO_COPY(CommandPool);
 private:
-	CommandPool(std::shared_ptr<vkr::Device> device, std::unique_ptr<vkr::CommandPool> commandPool);
+	CommandPool(std::weak_ptr<vkr::Device> device, std::unique_ptr<vkr::CommandPool> commandPool);
 
 public:
 	~CommandPool();

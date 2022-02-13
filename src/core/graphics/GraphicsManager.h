@@ -7,6 +7,7 @@
 #include <SDL_vulkan.h>
 #include "GraphicsPipeline.h"
 #include "DescriptorSet.h"
+#include "Image.h"
 
 #define QUEUE_GRAPHICS_MAIN "graphics_main"
 #define QUEUE_COMPUTE_MAIN "compute_main"
@@ -51,7 +52,7 @@ struct SurfaceDetails {
 
 struct SwapchainDetails {
 	std::unique_ptr<vkr::SwapchainKHR> swapchain;
-	std::vector<std::shared_ptr<vkr::ImageView>> imageViews;
+	std::vector<std::shared_ptr<ImageView2D>> imageViews;
 	std::vector<std::shared_ptr<vkr::Framebuffer>> framebuffers;
 	std::vector<std::shared_ptr<vkr::CommandBuffer>> commandBuffers;
 	vk::Extent2D imageExtent;
@@ -66,7 +67,7 @@ struct SwapchainDetails {
 };
 
 class GraphicsManager {
-	NO_COPY(GraphicsManager);
+	NO_COPY(GraphicsManager)
 
 	friend class Application;
 

@@ -3,9 +3,12 @@
 #include "../core.h"
 
 class Buffer;
+class Sampler;
+class ImageView2D;
+class Texture2D;
 
 struct DescriptorPoolConfiguration {
-	std::shared_ptr<vkr::Device> device;
+	std::weak_ptr<vkr::Device> device;
 	vk::DescriptorPoolCreateFlags flags;
 	uint32_t maxSets = 1000;
 
@@ -32,6 +35,12 @@ public:
 	struct Key : public vk::DescriptorSetLayoutCreateInfo {
 		Key(const vk::DescriptorSetLayoutCreateInfo& rhs);
 
+		Key(const Key& copy);
+
+		Key(Key&& move);
+
+		~Key();
+
 		bool operator==(const Key& rhs) const;
 	};
 
@@ -39,15 +48,15 @@ public:
 		size_t operator()(const Key& descriptorSetLayoutKey) const;
 	};
 
-	typedef std::unordered_map<Key, std::shared_ptr<DescriptorSetLayout>, KeyHasher> Cache;
+	typedef std::unordered_map<Key, std::weak_ptr<DescriptorSetLayout>, KeyHasher> Cache;
 
 private:
-	DescriptorSetLayout(std::shared_ptr<vkr::Device> device, vk::DescriptorSetLayout descriptorSetLayout, Key key);
+	DescriptorSetLayout(std::weak_ptr<vkr::Device> device, vk::DescriptorSetLayout descriptorSetLayout, Key key);
 
 public:
 	~DescriptorSetLayout();
 
-	static std::shared_ptr<DescriptorSetLayout> get(std::shared_ptr<vkr::Device> device, const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo);
+	static std::shared_ptr<DescriptorSetLayout> get(std::weak_ptr<vkr::Device> device, const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo);
 
 	static void clearCache();
 
@@ -84,12 +93,12 @@ private:
 class DescriptorPool {
 	NO_COPY(DescriptorPool);
 private:
-	DescriptorPool(std::shared_ptr<vkr::Device> device, vk::DescriptorPool descriptorPool, bool canFreeDescriptorSets);
+	DescriptorPool(std::weak_ptr<vkr::Device> device, vk::DescriptorPool descriptorPool, bool canFreeDescriptorSets);
 
 public:
 	~DescriptorPool();
 
-	static std::shared_ptr<DescriptorPool> create(const DescriptorPoolConfiguration& descriptorPoolConfiguration);
+	static DescriptorPool* create(const DescriptorPoolConfiguration& descriptorPoolConfiguration);
 
 	std::shared_ptr<vkr::Device> getDevice() const;
 
@@ -112,14 +121,14 @@ private:
 class DescriptorSet {
 	NO_COPY(DescriptorSet);
 private:
-	DescriptorSet(std::shared_ptr<vkr::Device> device, std::shared_ptr<DescriptorPool> pool, std::shared_ptr<DescriptorSetLayout> layout, vk::DescriptorSet descriptorSet);
+	DescriptorSet(std::weak_ptr<vkr::Device> device, std::weak_ptr<DescriptorPool> pool, std::weak_ptr<DescriptorSetLayout> layout, vk::DescriptorSet descriptorSet);
 
 public:
 	~DescriptorSet();
 
-	static std::shared_ptr<DescriptorSet> get(const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, std::shared_ptr<DescriptorPool> descriptorPool);
+	static std::shared_ptr<DescriptorSet> get(const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, std::weak_ptr<DescriptorPool> descriptorPool);
 
-	static std::shared_ptr<DescriptorSet> get(std::shared_ptr<DescriptorSetLayout> descriptorSetLayout, std::shared_ptr<DescriptorPool> descriptorPool);
+	static std::shared_ptr<DescriptorSet> get(std::weak_ptr<DescriptorSetLayout> descriptorSetLayout, std::weak_ptr<DescriptorPool> descriptorPool);
 
 	const vk::DescriptorSet& getDescriptorSet() const;
 
@@ -140,7 +149,7 @@ private:
 class DescriptorSetWriter {
 	NO_COPY(DescriptorSetWriter);
 public:
-	DescriptorSetWriter(std::shared_ptr<DescriptorSet> descriptorSet);
+	DescriptorSetWriter(std::weak_ptr<DescriptorSet> descriptorSet);
 
 	~DescriptorSetWriter();
 
@@ -150,6 +159,14 @@ public:
 
 	DescriptorSetWriter& writeBuffer(uint32_t binding, Buffer* buffer, vk::DeviceSize offset = 0, vk::DeviceSize range = VK_WHOLE_SIZE);
 
+	DescriptorSetWriter& writeImage(uint32_t binding, const vk::DescriptorImageInfo& imageInfo);
+
+	DescriptorSetWriter& writeImage(uint32_t binding, vk::Sampler sampler, vk::ImageView imageView, vk::ImageLayout imageLayout);
+
+	DescriptorSetWriter& writeImage(uint32_t binding, Sampler* sampler, ImageView2D* imageView, vk::ImageLayout imageLayout);
+
+	DescriptorSetWriter& writeImage(uint32_t binding, Texture2D* texture, vk::ImageLayout imageLayout);
+
 	bool write();
 
 private:
@@ -157,4 +174,5 @@ private:
 	std::shared_ptr<DescriptorSet> m_descriptorSet;
 
 	std::vector<vk::DescriptorBufferInfo> m_tempBufferInfo;
+	std::vector<vk::DescriptorImageInfo> m_tempImageInfo;
 };

@@ -3,23 +3,19 @@
 #include "CommandPool.h"
 #include "../Application.h"
 
-Buffer::Buffer(std::shared_ptr<vkr::Device> device, vk::Buffer buffer, vk::DeviceMemory deviceMemory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties):
-	m_device(std::move(device)),
+std::unique_ptr<Buffer> Buffer::s_stagingBuffer = NULL;
+vk::DeviceSize Buffer::s_maxStagingBufferSize = 128 * 1024 * 1024; // 128 MiB
+
+Buffer::Buffer(std::weak_ptr<vkr::Device> device, vk::Buffer buffer, vk::DeviceMemory deviceMemory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties):
+	m_device(device),
 	m_buffer(buffer),
 	m_deviceMemory(deviceMemory),
 	m_size(size),
 	m_memoryProperties(memoryProperties) {
+	//printf("Create Buffer\n");
 }
-
-//Buffer::Buffer(Buffer&& buffer) {
-//	m_device = vkr::exchange(buffer.m_device, {});
-//	m_buffer = vkr::exchange(buffer.m_buffer, {});
-//	m_deviceMemory = vkr::exchange(buffer.m_deviceMemory, {});
-//	m_size = vkr::exchange(buffer.m_size, 0);
-//	m_memoryProperties = vkr::exchange(buffer.m_memoryProperties, {});
-//}
-
 Buffer::~Buffer() {
+	//printf("Destroy Buffer\n");
 	(**m_device).destroyBuffer(m_buffer);
 	(**m_device).freeMemory(m_deviceMemory);
 }
@@ -27,7 +23,9 @@ Buffer::~Buffer() {
 Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
 	vk::BufferUsageFlags usage = bufferConfiguration.usage;
 
-	const vk::Device& device = **bufferConfiguration.device;
+	const vk::Device& device = **bufferConfiguration.device.lock();
+
+	vk::Result result;
 
 	if (bufferConfiguration.data != NULL && !(bufferConfiguration.memoryProperties & vk::MemoryPropertyFlagBits::eHostVisible)) {
 		// We have data to upload but the buffer is not visible to the host, so we need to allow this 
@@ -38,25 +36,21 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
 	vk::BufferCreateInfo bufferCreateInfo;
 	bufferCreateInfo.setUsage(usage);
 	bufferCreateInfo.setSize(bufferConfiguration.size);
-	bufferCreateInfo.setSharingMode(bufferConfiguration.sharingMode);
+	bufferCreateInfo.setSharingMode(vk::SharingMode::eExclusive);
 	vk::Buffer buffer = VK_NULL_HANDLE;
+	result = device.createBuffer(&bufferCreateInfo, NULL, &buffer);
 
-	try {
-		buffer = device.createBuffer(bufferCreateInfo);
-	} catch (std::exception e) {
-		printf("Failed to create buffer: %s\n", e.what());
-	}
-
-	if (!buffer) {
+	if (result != vk::Result::eSuccess) {
+		printf("Failed to create buffer: %s\n", vk::to_string(result).c_str());
 		return NULL;
 	}
 
-	;
 	const vk::MemoryRequirements& memoryRequirements = device.getBufferMemoryRequirements(buffer);
 
 	uint32_t memoryTypeIndex;
 	if (!GPUMemory::selectMemoryType(memoryRequirements.memoryTypeBits, bufferConfiguration.memoryProperties, memoryTypeIndex)) {
-		printf("Vertex buffer memory allocation failed\n");
+		device.destroyBuffer(buffer);
+		printf("Buffer memory allocation failed\n");
 		return NULL;
 	}
 
@@ -65,14 +59,11 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
 	allocateInfo.setMemoryTypeIndex(memoryTypeIndex);
 
 	vk::DeviceMemory deviceMemory = VK_NULL_HANDLE;
+	result = device.allocateMemory(&allocateInfo, NULL, &deviceMemory);
 
-	try {
-		deviceMemory = device.allocateMemory(allocateInfo);
-	} catch (std::exception e) {
-		printf("Failed to allocate device memory for buffer: %s\n", e.what());
-	}
-
-	if (!deviceMemory) {
+	if (result != vk::Result::eSuccess) {
+		device.destroyBuffer(buffer);
+		printf("Failed to allocate device memory for buffer: %s\n", vk::to_string(result).c_str());
 		return NULL;
 	}
 
@@ -83,6 +74,7 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
 	if (bufferConfiguration.data != NULL) {
 		if (!returnBuffer->upload(0, bufferConfiguration.size, bufferConfiguration.data)) {
 			printf("Failed to upload buffer data\n");
+			delete returnBuffer;
 			return NULL;
 		}
 	}
@@ -117,8 +109,8 @@ bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk:
 		return true;
 	}
 
-	vk::Queue transferQueue = **Application::instance()->graphics()->getQueue(QUEUE_TRANSFER_MAIN);
-	vk::CommandBuffer transferCommandBuffer = **Application::instance()->graphics()->commandPool().getCommandBuffer("transfer_buffer");
+	const vk::Queue& transferQueue = **Application::instance()->graphics()->getQueue(QUEUE_TRANSFER_MAIN);
+	const vk::CommandBuffer& transferCommandBuffer = **Application::instance()->graphics()->commandPool().getCommandBuffer("transfer_buffer");
 
 	vk::CommandBufferBeginInfo commandBeginInfo;
 	commandBeginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
@@ -140,6 +132,61 @@ bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk:
 	return true;
 }
 
+bool Buffer::upload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, void* data) {
+#if _DEBUG
+	if (dstBuffer == NULL) {
+		printf("Cannot upload to NULL buffer\n");
+		assert(false);
+		return false;
+	}
+
+	if (data == NULL) {
+		printf("Cannot upload NULL data to buffer\n");
+		assert(false);
+		return false;
+	}
+	if (offset > dstBuffer->getSize()) {
+		printf("Unable to upload data to buffer out of allocated range\n");
+		assert(false);
+		return false;
+	}
+#endif
+
+	if (size == VK_WHOLE_SIZE) {
+		size = dstBuffer->getSize() - offset;
+	}
+
+#if _DEBUG
+	if (offset + size > dstBuffer->getSize()) {
+		printf("Unable to upload data to buffer out of allocated range\n");
+		assert(false);
+		return false;
+	}
+#endif
+
+	if (!dstBuffer->hasMemoryProperties(vk::MemoryPropertyFlagBits::eHostVisible)) {
+		return Buffer::stagedUpload(dstBuffer, offset, size, data);
+	} else {
+		return Buffer::mappedUpload(dstBuffer, offset, size, data);
+	}
+}
+
+bool Buffer::copyFrom(Buffer* srcBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset, vk::DeviceSize dstOffset) {
+	return Buffer::copy(srcBuffer, this, size, srcOffset, dstOffset);
+}
+
+bool Buffer::copyTo(Buffer* dstBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset, vk::DeviceSize dstOffset) {
+	return Buffer::copy(this, dstBuffer, size, srcOffset, dstOffset);
+}
+
+bool Buffer::upload(vk::DeviceSize offset, vk::DeviceSize size, void* data) {
+	return Buffer::upload(this, offset, size, data);
+}
+
+std::shared_ptr<vkr::Device> Buffer::getDevice() const {
+	return m_device;
+}
+
 const vk::Buffer& Buffer::getBuffer() const {
 	return m_buffer;
 }
@@ -148,64 +195,96 @@ vk::DeviceSize Buffer::getSize() const {
 	return m_size;
 }
 
-bool Buffer::upload(vk::DeviceSize offset, vk::DeviceSize size, void* data) {
-#if _DEBUG
-	if (offset + size > m_size) {
-		printf("Unable to upload data to buffer out of allocated range\n");
-		return false;
+vk::MemoryPropertyFlags Buffer::getMemoryProperties() const {
+	return m_memoryProperties;
+}
+
+bool Buffer::hasMemoryProperties(vk::MemoryPropertyFlags memoryProperties, bool any) {
+	if (any) {
+		return (uint32_t)(m_memoryProperties & memoryProperties) != 0;
+	} else {
+		return (m_memoryProperties & memoryProperties) == memoryProperties;
 	}
-	if (data == NULL) {
-		printf("Unable to upload NULL data to buffer\n");
-		return false;
-	}
-#endif
+}
 
-	if (size == 0) { // 0 bytes uploaded... technically valid
-#if _DEBUG
-		printf("Buffer::upload was called with size=0. Nothing changed\n");
-#endif
-		return true;
-	}
+const std::unique_ptr<Buffer>& Buffer::getStagingBuffer() {
+	return s_stagingBuffer;
+}
 
-	if (!(m_memoryProperties & vk::MemoryPropertyFlagBits::eHostVisible)) {
-		// This buffer is not visible to the host, so a temporary staging buffer needs to be created, from which the data is copied to this buffer.
-		BufferConfiguration stagingBufferConfig;
-		stagingBufferConfig.device = m_device;
-		stagingBufferConfig.size = size;
-		stagingBufferConfig.sharingMode = vk::SharingMode::eExclusive;
-		stagingBufferConfig.usage = vk::BufferUsageFlagBits::eTransferSrc;
-		stagingBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-		Buffer* stagingBuffer = Buffer::create(stagingBufferConfig);
+void Buffer::resetStagingBuffer() {
+	s_stagingBuffer.reset();
+}
 
-		if (stagingBuffer == NULL) {
-			printf("Unable to upload data to buffer. Failed to create staging buffer\n");
-			return false;
-		}
+bool Buffer::stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, void* data) {
+	reserveStagingBuffer(dstBuffer->getDevice(), size);
 
-		if (!stagingBuffer->upload(0, size, data)) {
+	vk::DeviceSize stageSize = glm::min(s_stagingBuffer->getSize(), size);
+	vk::DeviceSize stageOffset = 0;
+	uint8_t* stageData = static_cast<uint8_t*>(data);
+
+	int stages = (size + stageSize - 1) / stageSize; // round-up integer division
+
+	for (int i = 0; i < stages; ++i) {
+		if (!Buffer::mappedUpload(s_stagingBuffer.get(), 0, stageSize, stageData)) {
 			printf("Failed to upload data to staging buffer\n");
 			return false;
 		}
 
-		if (!Buffer::copy(stagingBuffer, this, size, 0, offset)) {
+		if (!Buffer::copy(s_stagingBuffer.get(), dstBuffer, stageSize, 0, offset + stageOffset)) {
 			printf("Failed to copy data from staging buffer\n");
-			delete stagingBuffer;
 			return false;
 		}
 
-		delete stagingBuffer;
-		return true;
+		stageData += stageSize;
+	}
 
-	} else {
-		void* mappedBuffer = (**m_device).mapMemory(m_deviceMemory, offset, size);
-		if (mappedBuffer == NULL) {
-			printf("Failed to map buffer memory\n");
-			return false;
+	return true;
+}
+
+bool Buffer::mappedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, void* data) {
+	const vk::Device& device = **dstBuffer->getDevice();
+	void* mappedBuffer = NULL;
+
+	vk::Result result = device.mapMemory(dstBuffer->m_deviceMemory, offset, size, {}, &mappedBuffer);
+	if (result != vk::Result::eSuccess) {
+		printf("Failed to map device memory for buffer: %s\n", vk::to_string(result).c_str());
+		return false;
+	}
+	
+	memcpy(mappedBuffer, data, size);
+	
+	device.unmapMemory(dstBuffer->m_deviceMemory);
+
+}
+
+void Buffer::resizeStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSize size) {
+	if (size > s_maxStagingBufferSize) {
+		size = s_maxStagingBufferSize;
+	}
+
+	std::string startSize = !s_stagingBuffer ? "UNALLOCATED" : std::to_string(s_stagingBuffer->getSize());
+
+	if (s_stagingBuffer) {
+		if (size == s_stagingBuffer->getSize()) {
+			return; // Do nothing, we are resizing to the same size.
 		}
 
-		memcpy(mappedBuffer, data, size);
-		(**m_device).unmapMemory(m_deviceMemory);
+		Buffer::resetStagingBuffer();
+	}
 
-		return true;
+	printf("Resizing staging buffer from %s to %llu bytes\n", startSize.c_str(), size);
+
+	BufferConfiguration stagingBufferConfig;
+	stagingBufferConfig.device = device;
+	stagingBufferConfig.size = size;
+	stagingBufferConfig.usage = vk::BufferUsageFlagBits::eTransferSrc;
+	stagingBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+	s_stagingBuffer = std::unique_ptr<Buffer>(Buffer::create(stagingBufferConfig));
+	assert(!!s_stagingBuffer);
+}
+
+void Buffer::reserveStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSize size) {
+	if (!s_stagingBuffer || size > s_stagingBuffer->getSize()) {
+		Buffer::resizeStagingBuffer(device, size);
 	}
 }

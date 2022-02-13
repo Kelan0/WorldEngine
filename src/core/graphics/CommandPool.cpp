@@ -1,7 +1,7 @@
 #include "CommandPool.h"
 
-CommandPool::CommandPool(std::shared_ptr<vkr::Device> device, std::unique_ptr<vkr::CommandPool> commandPool):
-	m_device(std::move(device)),
+CommandPool::CommandPool(std::weak_ptr<vkr::Device> device, std::unique_ptr<vkr::CommandPool> commandPool):
+	m_device(device),
 	m_commandPool(std::move(commandPool)) {
 }
 
@@ -20,7 +20,7 @@ CommandPool* CommandPool::create(const CommandPoolConfiguration& commandPoolConf
 		commandPoolCreateInfo.flags |= vk::CommandPoolCreateFlagBits::eTransient;
 	if (commandPoolConfiguration.resetCommandBuffer)
 		commandPoolCreateInfo.flags |= vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-	std::unique_ptr<vkr::CommandPool> commandPool = std::make_unique<vkr::CommandPool>(*commandPoolConfiguration.device, commandPoolCreateInfo);
+	std::unique_ptr<vkr::CommandPool> commandPool = std::make_unique<vkr::CommandPool>(*commandPoolConfiguration.device.lock(), commandPoolCreateInfo);
 	return new CommandPool(commandPoolConfiguration.device, std::move(commandPool));
 }
 

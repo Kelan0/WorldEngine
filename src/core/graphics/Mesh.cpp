@@ -35,8 +35,8 @@ std::vector<vk::VertexInputAttributeDescription> Vertex::getAttributeDescription
 
 
 
-Mesh::Mesh(std::shared_ptr<vkr::Device> device):
-	m_device(std::move(device)) {
+Mesh::Mesh(std::weak_ptr<vkr::Device> device):
+	m_device(device) {
 }
 
 Mesh::~Mesh() {

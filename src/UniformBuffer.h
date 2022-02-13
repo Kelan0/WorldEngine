@@ -34,7 +34,7 @@ public:
 
 		Builder& addUniformBlock(uint32_t set, uint32_t binding, vk::DeviceSize dataSize, vk::ShaderStageFlags shaderStages);
 
-		template<class T>
+		template<class T> 
 		Builder& addUniformBlock(uint32_t set, uint32_t binding, vk::ShaderStageFlags shaderStages);
 
 		Builder& addTextureSampler(uint32_t set, uint32_t binding, vk::ShaderStageFlags shaderStages);
@@ -58,16 +58,10 @@ public:
 	~UniformBuffer();
 
 	DescriptorSetWriter writer(uint32_t set);
-
+	
 	void startBatchWrite(uint32_t set);
 
 	void endBatchWrite(uint32_t set);
-
-	void writeBuffer(uint32_t set, uint32_t binding, const vk::DescriptorBufferInfo& bufferInfo);
-
-	void writeBuffer(uint32_t set, uint32_t binding, vk::Buffer buffer, vk::DeviceSize offset = 0, vk::DeviceSize range = VK_WHOLE_SIZE);
-
-	void writeBuffer(uint32_t set, uint32_t binding, Buffer* buffer, vk::DeviceSize offset = 0, vk::DeviceSize range = VK_WHOLE_SIZE);
 
 	void writeImage(uint32_t set, uint32_t binding, const vk::DescriptorImageInfo& imageInfo);
 
@@ -79,13 +73,9 @@ public:
 
 	void update(uint32_t set, uint32_t binding, void* data, vk::DeviceSize offset = 0, vk::DeviceSize range = VK_WHOLE_SIZE);
 
-	void bind(uint32_t set, uint32_t shaderSet, const vk::CommandBuffer& commandBuffer, const GraphicsPipeline& graphicsPipeline);
-
-	void bind(std::vector<uint32_t> sets, uint32_t firstShaderSet, const vk::CommandBuffer& commandBuffer, const GraphicsPipeline& graphicsPipeline);
+	void bind(uint32_t set, const vk::CommandBuffer& commandBuffer, const GraphicsPipeline& graphicsPipeline);
 
 	const vk::DescriptorSetLayout& getDescriptorSetLayout(uint32_t set) const;
-
-	void initPipelineConfiguration(GraphicsPipelineConfiguration& graphicsPipelineConfiguration);
 
 private:
 	std::shared_ptr<DescriptorPool> m_descriptorPool;
@@ -93,7 +83,7 @@ private:
 	DescriptorSetMap m_descriptorSets;
 	SetBindingMap m_setBindings;
 
-	std::unordered_map<uint32_t, DescriptorSetWriter*> m_activeWriters;
+	std::unordered_map<uint32_t, DescriptorSetWriter> m_activeWriters;
 };
 
 

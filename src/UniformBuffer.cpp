@@ -1,7 +1,7 @@
 #include "UniformBuffer.h"
 
 
-UniformBuffer::Builder::Builder(std::weak_ptr<DescriptorPool> descriptorPool) :
+UniformBuffer::Builder::Builder(std::weak_ptr<DescriptorPool> descriptorPool):
 	m_descriptorPool(descriptorPool),
 	m_uniformBufferSize(0) {
 }
@@ -114,7 +114,7 @@ UniformBuffer::UniformBuffer(
 	std::weak_ptr<DescriptorPool> descriptorPool,
 	std::weak_ptr<Buffer> uniformBuffer,
 	DescriptorSetMap descriptorSets,
-	SetBindingMap setBindings) :
+	SetBindingMap setBindings):
 	m_descriptorPool(descriptorPool),
 	m_uniformBuffer(uniformBuffer),
 	m_descriptorSets(descriptorSets),
@@ -130,78 +130,26 @@ UniformBuffer::~UniformBuffer() {
 
 void UniformBuffer::update(uint32_t set, uint32_t binding, void* data, vk::DeviceSize offset, vk::DeviceSize range) {
 	const Binding& bindingInfo = m_setBindings.at(set).at(binding);
-
-#if _DEBUG
-	if (m_activeWriters.count(set) > 0) {
-		printf("Unable to update buffer [set = %d, binding = %d] for this uniform buffer: batch write for set index %d was not ended\n", set);
-		assert(false);
-		return;
-	}
-	if (offset >= bindingInfo.bufferRange) {
-		printf("Unable to update buffer [set = %d, binding = %d] for this uniform buffer: buffer offset out of range\n", set, binding);
-		assert(false);
-		return;
-	}
-#endif
+	
+	assert(offset < bindingInfo.bufferRange);
 
 	if (range == VK_WHOLE_SIZE)
 		range = bindingInfo.bufferRange - offset;
-
-#if _DEBUG
-	if (offset + range > bindingInfo.bufferRange) {
-		printf("Unable to update buffer [set = %d, binding = %d] for this uniform buffer: buffer range out of range\n", set, binding);
-		assert(false);
-		return;
-	}
-#endif
+	
+	assert(offset + range <= bindingInfo.bufferRange);
 
 	m_uniformBuffer->upload(bindingInfo.bufferOffset + offset, range, data);
 }
 
-void UniformBuffer::bind(uint32_t set, uint32_t shaderSet, const vk::CommandBuffer& commandBuffer, const GraphicsPipeline& graphicsPipeline) {
+void UniformBuffer::bind(uint32_t set, const vk::CommandBuffer& commandBuffer, const GraphicsPipeline& graphicsPipeline) {
 #if _DEBUG
 	if (m_descriptorSets.count(set) == 0) {
-		printf("Unable to bind descriptor set: set index %d does not exist\n", set);
+		printf("Unable to bind descriptor sets: set index %d does not exist\n", set);
 		assert(false);
-		return;
-	}
-	if (m_activeWriters.count(set) > 0) {
-		printf("Unable to bind descriptor set: batch write for set index %d was not ended\n", set);
-		assert(false);
-		return;
 	}
 #endif
 	const auto& descriptorSet = m_descriptorSets.at(set);
-	commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline.getPipelineLayout(), shaderSet, 1, &descriptorSet->getDescriptorSet(), 0, NULL);
-}
-
-void UniformBuffer::bind(std::vector<uint32_t> sets, uint32_t firstShaderSet, const vk::CommandBuffer& commandBuffer, const GraphicsPipeline& graphicsPipeline) {
-
-#if _DEBUG
-	for (int i = 0; i < sets.size(); ++i) {
-		if (m_descriptorSets.count(sets[i]) == 0) {
-			printf("Unable to bind descriptor sets: set index %d does not exist\n", sets[i]);
-			assert(false);
-			return;
-		}
-		if (m_activeWriters.count(sets[i]) > 0) {
-			printf("Unable to bind descriptor sets: batch write for set index %d was not ended\n", sets[i]);
-			assert(false);
-			return;
-		}
-	}
-#endif
-
-	std::vector<vk::DescriptorSet> descriptorSets;
-	descriptorSets.resize(sets.size());
-
-	for (int i = 0; i < sets.size(); ++i) {
-		descriptorSets[i] = m_descriptorSets.at(sets[i])->getDescriptorSet();
-	}
-
-	std::vector<uint32_t> dynamicOffsets;
-
-	commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline.getPipelineLayout(), firstShaderSet, descriptorSets, dynamicOffsets);
+	commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline.getPipelineLayout(), set, 1, &descriptorSet->getDescriptorSet(), 0, NULL);
 }
 
 DescriptorSetWriter UniformBuffer::writer(uint32_t set) {
@@ -220,11 +168,6 @@ void UniformBuffer::writeImage(uint32_t set, uint32_t binding, const vk::Descrip
 
 void UniformBuffer::startBatchWrite(uint32_t set) {
 #if _DEBUG
-	if (m_descriptorSets.count(set) == 0) {
-		printf("Unable to create descriptor set writer: set index %d does not exist\n", set);
-		assert(false);
-		return;
-	}
 	if (m_activeWriters.count(set) != 0) {
 		printf("Batch write for set %d of this uniform buffer was already started\n", set);
 		assert(false);
@@ -232,76 +175,22 @@ void UniformBuffer::startBatchWrite(uint32_t set) {
 	}
 #endif
 
-	m_activeWriters.insert(std::make_pair(set, new DescriptorSetWriter(m_descriptorSets.at(set))));
+	m_activeWriters.insert(std::make_pair<uint32_t, DescriptorSetWriter>(set, writer(set)));
 }
 
 void UniformBuffer::endBatchWrite(uint32_t set) {
-	auto it = m_activeWriters.find(set);
-#if _DEBUG
-	if (it == m_activeWriters.end()) {
-		printf("Unable to end batch write for set %d of this uniform buffer. It was never started\n", set);
-		assert(false);
-		return;
-	}
-#endif
-
-	it->second->write();
-	delete it->second;
-	m_activeWriters.erase(it);
-}
-
-void UniformBuffer::writeBuffer(uint32_t set, uint32_t binding, const vk::DescriptorBufferInfo& bufferInfo) {
-	auto it = m_activeWriters.find(set);
-	if (it == m_activeWriters.end()) {
-		writer(set).writeBuffer(binding, bufferInfo).write();
-	} else {
-		it->second->writeBuffer(binding, bufferInfo);
-	}
-}
-
-void UniformBuffer::writeBuffer(uint32_t set, uint32_t binding, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range) {
-	auto it = m_activeWriters.find(set);
-	if (it == m_activeWriters.end()) {
-		writer(set).writeBuffer(binding, buffer, offset, range).write();
-	} else {
-		it->second->writeBuffer(binding, buffer, offset, range);
-	}
-}
-
-void UniformBuffer::writeBuffer(uint32_t set, uint32_t binding, Buffer* buffer, vk::DeviceSize offset, vk::DeviceSize range) {
-	auto it = m_activeWriters.find(set);
-	if (it == m_activeWriters.end()) {
-		writer(set).writeBuffer(binding, buffer, offset, range).write();
-	} else {
-		it->second->writeBuffer(binding, buffer, offset, range);
-	}
 }
 
 void UniformBuffer::writeImage(uint32_t set, uint32_t binding, vk::Sampler sampler, vk::ImageView imageView, vk::ImageLayout imageLayout) {
-	auto it = m_activeWriters.find(set);
-	if (it == m_activeWriters.end()) {
-		writer(set).writeImage(binding, sampler, imageView, imageLayout).write();
-	} else {
-		it->second->writeImage(binding, sampler, imageView, imageLayout);
-	}
+	writer(set).writeImage(binding, sampler, imageView, imageLayout).write();
 }
 
 void UniformBuffer::writeImage(uint32_t set, uint32_t binding, Sampler* sampler, ImageView2D* imageView, vk::ImageLayout imageLayout) {
-	auto it = m_activeWriters.find(set);
-	if (it == m_activeWriters.end()) {
-		writer(set).writeImage(binding, sampler, imageView, imageLayout).write();
-	} else {
-		it->second->writeImage(binding, sampler, imageView, imageLayout);
-	}
+	writer(set).writeImage(binding, sampler, imageView, imageLayout).write();
 }
 
 void UniformBuffer::writeImage(uint32_t set, uint32_t binding, Texture2D* texture, vk::ImageLayout imageLayout) {
-	auto it = m_activeWriters.find(set);
-	if (it == m_activeWriters.end()) {
-		writer(set).writeImage(binding, texture, imageLayout).write();
-	} else {
-		it->second->writeImage(binding, texture, imageLayout);
-	}
+	writer(set).writeImage(binding, texture, imageLayout).write();
 }
 
 
@@ -314,10 +203,4 @@ const vk::DescriptorSetLayout& UniformBuffer::getDescriptorSetLayout(uint32_t se
 #endif
 	const auto& descriptorSet = m_descriptorSets.at(set);
 	return descriptorSet->getLayout()->getDescriptorSetLayout();
-}
-
-void UniformBuffer::initPipelineConfiguration(GraphicsPipelineConfiguration& graphicsPipelineConfiguration) {
-	for (auto it = m_descriptorSets.begin(); it != m_descriptorSets.end(); ++it) {
-		graphicsPipelineConfiguration.descriptorSetLayous.push_back(it->second->getLayout()->getDescriptorSetLayout());
-	}
 }

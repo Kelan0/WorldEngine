@@ -3,8 +3,10 @@
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Buffer.h"
+#include "core/graphics/Image.h"
 #include "core/graphics/Mesh.h"
 #include "core/graphics/UniformBuffer.h"
+#include "core/graphics/Texture.h"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -25,48 +27,70 @@ class App : public Application {
 	UniformBuffer* ubo;
 	std::shared_ptr<DescriptorPool> descriptorPool;
 	Mesh* testMesh = NULL;
+	Image2D* testImage = NULL;
+	Texture2D* testTexture = NULL;
+
 	float x = 0.0F;
 
     void init() override {
 
+		Image2DConfiguration testTextureImageConfig;
+		testTextureImageConfig.device = graphics()->getDevice();
+		testTextureImageConfig.filePath = "D:/Code/ActiveProjects/WorldEngine/res/textures/Brick_Wall_017_SD/Brick_Wall_017_basecolor.jpg";
+		testTextureImageConfig.usage = vk::ImageUsageFlagBits::eSampled;
+		testTextureImageConfig.format = vk::Format::eR8G8B8A8Srgb;
+		testImage = Image2D::create(testTextureImageConfig);
+
+		SamplerConfiguration testTextureSamplerConfig;
+		testTextureSamplerConfig.device = graphics()->getDevice();
+		testTextureSamplerConfig.minFilter = vk::Filter::eLinear;
+		testTextureSamplerConfig.magFilter = vk::Filter::eNearest;
+		ImageView2DConfiguration testTextureImageViewConfig;
+		testTextureImageViewConfig.device = graphics()->getDevice();
+		testTextureImageViewConfig.image = testImage->getImage();
+		testTextureImageViewConfig.format = testImage->getFormat();
+		testTexture = Texture2D::create(testTextureImageViewConfig, testTextureSamplerConfig);
+
+		MeshConfiguration testMeshConfig;
+		testMeshConfig.device = graphics()->getDevice();
+		testMeshConfig.vertices = {
+			{ glm::vec3(-1.0F, -1.0F, 0.0F), glm::vec3(0.0F), glm::vec2(0.0F, 0.0F) },
+			{ glm::vec3(+1.0F, -1.0F, 0.0F), glm::vec3(0.0F), glm::vec2(1.0F, 0.0F) },
+			{ glm::vec3(+1.0F, +1.0F, 0.0F), glm::vec3(0.0F), glm::vec2(1.0F, 1.0F) },
+			{ glm::vec3(-1.0F, +1.0F, 0.0F), glm::vec3(0.0F), glm::vec2(0.0F, 1.0F) }
+		};
+		testMeshConfig.indices = { 0, 1, 2, 0, 2, 3 };
+		testMesh = Mesh::create(testMeshConfig);
+
+
 		DescriptorPoolConfiguration descriptorPoolConfig;
 		descriptorPoolConfig.device = graphics()->getDevice();
 		descriptorPoolConfig.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
-		descriptorPool = DescriptorPool::create(descriptorPoolConfig);
+		descriptorPool = std::shared_ptr<DescriptorPool>(DescriptorPool::create(descriptorPoolConfig));
 
 
 		ubo = UniformBuffer::Builder(descriptorPool)
 			.addUniformBlock<UBO0>(0, 0, vk::ShaderStageFlagBits::eVertex)
 			.addUniformBlock<UBO1>(1, 0, vk::ShaderStageFlagBits::eVertex)
+			.addTextureSampler(2, 0, vk::ShaderStageFlagBits::eFragment)
 			.build();
+
+		ubo->startBatchWrite(2);
+		ubo->writeImage(2, 0, testTexture, vk::ImageLayout::eShaderReadOnlyOptimal);
+		ubo->endBatchWrite(2);
 
 		GraphicsPipelineConfiguration pipelineConfig;
 		pipelineConfig.vertexShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.vert";
 		pipelineConfig.fragmentShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.frag";
 		pipelineConfig.vertexInputBindings = Vertex::getBindingDescriptions();
 		pipelineConfig.vertexInputAttributes = Vertex::getAttributeDescriptions();
-		pipelineConfig.descriptorSetLayous.push_back(ubo->getDescriptorSetLayout(0));
-		pipelineConfig.descriptorSetLayous.push_back(ubo->getDescriptorSetLayout(1));
+		ubo->initPipelineConfiguration(pipelineConfig);
 		graphics()->initializeGraphicsPipeline(pipelineConfig);
-
-		MeshConfiguration testMeshConfig;
-		testMeshConfig.device = graphics()->getDevice();
-		testMeshConfig.vertices = {
-			{ glm::vec3(-0.5F, -0.5F, 0.0F), glm::vec3(0.0F), glm::vec2(0.0F) },
-			{ glm::vec3(+0.5F, -0.5F, 0.0F), glm::vec3(0.0F), glm::vec2(0.0F) },
-			{ glm::vec3(+0.5F, +0.5F, 0.0F), glm::vec3(0.0F), glm::vec2(0.0F) },
-			{ glm::vec3(-0.5F, +0.5F, 0.0F), glm::vec3(0.0F), glm::vec2(0.0F) }
-		};
-
-		testMeshConfig.indices = {
-			0, 1, 2, 0, 2, 3
-		};
-
-		testMesh = Mesh::create(testMeshConfig);
-
     }
 
 	void cleanup() override {
+		delete testTexture;
+		delete testImage;
 		delete testMesh;
 		delete ubo;
 		descriptorPool.reset();
@@ -102,8 +126,7 @@ class App : public Application {
 			ubo->update(0, 0, &modelMatrix);
 			ubo->update(1, 0, &viewProjectionMatrix);
 
-			ubo->bind(0, commandBuffer, pipeline);
-			ubo->bind(1, commandBuffer, pipeline);
+			ubo->bind({ 0, 1, 2 }, 0, commandBuffer, pipeline);
 
 			testMesh->draw(commandBuffer);
 

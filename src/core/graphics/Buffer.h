@@ -4,19 +4,18 @@
 #include "GraphicsManager.h"
 
 struct BufferConfiguration {
-	std::shared_ptr<vkr::Device> device;
+	std::weak_ptr<vkr::Device> device;
 	vk::BufferUsageFlags usage;
-	vk::MemoryPropertyFlags memoryProperties;
+	vk::MemoryPropertyFlags memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 	vk::DeviceSize size;
-	vk::SharingMode sharingMode = vk::SharingMode::eExclusive;
 	void* data = NULL;
 };
 
 
 class Buffer {
-	NO_COPY(Buffer);
+	NO_COPY(Buffer)
 private:
-	Buffer(std::shared_ptr<vkr::Device> device, vk::Buffer buffer, vk::DeviceMemory deviceMemory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties);
+	Buffer(std::weak_ptr<vkr::Device> device, vk::Buffer buffer, vk::DeviceMemory deviceMemory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties);
 
 public:
 	//Buffer(Buffer&& buffer);
@@ -27,17 +26,37 @@ public:
 
 	static bool copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset = 0, vk::DeviceSize dstOffset = 0);
 
+	static bool upload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, void* data);
+
+	bool copyFrom(Buffer* srcBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset = 0, vk::DeviceSize dstOffset = 0);
+
+	bool copyTo(Buffer* dstBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset = 0, vk::DeviceSize dstOffset = 0);
+
+	bool upload(vk::DeviceSize offset, vk::DeviceSize size, void* data);
+
+	std::shared_ptr<vkr::Device> getDevice() const;
+
 	const vk::Buffer& getBuffer() const;
 
 	vk::DeviceSize getSize() const;
 
-	bool upload(vk::DeviceSize offset, vk::DeviceSize size, void* data);
+	vk::MemoryPropertyFlags getMemoryProperties() const;
 
-	template<typename T>
-	bool upload(size_t index, size_t count, T* data);
+	bool hasMemoryProperties(vk::MemoryPropertyFlags memoryProperties, bool any = false);
 
-	template<typename T>
-	bool upload(size_t index, const std::vector<T>& data);
+public:
+	static const std::unique_ptr<Buffer>& getStagingBuffer();
+
+	static void resetStagingBuffer();
+
+	static bool stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, void* data);
+
+	static bool mappedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, void* data);
+
+private:
+	static void resizeStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSize size);
+
+	static void reserveStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSize size);
 
 private:
 	std::shared_ptr<vkr::Device> m_device;
@@ -45,14 +64,7 @@ private:
 	vk::DeviceMemory m_deviceMemory;
 	vk::MemoryPropertyFlags m_memoryProperties;
 	vk::DeviceSize m_size;
+
+	static std::unique_ptr<Buffer> s_stagingBuffer;
+	static vk::DeviceSize s_maxStagingBufferSize;
 };
-
-template<typename T>
-inline bool Buffer::upload(size_t index, size_t count, T* data) {
-	return upload(sizeof(T) * index, sizeof(T) * count, static_cast<void*>(data));
-}
-
-template<typename T>
-inline bool Buffer::upload(size_t index, const std::vector<T>& data) {
-	return upload(sizeof(T) * index, sizeof(T) * data.size(), static_cast<void*>(data.data()));
-}

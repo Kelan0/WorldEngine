@@ -5,6 +5,7 @@
 #include "GPUMemory.h"
 #include "Mesh.h"
 #include "DescriptorSet.h"
+#include "Buffer.h"
 
 
 enum QueueType {
@@ -41,7 +42,8 @@ GraphicsManager::GraphicsManager() {
 GraphicsManager::~GraphicsManager() {
 	printf("Uninitializing graphics engine\n");
 
-	DescriptorSetLayout::clearCache();
+	//DescriptorSetLayout::clearCache();
+	Buffer::resetStagingBuffer();
 
 	m_swapchain.commandBuffers.clear();
 	m_swapchain.framebuffers.clear();
@@ -50,6 +52,10 @@ GraphicsManager::~GraphicsManager() {
 	delete m_gpuMemory;
 	delete m_commandPool;
 	delete m_pipeline;
+
+	if (m_device.device.use_count() > 1) {
+		printf("Destroyed graphics manager but the logical device still has %d external references\n", m_device.device.use_count() - 1);
+	}
 }
 
 bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName) {
@@ -660,21 +666,11 @@ bool GraphicsManager::createSwapchainImages() {
 	m_swapchain.imageViews.resize(images.size());
 	
 	for (int i = 0; i < images.size(); ++i) {
-		vk::ImageViewCreateInfo imageViewCreateInfo;
-		imageViewCreateInfo.setImage(images[i]);
-		imageViewCreateInfo.setViewType(vk::ImageViewType::e2D);
-		imageViewCreateInfo.setFormat(m_surface.surfaceFormat.format);
-		imageViewCreateInfo.components.setR(vk::ComponentSwizzle::eIdentity);
-		imageViewCreateInfo.components.setG(vk::ComponentSwizzle::eIdentity);
-		imageViewCreateInfo.components.setB(vk::ComponentSwizzle::eIdentity);
-		imageViewCreateInfo.components.setA(vk::ComponentSwizzle::eIdentity);
-		imageViewCreateInfo.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
-		imageViewCreateInfo.subresourceRange.setBaseMipLevel(0);
-		imageViewCreateInfo.subresourceRange.setLevelCount(1);
-		imageViewCreateInfo.subresourceRange.setBaseArrayLayer(0);
-		imageViewCreateInfo.subresourceRange.setLayerCount(1);
-
-		m_swapchain.imageViews[i] = std::make_shared<vkr::ImageView>(*m_device.device, imageViewCreateInfo);
+		ImageView2DConfiguration imageViewConfig;
+		imageViewConfig.device = m_device.device;
+		imageViewConfig.image = images[i];
+		imageViewConfig.format = m_surface.surfaceFormat.format;
+		m_swapchain.imageViews[i] = std::shared_ptr<ImageView2D>(ImageView2D::create(imageViewConfig));
 	}
 
 	m_swapchain.imagesInFlight.clear();
@@ -687,10 +683,9 @@ bool GraphicsManager::createSwapchainFramebuffers() {
 	m_swapchain.framebuffers.resize(m_swapchain.imageViews.size());
 
 	for (int i = 0; i < m_swapchain.imageViews.size(); ++i) {
-		vk::ImageView colourAttachment = **m_swapchain.imageViews[i];
 		vk::FramebufferCreateInfo framebufferCreateInfo;
 		framebufferCreateInfo.setRenderPass(m_pipeline->getRenderPass());
-		framebufferCreateInfo.setPAttachments(&colourAttachment);
+		framebufferCreateInfo.setPAttachments(&m_swapchain.imageViews[i]->getImageView());
 		framebufferCreateInfo.setAttachmentCount(1);
 		framebufferCreateInfo.setWidth(m_swapchain.imageExtent.width);
 		framebufferCreateInfo.setHeight(m_swapchain.imageExtent.height);

@@ -16,7 +16,7 @@ struct Vertex {
 };
 
 struct MeshConfiguration {
-	std::shared_ptr<vkr::Device> device;
+	std::weak_ptr<vkr::Device> device;
 	std::vector<Vertex> vertices;
 	std::vector<uint32_t> indices;
 };
@@ -24,7 +24,7 @@ struct MeshConfiguration {
 class Mesh {
 	NO_COPY(Mesh);
 private:
-	Mesh(std::shared_ptr<vkr::Device> device);
+	Mesh(std::weak_ptr<vkr::Device> device);
 
 public:
 	~Mesh();

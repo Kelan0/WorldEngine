@@ -9,10 +9,13 @@
 #include <unordered_map>
 #include <algorithm>
 #include <optional>
+#include <memory>
+#include <utility>
+
+//#define GLM_SWIZZLE 
 #include <glm/glm.hpp>
 #include <glm/matrix.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <memory>
 
 #define VULKAN_HPP_NO_SPACESHIP_OPERATOR 
 #include <vulkan/vulkan.h>
