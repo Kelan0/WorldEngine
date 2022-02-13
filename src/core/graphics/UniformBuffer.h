@@ -79,6 +79,9 @@ public:
 
 	void update(uint32_t set, uint32_t binding, void* data, vk::DeviceSize offset = 0, vk::DeviceSize range = VK_WHOLE_SIZE);
 
+	template<class T>
+	void update(uint32_t set, uint32_t binding, T* data, vk::DeviceSize offset = 0, vk::DeviceSize range = VK_WHOLE_SIZE);
+
 	void bind(uint32_t set, uint32_t shaderSet, const vk::CommandBuffer& commandBuffer, const GraphicsPipeline& graphicsPipeline);
 
 	void bind(std::vector<uint32_t> sets, uint32_t firstShaderSet, const vk::CommandBuffer& commandBuffer, const GraphicsPipeline& graphicsPipeline);
@@ -101,4 +104,9 @@ private:
 template<class T>
 inline UniformBuffer::Builder& UniformBuffer::Builder::addUniformBlock(uint32_t set, uint32_t binding, vk::ShaderStageFlags shaderStages) {
 	return addUniformBlock(set, binding, sizeof(T), shaderStages);
+}
+
+template<class T>
+inline void UniformBuffer::update(uint32_t set, uint32_t binding, T* data, vk::DeviceSize offset, vk::DeviceSize range) {
+	update(set, binding, (void*)(data), offset, range);
 }

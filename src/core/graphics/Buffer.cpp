@@ -1,7 +1,7 @@
 #include "Buffer.h"
 #include "GPUMemory.h"
 #include "CommandPool.h"
-#include "../Application.h"
+#include "../application/Application.h"
 
 std::unique_ptr<Buffer> Buffer::s_stagingBuffer = NULL;
 vk::DeviceSize Buffer::s_maxStagingBufferSize = 128 * 1024 * 1024; // 128 MiB

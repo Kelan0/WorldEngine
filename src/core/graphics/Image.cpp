@@ -3,7 +3,7 @@
 #include "GPUMemory.h"
 #include "CommandPool.h"
 #include "GraphicsManager.h"
-#include "../Application.h"
+#include "../application/Application.h"
 
 
 std::map<std::string, ImageData*> ImageData::s_imageCache;

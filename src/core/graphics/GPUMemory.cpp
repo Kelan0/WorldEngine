@@ -1,5 +1,5 @@
 #include "GPUMemory.h"
-#include "../Application.h"
+#include "../application/Application.h"
 
 GPUMemory::GPUMemory(std::shared_ptr<vkr::Device> device, std::unique_ptr<vkr::DeviceMemory> deviceMemory):
 	m_device(std::move(device)),

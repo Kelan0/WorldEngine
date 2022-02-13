@@ -131,6 +131,8 @@ public:
 
 	glm::ivec2 getResolution() const;
 
+	float getAspectRatio() const;
+
 	const vk::Extent2D& getImageExtent() const;
 
 	vk::Format getColourFormat() const;

@@ -12,9 +12,13 @@
 #include <memory>
 #include <utility>
 
+
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 //#define GLM_SWIZZLE 
 #include <glm/glm.hpp>
 #include <glm/matrix.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #define VULKAN_HPP_NO_SPACESHIP_OPERATOR 

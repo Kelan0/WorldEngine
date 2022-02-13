@@ -1,5 +1,5 @@
 
-#include "core/Application.h"
+#include "core/application/Application.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Buffer.h"
@@ -7,11 +7,7 @@
 #include "core/graphics/Mesh.h"
 #include "core/graphics/UniformBuffer.h"
 #include "core/graphics/Texture.h"
-
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/vec4.hpp>
-#include <glm/mat4x4.hpp>
+#include "core/engine/Camera.h"
 
 #include <iostream>
 
@@ -29,6 +25,8 @@ class App : public Application {
 	Mesh* testMesh = NULL;
 	Image2D* testImage = NULL;
 	Texture2D* testTexture = NULL;
+	Camera camera;
+	
 
 	float x = 0.0F;
 
@@ -44,7 +42,7 @@ class App : public Application {
 		SamplerConfiguration testTextureSamplerConfig;
 		testTextureSamplerConfig.device = graphics()->getDevice();
 		testTextureSamplerConfig.minFilter = vk::Filter::eLinear;
-		testTextureSamplerConfig.magFilter = vk::Filter::eNearest;
+		testTextureSamplerConfig.magFilter = vk::Filter::eLinear;
 		ImageView2DConfiguration testTextureImageViewConfig;
 		testTextureImageViewConfig.device = graphics()->getDevice();
 		testTextureImageViewConfig.image = testImage->getImage();
@@ -100,6 +98,12 @@ class App : public Application {
 
 		if (graphics()->beginFrame()) {
 
+			camera.setAspect(graphics()->getAspectRatio());
+			camera.setClipppingPlanes(0.001F, 10.0F);
+			camera.setFovDegrees(90.0F);
+			camera.lookAt(0.0F, 0.0F, 0.5F * glm::sin(x) + 0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F);
+			camera.update();
+
 			auto& commandBuffer = graphics()->getCurrentCommandBuffer();
 			auto& framebuffer = graphics()->getCurrentFramebuffer();
 
@@ -120,11 +124,10 @@ class App : public Application {
 			pipeline.bind(commandBuffer);
 
 			x += 1.0F / 8000.0F;
-			glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0F), glm::vec3(glm::sin(x), 0.0F, 0.0F));
-			glm::mat4 viewProjectionMatrix = glm::rotate(glm::mat4(1.0F), glm::radians(45.0F), glm::vec3(0.0F, 0.0F, 1.0F));
+			glm::mat4 modelMatrix(1.0F);// = glm::translate(glm::mat4(1.0F), glm::vec3(glm::sin(x), 0.0F, 0.0F));
 
 			ubo->update(0, 0, &modelMatrix);
-			ubo->update(1, 0, &viewProjectionMatrix);
+			ubo->update(1, 0, &camera.getViewProjectionMatrix());
 
 			ubo->bind({ 0, 1, 2 }, 0, commandBuffer, pipeline);
 

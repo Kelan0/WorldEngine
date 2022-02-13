@@ -1,6 +1,6 @@
 #include "Mesh.h"
 #include "GPUMemory.h"
-#include "../Application.h"
+#include "../application/Application.h"
 
 
 std::vector<vk::VertexInputBindingDescription> Vertex::getBindingDescriptions() {

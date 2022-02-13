@@ -1,7 +1,7 @@
 #include "Application.h"
-#include "graphics/GraphicsManager.h"
-#include "graphics/GraphicsPipeline.h"
-#include "graphics/Mesh.h"
+#include "../graphics/GraphicsManager.h"
+#include "../graphics/GraphicsPipeline.h"
+#include "../graphics/Mesh.h"
 #include <chrono>
 
 

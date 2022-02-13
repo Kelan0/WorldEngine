@@ -1,5 +1,5 @@
 #include "GraphicsManager.h"
-#include "../Application.h"
+#include "../application/Application.h"
 #include "GraphicsPipeline.h"
 #include "CommandPool.h"
 #include "GPUMemory.h"
@@ -850,6 +850,10 @@ CommandPool& GraphicsManager::commandPool() {
 
 glm::ivec2 GraphicsManager::getResolution() const {
 	return glm::ivec2(m_swapchain.imageExtent.width, m_swapchain.imageExtent.height);
+}
+
+float GraphicsManager::getAspectRatio() const {
+	return (float)m_swapchain.imageExtent.width / (float)m_swapchain.imageExtent.height;
 }
 
 const vk::Extent2D& GraphicsManager::getImageExtent() const {
