@@ -64,6 +64,15 @@ public:
 
 	} Triangle;
 
+	struct Transform {
+		glm::mat4 modelMatrix = glm::mat4(1.0F);
+		glm::mat4 normalMatrix = glm::mat4(1.0F);
+	};
+
+	struct State {
+		Index baseVertex = 0;
+		Index baseTriangle = 0;
+	};
 
 public:
 	MeshData();
@@ -94,6 +103,10 @@ public:
 
 	void scale(float scale);
 
+	void pushState();
+
+	void popState();
+
 	void createTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2);
 
 	void createTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, glm::vec3 normal);
@@ -108,17 +121,21 @@ public:
 
 	void createCuboid(glm::vec3 pos0, glm::vec3 pos1);
 
+	void createUVSphere(glm::vec3 center, float radius, uint32_t slices, uint32_t stacks);
+
 	Index addVertex(const Vertex& vertex);
 
 	Index addVertex(const glm::vec3& position, const glm::vec3& normal, const glm::vec2& texture);
 
 	Index addVertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty);
 
-	Index addTriangle(const Triangle& triangle);
-
 	Index addTriangle(Index	i0, Index i1, Index i2);
 
 	Index addTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2);
+
+	Index addQuad(Index	i0, Index i1, Index i2, Index i3);
+
+	Index addQuad(const Vertex& v0, const Vertex& v1, const Vertex& v2, const Vertex& v3);
 
 	const std::vector<Vertex>& getVertices() const;
 
@@ -129,6 +146,8 @@ private:
 	std::vector<Triangle> m_triangles;
 	std::stack<glm::mat4> m_transfromStack;
 	glm::mat4 m_currentTransform;
+	std::stack<State> m_stateStack;
+	State m_currentState;
 };
 
 

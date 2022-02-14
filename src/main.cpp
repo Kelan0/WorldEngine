@@ -21,6 +21,7 @@ struct UBO1 {
 
 class App : public Application {
 
+	GraphicsPipelineConfiguration pipelineConfig;
 	UniformBuffer* ubo;
 	std::shared_ptr<DescriptorPool> descriptorPool;
 	Mesh* testMesh = NULL;
@@ -53,6 +54,7 @@ class App : public Application {
 		testTexture = Texture2D::create(testTextureImageViewConfig, testTextureSamplerConfig);
 
 		MeshData testMeshData;
+		testMeshData.pushTransform();
 		testMeshData.scale(0.5F);
 		for (int i = 0; i < 10; ++i) {
 			testMeshData.rotateDegrees(36.0F, 0.0F, 0.0F, 1.0F);
@@ -61,6 +63,11 @@ class App : public Application {
 			testMeshData.createCuboid(glm::vec3(-0.5F), glm::vec3(0.5F));
 			testMeshData.popTransform();
 		}
+		testMeshData.popTransform();
+		testMeshData.createUVSphere(glm::vec3(0.0F), 0.5F, 30, 30);
+
+
+
 
 		MeshConfiguration testMeshConfig;
 		testMeshConfig.device = graphics()->getDevice();
@@ -84,7 +91,6 @@ class App : public Application {
 		ubo->writeImage(2, 0, testTexture, vk::ImageLayout::eShaderReadOnlyOptimal);
 		ubo->endBatchWrite(2);
 
-		GraphicsPipelineConfiguration pipelineConfig;
 		pipelineConfig.vertexShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.vert";
 		pipelineConfig.fragmentShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.frag";
 		pipelineConfig.vertexInputBindings = MeshData::Vertex::getBindingDescriptions();
@@ -106,6 +112,17 @@ class App : public Application {
 	void handleUserInput() {
 		if (input()->keyPressed(SDL_SCANCODE_ESCAPE)) {
 			input()->toggleMouseGrabbed();
+		}
+
+		if (input()->keyPressed(SDL_SCANCODE_F1)) {
+			// TODO: not reinitialize the graphics pipeline each time...
+			// We should have a dedicated wireframe pipeline and shaders, and just switch to it.
+			if (pipelineConfig.polygonMode == vk::PolygonMode::eFill) {
+				pipelineConfig.polygonMode = vk::PolygonMode::eLine;
+			} else {
+				pipelineConfig.polygonMode = vk::PolygonMode::eFill;
+			}
+			graphics()->initializeGraphicsPipeline(pipelineConfig);
 		}
 
 		if (input()->isMouseGrabbed()) {
@@ -157,16 +174,16 @@ class App : public Application {
 
 			GraphicsPipeline& pipeline = graphics()->pipeline();
 
-			vk::ClearValue clearValue;
-			clearValue.color.setFloat32({ 0.0F, 0.0F, 0.0F, 1.0F });
+			std::array<vk::ClearValue, 2> clearValues;
+			clearValues[0].color.setFloat32({ 0.0F, 0.0F, 0.0F, 1.0F });
+			clearValues[1].depthStencil.setDepth(1.0F).setStencil(0);
 
 			vk::RenderPassBeginInfo renderPassBeginInfo;
 			renderPassBeginInfo.setRenderPass(pipeline.getRenderPass());
 			renderPassBeginInfo.setFramebuffer(framebuffer);
 			renderPassBeginInfo.renderArea.setOffset({ 0, 0 });
 			renderPassBeginInfo.renderArea.setExtent(graphics()->getImageExtent());
-			renderPassBeginInfo.setClearValueCount(1);
-			renderPassBeginInfo.setPClearValues(&clearValue);
+			renderPassBeginInfo.setClearValues(clearValues);
 
 			commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 			pipeline.bind(commandBuffer);

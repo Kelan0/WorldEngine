@@ -136,7 +136,8 @@ glm::vec3 MeshData::Triangle::getNormal(MeshData& meshData) const {
 
 
 MeshData::MeshData():
-	m_currentTransform(1.0F) {
+	m_currentTransform(1.0F),
+	m_currentState() {
 }
 
 MeshData::~MeshData() {
@@ -147,6 +148,13 @@ void MeshData::pushTransform() {
 }
 
 void MeshData::popTransform() {
+#if _DEBUG
+	if (m_transfromStack.empty()) {
+		printf("MeshData::popTransform(): Stack underflow\n");
+		assert(false);
+		return;
+	}
+#endif
 	m_currentTransform = m_transfromStack.top();
 	m_transfromStack.pop();
 }
@@ -189,6 +197,24 @@ void MeshData::scale(float x, float y, float z) {
 
 void MeshData::scale(float s) {
 	scale(glm::vec3(s));
+}
+
+void MeshData::pushState() {
+	m_stateStack.push(m_currentState);
+	m_currentState.baseVertex = m_vertices.size();
+	m_currentState.baseTriangle = m_triangles.size();
+}
+
+void MeshData::popState() {
+#if _DEBUG
+	if (m_stateStack.empty()) {
+		printf("MeshData::popState(): Stack underflow\n");
+		assert(false);
+		return;
+	}
+#endif
+	m_currentState = m_stateStack.top();
+	m_stateStack.pop();
 }
 
 void MeshData::createTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2) {
@@ -242,8 +268,68 @@ void MeshData::createCuboid(glm::vec3 pos0, glm::vec3 pos1) {
 	createQuad(glm::vec3(pos0.x, pos0.y, pos1.z), glm::vec3(pos1.x, pos0.y, pos1.z), glm::vec3(pos1.x, pos1.y, pos1.z), glm::vec3(pos0.x, pos1.y, pos1.z), glm::vec3(0.0F, 0.0F, +1.0F));
 }
 
+void MeshData::createUVSphere(glm::vec3 center, float radius, uint32_t slices, uint32_t stacks) {
+	pushState();
+
+	glm::vec3 pos;
+	glm::vec3 norm;
+	glm::vec2 tex;
+
+	for (int i = 0; i <= stacks; ++i) {
+		tex.y = (float)(i) / stacks;
+		float phi = glm::pi<float>() * (tex.y - 0.5F); // -90 to +90 degrees
+		norm.y = glm::sin(phi);
+		pos.y = center.y + norm.y * radius;
+
+		for (int j = 0; j <= slices; ++j) {
+			tex.x = (float)(j) / slices;
+			float theta = glm::two_pi<float>() * tex.x; // 0 to 360 degrees
+
+			norm.x = glm::cos(phi) * glm::sin(theta);
+			norm.z = glm::cos(phi) * glm::cos(theta);
+			pos.x = center.x + norm.x * radius;
+			pos.z = center.z + norm.z * radius;
+
+			addVertex(pos, norm, tex);
+
+		}
+	}
+
+	for (int i0 = 0; i0 < stacks; ++i0) {
+		int i1 = (i0 + 1);
+
+		for (int j0 = 0; j0 < slices; ++j0) {
+			int j1 = (j0 + 1);
+
+			Index i00 = i0 * (slices + 1) + j0;
+			Index i10 = i0 * (slices + 1) + j1;
+			Index i01 = i1 * (slices + 1) + j0;
+			Index i11 = i1 * (slices + 1) + j1;
+
+			addQuad(i00, i10, i11, i01);
+		}
+	}
+
+	//for (int i = 0; i <= stacks; ++i) {
+	//	for (int j = 0; j <= slices; ++j) {
+	//		if (i > 0) {
+	//			int j1 = (j + 1) % slices;
+	//			int i0 = (i - 1);
+	//			Index i00 = i0 * (slices + 1) + j;
+	//			Index i10 = i0 * (slices + 1) + j1;
+	//			Index i01 = i * (slices + 1) + j;
+	//			Index i11 = i * (slices + 1) + j1;
+	//
+	//			addQuad(i00, i10, i11, i01);
+	//		}
+	//	}
+	//}
+
+	popState();
+}
+
 MeshData::Index MeshData::addVertex(const Vertex& vertex) {
-	size_t index = m_vertices.size();
+	size_t index = m_vertices.size() - m_currentState.baseVertex;
 	VALIDATE_MAX_INDEX(index);
 	m_vertices.emplace_back(vertex * m_currentTransform);
 	return static_cast<Index>(index);
@@ -257,20 +343,15 @@ MeshData::Index MeshData::addVertex(float px, float py, float pz, float nx, floa
 	return addVertex(Vertex(px, py, pz, nx, ny, nz, tx, ty));
 }
 
-MeshData::Index MeshData::addTriangle(const Triangle& triangle) {
-	VALIDATE_VERTEX_INDEX(triangle.i0);
-	VALIDATE_VERTEX_INDEX(triangle.i1);
-	VALIDATE_VERTEX_INDEX(triangle.i2);
-	size_t index = m_vertices.size();
-	m_triangles.emplace_back(triangle);
-	return static_cast<Index>(index);
-}
-
 MeshData::Index MeshData::addTriangle(Index i0, Index i1, Index i2) {
+	i0 += m_currentState.baseVertex;
+	i1 += m_currentState.baseVertex;
+	i2 += m_currentState.baseVertex;
+
 	VALIDATE_VERTEX_INDEX(i0);
 	VALIDATE_VERTEX_INDEX(i1);
 	VALIDATE_VERTEX_INDEX(i2);
-	size_t index = m_vertices.size();
+	size_t index = m_triangles.size() - m_currentState.baseTriangle;
 	m_triangles.emplace_back(i0, i1, i2);
 	return static_cast<Index>(index);
 }
@@ -280,6 +361,20 @@ MeshData::Index MeshData::addTriangle(const Vertex& v0, const Vertex& v1, const 
 	Index i1 = addVertex(v1);
 	Index i2 = addVertex(v2);
 	return addTriangle(i0, i1, i2);
+}
+
+MeshData::Index MeshData::addQuad(Index i0, Index i1, Index i2, Index i3) {
+	Index index = addTriangle(i0, i1, i2);
+	addTriangle(i0, i2, i3);
+	return index;
+}
+
+MeshData::Index MeshData::addQuad(const Vertex& v0, const Vertex& v1, const Vertex& v2, const Vertex& v3) {
+	Index i0 = addVertex(v0);
+	Index i1 = addVertex(v1);
+	Index i2 = addVertex(v2);
+	Index i3 = addVertex(v3);
+	return addQuad(i0, i1, i2, i3);
 }
 
 const std::vector<MeshData::Vertex>& MeshData::getVertices() const {

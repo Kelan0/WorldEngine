@@ -53,6 +53,8 @@ struct SurfaceDetails {
 struct SwapchainDetails {
 	std::unique_ptr<vkr::SwapchainKHR> swapchain;
 	std::vector<std::shared_ptr<ImageView2D>> imageViews;
+	std::shared_ptr<Image2D> depthImage;
+	std::shared_ptr<ImageView2D> depthImageView;
 	std::vector<std::shared_ptr<vkr::Framebuffer>> framebuffers;
 	std::vector<std::shared_ptr<vkr::CommandBuffer>> commandBuffers;
 	vk::Extent2D imageExtent;
@@ -136,6 +138,8 @@ public:
 	const vk::Extent2D& getImageExtent() const;
 
 	vk::Format getColourFormat() const;
+
+	vk::Format getDepthFormat() const;
 
 	vk::ColorSpaceKHR getColourSpace() const;
 

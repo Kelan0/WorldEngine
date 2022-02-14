@@ -80,7 +80,9 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
 	queueLayout.insert(std::make_pair(QUEUE_COMPUTE_MAIN, QUEUE_TYPE_COMPUTE_BIT));
 	queueLayout.insert(std::make_pair(QUEUE_TRANSFER_MAIN, QUEUE_TYPE_TRANSFER_BIT));
 
-	if (!createLogicalDevice(deviceLayers, deviceExtensions, NULL, queueLayout)) {
+	vk::PhysicalDeviceFeatures enabledFeatures;
+	enabledFeatures.fillModeNonSolid = true;
+	if (!createLogicalDevice(deviceLayers, deviceExtensions, &enabledFeatures, queueLayout)) {
 		return false;
 	}
 
@@ -578,6 +580,8 @@ bool GraphicsManager::recreateSwapchain() {
 	initSurfaceDetails();
 
 	glm::ivec2 windowSize = Application::instance()->getWindowSize();
+	//printf("Reinitializing graphics pipeline: [%d x %d]\n", windowSize.x, windowSize.y);
+
 	m_swapchain.imageExtent = vk::Extent2D((uint32_t)windowSize.x, (uint32_t)windowSize.y);
 	m_swapchain.imageExtent.width = glm::clamp(m_swapchain.imageExtent.width, m_surface.capabilities.minImageExtent.width, m_surface.capabilities.maxImageExtent.width);
 	m_swapchain.imageExtent.height = glm::clamp(m_swapchain.imageExtent.height, m_surface.capabilities.minImageExtent.height, m_surface.capabilities.maxImageExtent.height);
@@ -587,7 +591,7 @@ bool GraphicsManager::recreateSwapchain() {
 		imageCount = glm::min(imageCount, m_surface.capabilities.maxImageCount);
 	}
 
-	m_swapchain.maxFramesInFlight = 50;
+	m_swapchain.maxFramesInFlight = 5;
 
 	vk::SwapchainCreateInfoKHR createInfo;
 	createInfo.setSurface(**m_surface.surface);
@@ -673,6 +677,43 @@ bool GraphicsManager::createSwapchainImages() {
 		m_swapchain.imageViews[i] = std::shared_ptr<ImageView2D>(ImageView2D::create(imageViewConfig));
 	}
 
+	std::vector<vk::Format> depthFormats = { vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint, vk::Format::eD32Sfloat };
+	vk::Format depthFormat = Image2D::selectSupportedFormat(getPhysicalDevice(), depthFormats, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
+
+	m_swapchain.depthImageView.reset();
+	m_swapchain.depthImage.reset();
+
+	if (depthFormat == vk::Format::eUndefined) {
+		std::string formatsStr = "";
+		for (int i = 0; i < depthFormats.size(); ++i)
+			formatsStr += (i > 0 ? ", " : "") + vk::to_string(depthFormats[0]);
+		printf("Unable to create depth buffer: Requested formats [%s] but none were supported\n", formatsStr.c_str());
+	} else {
+
+		Image2DConfiguration depthImageConfig;
+		depthImageConfig.device = m_device.device;
+		depthImageConfig.width = m_swapchain.imageExtent.width;
+		depthImageConfig.height = m_swapchain.imageExtent.height;
+		depthImageConfig.format = depthFormat;
+		depthImageConfig.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
+		m_swapchain.depthImage = std::shared_ptr<Image2D>(Image2D::create(depthImageConfig));
+
+		if (!m_swapchain.depthImage) {
+			printf("Failed to create depth image\n");
+		} else {
+			ImageView2DConfiguration depthImageViewConfig;
+			depthImageViewConfig.device = m_device.device;
+			depthImageViewConfig.image = m_swapchain.depthImage->getImage();
+			depthImageViewConfig.format = m_swapchain.depthImage->getFormat();
+			depthImageViewConfig.aspectMask = vk::ImageAspectFlagBits::eDepth;
+			m_swapchain.depthImageView = std::shared_ptr<ImageView2D>(ImageView2D::create(depthImageViewConfig));
+
+			if (!m_swapchain.depthImageView) {
+				printf("Failed to create depth image view\n");
+			}
+		}
+	}
+
 	m_swapchain.imagesInFlight.clear();
 	m_swapchain.imagesInFlight.resize(images.size(), VK_NULL_HANDLE);
 
@@ -683,10 +724,13 @@ bool GraphicsManager::createSwapchainFramebuffers() {
 	m_swapchain.framebuffers.resize(m_swapchain.imageViews.size());
 
 	for (int i = 0; i < m_swapchain.imageViews.size(); ++i) {
+		std::vector<vk::ImageView> attachments = {
+			m_swapchain.imageViews[i]->getImageView(),
+			m_swapchain.depthImageView->getImageView()
+		};
 		vk::FramebufferCreateInfo framebufferCreateInfo;
 		framebufferCreateInfo.setRenderPass(m_pipeline->getRenderPass());
-		framebufferCreateInfo.setPAttachments(&m_swapchain.imageViews[i]->getImageView());
-		framebufferCreateInfo.setAttachmentCount(1);
+		framebufferCreateInfo.setAttachments(attachments);
 		framebufferCreateInfo.setWidth(m_swapchain.imageExtent.width);
 		framebufferCreateInfo.setHeight(m_swapchain.imageExtent.height);
 		framebufferCreateInfo.setLayers(1);
@@ -835,8 +879,8 @@ bool GraphicsManager::hasQueue(const std::string& name) const {
 void GraphicsManager::initializeGraphicsPipeline(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration) {
 	m_pipelineConfig = graphicsPipelineConfiguration;
 	m_pipelineConfig.device = m_device.device;
-	m_pipelineConfig.framebufferWidth = m_swapchain.imageExtent.width;
-	m_pipelineConfig.framebufferHeight = m_swapchain.imageExtent.height;
+	m_pipelineConfig.framebufferWidth = 0; // Always default to screen resolution
+	m_pipelineConfig.framebufferHeight = 0;
 	m_recreateSwapchain = true;
 }
 
@@ -862,6 +906,10 @@ const vk::Extent2D& GraphicsManager::getImageExtent() const {
 
 vk::Format GraphicsManager::getColourFormat() const {
 	return m_surface.surfaceFormat.format;
+}
+
+vk::Format GraphicsManager::getDepthFormat() const {
+	return m_swapchain.depthImage->getFormat();
 }
 
 GPUMemory& GraphicsManager::gpuMemory() {

@@ -3,7 +3,7 @@
 #include "../core.h"
 
 struct GraphicsPipelineConfiguration {
-	std::shared_ptr<vkr::Device> device;
+	std::weak_ptr<vkr::Device> device;
 	uint32_t framebufferWidth = 0;
 	uint32_t framebufferHeight = 0;
 	std::optional<std::string> vertexShader;
@@ -11,13 +11,16 @@ struct GraphicsPipelineConfiguration {
 	std::vector<vk::VertexInputBindingDescription> vertexInputBindings;
 	std::vector<vk::VertexInputAttributeDescription> vertexInputAttributes;
 	std::vector<vk::DescriptorSetLayout> descriptorSetLayous;
+	vk::PolygonMode polygonMode = vk::PolygonMode::eFill;
+	vk::CullModeFlags cullMode = vk::CullModeFlagBits::eBack;
+	vk::FrontFace frontFace = vk::FrontFace::eClockwise;
 };
 
 class GraphicsPipeline {
 	NO_COPY(GraphicsPipeline);
 
 private:
-	GraphicsPipeline(std::shared_ptr<vkr::Device> device, 
+	GraphicsPipeline(std::weak_ptr<vkr::Device> device,
 					std::unique_ptr<vkr::Pipeline>& pipeline, 
 					std::unique_ptr<vkr::RenderPass>& renderPass, 
 					std::unique_ptr<vkr::PipelineLayout>& pipelineLayout);

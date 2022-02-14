@@ -12,5 +12,5 @@ void main() {
 
     outColor = vec4(texture(testTexture, fs_texture).rgb, 1.0);
 
-    //outColor = vec4(fs_normal * 0.5 + 0.5, 1.0);
+    //outColor = vec4(fs_texture, 0.0, 1.0);
 }

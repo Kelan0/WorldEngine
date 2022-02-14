@@ -6,7 +6,7 @@
 
 #define GLSL_COMPILER_EXECUTABLE "D:/Code/VulkanSDK/1.2.198.1/Bin/glslc.exe"
 
-GraphicsPipeline::GraphicsPipeline(std::shared_ptr<vkr::Device> device,
+GraphicsPipeline::GraphicsPipeline(std::weak_ptr<vkr::Device> device,
 	std::unique_ptr<vkr::Pipeline>& pipeline,
 	std::unique_ptr<vkr::RenderPass>& renderPass,
 	std::unique_ptr<vkr::PipelineLayout>& pipelineLayout):
@@ -21,7 +21,9 @@ GraphicsPipeline::~GraphicsPipeline() {
 }
 
 GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration) {
-	const std::shared_ptr<vkr::Device>& device = graphicsPipelineConfiguration.device;
+	assert(!graphicsPipelineConfiguration.device.expired());
+
+	const vkr::Device& device = *graphicsPipelineConfiguration.device.lock();
 
 	VkResult result;
 
@@ -60,7 +62,7 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
 	}
 	shaderModuleCreateInfo.setCodeSize(shaderBytecode.size());
 	shaderModuleCreateInfo.setPCode(reinterpret_cast<const uint32_t*>(shaderBytecode.data()));
-	vkr::ShaderModule vertexShaderModule = device->createShaderModule(shaderModuleCreateInfo);
+	vkr::ShaderModule vertexShaderModule = device.createShaderModule(shaderModuleCreateInfo);
 
 	if (!loadShaderStage(graphicsPipelineConfiguration.fragmentShader.value(), shaderBytecode)) {
 		printf("Failed to create fragment shader module for shader file \"%s\"\n", graphicsPipelineConfiguration.fragmentShader.value().c_str());
@@ -68,7 +70,7 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
 	}
 	shaderModuleCreateInfo.setCodeSize(shaderBytecode.size());
 	shaderModuleCreateInfo.setPCode(reinterpret_cast<const uint32_t*>(shaderBytecode.data()));
-	vkr::ShaderModule fragmentShaderModule = device->createShaderModule(shaderModuleCreateInfo);
+	vkr::ShaderModule fragmentShaderModule = device.createShaderModule(shaderModuleCreateInfo);
 
 
 	std::vector<vk::PipelineShaderStageCreateInfo> pipelineShaderStages;
@@ -102,9 +104,9 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
 	vk::PipelineRasterizationStateCreateInfo rasterizationStateCreateInfo;
 	rasterizationStateCreateInfo.setDepthClampEnable(false);
 	rasterizationStateCreateInfo.setRasterizerDiscardEnable(false);
-	rasterizationStateCreateInfo.setPolygonMode(vk::PolygonMode::eFill);
-	rasterizationStateCreateInfo.setCullMode(vk::CullModeFlagBits::eBack);
-	rasterizationStateCreateInfo.setFrontFace(vk::FrontFace::eClockwise);
+	rasterizationStateCreateInfo.setPolygonMode(graphicsPipelineConfiguration.polygonMode);
+	rasterizationStateCreateInfo.setCullMode(graphicsPipelineConfiguration.cullMode);
+	rasterizationStateCreateInfo.setFrontFace(graphicsPipelineConfiguration.frontFace);
 	rasterizationStateCreateInfo.setDepthBiasEnable(false);
 	rasterizationStateCreateInfo.setDepthBiasConstantFactor(0.0F);
 	rasterizationStateCreateInfo.setDepthBiasClamp(0.0F);
@@ -118,6 +120,17 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
 	multisampleStateCreateInfo.setPSampleMask(NULL);
 	multisampleStateCreateInfo.setAlphaToCoverageEnable(false);
 	multisampleStateCreateInfo.setAlphaToOneEnable(false);
+
+	vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo;
+	depthStencilStateCreateInfo.setDepthTestEnable(true);
+	depthStencilStateCreateInfo.setDepthWriteEnable(true);
+	depthStencilStateCreateInfo.setDepthCompareOp(vk::CompareOp::eLess);
+	depthStencilStateCreateInfo.setDepthBoundsTestEnable(false);
+	depthStencilStateCreateInfo.setMinDepthBounds(0.0F);
+	depthStencilStateCreateInfo.setMaxDepthBounds(1.0F);
+	depthStencilStateCreateInfo.setStencilTestEnable(false);
+	//depthStencilStateCreateInfo.front;
+	//depthStencilStateCreateInfo.back;
 
 	std::vector<vk::PipelineColorBlendAttachmentState> attachments;
 	vk::PipelineColorBlendAttachmentState& colourBlendAttachmentState = attachments.emplace_back();
@@ -143,7 +156,7 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
 	pipelineLayoutCreateInfo.setSetLayouts(graphicsPipelineConfiguration.descriptorSetLayous);
 	pipelineLayoutCreateInfo.setPushConstantRangeCount(0);
 
-	std::unique_ptr<vkr::PipelineLayout> pipelineLayout = std::make_unique<vkr::PipelineLayout>(*device, pipelineLayoutCreateInfo);
+	std::unique_ptr<vkr::PipelineLayout> pipelineLayout = std::make_unique<vkr::PipelineLayout>(device, pipelineLayoutCreateInfo);
 
 	std::vector<vk::AttachmentDescription> renderPassAttachments;
 	vk::AttachmentDescription& colourAttachment = renderPassAttachments.emplace_back();
@@ -156,6 +169,16 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
 	colourAttachment.setInitialLayout(vk::ImageLayout::eUndefined);
 	colourAttachment.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 
+	vk::AttachmentDescription& depthAttachment = renderPassAttachments.emplace_back();
+	depthAttachment.setFormat(Application::instance()->graphics()->getDepthFormat());
+	depthAttachment.setSamples(vk::SampleCountFlagBits::e1);
+	depthAttachment.setLoadOp(vk::AttachmentLoadOp::eClear);
+	depthAttachment.setStoreOp(vk::AttachmentStoreOp::eDontCare);
+	depthAttachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+	depthAttachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+	depthAttachment.setInitialLayout(vk::ImageLayout::eUndefined);
+	depthAttachment.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
 	std::vector<std::vector<vk::AttachmentReference>> allSubpassColourAttachments;
 	std::vector<vk::SubpassDescription> subpasses;
 
@@ -163,12 +186,15 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
 	vk::AttachmentReference& colourAttachmentReference = subpassColourAttachments.emplace_back();
 	colourAttachmentReference.setAttachment(0);
 	colourAttachmentReference.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
+	vk::AttachmentReference depthStencilAttachmentReference;
+	depthStencilAttachmentReference.setAttachment(1);
+	depthStencilAttachmentReference.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
 	vk::SubpassDescription& subpassDescription = subpasses.emplace_back();
 	subpassDescription.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
 	subpassDescription.setColorAttachments(subpassColourAttachments);
 	subpassDescription.setPResolveAttachments(NULL);
-	subpassDescription.setPDepthStencilAttachment(NULL); // TODO
+	subpassDescription.setPDepthStencilAttachment(&depthStencilAttachmentReference);
 	subpassDescription.setPreserveAttachmentCount(0);
 	subpassDescription.setPPreserveAttachments(NULL);
 
@@ -176,18 +202,17 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
 	vk::SubpassDependency& subpassDependency = subpassDependencies.emplace_back();
 	subpassDependency.setSrcSubpass(VK_SUBPASS_EXTERNAL);
 	subpassDependency.setDstSubpass(0);
-	subpassDependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
-	subpassDependency.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+	subpassDependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests);
+	subpassDependency.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests);
 	subpassDependency.setSrcAccessMask({});
-	subpassDependency.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+	subpassDependency.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite);
 
 	vk::RenderPassCreateInfo renderPassCreateInfo;
 	renderPassCreateInfo.setAttachments(renderPassAttachments);
 	renderPassCreateInfo.setSubpasses(subpasses);
-	renderPassCreateInfo.setDependencyCount(0);
 	renderPassCreateInfo.setDependencies(subpassDependencies);
 
-	std::unique_ptr<vkr::RenderPass> renderPass = std::make_unique<vkr::RenderPass>(*device, renderPassCreateInfo);
+	std::unique_ptr<vkr::RenderPass> renderPass = std::make_unique<vkr::RenderPass>(device, renderPassCreateInfo);
 
 	vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo;
 	graphicsPipelineCreateInfo.setStages(pipelineShaderStages);
@@ -197,7 +222,7 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
 	graphicsPipelineCreateInfo.setPViewportState(&viewportStateCreateInfo);
 	graphicsPipelineCreateInfo.setPRasterizationState(&rasterizationStateCreateInfo);
 	graphicsPipelineCreateInfo.setPMultisampleState(&multisampleStateCreateInfo);
-	graphicsPipelineCreateInfo.setPDepthStencilState(NULL); // TODO
+	graphicsPipelineCreateInfo.setPDepthStencilState(&depthStencilStateCreateInfo); // TODO
 	graphicsPipelineCreateInfo.setPColorBlendState(&colourBlendStateCreateInfo);
 	graphicsPipelineCreateInfo.setPDynamicState(&dynamicStateCreateInfo);
 	graphicsPipelineCreateInfo.setLayout(**pipelineLayout);
@@ -206,9 +231,9 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
 	graphicsPipelineCreateInfo.setBasePipelineHandle(VK_NULL_HANDLE);
 	graphicsPipelineCreateInfo.setBasePipelineIndex(-1);
 
-	std::unique_ptr<vkr::Pipeline> graphicsPipeline = std::make_unique<vkr::Pipeline>(*device, VK_NULL_HANDLE, graphicsPipelineCreateInfo);
+	std::unique_ptr<vkr::Pipeline> graphicsPipeline = std::make_unique<vkr::Pipeline>(device, VK_NULL_HANDLE, graphicsPipelineCreateInfo);
 
-	GraphicsPipeline* pipeline = new GraphicsPipeline(device, graphicsPipeline, renderPass, pipelineLayout);
+	GraphicsPipeline* pipeline = new GraphicsPipeline(graphicsPipelineConfiguration.device, graphicsPipeline, renderPass, pipelineLayout);
 	return pipeline;
 }
 

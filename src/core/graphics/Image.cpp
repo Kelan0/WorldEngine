@@ -789,6 +789,21 @@ vk::Format Image2D::getFormat() const {
 	return m_format;
 }
 
+vk::Format Image2D::selectSupportedFormat(const vk::PhysicalDevice& physicalDevice, const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features) {
+	for (int i = 0; i < candidates.size(); ++i) {
+		const vk::Format& format = candidates[i];
+		vk::FormatProperties props = physicalDevice.getFormatProperties(format);
+
+		if ((tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) || 
+			(tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features)) {
+
+			return format;
+		}
+	}
+
+	return vk::Format::eUndefined;
+}
+
 bool Image2D::validateImageRegion(Image2D* image, ImageRegion& imageRegion) {
 	if (image == NULL) {
 		return false;

@@ -255,6 +255,7 @@ bool Buffer::mappedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSi
 	
 	device.unmapMemory(dstBuffer->m_deviceMemory);
 
+	return true;
 }
 
 void Buffer::resizeStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSize size) {

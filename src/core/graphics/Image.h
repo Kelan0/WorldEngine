@@ -146,6 +146,8 @@ public:
 
 	vk::Format getFormat() const;
 
+	static vk::Format selectSupportedFormat(const vk::PhysicalDevice& physicalDevice, const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features);
+
 private:
 
 	static bool validateImageRegion(Image2D* image, ImageRegion& imageRegion);
