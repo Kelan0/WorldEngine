@@ -587,7 +587,7 @@ bool GraphicsManager::recreateSwapchain() {
 		imageCount = glm::min(imageCount, m_surface.capabilities.maxImageCount);
 	}
 
-	m_swapchain.maxFramesInFlight = 4;
+	m_swapchain.maxFramesInFlight = 50;
 
 	vk::SwapchainCreateInfoKHR createInfo;
 	createInfo.setSurface(**m_surface.surface);

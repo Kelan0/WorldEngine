@@ -52,15 +52,19 @@ class App : public Application {
 		testTextureImageViewConfig.format = testImage->getFormat();
 		testTexture = Texture2D::create(testTextureImageViewConfig, testTextureSamplerConfig);
 
+		MeshData testMeshData;
+		testMeshData.scale(0.5F);
+		for (int i = 0; i < 10; ++i) {
+			testMeshData.rotateDegrees(36.0F, 0.0F, 0.0F, 1.0F);
+			testMeshData.pushTransform();
+			testMeshData.translate(2.0F, 0.0F, 0.0F);
+			testMeshData.createCuboid(glm::vec3(-0.5F), glm::vec3(0.5F));
+			testMeshData.popTransform();
+		}
+
 		MeshConfiguration testMeshConfig;
 		testMeshConfig.device = graphics()->getDevice();
-		testMeshConfig.vertices = {
-			{ glm::vec3(-1.0F, -1.0F, 0.0F), glm::vec3(0.0F), glm::vec2(0.0F, 0.0F) },
-			{ glm::vec3(+1.0F, -1.0F, 0.0F), glm::vec3(0.0F), glm::vec2(1.0F, 0.0F) },
-			{ glm::vec3(+1.0F, +1.0F, 0.0F), glm::vec3(0.0F), glm::vec2(1.0F, 1.0F) },
-			{ glm::vec3(-1.0F, +1.0F, 0.0F), glm::vec3(0.0F), glm::vec2(0.0F, 1.0F) }
-		};
-		testMeshConfig.indices = { 0, 1, 2, 0, 2, 3 };
+		testMeshConfig.setMeshData(&testMeshData);
 		testMesh = Mesh::create(testMeshConfig);
 
 
@@ -83,8 +87,8 @@ class App : public Application {
 		GraphicsPipelineConfiguration pipelineConfig;
 		pipelineConfig.vertexShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.vert";
 		pipelineConfig.fragmentShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.frag";
-		pipelineConfig.vertexInputBindings = Vertex::getBindingDescriptions();
-		pipelineConfig.vertexInputAttributes = Vertex::getAttributeDescriptions();
+		pipelineConfig.vertexInputBindings = MeshData::Vertex::getBindingDescriptions();
+		pipelineConfig.vertexInputAttributes = MeshData::Vertex::getAttributeDescriptions();
 		ubo->initPipelineConfiguration(pipelineConfig);
 		graphics()->initializeGraphicsPipeline(pipelineConfig);
 

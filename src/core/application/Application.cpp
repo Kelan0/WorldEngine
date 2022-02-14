@@ -100,6 +100,8 @@ void Application::start() {
 			frameCount = 0;
 			lastDebug = frameStart;
 		}
+
+		//SDL_Delay(1);
 	}
 
 	m_graphics->getDevice()->waitIdle();

@@ -3,7 +3,65 @@
 #include "../application/Application.h"
 
 
-std::vector<vk::VertexInputBindingDescription> Vertex::getBindingDescriptions() {
+#if _DEBUG
+
+#define VALIDATE_MAX_INDEX(i) \
+if (i > std::numeric_limits<Index>::max()) { \
+	printf("Index %llu is larger than the maximum supported index %llu\n", (uint64_t)i, (uint64_t)std::numeric_limits<Index>::max()); \
+	assert(false); \
+}
+
+#define VALIDATE_VERTEX_INDEX(i) \
+if (i < 0 || i >= m_vertices.size()) { \
+	printf("Vertex index " #i " = %llu is out of range\n", (uint64_t)i); \
+	assert(false); \
+}
+
+#else
+
+#define VALIDATE_MAX_INDEX
+#define VALIDATE_VERTEX_INDEX
+
+#endif
+
+MeshData::Vertex::Vertex():
+	position(0.0F),
+	normal(0.0F), 
+	texture(0.0F) {
+}
+
+MeshData::Vertex::Vertex(const Vertex& copy):
+	position(copy.position),
+	normal(copy.normal),
+	texture(copy.texture) {
+}
+
+MeshData::Vertex::Vertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texture):
+	position(position),
+	normal(normal),
+	texture(texture) {
+}
+
+MeshData::Vertex::Vertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty):
+	position(px, py, pz),
+	normal(nx, ny, nz),
+	texture(tx, ty) {
+}
+
+MeshData::Vertex MeshData::Vertex::operator*(const glm::mat4& m) const {
+	Vertex v(*this);
+	v *= m;
+	return v;
+}
+
+MeshData::Vertex& MeshData::Vertex::operator*=(const glm::mat4& m) {
+	glm::mat4 nm = glm::transpose(glm::inverse(m));
+	position = glm::vec3(m * glm::vec4(position, 1.0F));
+	normal = glm::vec3(nm * glm::vec4(normal, 0.0F));
+	return *this;
+}
+
+std::vector<vk::VertexInputBindingDescription> MeshData::Vertex::getBindingDescriptions() {
 	std::vector<vk::VertexInputBindingDescription> inputBindingDescriptions;
 	inputBindingDescriptions.resize(1);
 	inputBindingDescriptions[0].setBinding(0);
@@ -12,7 +70,7 @@ std::vector<vk::VertexInputBindingDescription> Vertex::getBindingDescriptions() 
 	return inputBindingDescriptions;
 }
 
-std::vector<vk::VertexInputAttributeDescription> Vertex::getAttributeDescriptions() {
+std::vector<vk::VertexInputAttributeDescription> MeshData::Vertex::getAttributeDescriptions() {
 	std::vector<vk::VertexInputAttributeDescription> attribDescriptions;
 	attribDescriptions.resize(3);
 
@@ -33,6 +91,230 @@ std::vector<vk::VertexInputAttributeDescription> Vertex::getAttributeDescription
 	return attribDescriptions;
 }
 
+MeshData::Triangle::Triangle() :
+	i0(0), i1(0), i2(0) {
+}
+
+MeshData::Triangle::Triangle(Index i0, Index i1, Index i2) :
+	i0(i0), i1(i1), i2(i2) {
+}
+
+MeshData::Vertex& MeshData::Triangle::getVertex(MeshData& meshData, Index index) const {
+#if _DEBUG
+	if (index < 0 || index >= 3) {
+		printf("Get triangle vertex: internal triangle index %d is out of range [0..3]\n", index);
+		assert(false);
+	}
+#endif
+	
+	const Index& vertexIndex = indices[index];
+
+#if _DEBUG
+	if (vertexIndex <= 0 || vertexIndex >= meshData.m_vertices.size()) {
+		printf("Triangle vertex index %d is out of range [0..%d]\n", vertexIndex, meshData.m_vertices.size());
+		assert(false);
+	}
+#endif
+
+	return meshData.m_vertices.at(vertexIndex);
+}
+
+glm::vec3 MeshData::Triangle::getFacing(MeshData& meshData) const {
+	const glm::vec3& v0 = getVertex(meshData, 0).position;
+	const glm::vec3& v1 = getVertex(meshData, 1).position;
+	const glm::vec3& v2 = getVertex(meshData, 2).position;
+
+	return glm::cross(v1 - v0, v2 - v0);
+}
+
+glm::vec3 MeshData::Triangle::getNormal(MeshData& meshData) const {
+	return glm::normalize(getFacing(meshData));
+}
+
+
+
+
+
+MeshData::MeshData():
+	m_currentTransform(1.0F) {
+}
+
+MeshData::~MeshData() {
+}
+
+void MeshData::pushTransform() {
+	m_transfromStack.push(m_currentTransform);
+}
+
+void MeshData::popTransform() {
+	m_currentTransform = m_transfromStack.top();
+	m_transfromStack.pop();
+}
+
+void MeshData::translate(glm::vec3 v) {
+	m_currentTransform = glm::translate(m_currentTransform, v);
+}
+
+void MeshData::translate(float x, float y, float z) {
+	translate(glm::vec3(x, y, z));
+}
+
+void MeshData::rotate(glm::quat q) {
+	m_currentTransform = glm::mat4_cast(q) * m_currentTransform;
+}
+
+void MeshData::rotate(float angle, glm::vec3 axis) {
+	m_currentTransform = glm::rotate(m_currentTransform, angle, axis);
+}
+
+void MeshData::rotateDegrees(float angle, glm::vec3 axis) {
+	rotate(glm::radians(angle), axis);
+}
+
+void MeshData::rotate(float angle, float x, float y, float z) {
+	rotate(angle, glm::vec3(x, y, z));
+}
+
+void MeshData::rotateDegrees(float angle, float x, float y, float z) {
+	rotate(glm::radians(angle), glm::vec3(x, y, z));
+}
+
+void MeshData::scale(glm::vec3 s) {
+	m_currentTransform = glm::scale(m_currentTransform, s);
+}
+
+void MeshData::scale(float x, float y, float z) {
+	scale(glm::vec3(x, y, z));
+}
+
+void MeshData::scale(float s) {
+	scale(glm::vec3(s));
+}
+
+void MeshData::createTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2) {
+	Index i0 = addVertex(v0);
+	Index i1 = addVertex(v1);
+	Index i2 = addVertex(v2);
+	addTriangle(i0, i1, i2);
+}
+
+void MeshData::createTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, glm::vec3 normal) {
+	Index i0 = addVertex(v0);
+	Index i1 = addVertex(v1);
+	Index i2 = addVertex(v2);
+
+	Triangle t(i0, i1, i2);
+	if (glm::dot(t.getFacing(*this), normal) < 0) {
+		addTriangle(i0, i2, i1);
+	} else {
+		addTriangle(i0, i1, i2);
+	}
+}
+
+void MeshData::createQuad(const Vertex& v0, const Vertex& v1, const Vertex& v2, const Vertex& v3) {
+	Index i0 = addVertex(v0);
+	Index i1 = addVertex(v1);
+	Index i2 = addVertex(v2);
+	Index i3 = addVertex(v3);
+
+	addTriangle(i0, i1, i2);
+	addTriangle(i0, i2, i3);
+}
+
+void MeshData::createQuad(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 n0, glm::vec3 n1, glm::vec3 n2, glm::vec3 n3, glm::vec2 t0, glm::vec2 t1, glm::vec2 t2, glm::vec2 t3) {
+	createQuad(Vertex(p0, n0, t0), Vertex(p1, n1, t1), Vertex(p2, n2, t2), Vertex(p3, n3, t3));
+}
+
+void MeshData::createQuad(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 normal, glm::vec2 t0, glm::vec2 t1, glm::vec2 t2, glm::vec2 t3) {
+	createQuad(p0, p1, p2, p3, normal, normal, normal, normal, t0, t1, t2, t3);
+}
+
+void MeshData::createQuad(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 normal) {
+	createQuad(p0, p1, p2, p3, normal, normal, normal, normal, glm::vec2(0.0F, 0.0F), glm::vec2(1.0F, 0.0F), glm::vec2(1.0F, 1.0F), glm::vec2(0.0F, 1.0F));
+}
+
+void MeshData::createCuboid(glm::vec3 pos0, glm::vec3 pos1) {
+	createQuad(glm::vec3(pos0.x, pos0.y, pos0.z), glm::vec3(pos0.x, pos0.y, pos1.z), glm::vec3(pos0.x, pos1.y, pos1.z), glm::vec3(pos0.x, pos1.y, pos0.z), glm::vec3(-1.0F, 0.0F, 0.0F));
+	createQuad(glm::vec3(pos1.x, pos0.y, pos1.z), glm::vec3(pos1.x, pos0.y, pos0.z), glm::vec3(pos1.x, pos1.y, pos0.z), glm::vec3(pos1.x, pos1.y, pos1.z), glm::vec3(+1.0F, 0.0F, 0.0F));
+	createQuad(glm::vec3(pos0.x, pos0.y, pos0.z), glm::vec3(pos1.x, pos0.y, pos0.z), glm::vec3(pos1.x, pos0.y, pos1.z), glm::vec3(pos0.x, pos0.y, pos1.z), glm::vec3(0.0F, -1.0F, 0.0F));	
+	createQuad(glm::vec3(pos1.x, pos1.y, pos0.z), glm::vec3(pos0.x, pos1.y, pos0.z), glm::vec3(pos0.x, pos1.y, pos1.z), glm::vec3(pos1.x, pos1.y, pos1.z), glm::vec3(0.0F, +1.0F, 0.0F));
+	createQuad(glm::vec3(pos1.x, pos0.y, pos0.z), glm::vec3(pos0.x, pos0.y, pos0.z), glm::vec3(pos0.x, pos1.y, pos0.z), glm::vec3(pos1.x, pos1.y, pos0.z), glm::vec3(0.0F, 0.0F, -1.0F));
+	createQuad(glm::vec3(pos0.x, pos0.y, pos1.z), glm::vec3(pos1.x, pos0.y, pos1.z), glm::vec3(pos1.x, pos1.y, pos1.z), glm::vec3(pos0.x, pos1.y, pos1.z), glm::vec3(0.0F, 0.0F, +1.0F));
+}
+
+MeshData::Index MeshData::addVertex(const Vertex& vertex) {
+	size_t index = m_vertices.size();
+	VALIDATE_MAX_INDEX(index);
+	m_vertices.emplace_back(vertex * m_currentTransform);
+	return static_cast<Index>(index);
+}
+
+MeshData::Index MeshData::addVertex(const glm::vec3& position, const glm::vec3& normal, const glm::vec2& texture) {
+	return addVertex(Vertex(position, normal, texture));
+}
+
+MeshData::Index MeshData::addVertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty) {
+	return addVertex(Vertex(px, py, pz, nx, ny, nz, tx, ty));
+}
+
+MeshData::Index MeshData::addTriangle(const Triangle& triangle) {
+	VALIDATE_VERTEX_INDEX(triangle.i0);
+	VALIDATE_VERTEX_INDEX(triangle.i1);
+	VALIDATE_VERTEX_INDEX(triangle.i2);
+	size_t index = m_vertices.size();
+	m_triangles.emplace_back(triangle);
+	return static_cast<Index>(index);
+}
+
+MeshData::Index MeshData::addTriangle(Index i0, Index i1, Index i2) {
+	VALIDATE_VERTEX_INDEX(i0);
+	VALIDATE_VERTEX_INDEX(i1);
+	VALIDATE_VERTEX_INDEX(i2);
+	size_t index = m_vertices.size();
+	m_triangles.emplace_back(i0, i1, i2);
+	return static_cast<Index>(index);
+}
+
+MeshData::Index MeshData::addTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2) {
+	Index i0 = addVertex(v0);
+	Index i1 = addVertex(v1);
+	Index i2 = addVertex(v2);
+	return addTriangle(i0, i1, i2);
+}
+
+const std::vector<MeshData::Vertex>& MeshData::getVertices() const {
+	return m_vertices;
+}
+
+const std::vector<MeshData::Triangle>& MeshData::getTriangles() const {
+	return m_triangles;
+}
+
+
+
+
+
+
+void MeshConfiguration::setVertices(const std::vector<MeshData::Vertex>& verticesArray) {
+	vertices = verticesArray.data();
+	vertexCount = verticesArray.size();
+}
+
+void MeshConfiguration::setIndices(const std::vector<MeshData::Index>& indicesArray) {
+	indices = indicesArray.data();
+	indexCount = indicesArray.size();
+}
+
+void MeshConfiguration::setIndices(const std::vector<MeshData::Triangle>& triangleArray) {
+	indices = reinterpret_cast<const MeshData::Index*>(triangleArray.data());
+	indexCount = triangleArray.size() * 3;
+}
+
+void MeshConfiguration::setMeshData(MeshData* meshData) {
+	setVertices(meshData->getVertices());
+	setIndices(meshData->getTriangles());
+}
+
 
 
 Mesh::Mesh(std::weak_ptr<vkr::Device> device):
@@ -48,16 +330,16 @@ Mesh* Mesh::create(const MeshConfiguration& meshConfiguration) {
 
 	Mesh* mesh = new Mesh(meshConfiguration.device);
 	
-	if (!meshConfiguration.vertices.empty()) {
-		if (!mesh->uploadVertices(meshConfiguration.vertices)) {
+	if (meshConfiguration.vertexCount > 0) {
+		if (!mesh->uploadVertices(meshConfiguration.vertices, meshConfiguration.vertexCount)) {
 			printf("Unable to create mesh, failed to upload vertices\n");
 			delete mesh;
 			return NULL;
 		}
 	}
 	
-	if (!meshConfiguration.indices.empty()) {
-		if (!mesh->uploadIndices(meshConfiguration.indices)) {
+	if (meshConfiguration.indexCount > 0) {
+		if (!mesh->uploadIndices(meshConfiguration.indices, meshConfiguration.indexCount)) {
 			printf("Unable to create mesh, failed to upload indices\n");
 			delete mesh;
 			return NULL;
@@ -67,22 +349,24 @@ Mesh* Mesh::create(const MeshConfiguration& meshConfiguration) {
 	return mesh;
 }
 
-bool Mesh::uploadVertices(const std::vector<Vertex>& vertices) {
+bool Mesh::uploadVertices(const MeshData::Vertex* vertices, size_t vertexCount) {
 	delete m_vertexBuffer;
 
-	if (vertices.empty()) {
+	if (vertexCount <= 0) {
 		// Valid to pass no vertices, we just deleted the buffer
 		return true;
 	}
 
+	assert(vertices != NULL);
+
 	BufferConfiguration vertexBufferConfig;
 	vertexBufferConfig.device = m_device;
-	vertexBufferConfig.size = vertices.size() * sizeof(Vertex);
-	vertexBufferConfig.data = (void*)&vertices[0];
+	vertexBufferConfig.size = vertexCount * sizeof(MeshData::Vertex);
+	vertexBufferConfig.data = (void*)vertices;
 	vertexBufferConfig.usage = vk::BufferUsageFlagBits::eVertexBuffer;
 	vertexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 	m_vertexBuffer = Buffer::create(vertexBufferConfig);
-	
+
 	if (m_vertexBuffer == NULL) {
 		printf("Failed to create vertex buffer\n");
 		return false;
@@ -91,18 +375,22 @@ bool Mesh::uploadVertices(const std::vector<Vertex>& vertices) {
 	return true;
 }
 
-bool Mesh::uploadIndices(const std::vector<uint32_t>& indices) {
+bool Mesh::uploadVertices(const std::vector<MeshData::Vertex>& vertices) {
+	return uploadVertices(vertices.data(), vertices.size());
+}
+
+bool Mesh::uploadIndices(const MeshData::Index* indices, size_t indexCount) {
 	delete m_indexBuffer;
 
-	if (indices.empty()) {
+	if (indexCount <= 0) {
 		// Valid to pass no vertices, we just deleted the buffer
 		return true;
 	}
 
 	BufferConfiguration indexBufferConfig;
 	indexBufferConfig.device = m_device;
-	indexBufferConfig.size = indices.size() * sizeof(uint32_t);
-	indexBufferConfig.data = (void*)&indices[0];
+	indexBufferConfig.size = indexCount * sizeof(MeshData::Index);
+	indexBufferConfig.data = (void*)indices;
 	indexBufferConfig.usage = vk::BufferUsageFlagBits::eIndexBuffer;
 	indexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 	m_indexBuffer = Buffer::create(indexBufferConfig);
@@ -113,6 +401,10 @@ bool Mesh::uploadIndices(const std::vector<uint32_t>& indices) {
 	}
 
 	return true;
+}
+
+bool Mesh::uploadIndices(const std::vector<MeshData::Index>& indices) {
+	return uploadIndices(indices.data(), indices.size());
 }
 
 void Mesh::draw(const vk::CommandBuffer& commandBuffer) {
@@ -126,10 +418,9 @@ void Mesh::draw(const vk::CommandBuffer& commandBuffer) {
 }
 
 uint32_t Mesh::getVertexCount() const {
-	return m_vertexBuffer->getSize() / sizeof(Vertex);
+	return m_vertexBuffer->getSize() / sizeof(MeshData::Vertex);
 }
 
 uint32_t Mesh::getIndexCount() const {
-	return m_indexBuffer->getSize() / sizeof(uint32_t);
+	return m_indexBuffer->getSize() / sizeof(MeshData::Index);
 }
-

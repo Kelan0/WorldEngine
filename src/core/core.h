@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <vector>
 #include <array>
+#include <stack>
 #include <set>
 #include <map>
 #include <unordered_map>
