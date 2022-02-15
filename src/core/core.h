@@ -28,18 +28,11 @@
 
 #include <stb_image.h>
 
+#include "hash.h"
+
 namespace vkr = vk::raii;
 
 #define NO_COPY(ClassName) \
 	ClassName(const ClassName&) = delete; \
 	ClassName& operator=(const ClassName&) = delete;
 
-
-// Why isn't this included in the standard library?
-namespace std {
-	template<class T>
-	static inline void hash_combine(std::size_t& s, const T& v) {
-		std::hash<T> h;
-		s ^= h(v) + 0x9e3779b9 + (s << 6) + (s >> 2);
-	}
-};

@@ -126,3 +126,7 @@ glm::ivec2 Application::getWindowSize() const {
 	SDL_GetWindowSize(m_windowHandle, &size.x, &size.y);
 	return size;
 }
+
+bool Application::isViewportInverted() const {
+	return true;
+}

@@ -54,18 +54,19 @@ class App : public Application {
 		testTexture = Texture2D::create(testTextureImageViewConfig, testTextureSamplerConfig);
 
 		MeshData testMeshData;
-		testMeshData.pushTransform();
-		testMeshData.scale(0.5F);
-		for (int i = 0; i < 10; ++i) {
-			testMeshData.rotateDegrees(36.0F, 0.0F, 0.0F, 1.0F);
-			testMeshData.pushTransform();
-			testMeshData.translate(2.0F, 0.0F, 0.0F);
-			testMeshData.createCuboid(glm::vec3(-0.5F), glm::vec3(0.5F));
-			testMeshData.popTransform();
-		}
-		testMeshData.popTransform();
-		testMeshData.createUVSphere(glm::vec3(0.0F), 0.5F, 30, 30);
+		//testMeshData.pushTransform();
+		//testMeshData.scale(0.5F);
+		//for (int i = 0; i < 10; ++i) {
+		//	testMeshData.rotateDegrees(36.0F, 0.0F, 0.0F, 1.0F);
+		//	testMeshData.pushTransform();
+		//	testMeshData.translate(2.0F, 0.0F, 0.0F);
+		//	testMeshData.createCuboid(glm::vec3(-0.5F), glm::vec3(0.5F));
+		//	testMeshData.popTransform();
+		//}
+		//testMeshData.popTransform();
+		//testMeshData.createUVSphere(glm::vec3(0.0F), 0.5F, 30, 30);
 
+		MeshLoader::loadOBJ("D:/Code/ActiveProjects/WorldEngine/res/meshes/bunny.obj", testMeshData);
 
 
 
@@ -91,10 +92,13 @@ class App : public Application {
 		ubo->writeImage(2, 0, testTexture, vk::ImageLayout::eShaderReadOnlyOptimal);
 		ubo->endBatchWrite(2);
 
+		struct V {
+			glm::vec3 pos;
+		};
 		pipelineConfig.vertexShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.vert";
 		pipelineConfig.fragmentShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.frag";
-		pipelineConfig.vertexInputBindings = MeshData::Vertex::getBindingDescriptions();
-		pipelineConfig.vertexInputAttributes = MeshData::Vertex::getAttributeDescriptions();
+		pipelineConfig.vertexInputBindings = Mesh::getVertexBindingDescriptions();
+		pipelineConfig.vertexInputAttributes = Mesh::getVertexAttributeDescriptions();
 		ubo->initPipelineConfiguration(pipelineConfig);
 		graphics()->initializeGraphicsPipeline(pipelineConfig);
 
@@ -127,6 +131,9 @@ class App : public Application {
 
 		if (input()->isMouseGrabbed()) {
 			glm::ivec2 dMouse = input()->getRelativeMouseState();
+			if (isViewportInverted()) 
+				dMouse.y *= -1;
+
 			cameraPitch += dMouse.y * 0.001F;
 			cameraYaw -= dMouse.x * 0.001F;
 			if (cameraYaw > +M_PI) cameraYaw -= M_PI * 2.0;

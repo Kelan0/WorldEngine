@@ -33,6 +33,8 @@ public:
 
 	glm::ivec2 getWindowSize() const;
 
+	bool isViewportInverted() const;
+
 private:
 	void start();
 

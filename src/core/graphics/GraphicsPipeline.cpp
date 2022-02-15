@@ -37,11 +37,24 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
 	viewport.minDepth = 0.0F;
 	viewport.maxDepth = 1.0F;
 
+
+	vk::FrontFace frontFace = graphicsPipelineConfiguration.frontFace;
+
 	vk::Rect2D scissor;
 	scissor.offset.x = 0;
 	scissor.offset.y = 0;
 	scissor.extent.width = viewport.width;
 	scissor.extent.height = viewport.height;
+
+	if (Application::instance()->isViewportInverted()) {
+		viewport.y += viewport.height;
+		viewport.height *= -1;
+		if (frontFace == vk::FrontFace::eClockwise)
+			frontFace = vk::FrontFace::eCounterClockwise;
+		else
+			frontFace = vk::FrontFace::eClockwise;
+	}
+
 
 	if (!graphicsPipelineConfiguration.vertexShader.has_value()) {
 		printf("Vertex shader is required by a graphics pipeline, but was not supplied\n");
@@ -106,7 +119,7 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
 	rasterizationStateCreateInfo.setRasterizerDiscardEnable(false);
 	rasterizationStateCreateInfo.setPolygonMode(graphicsPipelineConfiguration.polygonMode);
 	rasterizationStateCreateInfo.setCullMode(graphicsPipelineConfiguration.cullMode);
-	rasterizationStateCreateInfo.setFrontFace(graphicsPipelineConfiguration.frontFace);
+	rasterizationStateCreateInfo.setFrontFace(frontFace);
 	rasterizationStateCreateInfo.setDepthBiasEnable(false);
 	rasterizationStateCreateInfo.setDepthBiasConstantFactor(0.0F);
 	rasterizationStateCreateInfo.setDepthBiasClamp(0.0F);

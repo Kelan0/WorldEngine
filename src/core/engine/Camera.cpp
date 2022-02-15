@@ -34,6 +34,7 @@ void Camera::update() {
 
 	if (m_projectionChanged) {
 		m_projectionMatrix = glm::perspective(m_fov, m_aspect, m_near, m_far);
+		//m_projectionMatrix = glm::scale(m_projectionMatrix, glm::vec3(1.0F, -1.0F, 1.0F));
 		m_inverseProjectionMatrix = glm::inverse(m_projectionMatrix);
 	}
 	if (m_viewChanged) {
