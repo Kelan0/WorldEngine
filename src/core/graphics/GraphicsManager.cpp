@@ -36,7 +36,7 @@ GraphicsManager::GraphicsManager() {
 	m_commandPool = NULL;
 	m_gpuMemory = NULL;
 	m_debugMessenger = NULL;
-
+	m_preferredPresentMode = vk::PresentModeKHR::eMailbox;
 }
 
 GraphicsManager::~GraphicsManager() {
@@ -45,6 +45,8 @@ GraphicsManager::~GraphicsManager() {
 	//DescriptorSetLayout::clearCache();
 	Buffer::resetStagingBuffer();
 
+	m_swapchain.depthImageView.reset();
+	m_swapchain.depthImage.reset();
 	m_swapchain.commandBuffers.clear();
 	m_swapchain.framebuffers.clear();
 	m_swapchain.imageViews.clear();
@@ -552,12 +554,12 @@ bool GraphicsManager::initSurfaceDetails() {
 		return false;
 	}
 
-	auto presentMode = std::find(presentModes.begin(), presentModes.end(), vk::PresentModeKHR::eMailbox);
-	if (presentMode != presentModes.end()) {
-		m_surface.presentMode = *presentMode;
+	auto it = std::find(presentModes.begin(), presentModes.end(), m_preferredPresentMode);
+	if (it != presentModes.end()) {
+		m_surface.presentMode = *it;
 	} else {
-		printf("Preferred surface present mode was not found. Defaulting to first available option\n");
-		m_surface.presentMode = presentModes[0];
+		m_surface.presentMode = presentModes.at(0);
+		printf("Preferred surface present mode %s was not found. Defaulting to %s\n", vk::to_string(m_preferredPresentMode).c_str(), vk::to_string(m_surface.presentMode).c_str());
 	}
 
 	return true;
@@ -882,6 +884,13 @@ void GraphicsManager::initializeGraphicsPipeline(const GraphicsPipelineConfigura
 	m_pipelineConfig.framebufferWidth = 0; // Always default to screen resolution
 	m_pipelineConfig.framebufferHeight = 0;
 	m_recreateSwapchain = true;
+}
+
+void GraphicsManager::setPreferredPresentMode(vk::PresentModeKHR presentMode) {
+	if (m_preferredPresentMode != presentMode) {
+		m_preferredPresentMode = presentMode;
+		m_recreateSwapchain = true;
+	}
 }
 
 GraphicsPipeline& GraphicsManager::pipeline() {

@@ -145,6 +145,8 @@ public:
 
 	void initializeGraphicsPipeline(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration);
 
+	void setPreferredPresentMode(vk::PresentModeKHR presentMode);
+
 private:
 	vkr::Context m_context;
 	std::unique_ptr<vkr::Instance> m_instance;
@@ -159,6 +161,7 @@ private:
 	std::unique_ptr<vkr::DebugUtilsMessengerEXT> m_debugMessenger;
 
 	GraphicsPipelineConfiguration m_pipelineConfig;
+	vk::PresentModeKHR m_preferredPresentMode;
 	bool m_recreateSwapchain;
 };
 

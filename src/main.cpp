@@ -9,6 +9,8 @@
 #include "core/graphics/UniformBuffer.h"
 #include "core/graphics/Texture.h"
 #include "core/engine/Camera.h"
+#include "core/engine/scene/Scene.h"
+#include "core/engine/scene/EntityHierarchy.h"
 
 #include <iostream>
 
@@ -35,6 +37,26 @@ class App : public Application {
 	float x = 0.0F;
 
     void init() override {
+
+		Entity test0 = scene()->createEntity("test0");
+		EntityHierarchy& test0_node = test0.addComponent<EntityHierarchy>();
+
+		Entity test00 = EntityHierarchy::createChild(test0, "test00");
+		EntityHierarchy& test00_node = test00.getComponent<EntityHierarchy>();
+
+		Entity test000 = EntityHierarchy::createChild(test00, "test000");
+		EntityHierarchy& test000_node = test000.getComponent<EntityHierarchy>();
+
+		Entity test001 = EntityHierarchy::createChild(test00, "test001");
+		EntityHierarchy& test001_node = test001.getComponent<EntityHierarchy>();
+
+		Entity test0010 = EntityHierarchy::createChild(test001, "test0010");
+		EntityHierarchy& test0010_node = test0010.getComponent<EntityHierarchy>();
+
+		test001.destroy();
+
+		//EntityHierarchy::detach(test001);
+
 
 		Image2DConfiguration testTextureImageConfig;
 		testTextureImageConfig.device = graphics()->getDevice();
@@ -92,17 +114,16 @@ class App : public Application {
 		ubo->writeImage(2, 0, testTexture, vk::ImageLayout::eShaderReadOnlyOptimal);
 		ubo->endBatchWrite(2);
 
-		struct V {
-			glm::vec3 pos;
-		};
 		pipelineConfig.vertexShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.vert";
 		pipelineConfig.fragmentShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.frag";
 		pipelineConfig.vertexInputBindings = Mesh::getVertexBindingDescriptions();
 		pipelineConfig.vertexInputAttributes = Mesh::getVertexAttributeDescriptions();
 		ubo->initPipelineConfiguration(pipelineConfig);
 		graphics()->initializeGraphicsPipeline(pipelineConfig);
+		//graphics()->setPreferredPresentMode(vk::PresentModeKHR::eFifo);
 
-		camera.setPosition(0.0F, 0.0F, 2.0F);
+		camera.setPosition(0.0F, 2.0F, 2.0F);
+
     }
 
 	void cleanup() override {
@@ -113,7 +134,7 @@ class App : public Application {
 		descriptorPool.reset();
 	}
 
-	void handleUserInput() {
+	void handleUserInput(double dt) {
 		if (input()->keyPressed(SDL_SCANCODE_ESCAPE)) {
 			input()->toggleMouseGrabbed();
 		}
@@ -150,7 +171,7 @@ class App : public Application {
 			camera.setRotation(pitch * yaw);
 
 
-			float movementSpeed = 1.0F / 4000.0F;
+			float movementSpeed = 1.0F;
 			glm::vec3 movementDir(0.0F);
 
 			if (input()->keyDown(SDL_SCANCODE_W)) movementDir.z--;
@@ -160,55 +181,35 @@ class App : public Application {
 
 			if (glm::dot(movementDir, movementDir) > 0.5F) {
 				movementDir = camera.getRotationMatrix() * glm::normalize(movementDir);
-				camera.setPosition(camera.getPosition() + movementDir * movementSpeed);
+				camera.setPosition(camera.getPosition() + movementDir * movementSpeed * (float)dt);
 			}
 		}
 	}
 
-    void render() override {
+    void render(double dt) override {
 
-		if (graphics()->beginFrame()) {
+		handleUserInput(dt);
 
-			handleUserInput();
+		camera.setAspect(graphics()->getAspectRatio());
+		camera.setClipppingPlanes(0.01F, 500.0F);
+		camera.setFovDegrees(90.0F);
+		camera.update();
 
-			camera.setAspect(graphics()->getAspectRatio());
-			camera.setClipppingPlanes(0.01F, 500.0F);
-			camera.setFovDegrees(90.0F);
-			camera.update();
+		GraphicsPipeline& pipeline = graphics()->pipeline();
+			
+		auto& commandBuffer = graphics()->getCurrentCommandBuffer();
 
-			auto& commandBuffer = graphics()->getCurrentCommandBuffer();
-			auto& framebuffer = graphics()->getCurrentFramebuffer();
+		pipeline.bind(commandBuffer);
 
-			GraphicsPipeline& pipeline = graphics()->pipeline();
+		x += 1.0F / 8000.0F;
+		glm::mat4 modelMatrix(1.0F);// = glm::translate(glm::mat4(1.0F), glm::vec3(glm::sin(x), 0.0F, 0.0F));
 
-			std::array<vk::ClearValue, 2> clearValues;
-			clearValues[0].color.setFloat32({ 0.0F, 0.0F, 0.0F, 1.0F });
-			clearValues[1].depthStencil.setDepth(1.0F).setStencil(0);
+		ubo->update(0, 0, &modelMatrix);
+		ubo->update(1, 0, &camera.getViewProjectionMatrix());
 
-			vk::RenderPassBeginInfo renderPassBeginInfo;
-			renderPassBeginInfo.setRenderPass(pipeline.getRenderPass());
-			renderPassBeginInfo.setFramebuffer(framebuffer);
-			renderPassBeginInfo.renderArea.setOffset({ 0, 0 });
-			renderPassBeginInfo.renderArea.setExtent(graphics()->getImageExtent());
-			renderPassBeginInfo.setClearValues(clearValues);
+		ubo->bind({ 0, 1, 2 }, 0, commandBuffer, pipeline);
 
-			commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-			pipeline.bind(commandBuffer);
-
-			x += 1.0F / 8000.0F;
-			glm::mat4 modelMatrix(1.0F);// = glm::translate(glm::mat4(1.0F), glm::vec3(glm::sin(x), 0.0F, 0.0F));
-
-			ubo->update(0, 0, &modelMatrix);
-			ubo->update(1, 0, &camera.getViewProjectionMatrix());
-
-			ubo->bind({ 0, 1, 2 }, 0, commandBuffer, pipeline);
-
-			testMesh->draw(commandBuffer);
-
-			commandBuffer.endRenderPass();
-
-			graphics()->endFrame();
-		}
+		testMesh->draw(commandBuffer);
     }
 };
 

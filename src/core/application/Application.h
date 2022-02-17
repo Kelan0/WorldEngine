@@ -5,6 +5,7 @@
 
 class GraphicsManager;
 class InputHandler;
+class Scene;
 
 class Application {
 	NO_COPY(Application);
@@ -18,7 +19,7 @@ public:
 
 	virtual void cleanup() = 0;
 
-	virtual void render() = 0;
+	virtual void render(double dt) = 0;
 
 	template<class T>
 	static int create();
@@ -27,9 +28,13 @@ public:
 
 	static Application* instance();
 
+	void stop();
+
 	GraphicsManager* graphics();
 
 	InputHandler* input();
+
+	Scene* scene();
 
 	glm::ivec2 getWindowSize() const;
 
@@ -42,12 +47,19 @@ private:
 
 	void cleanupInternal();
 
+	void renderInternal(double dt);
+
+	void processEventsInternal();
+
 private:
 	static Application* s_instance;
 
 	SDL_Window* m_windowHandle;
 	GraphicsManager* m_graphics;
 	InputHandler* m_inputHandler;
+	Scene* m_scene;
+
+	bool m_running;
 };
 
 template<class T>
