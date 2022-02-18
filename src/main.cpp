@@ -53,6 +53,18 @@ class App : public Application {
 		Entity test0010 = EntityHierarchy::createChild(test001, "test0010");
 		EntityHierarchy& test0010_node = test0010.getComponent<EntityHierarchy>();
 
+		Entity test0011 = EntityHierarchy::createChild(test001, "test0011");
+		EntityHierarchy& test0011_node = test0010.getComponent<EntityHierarchy>();
+
+		Entity test0012 = EntityHierarchy::createChild(test001, "test0012");
+		EntityHierarchy& test0012_node = test0010.getComponent<EntityHierarchy>();
+
+		Entity test0013 = EntityHierarchy::createChild(test001, "test0013");
+		EntityHierarchy& test0013_node = test0010.getComponent<EntityHierarchy>();
+
+		Entity test0014 = EntityHierarchy::createChild(test001, "test0014");
+		EntityHierarchy& test0014_node = test0010.getComponent<EntityHierarchy>();
+
 		test001.destroy();
 
 		//EntityHierarchy::detach(test001);

@@ -13,6 +13,8 @@
 #include <memory>
 #include <utility>
 #include <cstddef>
+#include <typeinfo>
+#include <typeindex>
 
 
 #define GLM_FORCE_RADIANS

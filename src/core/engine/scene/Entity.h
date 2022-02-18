@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../../core.h"
-#include "Scene.h"
 
 #include <entt/entt.hpp>
 
@@ -14,6 +13,7 @@ public:
 	entt::dispatcher dispacher;
 };
 
+class Scene;
 
 class Entity {
 	friend class Scene;
@@ -76,6 +76,8 @@ private:
 
 	void removeRef();
 
+	entt::registry& registry() const;
+
 protected:
 	entt::entity m_entity = entt::null;
 	Scene* m_scene;
@@ -102,7 +104,7 @@ inline T& Entity::addComponent(Args && ...args) const {
 
 template<typename T, typename ...Args>
 inline T& Entity::setComponent(Args && ...args) const {
-	T& component = m_scene->m_registry.emplace<T>(m_entity, std::forward<Args>(args)...);
+	T& component = registry().emplace<T>(m_entity, std::forward<Args>(args)...);
 	return component;
 }
 
@@ -114,7 +116,7 @@ inline T& Entity::removeComponent() const {
 		assert(false);
 	}
 #endif
-	T& component = m_scene->m_registry.remove<T>(m_entity);
+	T& component = registry().remove<T>(m_entity);
 	return component;
 }
 
@@ -126,10 +128,10 @@ inline T& Entity::getComponent() const {
 		assert(false);
 	}
 #endif
-	return m_scene->m_registry.get<T>(m_entity);
+	return registry().get<T>(m_entity);
 }
 
 template<typename T>
 inline bool Entity::hasComponent() const {
-	return m_scene->m_registry.try_get<T>(m_entity) != NULL;
+	return registry().try_get<T>(m_entity) != NULL;
 }

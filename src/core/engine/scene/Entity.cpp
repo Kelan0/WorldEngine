@@ -1,4 +1,5 @@
 #include "Entity.h"
+#include "Scene.h"
 
 Entity::Entity(Scene* scene, const entt::entity& entity) :
 	m_scene(scene),
@@ -100,4 +101,8 @@ void Entity::removeRef() {
 		auto& v = m_scene->m_entityRefTracker[m_entity];
 		v.erase(std::remove(v.begin(), v.end(), this), v.end());
 	}
+}
+
+entt::registry& Entity::registry() const {
+	return m_scene->m_registry;
 }

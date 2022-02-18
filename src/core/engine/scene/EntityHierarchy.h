@@ -5,39 +5,47 @@
 
 class EntityHierarchy {
 public:
-	class ChildIterator {
+	class iterator {
 		friend class EntityHierarchy;
 	private:
-		ChildIterator(const Entity& ptr);
+		iterator(const Entity& ptr, bool reverse);
 
 	public:
 		const Entity& operator*() const;
 
 		Entity* operator->();
 
-		ChildIterator& operator++();
+		iterator& operator++();
 
-		ChildIterator operator++(int);
+		iterator operator++(int);
 
-		ChildIterator& operator+=(int i);
+		iterator& operator+=(int i);
 
-		ChildIterator operator+(int i);
+		iterator operator+(int i);
 
-		ChildIterator& operator--();
+		iterator& operator--();
 
-		ChildIterator operator--(int);
+		iterator operator--(int);
 
-		ChildIterator& operator-=(int i);
+		iterator& operator-=(int i);
 
-		ChildIterator operator-(int i);
+		iterator operator-(int i);
 
-		bool operator==(const ChildIterator& rhs) const;
+		bool operator==(const iterator& rhs) const;
 
-		bool operator!=(const ChildIterator& rhs) const;
+		bool operator!=(const iterator& rhs) const;
 
 	private:
+		void next();
+
+		void prev();
+	private:
 		Entity m_ptr;
+		Entity m_prev;
+		Entity m_next;
+		bool m_reverse;
 	};
+
 public:
 	static bool hasParent(const Entity& entity);
 
@@ -57,9 +65,13 @@ public:
 
 	static Entity getPrevSibling(const Entity& entity);
 
-	static ChildIterator begin(const Entity& entity);
+	static iterator begin(const Entity& entity);
 
-	static ChildIterator end(const Entity& entity);
+	static iterator end(const Entity& entity);
+
+	static iterator rbegin(const Entity& entity);
+
+	static iterator rend(const Entity& entity);
 
 	static bool isParent(const Entity& entity, const Entity& parent);
 

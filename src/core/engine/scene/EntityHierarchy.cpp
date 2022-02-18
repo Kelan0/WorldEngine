@@ -37,12 +37,20 @@ Entity EntityHierarchy::getPrevSibling(const Entity& entity) {
     return getNode(entity).m_prevSibling;
 }
 
-EntityHierarchy::ChildIterator EntityHierarchy::begin(const Entity& entity) {
-    return ChildIterator(getNode(entity).m_firstChild);
+EntityHierarchy::iterator EntityHierarchy::begin(const Entity& entity) {
+    return iterator(getNode(entity).m_firstChild, false);
 }
 
-EntityHierarchy::ChildIterator EntityHierarchy::end(const Entity& entity) {
-    return ChildIterator(getNode(entity).m_lastChild);
+EntityHierarchy::iterator EntityHierarchy::end(const Entity& entity) {
+    return iterator(nullptr, false);
+}
+
+EntityHierarchy::iterator EntityHierarchy::rbegin(const Entity& entity) {
+    return iterator(getNode(entity).m_lastChild, true);
+}
+
+EntityHierarchy::iterator EntityHierarchy::rend(const Entity& entity) {
+    return iterator(nullptr, true);
 }
 
 bool EntityHierarchy::isParent(const Entity& entity, const Entity& parent) {
@@ -130,6 +138,8 @@ bool EntityHierarchy::detach(const Entity& entity) {
     const Entity& child = entity;
     const Entity& parent = getParent(child);
 
+    printf("Detaching entity %llu from parent %llu\n", (uint64_t)entity, (uint64_t)parent);
+
     if (parent == nullptr)
         return true; // Already detached
 
@@ -183,31 +193,37 @@ EntityHierarchy& EntityHierarchy::getNode(const Entity& entity) {
 
 
 
-EntityHierarchy::ChildIterator::ChildIterator(const Entity& ptr):
-    m_ptr(ptr) {
+EntityHierarchy::iterator::iterator(const Entity& ptr, bool reverse):
+    m_ptr(ptr), 
+    m_reverse(reverse) {
+    if (m_ptr != nullptr) {
+        const EntityHierarchy& node = m_ptr.getComponent<EntityHierarchy>();
+        m_prev = node.m_prevSibling;
+        m_next = node.m_nextSibling;
+    }
 }
 
-const Entity& EntityHierarchy::ChildIterator::operator*() const {
+const Entity& EntityHierarchy::iterator::operator*() const {
     return m_ptr;
 }
 
-Entity* EntityHierarchy::ChildIterator::operator->() {
+Entity* EntityHierarchy::iterator::operator->() {
     return &m_ptr;
 }
 
-EntityHierarchy::ChildIterator& EntityHierarchy::ChildIterator::operator++() {
+EntityHierarchy::iterator& EntityHierarchy::iterator::operator++() {
     assert(m_ptr != nullptr);
-    m_ptr = m_ptr.getComponent<EntityHierarchy>().m_nextSibling;
+    m_reverse ? prev() : next();
     return *this;
 }
 
-EntityHierarchy::ChildIterator EntityHierarchy::ChildIterator::operator++(int) {
-    ChildIterator tmp = *this;
+EntityHierarchy::iterator EntityHierarchy::iterator::operator++(int) {
+    iterator tmp = *this;
     ++(*this);
     return tmp;
 }
 
-EntityHierarchy::ChildIterator& EntityHierarchy::ChildIterator::operator+=(int i) {
+EntityHierarchy::iterator& EntityHierarchy::iterator::operator+=(int i) {
     if (i > 0)
         for (; i > 0; --i) ++(*this);
     else
@@ -215,36 +231,48 @@ EntityHierarchy::ChildIterator& EntityHierarchy::ChildIterator::operator+=(int i
     return *this;
 }
 
-EntityHierarchy::ChildIterator EntityHierarchy::ChildIterator::operator+(int i) {
-    ChildIterator tmp = *this;
+EntityHierarchy::iterator EntityHierarchy::iterator::operator+(int i) {
+    iterator tmp = *this;
     tmp += i;
     return tmp;
 }
 
-EntityHierarchy::ChildIterator& EntityHierarchy::ChildIterator::operator--() {
+EntityHierarchy::iterator& EntityHierarchy::iterator::operator--() {
     assert(m_ptr != nullptr);
-    m_ptr = m_ptr.getComponent<EntityHierarchy>().m_prevSibling;
+    m_reverse ? next() : prev();
     return *this;
 }
 
-EntityHierarchy::ChildIterator EntityHierarchy::ChildIterator::operator--(int) {
-    ChildIterator tmp = *this;
+EntityHierarchy::iterator EntityHierarchy::iterator::operator--(int) {
+    iterator tmp = *this;
     --(*this);
     return tmp;
 }
 
-EntityHierarchy::ChildIterator& EntityHierarchy::ChildIterator::operator-=(int i) {
+EntityHierarchy::iterator& EntityHierarchy::iterator::operator-=(int i) {
     return (*this) += (-i);
 }
 
-EntityHierarchy::ChildIterator EntityHierarchy::ChildIterator::operator-(int i) {
+EntityHierarchy::iterator EntityHierarchy::iterator::operator-(int i) {
     return (*this) + (-i);
 }
 
-bool EntityHierarchy::ChildIterator::operator==(const ChildIterator& rhs) const {
-    return m_ptr == rhs.m_ptr;
+bool EntityHierarchy::iterator::operator==(const iterator& rhs) const {
+    return m_ptr == rhs.m_ptr && m_reverse == rhs.m_reverse;
 }
 
-bool EntityHierarchy::ChildIterator::operator!=(const ChildIterator& rhs) const {
+bool EntityHierarchy::iterator::operator!=(const iterator& rhs) const {
     return !(*this == rhs);
+}
+
+void EntityHierarchy::iterator::next() {
+    m_prev = m_ptr;
+    m_ptr = m_next;
+    m_next = m_ptr == nullptr ? nullptr : m_ptr.getComponent<EntityHierarchy>().m_nextSibling;
+}
+
+void EntityHierarchy::iterator::prev() {
+    m_next = m_ptr;
+    m_ptr = m_prev;
+    m_prev = m_ptr == nullptr ? nullptr : m_ptr.getComponent<EntityHierarchy>().m_prevSibling;
 }

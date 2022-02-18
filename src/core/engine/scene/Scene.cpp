@@ -3,18 +3,8 @@
 #include "Entity.h"
 #include "EntityHierarchy.h"
 
-//void onEntityHierarchyNodeDestroy(Scene* scene, entt::registry& reg, entt::entity id) {
-//	Entity entity(scene, id);
-//	entity.getComponent<EntityHierarchyNode>().detach();
-//}
-// 
-//void onEntityHierarchyNodeDestroy(Scene* scene, entt::registry& reg, entt::entity id) {
-//	Entity entity(scene, id);
-//	entity.getComponent<EntityHierarchyNode>().detach();
-//}
-
-
 Scene::Scene() {
+	m_eventDispacher = new EventDispacher();
 }
 
 Scene::~Scene() {
@@ -29,9 +19,18 @@ Scene::~Scene() {
 }
 
 void Scene::init() {
-	m_registry.on_destroy<EntityHierarchy>();
-	m_registry.on_construct<EntityHierarchy>();
-	//m_registry.on_destroy<EntityHierarchy>().connect<&onEntityHierarchyNodeDestroy>(this);
+	enableEvents<EntityHierarchy>();
+
+	//m_eventDispacher->connect<ComponentAddedEvent<EntityHierarchy>>([](const ComponentAddedEvent<EntityHierarchy>& event) {
+	//	printf("EntityHierarchy added to entity %llu\n", (uint64_t)event.entity);
+	//});
+
+	m_eventDispacher->connect<ComponentRemovedEvent<EntityHierarchy>>([](const ComponentRemovedEvent<EntityHierarchy>& event) {
+		printf("EntityHierarchy for entity %llu was deleted\n", (uint64_t)event.entity);
+		for (auto it = EntityHierarchy::begin(event.entity); it != EntityHierarchy::end(event.entity); ++it)
+			EntityHierarchy::detach(*it);
+		EntityHierarchy::detach(event.entity);
+	});
 }
 
 Entity Scene::createEntity(const std::string& name) {
@@ -57,4 +56,8 @@ void Scene::destroyEntity(const Entity& entity) {
 		m_entityRefTracker.erase(id);
 
 	}
+}
+
+EventDispacher* Scene::getEventDispacher() const {
+	return m_eventDispacher;
 }
