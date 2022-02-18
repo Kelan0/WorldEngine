@@ -1,12 +1,12 @@
 #pragma once
 
-#include "../core.h"
+#include "../../core.h"
 
-class Camera {
+class RenderCamera {
 public:
-	Camera();
+	RenderCamera();
 
-	~Camera();
+	~RenderCamera();
 
 	void update();
 

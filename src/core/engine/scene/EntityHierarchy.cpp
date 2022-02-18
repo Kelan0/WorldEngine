@@ -166,9 +166,14 @@ bool EntityHierarchy::detach(const Entity& entity) {
     return true;
 }
 
+Entity EntityHierarchy::create(Scene* scene, const std::string& name) {
+    const Entity& entity = scene->createEntity(name);
+    entity.addComponent<EntityHierarchy>();
+    return entity;
+}
+
 Entity EntityHierarchy::createChild(const Entity& entity, const std::string& name) {
-    Entity child = entity.getScene()->createEntity(name);
-    child.addComponent<EntityHierarchy>();
+    const Entity& child = create(entity.getScene(), name);
     attachChild(entity, child);
     return child;
 }

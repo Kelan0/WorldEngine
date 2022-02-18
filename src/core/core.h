@@ -24,6 +24,7 @@
 #include <glm/matrix.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/euler_angles.hpp>
 
 #define VULKAN_HPP_NO_SPACESHIP_OPERATOR 
 #include <vulkan/vulkan.h>

@@ -1,6 +1,6 @@
-#include "Camera.h"
+#include "RenderCamera.h"
 
-Camera::Camera() :
+RenderCamera::RenderCamera() :
 	m_position(0.0F),
 	m_rotation(1.0F, 0.0F, 0.0F, 0.0F),
 	m_prevPosition(m_position),
@@ -22,10 +22,10 @@ Camera::Camera() :
 	m_projectionChanged(true) {
 }
 
-Camera::~Camera() {
+RenderCamera::~RenderCamera() {
 }
 
-void Camera::update() {
+void RenderCamera::update() {
 	m_prevPosition = m_position;
 	m_prevRotation = m_rotation;
 	m_prevViewMatrix = m_viewMatrix;
@@ -51,11 +51,11 @@ void Camera::update() {
 	m_projectionChanged = false;
 }
 
-glm::vec3 Camera::getPosition() const {
+glm::vec3 RenderCamera::getPosition() const {
 	return m_position;
 }
 
-glm::vec3 Camera::getAxisX() const {
+glm::vec3 RenderCamera::getAxisX() const {
 	float qyy = (m_rotation.y * m_rotation.y);
 	float qzz = (m_rotation.z * m_rotation.z);
 	float qxz = (m_rotation.x * m_rotation.z);
@@ -66,7 +66,7 @@ glm::vec3 Camera::getAxisX() const {
 	return glm::vec3(1.0F - 2.0F * (qyy + qzz), 2.0F * (qxy + qwz), 2.0F * (qxz - qwy));
 }
 
-glm::vec3 Camera::getAxisY() const {
+glm::vec3 RenderCamera::getAxisY() const {
 	float qxx = (m_rotation.x * m_rotation.x);
 	float qzz = (m_rotation.z * m_rotation.z);
 	float qxy = (m_rotation.x * m_rotation.y);
@@ -77,7 +77,7 @@ glm::vec3 Camera::getAxisY() const {
 	return glm::vec3(2.0F * (qxy - qwz), 1.0F - 2.0F * (qxx + qzz), 2.0F * (qyz + qwx));
 }
 
-glm::vec3 Camera::getAxisZ() const {
+glm::vec3 RenderCamera::getAxisZ() const {
 	float qxx = (m_rotation.x * m_rotation.x);
 	float qyy = (m_rotation.y * m_rotation.y);
 	float qxz = (m_rotation.x * m_rotation.z);
@@ -88,33 +88,33 @@ glm::vec3 Camera::getAxisZ() const {
 	return glm::vec3(2.0F * (qxz + qwy), 2.0F * (qyz - qwx), 1.0F - 2.0F * (qxx + qyy));
 }
 
-glm::mat3 Camera::getRotationMatrix() const {
+glm::mat3 RenderCamera::getRotationMatrix() const {
 	return glm::mat3_cast(m_rotation);
 }
 
-glm::quat Camera::getRotation() const {
+glm::quat RenderCamera::getRotation() const {
 	return m_rotation;
 }
 
-void Camera::setPosition(glm::vec3 position) {
+void RenderCamera::setPosition(glm::vec3 position) {
 	if (position != m_position) {
 		m_position = position;
 		m_viewChanged = true;
 	}
 }
 
-void Camera::setPosition(float x, float y, float z) {
+void RenderCamera::setPosition(float x, float y, float z) {
 	setPosition(glm::vec3(x, y, z));
 }
 
-void Camera::setRotation(glm::quat rotation) {
+void RenderCamera::setRotation(glm::quat rotation) {
 	if (rotation != m_rotation) { // TODO: threshold test?
 		m_rotation = rotation;
 		m_viewChanged = true;
 	}
 }
 
-void Camera::setRotation(glm::vec3 z, glm::vec3 y) {
+void RenderCamera::setRotation(glm::vec3 z, glm::vec3 y) {
 	constexpr float eps = 1e-5;
 	constexpr float epsSq = eps * eps;
 
@@ -144,92 +144,92 @@ void Camera::setRotation(glm::vec3 z, glm::vec3 y) {
 	}
 }
 
-void Camera::lookAt(glm::vec3 eye, glm::vec3 center, glm::vec3 up) {
+void RenderCamera::lookAt(glm::vec3 eye, glm::vec3 center, glm::vec3 up) {
 	setPosition(eye);
 	setRotation(center - eye, up);
 }
 
-void Camera::lookAt(float eyeX, float eyeY, float eyeZ, float centerX, float centerY, float centerZ, float upX, float upY, float upZ) {
+void RenderCamera::lookAt(float eyeX, float eyeY, float eyeZ, float centerX, float centerY, float centerZ, float upX, float upY, float upZ) {
 	lookAt(glm::vec3(eyeX, eyeY, eyeZ), glm::vec3(centerX, centerY, centerZ), glm::vec3(upX, upY, upZ));
 }
 
-void Camera::lookAt(glm::vec3 center, glm::vec3 up) {
+void RenderCamera::lookAt(glm::vec3 center, glm::vec3 up) {
 	setRotation(center - m_position, up);
 }
 
-void Camera::lookAt(float centerX, float centerY, float centerZ, float upX, float upY, float upZ) {
+void RenderCamera::lookAt(float centerX, float centerY, float centerZ, float upX, float upY, float upZ) {
 	lookAt(glm::vec3(centerX, centerY, centerZ), glm::vec3(upX, upY, upZ));
 }
 
-const glm::mat4& Camera::getViewMatrix() const {
+const glm::mat4& RenderCamera::getViewMatrix() const {
 	return m_viewMatrix;
 }
 
-const glm::mat4& Camera::getProjectionMatrix() const {
+const glm::mat4& RenderCamera::getProjectionMatrix() const {
 	return m_projectionMatrix;
 }
 
-const glm::mat4& Camera::getViewProjectionMatrix() const {
+const glm::mat4& RenderCamera::getViewProjectionMatrix() const {
 	return m_viewProjectionMatrix;
 }
 
-const glm::mat4& Camera::getInverseViewMatrix() const {
+const glm::mat4& RenderCamera::getInverseViewMatrix() const {
 	return m_inverseViewMatrix;
 }
 
-const glm::mat4& Camera::getInverseProjectionMatrix() const {
+const glm::mat4& RenderCamera::getInverseProjectionMatrix() const {
 	return m_inverseProjectionMatrix;
 }
 
-const glm::mat4& Camera::getInverseViewProjectionMatrix() const {
+const glm::mat4& RenderCamera::getInverseViewProjectionMatrix() const {
 	return m_inverseViewProjectionMatrix;
 }
 
-float Camera::getFovRadians() const {
+float RenderCamera::getFovRadians() const {
 	return m_fov;
 }
 
-float Camera::getFovDegrees() const {
+float RenderCamera::getFovDegrees() const {
 	return glm::degrees(m_fov);
 }
 
-float Camera::getAspect() const {
+float RenderCamera::getAspect() const {
 	return m_aspect;
 }
 
-float Camera::getNearPlane() const {
+float RenderCamera::getNearPlane() const {
 	return m_near;
 }
 
-float Camera::getFarPlane() const {
+float RenderCamera::getFarPlane() const {
 	return m_far;
 }
 
-void Camera::setPerspective(float fov, float aspect, float near, float far) {
+void RenderCamera::setPerspective(float fov, float aspect, float near, float far) {
 	setFovRadians(fov);
 	setAspect(aspect);
 	setClipppingPlanes(near, far);
 }
 
-void Camera::setFovRadians(float fov) {
+void RenderCamera::setFovRadians(float fov) {
 	if (fov != m_fov && !isnan(fov)) {
 		m_fov = fov;
 		m_projectionChanged = true;
 	}
 }
 
-void Camera::setFovDegrees(float fov) {
+void RenderCamera::setFovDegrees(float fov) {
 	setFovRadians(glm::radians(fov));
 }
 
-void Camera::setAspect(float aspect) {
+void RenderCamera::setAspect(float aspect) {
 	if (aspect != m_aspect && !isnan(aspect)) {
 		m_aspect = aspect;
 		m_projectionChanged = true;
 	}
 }
 
-void Camera::setClipppingPlanes(float near, float far) {
+void RenderCamera::setClipppingPlanes(float near, float far) {
 	if ((near != m_near || far != m_far) && !isnan(near) && !isnan(far)) {
 		m_near = near;
 		m_far = far;

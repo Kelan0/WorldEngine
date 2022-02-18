@@ -89,6 +89,8 @@ public:
 
 	static bool detach(const Entity& entity);
 
+	static Entity create(Scene* scene, const std::string& name);
+
 	static Entity createChild(const Entity& entity, const std::string& name);
 
 private:

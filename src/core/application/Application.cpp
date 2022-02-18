@@ -1,6 +1,7 @@
 #include "Application.h"
 #include "InputHandler.h"
 #include "../engine/scene/Scene.h"
+#include "../engine/renderer/SceneRenderer.h"
 #include "../graphics/GraphicsManager.h"
 #include "../graphics/GraphicsPipeline.h"
 #include "../graphics/Mesh.h"
@@ -16,10 +17,12 @@ Application::Application():
 	m_graphics(NULL),
 	m_inputHandler(NULL), 
 	m_scene(NULL),
+	m_sceneRenderer(NULL),
 	m_running(false) {
 }
 
 Application::~Application() {
+	delete m_sceneRenderer;
 	delete m_scene;
 	delete m_inputHandler;
 	delete m_graphics;
@@ -61,6 +64,9 @@ bool Application::initInternal() {
 	m_scene = new Scene();
 	m_scene->init();
 
+	m_sceneRenderer = new SceneRenderer();
+	m_sceneRenderer->setScene(m_scene);
+
 	init();
 }
 
@@ -88,6 +94,7 @@ void Application::renderInternal(double dt) {
 
 	commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 	render(dt);
+	m_sceneRenderer->render(dt);
 	commandBuffer.endRenderPass();
 }
 
@@ -213,6 +220,10 @@ InputHandler* Application::input() {
 
 Scene* Application::scene() {
 	return m_scene;
+}
+
+SceneRenderer* Application::renderer() {
+	return m_sceneRenderer;
 }
 
 glm::ivec2 Application::getWindowSize() const {

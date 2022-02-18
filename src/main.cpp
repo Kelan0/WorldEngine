@@ -8,9 +8,9 @@
 #include "core/graphics/Mesh.h"
 #include "core/graphics/UniformBuffer.h"
 #include "core/graphics/Texture.h"
-#include "core/engine/Camera.h"
 #include "core/engine/scene/Scene.h"
 #include "core/engine/scene/EntityHierarchy.h"
+#include "core/engine/renderer/RenderCamera.h"
 
 #include <iostream>
 
@@ -29,7 +29,7 @@ class App : public Application {
 	Mesh* testMesh = NULL;
 	Image2D* testImage = NULL;
 	Texture2D* testTexture = NULL;
-	Camera camera;
+	RenderCamera camera;
 	float cameraPitch = 0.0F;
 	float cameraYaw = 0.0F;
 	
@@ -37,37 +37,6 @@ class App : public Application {
 	float x = 0.0F;
 
     void init() override {
-
-		Entity test0 = scene()->createEntity("test0");
-		EntityHierarchy& test0_node = test0.addComponent<EntityHierarchy>();
-
-		Entity test00 = EntityHierarchy::createChild(test0, "test00");
-		EntityHierarchy& test00_node = test00.getComponent<EntityHierarchy>();
-
-		Entity test000 = EntityHierarchy::createChild(test00, "test000");
-		EntityHierarchy& test000_node = test000.getComponent<EntityHierarchy>();
-
-		Entity test001 = EntityHierarchy::createChild(test00, "test001");
-		EntityHierarchy& test001_node = test001.getComponent<EntityHierarchy>();
-
-		Entity test0010 = EntityHierarchy::createChild(test001, "test0010");
-		EntityHierarchy& test0010_node = test0010.getComponent<EntityHierarchy>();
-
-		Entity test0011 = EntityHierarchy::createChild(test001, "test0011");
-		EntityHierarchy& test0011_node = test0010.getComponent<EntityHierarchy>();
-
-		Entity test0012 = EntityHierarchy::createChild(test001, "test0012");
-		EntityHierarchy& test0012_node = test0010.getComponent<EntityHierarchy>();
-
-		Entity test0013 = EntityHierarchy::createChild(test001, "test0013");
-		EntityHierarchy& test0013_node = test0010.getComponent<EntityHierarchy>();
-
-		Entity test0014 = EntityHierarchy::createChild(test001, "test0014");
-		EntityHierarchy& test0014_node = test0010.getComponent<EntityHierarchy>();
-
-		test001.destroy();
-
-		//EntityHierarchy::detach(test001);
 
 
 		Image2DConfiguration testTextureImageConfig;
