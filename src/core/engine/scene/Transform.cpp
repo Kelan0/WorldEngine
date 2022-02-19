@@ -1,6 +1,9 @@
 #include "Transform.h"
 
-Transform::Transform() {
+Transform::Transform():
+	m_translation(0.0),
+	m_rotation(1.0),
+	m_scale(1.0) {
 }
 
 Transform::Transform(const glm::mat4& transformationMatrix) {
@@ -13,7 +16,7 @@ Transform::Transform(const Transform& copy):
 	m_scale(copy.m_scale) {
 }
 
-Transform::Transform(Transform&& move):
+Transform::Transform(Transform&& move) noexcept:
 	m_translation(std::exchange(move.m_translation, glm::dvec3(0.0))),
 	m_rotation(std::exchange(move.m_rotation, glm::dmat3(1.0))),
 	m_scale(std::exchange(move.m_scale, glm::dvec3(1.0))) {
@@ -317,15 +320,84 @@ Transform& Transform::operator=(glm::dmat4 other) {
 }
 
 Transform& Transform::operator=(const Transform& other) {
-	m_matrix = other.m_matrix;
+	m_translation = other.m_translation;
+	m_rotation = other.m_rotation;
+	m_scale = other.m_scale;
 	return *this;
 }
 
+bool Transform::equalsTranslation(const Transform& other, double epsilon) const {
+	if (!glm::epsilonEqual(m_translation.x, other.m_translation.x, epsilon)) return false;
+	if (!glm::epsilonEqual(m_translation.y, other.m_translation.y, epsilon)) return false;
+	if (!glm::epsilonEqual(m_translation.z, other.m_translation.z, epsilon)) return false;
+	return true;
+}
+
+bool Transform::equalsRotation(const Transform& other, double epsilon) const {
+	if (!glm::epsilonEqual(m_rotation[0].x, other.m_rotation[0].x, epsilon)) return false;
+	if (!glm::epsilonEqual(m_rotation[0].y, other.m_rotation[0].y, epsilon)) return false;
+	if (!glm::epsilonEqual(m_rotation[0].z, other.m_rotation[0].z, epsilon)) return false;
+	if (!glm::epsilonEqual(m_rotation[1].x, other.m_rotation[1].x, epsilon)) return false;
+	if (!glm::epsilonEqual(m_rotation[1].y, other.m_rotation[1].y, epsilon)) return false;
+	if (!glm::epsilonEqual(m_rotation[1].z, other.m_rotation[1].z, epsilon)) return false;
+	if (!glm::epsilonEqual(m_rotation[2].x, other.m_rotation[2].x, epsilon)) return false;
+	if (!glm::epsilonEqual(m_rotation[2].y, other.m_rotation[2].y, epsilon)) return false;
+	if (!glm::epsilonEqual(m_rotation[2].z, other.m_rotation[2].z, epsilon)) return false;
+	return true;
+}
+
+bool Transform::equalsScale(const Transform& other, double epsilon) const {
+	if (!glm::epsilonEqual(m_scale.x, other.m_scale.x, epsilon)) return false;
+	if (!glm::epsilonEqual(m_scale.y, other.m_scale.y, epsilon)) return false;
+	if (!glm::epsilonEqual(m_scale.z, other.m_scale.z, epsilon)) return false;
+	return true;
+}
+
+bool Transform::operator==(const Transform& other) const {
+	if (!equalsTranslation(other, 1e-10)) return false;
+	if (!equalsRotation(other, 1e-5)) return false;
+	if (!equalsScale(other, 1e-10)) return false;
+	return true;
+}
+
+bool Transform::operator==(const glm::dmat4& other) const {
+	return (*this) == Transform(other);
+}
+
+bool Transform::operator==(const glm::mat4& other) const {
+	return (*this) == Transform(other);
+}
+
+bool Transform::operator!=(const Transform& other) const {
+	return !(*this == other);
+}
+
+bool Transform::operator!=(const glm::dmat4& other) const {
+	return !(*this == other);
+}
+
+bool Transform::operator!=(const glm::mat4& other) const {
+	return !(*this == other);
+}
+
 glm::dmat4 Transform::getMatrix() const {
-	return glm::dmat4();
+	return glm::dmat4(
+		glm::dvec4(m_rotation[0] * m_scale.x, 0.0),
+		glm::dvec4(m_rotation[1] * m_scale.y, 0.0),
+		glm::dvec4(m_rotation[2] * m_scale.z, 0.0),
+		glm::dvec4(m_translation, 1.0)
+	);
 }
 
 Transform& Transform::setMatrix(const glm::dmat4& matrix) {
+	m_translation = glm::dvec3(matrix[3]);
+	m_rotation = glm::dmat3(matrix);
+	m_scale.x = glm::length(m_rotation[0]);
+	m_scale.y = glm::length(m_rotation[1]);
+	m_scale.z = glm::length(m_rotation[2]);
+	m_rotation[0] /= m_scale.x;
+	m_rotation[1] /= m_scale.y;
+	m_rotation[2] /= m_scale.z;
 	return *this;
 }
 

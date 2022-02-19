@@ -1,14 +1,8 @@
 #include "RenderCamera.h"
 
 RenderCamera::RenderCamera() :
-	m_position(0.0F),
-	m_rotation(1.0F, 0.0F, 0.0F, 0.0F),
-	m_prevPosition(m_position),
-	m_prevRotation(m_rotation),
-	m_fov(glm::radians(90.0F)),
-	m_aspect(1.0F),
-	m_near(0.1F),
-	m_far(100.0F),
+	m_transform(),
+	m_prevTransform(),
 	m_viewMatrix(1.0F),
 	m_projectionMatrix(1.0F),
 	m_viewProjectionMatrix(1.0F),
@@ -17,136 +11,55 @@ RenderCamera::RenderCamera() :
 	m_inverseViewProjectionMatrix(1.0F),
 	m_prevViewMatrix(m_viewMatrix),
 	m_prevProjectionMatrix(m_projectionMatrix),
-	m_prevViewProjectionMatrix(m_viewProjectionMatrix),
-	m_viewChanged(true),
-	m_projectionChanged(true) {
+	m_prevViewProjectionMatrix(m_viewProjectionMatrix) {
 }
 
 RenderCamera::~RenderCamera() {
 }
 
 void RenderCamera::update() {
-	m_prevPosition = m_position;
-	m_prevRotation = m_rotation;
+	m_prevTransform = m_transform;
 	m_prevViewMatrix = m_viewMatrix;
 	m_prevProjectionMatrix = m_projectionMatrix;
 	m_prevViewProjectionMatrix = m_viewProjectionMatrix;
 
-	if (m_projectionChanged) {
-		m_projectionMatrix = glm::perspective(m_fov, m_aspect, m_near, m_far);
-		//m_projectionMatrix = glm::scale(m_projectionMatrix, glm::vec3(1.0F, -1.0F, 1.0F));
-		m_inverseProjectionMatrix = glm::inverse(m_projectionMatrix);
-	}
-	if (m_viewChanged) {
-		m_inverseViewMatrix = glm::mat4(getRotationMatrix());
-		m_inverseViewMatrix[3] = glm::vec4(m_position, 1.0F);
-		m_viewMatrix = glm::inverse(m_inverseViewMatrix);
-	}
-	if (m_viewChanged || m_projectionChanged) {
-		m_viewProjectionMatrix = m_projectionMatrix * m_viewMatrix;
-		m_inverseViewProjectionMatrix = glm::inverse(m_viewProjectionMatrix);
-	}
+	m_projectionMatrix = m_projection.getProjectionMatrix();
+	//m_projectionMatrix = glm::scale(m_projectionMatrix, glm::vec3(1.0F, -1.0F, 1.0F));
+	m_inverseProjectionMatrix = glm::inverse(m_projectionMatrix);
 
-	m_viewChanged = false;
-	m_projectionChanged = false;
+	m_inverseViewMatrix = m_transform.getMatrix();
+	m_viewMatrix = glm::inverse(m_inverseViewMatrix);
+	m_viewProjectionMatrix = m_projectionMatrix * m_viewMatrix;
+	m_inverseViewProjectionMatrix = glm::inverse(m_viewProjectionMatrix);
 }
 
-glm::vec3 RenderCamera::getPosition() const {
-	return m_position;
+Transform& RenderCamera::transform() {
+	return m_transform;
 }
 
-glm::vec3 RenderCamera::getAxisX() const {
-	float qyy = (m_rotation.y * m_rotation.y);
-	float qzz = (m_rotation.z * m_rotation.z);
-	float qxz = (m_rotation.x * m_rotation.z);
-	float qxy = (m_rotation.x * m_rotation.y);
-	float qwy = (m_rotation.w * m_rotation.y);
-	float qwz = (m_rotation.w * m_rotation.z);
-
-	return glm::vec3(1.0F - 2.0F * (qyy + qzz), 2.0F * (qxy + qwz), 2.0F * (qxz - qwy));
+const Transform& RenderCamera::getTransform() const {
+	return m_transform;
 }
 
-glm::vec3 RenderCamera::getAxisY() const {
-	float qxx = (m_rotation.x * m_rotation.x);
-	float qzz = (m_rotation.z * m_rotation.z);
-	float qxy = (m_rotation.x * m_rotation.y);
-	float qyz = (m_rotation.y * m_rotation.z);
-	float qwx = (m_rotation.w * m_rotation.x);
-	float qwz = (m_rotation.w * m_rotation.z);
-
-	return glm::vec3(2.0F * (qxy - qwz), 1.0F - 2.0F * (qxx + qzz), 2.0F * (qyz + qwx));
+void RenderCamera::setTransform(const Transform& transform) {
+	m_transform = transform;
 }
 
-glm::vec3 RenderCamera::getAxisZ() const {
-	float qxx = (m_rotation.x * m_rotation.x);
-	float qyy = (m_rotation.y * m_rotation.y);
-	float qxz = (m_rotation.x * m_rotation.z);
-	float qyz = (m_rotation.y * m_rotation.z);
-	float qwx = (m_rotation.w * m_rotation.x);
-	float qwy = (m_rotation.w * m_rotation.y);
-
-	return glm::vec3(2.0F * (qxz + qwy), 2.0F * (qyz - qwx), 1.0F - 2.0F * (qxx + qyy));
+Camera& RenderCamera::projection() {
+	return m_projection;
 }
 
-glm::mat3 RenderCamera::getRotationMatrix() const {
-	return glm::mat3_cast(m_rotation);
+const Camera& RenderCamera::getProjection() const {
+	return m_projection;
 }
 
-glm::quat RenderCamera::getRotation() const {
-	return m_rotation;
-}
-
-void RenderCamera::setPosition(glm::vec3 position) {
-	if (position != m_position) {
-		m_position = position;
-		m_viewChanged = true;
-	}
-}
-
-void RenderCamera::setPosition(float x, float y, float z) {
-	setPosition(glm::vec3(x, y, z));
-}
-
-void RenderCamera::setRotation(glm::quat rotation) {
-	if (rotation != m_rotation) { // TODO: threshold test?
-		m_rotation = rotation;
-		m_viewChanged = true;
-	}
-}
-
-void RenderCamera::setRotation(glm::vec3 z, glm::vec3 y) {
-	constexpr float eps = 1e-5;
-	constexpr float epsSq = eps * eps;
-
-	float zLen = glm::length(z);
-	if (zLen <= eps) {
-		// z is zero-length, set rotation to identity quaternion
-		setRotation(glm::quat(1.0F, 0.0F, 0.0F, 0.0F));
-	} else {
-		z /= zLen;
-
-		float yLen = glm::dot(y, y);
-		if (yLen <= epsSq) {
-			// y is zero-length, default to global up (0, 1, 0)
-			y = glm::vec3(0, 1, 0); 
-
-		} else if (glm::abs(yLen - 1.0F) > eps) {
-			// y is not normalized
-			y = glm::normalize(y);
-		}
-
-		if (glm::abs(glm::dot(z, y)) > 0.999F) {
-			// z and y point in the same direction, choose a different y-axis
-			y = glm::cross(this->getAxisX(), z);
-		}
-
-		setRotation(glm::quatLookAt(z, y));
-	}
+void RenderCamera::setProjection(const Camera& camera) {
+	m_projection = camera;
 }
 
 void RenderCamera::lookAt(glm::vec3 eye, glm::vec3 center, glm::vec3 up) {
-	setPosition(eye);
-	setRotation(center - eye, up);
+	m_transform.setTranslation(eye.x, eye.y, eye.z);
+	m_transform.setRotation(center - eye, up, false);
 }
 
 void RenderCamera::lookAt(float eyeX, float eyeY, float eyeZ, float centerX, float centerY, float centerZ, float upX, float upY, float upZ) {
@@ -154,7 +67,7 @@ void RenderCamera::lookAt(float eyeX, float eyeY, float eyeZ, float centerX, flo
 }
 
 void RenderCamera::lookAt(glm::vec3 center, glm::vec3 up) {
-	setRotation(center - m_position, up);
+	m_transform.setRotation(glm::dvec3(center) - m_transform.getTranslation(), up, false);
 }
 
 void RenderCamera::lookAt(float centerX, float centerY, float centerZ, float upX, float upY, float upZ) {
@@ -183,56 +96,4 @@ const glm::mat4& RenderCamera::getInverseProjectionMatrix() const {
 
 const glm::mat4& RenderCamera::getInverseViewProjectionMatrix() const {
 	return m_inverseViewProjectionMatrix;
-}
-
-float RenderCamera::getFovRadians() const {
-	return m_fov;
-}
-
-float RenderCamera::getFovDegrees() const {
-	return glm::degrees(m_fov);
-}
-
-float RenderCamera::getAspect() const {
-	return m_aspect;
-}
-
-float RenderCamera::getNearPlane() const {
-	return m_near;
-}
-
-float RenderCamera::getFarPlane() const {
-	return m_far;
-}
-
-void RenderCamera::setPerspective(float fov, float aspect, float near, float far) {
-	setFovRadians(fov);
-	setAspect(aspect);
-	setClipppingPlanes(near, far);
-}
-
-void RenderCamera::setFovRadians(float fov) {
-	if (fov != m_fov && !isnan(fov)) {
-		m_fov = fov;
-		m_projectionChanged = true;
-	}
-}
-
-void RenderCamera::setFovDegrees(float fov) {
-	setFovRadians(glm::radians(fov));
-}
-
-void RenderCamera::setAspect(float aspect) {
-	if (aspect != m_aspect && !isnan(aspect)) {
-		m_aspect = aspect;
-		m_projectionChanged = true;
-	}
-}
-
-void RenderCamera::setClipppingPlanes(float near, float far) {
-	if ((near != m_near || far != m_far) && !isnan(near) && !isnan(far)) {
-		m_near = near;
-		m_far = far;
-		m_projectionChanged = true;
-	}
 }

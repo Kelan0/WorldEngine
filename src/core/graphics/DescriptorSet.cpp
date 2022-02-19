@@ -26,7 +26,7 @@ std::shared_ptr<DescriptorSetLayout> DescriptorSetLayout::get(std::weak_ptr<vkr:
 	for (int i = 0; i < key.bindingCount; ++i) {
 		int binding = (int)key.pBindings[i].binding;
 		if (binding == lastBinding) {
-			printf("Descriptor set layout has duplicated bindings\n");
+			printf("Descriptor setOrtho layout has duplicated bindings\n");
 			assert(false);
 			return NULL;
 		}
@@ -38,7 +38,7 @@ std::shared_ptr<DescriptorSetLayout> DescriptorSetLayout::get(std::weak_ptr<vkr:
 		vk::DescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 		vk::Result result = (**device.lock()).createDescriptorSetLayout(&descriptorSetLayoutCreateInfo, NULL, &descriptorSetLayout);
 		if (result != vk::Result::eSuccess) {
-			printf("Failed to get descriptor set layout: %s\n", vk::to_string(result).c_str());
+			printf("Failed to get descriptor setOrtho layout: %s\n", vk::to_string(result).c_str());
 			return NULL;
 		}
 
@@ -63,7 +63,7 @@ void DescriptorSetLayout::clearCache() {
 	}
 
 	if (count > 0) {
-		printf("Clearing descriptor set layout cache. %d descriptor set layouts have external references and will not be freed\n", count);
+		printf("Clearing descriptor setOrtho layout cache. %d descriptor setOrtho layouts have external references and will not be freed\n", count);
 	}
 #endif
 

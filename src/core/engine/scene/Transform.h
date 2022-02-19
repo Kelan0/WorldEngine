@@ -10,7 +10,7 @@ public:
 
 	Transform(const Transform& copy);
 
-	Transform(Transform&& move);
+	Transform(Transform&& move) noexcept;
 
 	~Transform();
 
@@ -84,6 +84,18 @@ public:
 	Transform& operator=(glm::dmat4 other);
 	Transform& operator=(const Transform& other);
 
+	bool equalsTranslation(const Transform& other, double epsilon) const;
+	bool equalsRotation(const Transform& other, double epsilon) const;
+	bool equalsScale(const Transform& other, double epsilon) const;
+
+	bool operator==(const Transform& other) const;
+	bool operator==(const glm::dmat4& other) const;
+	bool operator==(const glm::mat4& other) const;
+
+	bool operator!=(const Transform& other) const;
+	bool operator!=(const glm::dmat4& other) const;
+	bool operator!=(const glm::mat4& other) const;
+
 	glm::dmat4 getMatrix() const;
 
 	Transform& setMatrix(const glm::dmat4& matrix);
@@ -92,6 +104,6 @@ public:
 private:
 	glm::dvec3 m_translation;
 	glm::dmat3 m_rotation;
-	glm::vec3 m_scale;
+	glm::dvec3 m_scale;
 };
 

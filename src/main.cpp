@@ -10,6 +10,8 @@
 #include "core/graphics/Texture.h"
 #include "core/engine/scene/Scene.h"
 #include "core/engine/scene/EntityHierarchy.h"
+#include "core/engine/scene/Transform.h"
+#include "core/engine/scene/Camera.h"
 #include "core/engine/renderer/RenderCamera.h"
 
 #include <iostream>
@@ -32,12 +34,16 @@ class App : public Application {
 	RenderCamera camera;
 	float cameraPitch = 0.0F;
 	float cameraYaw = 0.0F;
+
+	Entity cameraEntity;
 	
 
 	float x = 0.0F;
 
     void init() override {
-
+		cameraEntity = scene()->createEntity("camera");
+		cameraEntity.addComponent<Camera>().setPerspective(glm::radians(90.0), graphics()->getAspectRatio(), 0.1, 100.0);
+		cameraEntity.addComponent<Transform>();
 
 		Image2DConfiguration testTextureImageConfig;
 		testTextureImageConfig.device = graphics()->getDevice();
@@ -103,8 +109,7 @@ class App : public Application {
 		graphics()->initializeGraphicsPipeline(pipelineConfig);
 		//graphics()->setPreferredPresentMode(vk::PresentModeKHR::eFifo);
 
-		camera.setPosition(0.0F, 2.0F, 2.0F);
-
+		cameraEntity.getComponent<Transform>().setTranslation(0.0F, 2.0F, 2.0F);
     }
 
 	void cleanup() override {
@@ -132,6 +137,7 @@ class App : public Application {
 		}
 
 		if (input()->isMouseGrabbed()) {
+			Transform& cameraTransform = cameraEntity.getComponent<Transform>();
 			glm::ivec2 dMouse = input()->getRelativeMouseState();
 			if (isViewportInverted()) 
 				dMouse.y *= -1;
@@ -142,18 +148,20 @@ class App : public Application {
 			if (cameraYaw < -M_PI) cameraYaw += M_PI * 2.0;
 			if (cameraPitch > +M_PI * 0.5) cameraPitch = +M_PI * 0.5;
 			if (cameraPitch < -M_PI * 0.5) cameraPitch = -M_PI * 0.5;
-			glm::quat yaw = glm::normalize(glm::angleAxis(cameraYaw, glm::vec3(0.0, 1.0, 0.0)));
-			glm::quat pitch = glm::normalize(angleAxis(cameraPitch, glm::vec3(
-				1.0F - 2.0F * ((yaw.y * yaw.y) + (yaw.z * yaw.z)),
-				2.0F * ((yaw.x * yaw.y) + (yaw.w * yaw.z)),
-				2.0F * ((yaw.x * yaw.z) - (yaw.w * yaw.y))
-			)));
+			//glm::quat yaw = glm::normalize(glm::angleAxis(cameraYaw, glm::vec3(0.0, 1.0, 0.0)));
+			//glm::quat pitch = glm::normalize(angleAxis(cameraPitch, glm::vec3(
+			//	1.0F - 2.0F * ((yaw.y * yaw.y) + (yaw.z * yaw.z)),
+			//	2.0F * ((yaw.x * yaw.y) + (yaw.w * yaw.z)),
+			//	2.0F * ((yaw.x * yaw.z) - (yaw.w * yaw.y))
+			//)));
 
-			camera.setRotation(pitch * yaw);
+			//camera.setRotation(pitch * yaw);
+
+			cameraTransform.setRotation(cameraPitch, cameraYaw);
 
 
-			float movementSpeed = 1.0F;
-			glm::vec3 movementDir(0.0F);
+			double movementSpeed = 1.0;
+			glm::dvec3 movementDir(0.0);
 
 			if (input()->keyDown(SDL_SCANCODE_W)) movementDir.z--;
 			if (input()->keyDown(SDL_SCANCODE_S)) movementDir.z++;
@@ -161,8 +169,8 @@ class App : public Application {
 			if (input()->keyDown(SDL_SCANCODE_D)) movementDir.x++;
 
 			if (glm::dot(movementDir, movementDir) > 0.5F) {
-				movementDir = camera.getRotationMatrix() * glm::normalize(movementDir);
-				camera.setPosition(camera.getPosition() + movementDir * movementSpeed * (float)dt);
+				movementDir = cameraTransform.getRotationMatrix() * glm::normalize(movementDir);
+				cameraTransform.translate(movementDir * movementSpeed * dt);
 			}
 		}
 	}
@@ -171,9 +179,12 @@ class App : public Application {
 
 		handleUserInput(dt);
 
-		camera.setAspect(graphics()->getAspectRatio());
-		camera.setClipppingPlanes(0.01F, 500.0F);
-		camera.setFovDegrees(90.0F);
+		Camera& projection = cameraEntity.getComponent<Camera>();
+		projection.setAspect(graphics()->getAspectRatio());
+		projection.setClippingPlanes(0.01F, 500.0F);
+		projection.setFov(glm::radians(90.0F));
+		camera.setTransform(cameraEntity.getComponent<Transform>());
+		camera.setProjection(projection);
 		camera.update();
 
 		GraphicsPipeline& pipeline = graphics()->pipeline();
