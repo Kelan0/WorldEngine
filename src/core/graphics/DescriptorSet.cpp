@@ -23,7 +23,7 @@ std::shared_ptr<DescriptorSetLayout> DescriptorSetLayout::get(std::weak_ptr<vkr:
 #if _DEBUG
 	// Check for duplicated bindings
 	int lastBinding = -1;
-	for (int i = 0; i < key.bindingCount; ++i) {
+	for (uint32_t i = 0; i < key.bindingCount; ++i) {
 		int binding = (int)key.pBindings[i].binding;
 		if (binding == lastBinding) {
 			printf("Descriptor setOrtho layout has duplicated bindings\n");
@@ -87,7 +87,7 @@ bool DescriptorSetLayout::hasBinding(uint32_t binding) const {
 }
 
 int DescriptorSetLayout::findBindingIndex(uint32_t binding) const {
-	for (int i = 0; i < m_key.bindingCount; ++i) {
+	for (uint32_t i = 0; i < m_key.bindingCount; ++i) {
 		if (m_key.pBindings[i].binding == binding) {
 			return i;
 		}

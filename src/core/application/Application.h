@@ -7,6 +7,7 @@ class GraphicsManager;
 class InputHandler;
 class Scene;
 class SceneRenderer;
+class EventDispacher;
 
 class Application {
 	NO_COPY(Application);
@@ -39,6 +40,8 @@ public:
 
 	SceneRenderer* renderer();
 
+	EventDispacher* getEventDispacher();
+
 	glm::ivec2 getWindowSize() const;
 
 	bool isViewportInverted() const;
@@ -62,6 +65,7 @@ private:
 	InputHandler* m_inputHandler;
 	Scene* m_scene;
 	SceneRenderer* m_sceneRenderer;
+	EventDispacher* m_eventDispacher;
 
 	bool m_running;
 };

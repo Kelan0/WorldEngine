@@ -97,11 +97,11 @@ struct ImageRegion {
 	uint32_t baseLayer = 0;
 	uint32_t baseMipLevel = 0;
 
-	uint32_t width = VK_WHOLE_SIZE;
-	uint32_t height = VK_WHOLE_SIZE;
-	uint32_t depth = VK_WHOLE_SIZE;
-	uint32_t layerCount = VK_WHOLE_SIZE;
-	uint32_t mipLevelCount = VK_WHOLE_SIZE;
+	uint32_t width = (uint32_t)VK_WHOLE_SIZE;
+	uint32_t height = (uint32_t)VK_WHOLE_SIZE;
+	uint32_t depth = (uint32_t)VK_WHOLE_SIZE;
+	uint32_t layerCount = (uint32_t)VK_WHOLE_SIZE;
+	uint32_t mipLevelCount = (uint32_t)VK_WHOLE_SIZE;
 };
 
 

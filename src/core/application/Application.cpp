@@ -5,6 +5,8 @@
 #include "../graphics/GraphicsManager.h"
 #include "../graphics/GraphicsPipeline.h"
 #include "../graphics/Mesh.h"
+#include "../engine/scene/event/EventDispacher.h"
+#include "../engine/scene/event/Events.h"
 #include <chrono>
 
 
@@ -18,6 +20,7 @@ Application::Application():
 	m_inputHandler(NULL), 
 	m_scene(NULL),
 	m_sceneRenderer(NULL),
+	m_eventDispacher(NULL),
 	m_running(false) {
 }
 
@@ -26,6 +29,7 @@ Application::~Application() {
 	delete m_scene;
 	delete m_inputHandler;
 	delete m_graphics;
+	delete m_eventDispacher;
 
 	printf("Destroying window\n");
 	SDL_DestroyWindow(m_windowHandle);
@@ -58,6 +62,8 @@ bool Application::initInternal() {
 		printf("Failed to initialize graphics engine\n");
 		return false;
 	}
+
+	m_eventDispacher = new EventDispacher();
 
 	m_inputHandler = new InputHandler(m_windowHandle);
 
@@ -101,14 +107,29 @@ void Application::renderInternal(double dt) {
 void Application::processEventsInternal() {
 	m_inputHandler->update();
 
+	glm::ivec2 windowSize = getWindowSize();
+
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
-
-		if (event.type == SDL_QUIT) {
+		switch (event.type) {
+		case SDL_QUIT:
 			stop();
+			break;
+
+		case SDL_WINDOWEVENT:
+			switch (event.window.event) {
+			case SDL_WINDOWEVENT_SIZE_CHANGED:
+				m_eventDispacher->trigger(ScreenResizeEvent{ windowSize, glm::ivec2(event.window.data1, event.window.data2) });
+				break;
+			}
+			break;
 		}
 
 		m_inputHandler->processEvent(event);
+	}
+
+	if (m_graphics->didResolutionChange()) {
+		printf("Resolution changed\n");
 	}
 }
 
@@ -224,6 +245,10 @@ Scene* Application::scene() {
 
 SceneRenderer* Application::renderer() {
 	return m_sceneRenderer;
+}
+
+EventDispacher* Application::getEventDispacher() {
+	return m_eventDispacher;
 }
 
 glm::ivec2 Application::getWindowSize() const {

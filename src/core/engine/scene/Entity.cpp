@@ -4,7 +4,7 @@
 Entity::Entity(Scene* scene, const entt::entity& entity) :
 	m_scene(scene),
 	m_entity(entity) {
-	addRef();
+	//addRef();
 }
 
 Entity::Entity(const Entity& entity): 
@@ -12,10 +12,10 @@ Entity::Entity(const Entity& entity):
 }
 
 Entity::Entity(Entity&& entity) noexcept {
-	entity.removeRef();
+	//entity.removeRef();
 	m_scene = std::exchange(entity.m_scene, nullptr);
 	m_entity = std::exchange(entity.m_entity, entt::null);
-	addRef();
+	//addRef();
 }
 
 Entity::Entity(std::nullptr_t):
@@ -27,7 +27,7 @@ Entity::Entity():
 }
 
 Entity::~Entity() {
-	removeRef();
+	//removeRef();
 }
 
 void Entity::destroy() const {
@@ -43,7 +43,7 @@ Scene* Entity::getScene() const {
 }
 
 bool Entity::exists() const {
-	return (m_entity != entt::null) && (m_scene != NULL);
+	return (m_entity != entt::null) && (registry().current(m_entity) == entt::to_version(m_entity)) && (m_scene != NULL);
 }
 
 Entity::operator entt::entity() const {
@@ -59,16 +59,16 @@ Entity::operator bool() const {
 }
 
 void Entity::operator=(std::nullptr_t) {
-	removeRef();
+	//removeRef();
 	m_entity = entt::null;
 	m_scene = NULL;
 }
 
 Entity& Entity::operator=(const Entity& entity) {
-	removeRef();
+	//removeRef();
 	m_entity = entity.m_entity;
 	m_scene = entity.m_scene;
-	addRef();
+	//addRef();
 	return *this;
 }
 
@@ -88,20 +88,20 @@ bool Entity::operator!=(std::nullptr_t) const {
 	return !(*this == nullptr);
 }
 
-void Entity::addRef() {
-	if (m_entity != entt::null) {
-		//printf("addRef 0x%p for %llu\n", this, (uint64_t)m_entity);
-		m_scene->m_entityRefTracker[m_entity].emplace_back(this);
-	}
-}
+//void Entity::addRef() {
+//	if (m_entity != entt::null) 
+//		//printf("addRef 0x%p for %llu\n", this, (uint64_t)m_entity);
+//		m_scene->m_entityRefTracker[m_entity].emplace_back(this);
+//	}
+//}
 
-void Entity::removeRef() {
-	if (m_entity != entt::null) {
-		//printf("removeRef 0x%p for %llu\n", this, (uint64_t)m_entity);
-		auto& v = m_scene->m_entityRefTracker[m_entity];
-		v.erase(std::remove(v.begin(), v.end(), this), v.end());
-	}
-}
+//void Entity::removeRef() {
+//	if (m_entity != entt::null) {
+//		//printf("removeRef 0x%p for %llu\n", this, (uint64_t)m_entity);
+//		auto& v = m_scene->m_entityRefTracker[m_entity];
+//		v.erase(std::remove(v.begin(), v.end(), this), v.end());
+//	}
+//}
 
 entt::registry& Entity::registry() const {
 	return m_scene->m_registry;

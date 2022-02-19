@@ -6,6 +6,7 @@
 #include <array>
 #include <stack>
 #include <set>
+#include <unordered_set>
 #include <map>
 #include <unordered_map>
 #include <algorithm>
@@ -32,6 +33,8 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include <stb_image.h>
+
+#define ENTT_ID_TYPE uint64_t
 
 #include "hash.h"
 

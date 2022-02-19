@@ -8,14 +8,15 @@ Scene::Scene() {
 }
 
 Scene::~Scene() {
-	for (auto it = m_entityRefTracker.begin(); it != m_entityRefTracker.end(); ++it) {
-		auto& references = it->second;
-		for (auto ref : references) {
-			ref->m_entity = entt::null;
-			ref->m_scene = NULL;
-		}
-	}
-	m_entityRefTracker.clear();
+	m_registry.clear();
+	//for (auto it = m_entityRefTracker.begin(); it != m_entityRefTracker.end(); ++it) {
+	//	auto& references = it->second;
+	//	for (auto ref : references) {
+	//		ref->m_entity = entt::null;
+	//		ref->m_scene = NULL;
+	//	}
+	//}
+	//m_entityRefTracker.clear();
 }
 
 void Scene::init() {
@@ -50,10 +51,10 @@ void Scene::destroyEntity(const Entity& entity) {
 		entt::entity id = entity.m_entity;
 		m_registry.destroy(id);
 
-		auto& references = m_entityRefTracker[id];
-		for (auto ref : references)
-			ref->m_entity = entt::null;
-		m_entityRefTracker.erase(id);
+		//auto& references = m_entityRefTracker[id];
+		//for (auto ref : references)
+		//	ref->m_entity = entt::null;
+		//m_entityRefTracker.erase(id);
 
 	}
 }

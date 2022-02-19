@@ -37,6 +37,7 @@ GraphicsManager::GraphicsManager() {
 	m_gpuMemory = NULL;
 	m_debugMessenger = NULL;
 	m_preferredPresentMode = vk::PresentModeKHR::eMailbox;
+	m_resolutionChanged = false;
 }
 
 GraphicsManager::~GraphicsManager() {
@@ -745,6 +746,7 @@ bool GraphicsManager::createSwapchainFramebuffers() {
 bool GraphicsManager::beginFrame() {
 
 	if (m_recreateSwapchain) {
+		m_resolutionChanged = false;
 		bool recreated = recreateSwapchain();
 #if _DEBUG
 		if (!recreated) {
@@ -765,6 +767,7 @@ bool GraphicsManager::beginFrame() {
 	if (m_swapchain.imageExtent.width != Application::instance()->getWindowSize().x ||
 		m_swapchain.imageExtent.height != Application::instance()->getWindowSize().y) {
 		m_recreateSwapchain = true;
+		m_resolutionChanged = true;
 		return false;
 	}
 
@@ -842,7 +845,7 @@ void GraphicsManager::endFrame() {
 
 	vk::Result result = queue.presentKHR(presentInfo);
 
-	if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eErrorOutOfDateKHR) {
+	if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
 		m_recreateSwapchain = true;
 		return;
 	}
@@ -891,6 +894,10 @@ void GraphicsManager::setPreferredPresentMode(vk::PresentModeKHR presentMode) {
 		m_preferredPresentMode = presentMode;
 		m_recreateSwapchain = true;
 	}
+}
+
+bool GraphicsManager::didResolutionChange() const {
+	return m_resolutionChanged;
 }
 
 GraphicsPipeline& GraphicsManager::pipeline() {

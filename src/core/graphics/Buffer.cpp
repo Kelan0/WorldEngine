@@ -222,9 +222,9 @@ bool Buffer::stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSi
 	vk::DeviceSize stageOffset = 0;
 	uint8_t* stageData = static_cast<uint8_t*>(data);
 
-	int stages = (size + stageSize - 1) / stageSize; // round-up integer division
+	vk::DeviceSize stages = (size + stageSize - 1) / stageSize; // round-up integer division
 
-	for (int i = 0; i < stages; ++i) {
+	for (vk::DeviceSize i = 0; i < stages; ++i) {
 		if (!Buffer::mappedUpload(s_stagingBuffer.get(), 0, stageSize, stageData)) {
 			printf("Failed to upload data to staging buffer\n");
 			return false;

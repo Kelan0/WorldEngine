@@ -105,8 +105,8 @@ private:
 	bool createSwapchainImages();
 
 	bool createSwapchainFramebuffers();
-public:
 
+public:
 	bool beginFrame();
 
 	void endFrame();
@@ -147,6 +147,7 @@ public:
 
 	void setPreferredPresentMode(vk::PresentModeKHR presentMode);
 
+	bool didResolutionChange() const;
 private:
 	vkr::Context m_context;
 	std::unique_ptr<vkr::Instance> m_instance;
@@ -163,5 +164,6 @@ private:
 	GraphicsPipelineConfiguration m_pipelineConfig;
 	vk::PresentModeKHR m_preferredPresentMode;
 	bool m_recreateSwapchain;
+	bool m_resolutionChanged;
 };
 

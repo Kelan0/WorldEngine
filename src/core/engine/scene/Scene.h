@@ -19,6 +19,7 @@ struct ComponentRemovedEvent {
 
 class Scene {
 	friend class Entity;
+	friend class SceneRenderer;
 private:
 	template<class Component>
 	struct ComponentEventTracker {
@@ -48,9 +49,8 @@ public:
 
 private:
 	entt::registry m_registry;
-	entt::dispatcher m_dispacher;
-	std::unordered_map<entt::entity, std::vector<Entity*>> m_entityRefTracker;
 	EventDispacher* m_eventDispacher;
+	//std::unordered_map<entt::entity, std::vector<Entity*>> m_entityRefTracker;
 };
 
 template<class Component>

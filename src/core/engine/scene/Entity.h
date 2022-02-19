@@ -72,9 +72,9 @@ public:
 	bool operator!=(std::nullptr_t) const;
 
 private:
-	void addRef();
-
-	void removeRef();
+	//void addRef();
+	//
+	//void removeRef();
 
 	entt::registry& registry() const;
 

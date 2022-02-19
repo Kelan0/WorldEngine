@@ -10,7 +10,7 @@ GPUMemory::~GPUMemory() {
 }
 
 GPUMemory* GPUMemory::create(const GPUMemoryConfiguration& gpuMemoryConfiguration) {
-	float printAllocSize = gpuMemoryConfiguration.size;
+	float printAllocSize = (float)gpuMemoryConfiguration.size;
 	std::string printSizeUnit = "Bytes";
 
 	if (printAllocSize >= 1024) {

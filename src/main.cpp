@@ -12,6 +12,8 @@
 #include "core/engine/scene/EntityHierarchy.h"
 #include "core/engine/scene/Transform.h"
 #include "core/engine/scene/Camera.h"
+#include "core/engine/scene/event/EventDispacher.h"
+#include "core/engine/scene/event/Events.h"
 #include "core/engine/renderer/RenderCamera.h"
 
 #include <iostream>
@@ -32,15 +34,23 @@ class App : public Application {
 	Image2D* testImage = NULL;
 	Texture2D* testTexture = NULL;
 	RenderCamera camera;
-	float cameraPitch = 0.0F;
-	float cameraYaw = 0.0F;
+	double cameraPitch = 0.0F;
+	double cameraYaw = 0.0F;
 
 	Entity cameraEntity;
 	
+	void onScreenResize(const ScreenResizeEvent& event) {
+		printf("ScreenResizeEvent from [%d x %d] to [%d x %d]\n", event.oldSize.x, event.oldSize.y, event.newSize.x, event.newSize.y);
+		//cameraEntity.
+	}
 
-	float x = 0.0F;
+	void test(const ScreenResizeEvent& event) {
+
+	}
 
     void init() override {
+		getEventDispacher()->connect<ScreenResizeEvent>(&App::onScreenResize, this);
+
 		cameraEntity = scene()->createEntity("camera");
 		cameraEntity.addComponent<Camera>().setPerspective(glm::radians(90.0), graphics()->getAspectRatio(), 0.1, 100.0);
 		cameraEntity.addComponent<Transform>();
@@ -148,17 +158,8 @@ class App : public Application {
 			if (cameraYaw < -M_PI) cameraYaw += M_PI * 2.0;
 			if (cameraPitch > +M_PI * 0.5) cameraPitch = +M_PI * 0.5;
 			if (cameraPitch < -M_PI * 0.5) cameraPitch = -M_PI * 0.5;
-			//glm::quat yaw = glm::normalize(glm::angleAxis(cameraYaw, glm::vec3(0.0, 1.0, 0.0)));
-			//glm::quat pitch = glm::normalize(angleAxis(cameraPitch, glm::vec3(
-			//	1.0F - 2.0F * ((yaw.y * yaw.y) + (yaw.z * yaw.z)),
-			//	2.0F * ((yaw.x * yaw.y) + (yaw.w * yaw.z)),
-			//	2.0F * ((yaw.x * yaw.z) - (yaw.w * yaw.y))
-			//)));
-
-			//camera.setRotation(pitch * yaw);
 
 			cameraTransform.setRotation(cameraPitch, cameraYaw);
-
 
 			double movementSpeed = 1.0;
 			glm::dvec3 movementDir(0.0);
@@ -193,7 +194,6 @@ class App : public Application {
 
 		pipeline.bind(commandBuffer);
 
-		x += 1.0F / 8000.0F;
 		glm::mat4 modelMatrix(1.0F);// = glm::translate(glm::mat4(1.0F), glm::vec3(glm::sin(x), 0.0F, 0.0F));
 
 		ubo->update(0, 0, &modelMatrix);
