@@ -18,6 +18,10 @@
 
 #include <iostream>
 
+struct TestEvent {
+	double dt;
+};
+
 struct UBO0 {
 	glm::mat4 modelMatrix = glm::mat4(1.0F);
 };
@@ -40,19 +44,18 @@ class App : public Application {
 	Entity cameraEntity;
 	
 	void onScreenResize(const ScreenResizeEvent& event) {
-		printf("ScreenResizeEvent from [%d x %d] to [%d x %d]\n", event.oldSize.x, event.oldSize.y, event.newSize.x, event.newSize.y);
-		//cameraEntity.
+		cameraEntity.getComponent<Camera>().setAspect((double)event.newSize.x / (double)event.newSize.y);
 	}
-
-	void test(const ScreenResizeEvent& event) {
-
+	
+	void onScreenShow(const ScreenShowEvent& event) {
+		cameraEntity.getComponent<Camera>().setAspect((double)event.size.x / (double)event.size.y);
 	}
 
     void init() override {
-		getEventDispacher()->connect<ScreenResizeEvent>(&App::onScreenResize, this);
+		eventDispacher()->connect<ScreenResizeEvent>(&App::onScreenResize, this);
 
 		cameraEntity = scene()->createEntity("camera");
-		cameraEntity.addComponent<Camera>().setPerspective(glm::radians(90.0), graphics()->getAspectRatio(), 0.1, 100.0);
+		cameraEntity.addComponent<Camera>().setPerspective(glm::radians(90.0), 1.0, 0.05, 500.0);
 		cameraEntity.addComponent<Transform>();
 
 		Image2DConfiguration testTextureImageConfig;
@@ -178,14 +181,11 @@ class App : public Application {
 
     void render(double dt) override {
 
+		eventDispacher()->trigger(TestEvent{ dt });
 		handleUserInput(dt);
 
-		Camera& projection = cameraEntity.getComponent<Camera>();
-		projection.setAspect(graphics()->getAspectRatio());
-		projection.setClippingPlanes(0.01F, 500.0F);
-		projection.setFov(glm::radians(90.0F));
 		camera.setTransform(cameraEntity.getComponent<Transform>());
-		camera.setProjection(projection);
+		camera.setProjection(cameraEntity.getComponent<Camera>());
 		camera.update();
 
 		GraphicsPipeline& pipeline = graphics()->pipeline();

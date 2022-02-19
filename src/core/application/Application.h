@@ -40,7 +40,7 @@ public:
 
 	SceneRenderer* renderer();
 
-	EventDispacher* getEventDispacher();
+	EventDispacher* eventDispacher();
 
 	glm::ivec2 getWindowSize() const;
 

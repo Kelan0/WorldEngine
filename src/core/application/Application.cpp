@@ -118,8 +118,11 @@ void Application::processEventsInternal() {
 
 		case SDL_WINDOWEVENT:
 			switch (event.window.event) {
+			case SDL_WINDOWEVENT_SHOWN:
+				m_eventDispacher->trigger(ScreenShowEvent{ getWindowSize() });
+				break;
 			case SDL_WINDOWEVENT_SIZE_CHANGED:
-				m_eventDispacher->trigger(ScreenResizeEvent{ windowSize, glm::ivec2(event.window.data1, event.window.data2) });
+				m_eventDispacher->trigger(ScreenResizeEvent{ windowSize, getWindowSize() });
 				break;
 			}
 			break;
@@ -247,7 +250,7 @@ SceneRenderer* Application::renderer() {
 	return m_sceneRenderer;
 }
 
-EventDispacher* Application::getEventDispacher() {
+EventDispacher* Application::eventDispacher() {
 	return m_eventDispacher;
 }
 
