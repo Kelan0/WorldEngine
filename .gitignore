@@ -564,3 +564,5 @@ FodyWeavers.xsd
 *.vcxproj.user
 
 # End of https://www.toptal.com/developers/gitignore/api/c++,visualstudio,visualstudiocode,clion
+
+temp/
