@@ -15,6 +15,7 @@
 
 class GraphicsPipeline;
 class CommandPool;
+class DescriptorPool;
 class GPUMemory;
 class DescriptorAllocator;
 class DescriptorLayoutCache;
@@ -127,7 +128,9 @@ public:
 
 	GraphicsPipeline& pipeline();
 
-	CommandPool& commandPool();
+	std::shared_ptr<CommandPool> commandPool();
+
+	std::shared_ptr<DescriptorPool> descriptorPool();
 
 	GPUMemory& gpuMemory();
 
@@ -156,7 +159,8 @@ private:
 	SurfaceDetails m_surface;
 	SwapchainDetails m_swapchain;
 	GraphicsPipeline* m_pipeline;
-	CommandPool* m_commandPool;
+	std::shared_ptr<CommandPool> m_commandPool;
+	std::shared_ptr<DescriptorPool> m_descriptorPool;
 	GPUMemory* m_gpuMemory;
 
 	std::unique_ptr<vkr::DebugUtilsMessengerEXT> m_debugMessenger;

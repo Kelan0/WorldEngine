@@ -129,11 +129,9 @@ DescriptorPool::DescriptorPool(std::weak_ptr<vkr::Device> device, vk::Descriptor
 	m_device(device),
 	m_descriptorPool(descriptorPool), 
 	m_canFreeDescriptorSets(canFreeDescriptorSets) {
-	//printf("Create DescriptorPool\n");
 }
 
 DescriptorPool::~DescriptorPool() {
-	//printf("Destroy DescriptorPool\n");
 	if (m_canFreeDescriptorSets) {
 		// TODO: should we keep a reference to all DescriptorSetLayouts allocated via this pool and free them here??
 	} else {

@@ -32,8 +32,7 @@ struct UBO1 {
 class App : public Application {
 
 	GraphicsPipelineConfiguration pipelineConfig;
-	UniformBuffer* ubo;
-	std::shared_ptr<DescriptorPool> descriptorPool;
+	ShaderResources* ubo;
 	Mesh* testMesh = NULL;
 	Image2D* testImage = NULL;
 	Texture2D* testTexture = NULL;
@@ -97,14 +96,8 @@ class App : public Application {
 		testMeshConfig.setMeshData(&testMeshData);
 		testMesh = Mesh::create(testMeshConfig);
 
-
-		DescriptorPoolConfiguration descriptorPoolConfig;
-		descriptorPoolConfig.device = graphics()->getDevice();
-		descriptorPoolConfig.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
-		descriptorPool = std::shared_ptr<DescriptorPool>(DescriptorPool::create(descriptorPoolConfig));
-
-
-		ubo = UniformBuffer::Builder(descriptorPool)
+		
+		ubo = ShaderResources::Builder(graphics()->descriptorPool())
 			.addUniformBlock<UBO0>(0, 0, vk::ShaderStageFlagBits::eVertex)
 			.addUniformBlock<UBO1>(1, 0, vk::ShaderStageFlagBits::eVertex)
 			.addTextureSampler(2, 0, vk::ShaderStageFlagBits::eFragment)
@@ -130,7 +123,6 @@ class App : public Application {
 		delete testImage;
 		delete testMesh;
 		delete ubo;
-		descriptorPool.reset();
 	}
 
 	void handleUserInput(double dt) {
@@ -198,7 +190,6 @@ class App : public Application {
 
 		ubo->update(0, 0, &modelMatrix);
 		ubo->update(1, 0, &camera.getViewProjectionMatrix());
-
 		ubo->bind({ 0, 1, 2 }, 0, commandBuffer, pipeline);
 
 		testMesh->draw(commandBuffer);

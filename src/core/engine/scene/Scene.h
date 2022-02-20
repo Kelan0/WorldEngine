@@ -22,7 +22,7 @@ class Scene {
 	friend class SceneRenderer;
 private:
 	template<class Component>
-	struct ComponentEventTracker {
+	struct ComponentEvents {
 		static void onConstruct(Scene* scene, entt::registry& registry, entt::entity entity);
 
 		static void onDestroy(Scene* scene, entt::registry& registry, entt::entity entity);
@@ -55,18 +55,18 @@ private:
 
 template<class Component>
 inline void Scene::enableEvents() {
-	m_registry.on_construct<Component>().connect<&ComponentEventTracker<Component>::onConstruct>(this);
-	m_registry.on_destroy<Component>().connect<&ComponentEventTracker<Component>::onDestroy>(this);
+	m_registry.on_construct<Component>().connect<&ComponentEvents<Component>::onConstruct>(this);
+	m_registry.on_destroy<Component>().connect<&ComponentEvents<Component>::onDestroy>(this);
 }
 
 template<class Component>
 inline void Scene::disableEvents() {
-	m_registry.on_construct<Component>().disconnect<&ComponentEventTracker<Component>::onConstruct>(this);
-	m_registry.on_destroy<Component>().disconnect<&ComponentEventTracker<Component>::onDestroy>(this);
+	m_registry.on_construct<Component>().disconnect<&ComponentEvents<Component>::onConstruct>(this);
+	m_registry.on_destroy<Component>().disconnect<&ComponentEvents<Component>::onDestroy>(this);
 }
 
 template<class Component>
-inline void Scene::ComponentEventTracker<Component>::onConstruct(Scene* scene, entt::registry& registry, entt::entity entity) {
+inline void Scene::ComponentEvents<Component>::onConstruct(Scene* scene, entt::registry& registry, entt::entity entity) {
 	ComponentAddedEvent<Component> event;
 	event.entity = Entity(scene, entity);
 	event.component = &event.entity.getComponent<Component>();
@@ -74,7 +74,7 @@ inline void Scene::ComponentEventTracker<Component>::onConstruct(Scene* scene, e
 }
 
 template<class Component>
-inline void Scene::ComponentEventTracker<Component>::onDestroy(Scene* scene, entt::registry& registry, entt::entity entity) {
+inline void Scene::ComponentEvents<Component>::onDestroy(Scene* scene, entt::registry& registry, entt::entity entity) {
 	ComponentRemovedEvent<Component> event;
 	event.entity = Entity(scene, entity);
 	event.component = &event.entity.getComponent<Component>();

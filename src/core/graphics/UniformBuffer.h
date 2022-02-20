@@ -5,8 +5,8 @@
 #include "DescriptorSet.h"
 #include "GraphicsPipeline.h"
 
-class UniformBuffer {
-	NO_COPY(UniformBuffer);
+class ShaderResources {
+	NO_COPY(ShaderResources);
 
 private:
 	struct Binding {
@@ -39,7 +39,7 @@ public:
 
 		Builder& addTextureSampler(uint32_t set, uint32_t binding, vk::ShaderStageFlags shaderStages);
 
-		UniformBuffer* build() const;
+		ShaderResources* build() const;
 
 	private:
 		std::shared_ptr<DescriptorPool> m_descriptorPool;
@@ -48,14 +48,14 @@ public:
 	};
 
 private:
-	UniformBuffer(
+	ShaderResources(
 		std::weak_ptr<DescriptorPool> descriptorPool,
 		std::weak_ptr<Buffer> uniformBuffer,
 		DescriptorSetMap descriptorSets,
 		SetBindingMap setBindings);
 
 public:
-	~UniformBuffer();
+	~ShaderResources();
 
 	DescriptorSetWriter writer(uint32_t set);
 
@@ -102,11 +102,11 @@ private:
 
 
 template<class T>
-inline UniformBuffer::Builder& UniformBuffer::Builder::addUniformBlock(uint32_t set, uint32_t binding, vk::ShaderStageFlags shaderStages) {
+inline ShaderResources::Builder& ShaderResources::Builder::addUniformBlock(uint32_t set, uint32_t binding, vk::ShaderStageFlags shaderStages) {
 	return addUniformBlock(set, binding, sizeof(T), shaderStages);
 }
 
 template<class T>
-inline void UniformBuffer::update(uint32_t set, uint32_t binding, T* data, vk::DeviceSize offset, vk::DeviceSize range) {
+inline void ShaderResources::update(uint32_t set, uint32_t binding, T* data, vk::DeviceSize offset, vk::DeviceSize range) {
 	update(set, binding, (void*)(data), offset, range);
 }

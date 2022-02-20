@@ -34,6 +34,7 @@ GraphicsManager::GraphicsManager() {
 	m_swapchain.currentFrameIndex = 0;
 	m_pipeline = NULL;
 	m_commandPool = NULL;
+	m_descriptorPool = NULL;
 	m_gpuMemory = NULL;
 	m_debugMessenger = NULL;
 	m_preferredPresentMode = vk::PresentModeKHR::eMailbox;
@@ -52,8 +53,15 @@ GraphicsManager::~GraphicsManager() {
 	m_swapchain.framebuffers.clear();
 	m_swapchain.imageViews.clear();
 
+	if (m_descriptorPool.use_count() > 1)
+		printf("Destroying graphics manager resources but DescriptorPool has %d external references\n", m_descriptorPool.use_count() - 1);
+
+	if (m_commandPool.use_count() > 1)
+		printf("Destroying graphics manager resources but CommandPool has %d external references\n", m_commandPool.use_count() - 1);
+
 	delete m_gpuMemory;
-	delete m_commandPool;
+	m_descriptorPool.reset();
+	m_commandPool.reset();
 	delete m_pipeline;
 
 	if (m_device.device.use_count() > 1) {
@@ -107,7 +115,12 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
 	commandPoolConfig.queueFamilyIndex = m_queues.graphicsQueueFamilyIndex.value();
 	commandPoolConfig.resetCommandBuffer = true;
 	commandPoolConfig.transient = false;
-	m_commandPool = CommandPool::create(commandPoolConfig);
+	m_commandPool = std::shared_ptr<CommandPool>(CommandPool::create(commandPoolConfig));
+
+	DescriptorPoolConfiguration descriptorPoolConfig;
+	descriptorPoolConfig.device = m_device.device;
+	//descriptorPoolConfig.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
+	m_descriptorPool = std::shared_ptr<DescriptorPool>(DescriptorPool::create(descriptorPoolConfig));
 
 	m_commandPool->allocateCommandBuffer("transfer_buffer", { vk::CommandBufferLevel::ePrimary });
 
@@ -904,8 +917,12 @@ GraphicsPipeline& GraphicsManager::pipeline() {
 	return *m_pipeline;
 }
 
-CommandPool& GraphicsManager::commandPool() {
-	return *m_commandPool;
+std::shared_ptr<CommandPool> GraphicsManager::commandPool() {
+	return m_commandPool;
+}
+
+std::shared_ptr<DescriptorPool> GraphicsManager::descriptorPool() {
+	return m_descriptorPool;
 }
 
 glm::ivec2 GraphicsManager::getResolution() const {

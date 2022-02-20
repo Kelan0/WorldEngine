@@ -110,7 +110,7 @@ bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk:
 	}
 
 	const vk::Queue& transferQueue = **Application::instance()->graphics()->getQueue(QUEUE_TRANSFER_MAIN);
-	const vk::CommandBuffer& transferCommandBuffer = **Application::instance()->graphics()->commandPool().getCommandBuffer("transfer_buffer");
+	const vk::CommandBuffer& transferCommandBuffer = **Application::instance()->graphics()->commandPool()->getCommandBuffer("transfer_buffer");
 
 	vk::CommandBufferBeginInfo commandBeginInfo;
 	commandBeginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);

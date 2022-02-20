@@ -1,15 +1,15 @@
 #include "UniformBuffer.h"
 
 
-UniformBuffer::Builder::Builder(std::weak_ptr<DescriptorPool> descriptorPool) :
+ShaderResources::Builder::Builder(std::weak_ptr<DescriptorPool> descriptorPool) :
 	m_descriptorPool(descriptorPool),
 	m_uniformBufferSize(0) {
 }
 
-UniformBuffer::Builder::~Builder() {
+ShaderResources::Builder::~Builder() {
 }
 
-UniformBuffer::Builder& UniformBuffer::Builder::addUniformBlock(uint32_t set, uint32_t binding, vk::DeviceSize dataSize, vk::ShaderStageFlags shaderStages) {
+ShaderResources::Builder& ShaderResources::Builder::addUniformBlock(uint32_t set, uint32_t binding, vk::DeviceSize dataSize, vk::ShaderStageFlags shaderStages) {
 	BindingMap& bindings = m_setBindings[set];
 
 #if _DEBUG
@@ -32,7 +32,7 @@ UniformBuffer::Builder& UniformBuffer::Builder::addUniformBlock(uint32_t set, ui
 	return *this;
 }
 
-UniformBuffer::Builder& UniformBuffer::Builder::addTextureSampler(uint32_t set, uint32_t binding, vk::ShaderStageFlags shaderStages) {
+ShaderResources::Builder& ShaderResources::Builder::addTextureSampler(uint32_t set, uint32_t binding, vk::ShaderStageFlags shaderStages) {
 	BindingMap& bindings = m_setBindings[set];
 
 #if _DEBUG
@@ -52,7 +52,7 @@ UniformBuffer::Builder& UniformBuffer::Builder::addTextureSampler(uint32_t set, 
 	return *this;
 }
 
-UniformBuffer* UniformBuffer::Builder::build() const {
+ShaderResources* ShaderResources::Builder::build() const {
 
 	BufferConfiguration uniformBufferConfiguration;
 	uniformBufferConfiguration.device = m_descriptorPool->getDevice();
@@ -105,12 +105,12 @@ UniformBuffer* UniformBuffer::Builder::build() const {
 		descriptorSets.insert(std::make_pair(setIndex, descriptorSet));
 	}
 
-	return new UniformBuffer(m_descriptorPool, std::move(uniformBuffer), descriptorSets, m_setBindings);
+	return new ShaderResources(m_descriptorPool, std::move(uniformBuffer), descriptorSets, m_setBindings);
 }
 
 
 
-UniformBuffer::UniformBuffer(
+ShaderResources::ShaderResources(
 	std::weak_ptr<DescriptorPool> descriptorPool,
 	std::weak_ptr<Buffer> uniformBuffer,
 	DescriptorSetMap descriptorSets,
@@ -121,14 +121,14 @@ UniformBuffer::UniformBuffer(
 	m_setBindings(setBindings) {
 }
 
-UniformBuffer::~UniformBuffer() {
+ShaderResources::~ShaderResources() {
 	m_descriptorPool.reset();
 	m_descriptorSets.clear();
 	m_setBindings.clear();
 	m_uniformBuffer.reset();
 }
 
-void UniformBuffer::update(uint32_t set, uint32_t binding, void* data, vk::DeviceSize offset, vk::DeviceSize range) {
+void ShaderResources::update(uint32_t set, uint32_t binding, void* data, vk::DeviceSize offset, vk::DeviceSize range) {
 	const Binding& bindingInfo = m_setBindings.at(set).at(binding);
 
 #if _DEBUG
@@ -158,7 +158,7 @@ void UniformBuffer::update(uint32_t set, uint32_t binding, void* data, vk::Devic
 	m_uniformBuffer->upload(bindingInfo.bufferOffset + offset, range, data);
 }
 
-void UniformBuffer::bind(uint32_t set, uint32_t shaderSet, const vk::CommandBuffer& commandBuffer, const GraphicsPipeline& graphicsPipeline) {
+void ShaderResources::bind(uint32_t set, uint32_t shaderSet, const vk::CommandBuffer& commandBuffer, const GraphicsPipeline& graphicsPipeline) {
 #if _DEBUG
 	if (m_descriptorSets.count(set) == 0) {
 		printf("Unable to bind descriptor setOrtho: setOrtho index %d does not exist\n", set);
@@ -175,7 +175,7 @@ void UniformBuffer::bind(uint32_t set, uint32_t shaderSet, const vk::CommandBuff
 	commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline.getPipelineLayout(), shaderSet, 1, &descriptorSet->getDescriptorSet(), 0, NULL);
 }
 
-void UniformBuffer::bind(std::vector<uint32_t> sets, uint32_t firstShaderSet, const vk::CommandBuffer& commandBuffer, const GraphicsPipeline& graphicsPipeline) {
+void ShaderResources::bind(std::vector<uint32_t> sets, uint32_t firstShaderSet, const vk::CommandBuffer& commandBuffer, const GraphicsPipeline& graphicsPipeline) {
 
 #if _DEBUG
 	for (int i = 0; i < sets.size(); ++i) {
@@ -204,7 +204,7 @@ void UniformBuffer::bind(std::vector<uint32_t> sets, uint32_t firstShaderSet, co
 	commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline.getPipelineLayout(), firstShaderSet, descriptorSets, dynamicOffsets);
 }
 
-DescriptorSetWriter UniformBuffer::writer(uint32_t set) {
+DescriptorSetWriter ShaderResources::writer(uint32_t set) {
 #if _DEBUG
 	if (m_descriptorSets.count(set) == 0) {
 		printf("Unable to create descriptor setOrtho writer: setOrtho index %d does not exist\n", set);
@@ -214,11 +214,11 @@ DescriptorSetWriter UniformBuffer::writer(uint32_t set) {
 	return DescriptorSetWriter(m_descriptorSets.at(set));
 }
 
-void UniformBuffer::writeImage(uint32_t set, uint32_t binding, const vk::DescriptorImageInfo& imageInfo) {
+void ShaderResources::writeImage(uint32_t set, uint32_t binding, const vk::DescriptorImageInfo& imageInfo) {
 	writer(set).writeImage(binding, imageInfo).write();
 }
 
-void UniformBuffer::startBatchWrite(uint32_t set) {
+void ShaderResources::startBatchWrite(uint32_t set) {
 #if _DEBUG
 	if (m_descriptorSets.count(set) == 0) {
 		printf("Unable to create descriptor setOrtho writer: setOrtho index %d does not exist\n", set);
@@ -235,7 +235,7 @@ void UniformBuffer::startBatchWrite(uint32_t set) {
 	m_activeWriters.insert(std::make_pair(set, new DescriptorSetWriter(m_descriptorSets.at(set))));
 }
 
-void UniformBuffer::endBatchWrite(uint32_t set) {
+void ShaderResources::endBatchWrite(uint32_t set) {
 	auto it = m_activeWriters.find(set);
 #if _DEBUG
 	if (it == m_activeWriters.end()) {
@@ -250,7 +250,7 @@ void UniformBuffer::endBatchWrite(uint32_t set) {
 	m_activeWriters.erase(it);
 }
 
-void UniformBuffer::writeBuffer(uint32_t set, uint32_t binding, const vk::DescriptorBufferInfo& bufferInfo) {
+void ShaderResources::writeBuffer(uint32_t set, uint32_t binding, const vk::DescriptorBufferInfo& bufferInfo) {
 	auto it = m_activeWriters.find(set);
 	if (it == m_activeWriters.end()) {
 		writer(set).writeBuffer(binding, bufferInfo).write();
@@ -259,7 +259,7 @@ void UniformBuffer::writeBuffer(uint32_t set, uint32_t binding, const vk::Descri
 	}
 }
 
-void UniformBuffer::writeBuffer(uint32_t set, uint32_t binding, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range) {
+void ShaderResources::writeBuffer(uint32_t set, uint32_t binding, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range) {
 	auto it = m_activeWriters.find(set);
 	if (it == m_activeWriters.end()) {
 		writer(set).writeBuffer(binding, buffer, offset, range).write();
@@ -268,7 +268,7 @@ void UniformBuffer::writeBuffer(uint32_t set, uint32_t binding, vk::Buffer buffe
 	}
 }
 
-void UniformBuffer::writeBuffer(uint32_t set, uint32_t binding, Buffer* buffer, vk::DeviceSize offset, vk::DeviceSize range) {
+void ShaderResources::writeBuffer(uint32_t set, uint32_t binding, Buffer* buffer, vk::DeviceSize offset, vk::DeviceSize range) {
 	auto it = m_activeWriters.find(set);
 	if (it == m_activeWriters.end()) {
 		writer(set).writeBuffer(binding, buffer, offset, range).write();
@@ -277,7 +277,7 @@ void UniformBuffer::writeBuffer(uint32_t set, uint32_t binding, Buffer* buffer, 
 	}
 }
 
-void UniformBuffer::writeImage(uint32_t set, uint32_t binding, vk::Sampler sampler, vk::ImageView imageView, vk::ImageLayout imageLayout) {
+void ShaderResources::writeImage(uint32_t set, uint32_t binding, vk::Sampler sampler, vk::ImageView imageView, vk::ImageLayout imageLayout) {
 	auto it = m_activeWriters.find(set);
 	if (it == m_activeWriters.end()) {
 		writer(set).writeImage(binding, sampler, imageView, imageLayout).write();
@@ -286,7 +286,7 @@ void UniformBuffer::writeImage(uint32_t set, uint32_t binding, vk::Sampler sampl
 	}
 }
 
-void UniformBuffer::writeImage(uint32_t set, uint32_t binding, Sampler* sampler, ImageView2D* imageView, vk::ImageLayout imageLayout) {
+void ShaderResources::writeImage(uint32_t set, uint32_t binding, Sampler* sampler, ImageView2D* imageView, vk::ImageLayout imageLayout) {
 	auto it = m_activeWriters.find(set);
 	if (it == m_activeWriters.end()) {
 		writer(set).writeImage(binding, sampler, imageView, imageLayout).write();
@@ -295,7 +295,7 @@ void UniformBuffer::writeImage(uint32_t set, uint32_t binding, Sampler* sampler,
 	}
 }
 
-void UniformBuffer::writeImage(uint32_t set, uint32_t binding, Texture2D* texture, vk::ImageLayout imageLayout) {
+void ShaderResources::writeImage(uint32_t set, uint32_t binding, Texture2D* texture, vk::ImageLayout imageLayout) {
 	auto it = m_activeWriters.find(set);
 	if (it == m_activeWriters.end()) {
 		writer(set).writeImage(binding, texture, imageLayout).write();
@@ -305,7 +305,7 @@ void UniformBuffer::writeImage(uint32_t set, uint32_t binding, Texture2D* textur
 }
 
 
-const vk::DescriptorSetLayout& UniformBuffer::getDescriptorSetLayout(uint32_t set) const {
+const vk::DescriptorSetLayout& ShaderResources::getDescriptorSetLayout(uint32_t set) const {
 #if _DEBUG
 	if (m_descriptorSets.count(set) == 0) {
 		printf("Unable to get descriptor setOrtho layout: setOrtho index %d does not exist\n", set);
@@ -316,7 +316,7 @@ const vk::DescriptorSetLayout& UniformBuffer::getDescriptorSetLayout(uint32_t se
 	return descriptorSet->getLayout()->getDescriptorSetLayout();
 }
 
-void UniformBuffer::initPipelineConfiguration(GraphicsPipelineConfiguration& graphicsPipelineConfiguration) {
+void ShaderResources::initPipelineConfiguration(GraphicsPipelineConfiguration& graphicsPipelineConfiguration) {
 	for (auto it = m_descriptorSets.begin(); it != m_descriptorSets.end(); ++it) {
 		graphicsPipelineConfiguration.descriptorSetLayous.push_back(it->second->getLayout()->getDescriptorSetLayout());
 	}
