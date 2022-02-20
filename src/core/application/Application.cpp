@@ -85,14 +85,12 @@ void Application::renderInternal(double dt) {
 	auto& commandBuffer = graphics()->getCurrentCommandBuffer();
 	auto& framebuffer = graphics()->getCurrentFramebuffer();
 
-	GraphicsPipeline& pipeline = graphics()->pipeline();
-
 	std::array<vk::ClearValue, 2> clearValues;
 	clearValues[0].color.setFloat32({ 0.0F, 0.0F, 0.0F, 1.0F });
 	clearValues[1].depthStencil.setDepth(1.0F).setStencil(0);
 
 	vk::RenderPassBeginInfo renderPassBeginInfo;
-	renderPassBeginInfo.setRenderPass(pipeline.getRenderPass());
+	renderPassBeginInfo.setRenderPass(graphics()->pipeline()->getRenderPass());
 	renderPassBeginInfo.setFramebuffer(framebuffer);
 	renderPassBeginInfo.renderArea.setOffset({ 0, 0 });
 	renderPassBeginInfo.renderArea.setExtent(graphics()->getImageExtent());

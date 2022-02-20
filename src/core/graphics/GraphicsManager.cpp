@@ -32,12 +32,14 @@ GraphicsManager::GraphicsManager() {
 	m_swapchain.swapchain = NULL;
 	m_swapchain.maxFramesInFlight = 2;
 	m_swapchain.currentFrameIndex = 0;
-	m_pipeline = NULL;
+	m_graphicsPipeline = NULL;
 	m_commandPool = NULL;
 	m_descriptorPool = NULL;
 	m_gpuMemory = NULL;
 	m_debugMessenger = NULL;
 	m_preferredPresentMode = vk::PresentModeKHR::eMailbox;
+	m_isInitialized = false;
+	m_recreateSwapchain = false;
 	m_resolutionChanged = false;
 }
 
@@ -54,18 +56,18 @@ GraphicsManager::~GraphicsManager() {
 	m_swapchain.imageViews.clear();
 
 	if (m_descriptorPool.use_count() > 1)
-		printf("Destroying graphics manager resources but DescriptorPool has %d external references\n", m_descriptorPool.use_count() - 1);
+		printf("Destroyed GraphicsManager but DescriptorPool has %d external references\n", m_descriptorPool.use_count() - 1);
 
 	if (m_commandPool.use_count() > 1)
-		printf("Destroying graphics manager resources but CommandPool has %d external references\n", m_commandPool.use_count() - 1);
+		printf("Destroyed GraphicsManager but CommandPool has %d external references\n", m_commandPool.use_count() - 1);
 
 	delete m_gpuMemory;
 	m_descriptorPool.reset();
 	m_commandPool.reset();
-	delete m_pipeline;
+	//delete m_pipeline;
 
 	if (m_device.device.use_count() > 1) {
-		printf("Destroyed graphics manager but the logical device still has %d external references\n", m_device.device.use_count() - 1);
+		printf("Destroyed GraphicsManager but the logical device still has %d external references\n", m_device.device.use_count() - 1);
 	}
 }
 
@@ -97,6 +99,15 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
 		return false;
 	}
 
+	if (!initSurfaceDetails()) {
+		return false;
+	}
+
+	GraphicsPipeline* graphicsPipeline = GraphicsPipeline::create(m_device.device);
+	if (graphicsPipeline == NULL)
+		return false;
+	m_graphicsPipeline = std::shared_ptr<GraphicsPipeline>(graphicsPipeline);
+
 	//GPUMemoryConfiguration memoryConfig;
 	//memoryConfig.device = m_device.device;
 	//memoryConfig.size = (size_t)(6.0 * 1024 * 1024 * 1024); // Allocate 8 GiB
@@ -124,6 +135,7 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
 
 	m_commandPool->allocateCommandBuffer("transfer_buffer", { vk::CommandBufferLevel::ePrimary });
 
+	m_isInitialized = true;
 	m_recreateSwapchain = true;
 	return true;
 }
@@ -537,9 +549,11 @@ bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enable
 }
 
 bool GraphicsManager::initSurfaceDetails() {
-	VkResult result;
-
 	m_surface.capabilities = m_device.physicalDevice->getSurfaceCapabilitiesKHR(**m_surface.surface);
+
+	glm::uvec2 windowSize = Application::instance()->getWindowSize();
+	m_swapchain.imageExtent.width = glm::clamp(windowSize.x, m_surface.capabilities.minImageExtent.width, m_surface.capabilities.maxImageExtent.width);
+	m_swapchain.imageExtent.height = glm::clamp(windowSize.y, m_surface.capabilities.minImageExtent.height, m_surface.capabilities.maxImageExtent.height);
 
 	std::vector<vk::SurfaceFormatKHR> formats = m_device.physicalDevice->getSurfaceFormatsKHR(**m_surface.surface);
 	
@@ -576,11 +590,27 @@ bool GraphicsManager::initSurfaceDetails() {
 		printf("Preferred surface present mode %s was not found. Defaulting to %s\n", vk::to_string(m_preferredPresentMode).c_str(), vk::to_string(m_surface.presentMode).c_str());
 	}
 
+	std::vector<vk::Format> depthFormats = { vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint, vk::Format::eD32Sfloat };
+	m_surface.depthFormat = Image2D::selectSupportedFormat(getPhysicalDevice(), depthFormats, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
+	if (m_surface.depthFormat == vk::Format::eUndefined) {
+		std::string formatsStr = "";
+		for (int i = 0; i < depthFormats.size(); ++i)
+			formatsStr += (i > 0 ? ", " : "") + vk::to_string(depthFormats[0]);
+		printf("Requested depth formats [%s] but none were supported\n", formatsStr.c_str());
+		return false;
+	}
+
 	return true;
 }
 
 bool GraphicsManager::recreateSwapchain() {
 	m_recreateSwapchain = false;
+
+	if (m_graphicsPipelineConfig.device.expired() || m_graphicsPipelineConfig.device.lock() != m_device.device) {
+		printf("Unable to recreate swapchain: Graphics pipeline has not been configured\n");
+		return false;
+	}
+
 	m_device.device->waitIdle();
 
 	m_swapchain.commandBuffers.clear();
@@ -590,17 +620,10 @@ bool GraphicsManager::recreateSwapchain() {
 
 	m_swapchain.framebuffers.clear();
 	m_swapchain.imageViews.clear();
-	delete m_pipeline;
+	//delete m_pipeline;
 	m_swapchain.swapchain.reset();
 
 	initSurfaceDetails();
-
-	glm::ivec2 windowSize = Application::instance()->getWindowSize();
-	//printf("Reinitializing graphics pipeline: [%d x %d]\n", windowSize.x, windowSize.y);
-
-	m_swapchain.imageExtent = vk::Extent2D((uint32_t)windowSize.x, (uint32_t)windowSize.y);
-	m_swapchain.imageExtent.width = glm::clamp(m_swapchain.imageExtent.width, m_surface.capabilities.minImageExtent.width, m_surface.capabilities.maxImageExtent.width);
-	m_swapchain.imageExtent.height = glm::clamp(m_swapchain.imageExtent.height, m_surface.capabilities.minImageExtent.height, m_surface.capabilities.maxImageExtent.height);
 
 	uint32_t imageCount = m_surface.capabilities.minImageCount + 1;
 	if (m_surface.capabilities.maxImageCount > 0) {
@@ -640,8 +663,8 @@ bool GraphicsManager::recreateSwapchain() {
 		return false;
 	}
 
-	m_pipeline = GraphicsPipeline::create(m_pipelineConfig);
-	if (m_pipeline == NULL) {
+	if (!m_graphicsPipeline->recreate(m_graphicsPipelineConfig)) {
+		printf("Failed to recreate graphics pipeline\n");
 		return false;
 	}
 
@@ -693,24 +716,18 @@ bool GraphicsManager::createSwapchainImages() {
 		m_swapchain.imageViews[i] = std::shared_ptr<ImageView2D>(ImageView2D::create(imageViewConfig));
 	}
 
-	std::vector<vk::Format> depthFormats = { vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint, vk::Format::eD32Sfloat };
-	vk::Format depthFormat = Image2D::selectSupportedFormat(getPhysicalDevice(), depthFormats, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
-
 	m_swapchain.depthImageView.reset();
 	m_swapchain.depthImage.reset();
 
-	if (depthFormat == vk::Format::eUndefined) {
-		std::string formatsStr = "";
-		for (int i = 0; i < depthFormats.size(); ++i)
-			formatsStr += (i > 0 ? ", " : "") + vk::to_string(depthFormats[0]);
-		printf("Unable to create depth buffer: Requested formats [%s] but none were supported\n", formatsStr.c_str());
+	if (m_surface.depthFormat == vk::Format::eUndefined) {
+		printf("Unable to create depth buffer: Undefined depth format\n");
 	} else {
 
 		Image2DConfiguration depthImageConfig;
 		depthImageConfig.device = m_device.device;
 		depthImageConfig.width = m_swapchain.imageExtent.width;
 		depthImageConfig.height = m_swapchain.imageExtent.height;
-		depthImageConfig.format = depthFormat;
+		depthImageConfig.format = m_surface.depthFormat;
 		depthImageConfig.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
 		m_swapchain.depthImage = std::shared_ptr<Image2D>(Image2D::create(depthImageConfig));
 
@@ -745,7 +762,7 @@ bool GraphicsManager::createSwapchainFramebuffers() {
 			m_swapchain.depthImageView->getImageView()
 		};
 		vk::FramebufferCreateInfo framebufferCreateInfo;
-		framebufferCreateInfo.setRenderPass(m_pipeline->getRenderPass());
+		framebufferCreateInfo.setRenderPass(m_graphicsPipeline->getRenderPass());
 		framebufferCreateInfo.setAttachments(attachments);
 		framebufferCreateInfo.setWidth(m_swapchain.imageExtent.width);
 		framebufferCreateInfo.setHeight(m_swapchain.imageExtent.height);
@@ -894,14 +911,6 @@ bool GraphicsManager::hasQueue(const std::string& name) const {
 	return m_queues.queues.count(name) > 0;
 }
 
-void GraphicsManager::initializeGraphicsPipeline(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration) {
-	m_pipelineConfig = graphicsPipelineConfiguration;
-	m_pipelineConfig.device = m_device.device;
-	m_pipelineConfig.framebufferWidth = 0; // Always default to screen resolution
-	m_pipelineConfig.framebufferHeight = 0;
-	m_recreateSwapchain = true;
-}
-
 void GraphicsManager::setPreferredPresentMode(vk::PresentModeKHR presentMode) {
 	if (m_preferredPresentMode != presentMode) {
 		m_preferredPresentMode = presentMode;
@@ -913,8 +922,8 @@ bool GraphicsManager::didResolutionChange() const {
 	return m_resolutionChanged;
 }
 
-GraphicsPipeline& GraphicsManager::pipeline() {
-	return *m_pipeline;
+std::shared_ptr<GraphicsPipeline> GraphicsManager::pipeline() {
+	return m_graphicsPipeline;
 }
 
 std::shared_ptr<CommandPool> GraphicsManager::commandPool() {
@@ -942,7 +951,7 @@ vk::Format GraphicsManager::getColourFormat() const {
 }
 
 vk::Format GraphicsManager::getDepthFormat() const {
-	return m_swapchain.depthImage->getFormat();
+	return m_surface.depthFormat;
 }
 
 GPUMemory& GraphicsManager::gpuMemory() {
@@ -951,4 +960,14 @@ GPUMemory& GraphicsManager::gpuMemory() {
 
 vk::ColorSpaceKHR GraphicsManager::getColourSpace() const {
 	return m_surface.surfaceFormat.colorSpace;
+}
+
+void GraphicsManager::configurePipeline(const GraphicsPipelineConfiguration& graphicsPipelineConfig) {
+	m_graphicsPipelineConfig = graphicsPipelineConfig;
+	m_graphicsPipelineConfig.device = m_device.device;
+	m_graphicsPipelineConfig.framebufferWidth = 0;
+	m_graphicsPipelineConfig.framebufferHeight = 0;
+	m_graphicsPipelineConfig.colourFormat = getColourFormat();
+	m_graphicsPipelineConfig.depthFormat = getDepthFormat();
+	recreateSwapchain();
 }

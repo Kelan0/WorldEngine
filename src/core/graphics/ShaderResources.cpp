@@ -1,9 +1,14 @@
-#include "UniformBuffer.h"
+#include "ShaderResources.h"
+#include "../application/Application.h"
 
 
 ShaderResources::Builder::Builder(std::weak_ptr<DescriptorPool> descriptorPool) :
 	m_descriptorPool(descriptorPool),
 	m_uniformBufferSize(0) {
+}
+
+ShaderResources::Builder::Builder():
+	Builder(Application::instance()->graphics()->descriptorPool()) {
 }
 
 ShaderResources::Builder::~Builder() {

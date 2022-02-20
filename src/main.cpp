@@ -6,7 +6,7 @@
 #include "core/graphics/Buffer.h"
 #include "core/graphics/Image.h"
 #include "core/graphics/Mesh.h"
-#include "core/graphics/UniformBuffer.h"
+#include "core/graphics/ShaderProgram.h"
 #include "core/graphics/Texture.h"
 #include "core/engine/scene/Scene.h"
 #include "core/engine/scene/EntityHierarchy.h"
@@ -31,8 +31,7 @@ struct UBO1 {
 
 class App : public Application {
 
-	GraphicsPipelineConfiguration pipelineConfig;
-	ShaderResources* ubo;
+	ShaderProgram* shaderProgram;
 	Mesh* testMesh = NULL;
 	Image2D* testImage = NULL;
 	Texture2D* testTexture = NULL;
@@ -96,33 +95,32 @@ class App : public Application {
 		testMeshConfig.setMeshData(&testMeshData);
 		testMesh = Mesh::create(testMeshConfig);
 
-		
-		ubo = ShaderResources::Builder(graphics()->descriptorPool())
+		ShaderResources* shaderResources = ShaderResources::Builder()
 			.addUniformBlock<UBO0>(0, 0, vk::ShaderStageFlagBits::eVertex)
 			.addUniformBlock<UBO1>(1, 0, vk::ShaderStageFlagBits::eVertex)
 			.addTextureSampler(2, 0, vk::ShaderStageFlagBits::eFragment)
 			.build();
+		
+		shaderResources->writeImage(2, 0, testTexture, vk::ImageLayout::eShaderReadOnlyOptimal);
 
-		ubo->startBatchWrite(2);
-		ubo->writeImage(2, 0, testTexture, vk::ImageLayout::eShaderReadOnlyOptimal);
-		ubo->endBatchWrite(2);
-
+		GraphicsPipelineConfiguration pipelineConfig;
 		pipelineConfig.vertexShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.vert";
 		pipelineConfig.fragmentShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.frag";
 		pipelineConfig.vertexInputBindings = Mesh::getVertexBindingDescriptions();
 		pipelineConfig.vertexInputAttributes = Mesh::getVertexAttributeDescriptions();
-		ubo->initPipelineConfiguration(pipelineConfig);
-		graphics()->initializeGraphicsPipeline(pipelineConfig);
-		//graphics()->setPreferredPresentMode(vk::PresentModeKHR::eFifo);
+		shaderResources->initPipelineConfiguration(pipelineConfig);
+		graphics()->configurePipeline(pipelineConfig);
+
+		shaderProgram = ShaderProgram::create(std::shared_ptr<ShaderResources>(shaderResources), graphics()->pipeline());
 
 		cameraEntity.getComponent<Transform>().setTranslation(0.0F, 2.0F, 2.0F);
     }
 
 	void cleanup() override {
+		delete shaderProgram;
 		delete testTexture;
 		delete testImage;
 		delete testMesh;
-		delete ubo;
 	}
 
 	void handleUserInput(double dt) {
@@ -130,16 +128,16 @@ class App : public Application {
 			input()->toggleMouseGrabbed();
 		}
 
-		if (input()->keyPressed(SDL_SCANCODE_F1)) {
-			// TODO: not reinitialize the graphics pipeline each time...
-			// We should have a dedicated wireframe pipeline and shaders, and just switch to it.
-			if (pipelineConfig.polygonMode == vk::PolygonMode::eFill) {
-				pipelineConfig.polygonMode = vk::PolygonMode::eLine;
-			} else {
-				pipelineConfig.polygonMode = vk::PolygonMode::eFill;
-			}
-			graphics()->initializeGraphicsPipeline(pipelineConfig);
-		}
+		//if (input()->keyPressed(SDL_SCANCODE_F1)) {
+		//	// TODO: not reinitialize the graphics pipeline each time...
+		//	// We should have a dedicated wireframe pipeline and shaders, and just switch to it.
+		//	if (pipelineConfig.polygonMode == vk::PolygonMode::eFill) {
+		//		pipelineConfig.polygonMode = vk::PolygonMode::eLine;
+		//	} else {
+		//		pipelineConfig.polygonMode = vk::PolygonMode::eFill;
+		//	}
+		//	graphics()->initializeGraphicsPipeline(pipelineConfig);
+		//}
 
 		if (input()->isMouseGrabbed()) {
 			Transform& cameraTransform = cameraEntity.getComponent<Transform>();
@@ -175,23 +173,21 @@ class App : public Application {
 
 		eventDispacher()->trigger(TestEvent{ dt });
 		handleUserInput(dt);
-
+		
 		camera.setTransform(cameraEntity.getComponent<Transform>());
 		camera.setProjection(cameraEntity.getComponent<Camera>());
 		camera.update();
-
-		GraphicsPipeline& pipeline = graphics()->pipeline();
-			
+		
 		auto& commandBuffer = graphics()->getCurrentCommandBuffer();
-
-		pipeline.bind(commandBuffer);
-
+		
+		shaderProgram->getPipeline()->bind(commandBuffer);
+		
 		glm::mat4 modelMatrix(1.0F);// = glm::translate(glm::mat4(1.0F), glm::vec3(glm::sin(x), 0.0F, 0.0F));
-
-		ubo->update(0, 0, &modelMatrix);
-		ubo->update(1, 0, &camera.getViewProjectionMatrix());
-		ubo->bind({ 0, 1, 2 }, 0, commandBuffer, pipeline);
-
+		
+		shaderProgram->getShaderResources()->update(0, 0, &modelMatrix);
+		shaderProgram->getShaderResources()->update(1, 0, &camera.getViewProjectionMatrix());
+		shaderProgram->getShaderResources()->bind({ 0, 1, 2 }, 0, commandBuffer, *shaderProgram->getPipeline());
+		
 		testMesh->draw(commandBuffer);
     }
 };

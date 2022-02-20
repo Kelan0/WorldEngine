@@ -49,6 +49,7 @@ struct SurfaceDetails {
 	vk::SurfaceCapabilitiesKHR capabilities;
 	vk::SurfaceFormatKHR surfaceFormat;
 	vk::PresentModeKHR presentMode;
+	vk::Format depthFormat;
 };
 
 struct SwapchainDetails {
@@ -126,7 +127,7 @@ public:
 
 	bool hasQueue(const std::string& name) const;
 
-	GraphicsPipeline& pipeline();
+	std::shared_ptr<GraphicsPipeline> pipeline();
 
 	std::shared_ptr<CommandPool> commandPool();
 
@@ -146,7 +147,7 @@ public:
 
 	vk::ColorSpaceKHR getColourSpace() const;
 
-	void initializeGraphicsPipeline(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration);
+	void configurePipeline(const GraphicsPipelineConfiguration& graphicsPipelineConfig);
 
 	void setPreferredPresentMode(vk::PresentModeKHR presentMode);
 
@@ -158,15 +159,17 @@ private:
 	QueueDetails m_queues;
 	SurfaceDetails m_surface;
 	SwapchainDetails m_swapchain;
-	GraphicsPipeline* m_pipeline;
+	std::shared_ptr<GraphicsPipeline> m_graphicsPipeline;
 	std::shared_ptr<CommandPool> m_commandPool;
 	std::shared_ptr<DescriptorPool> m_descriptorPool;
 	GPUMemory* m_gpuMemory;
 
 	std::unique_ptr<vkr::DebugUtilsMessengerEXT> m_debugMessenger;
 
-	GraphicsPipelineConfiguration m_pipelineConfig;
+	GraphicsPipelineConfiguration m_graphicsPipelineConfig;
+
 	vk::PresentModeKHR m_preferredPresentMode;
+	bool m_isInitialized;
 	bool m_recreateSwapchain;
 	bool m_resolutionChanged;
 };

@@ -30,6 +30,8 @@ public:
 	public:
 		Builder(std::weak_ptr<DescriptorPool> descriptorPool);
 
+		Builder();
+
 		~Builder();
 
 		Builder& addUniformBlock(uint32_t set, uint32_t binding, vk::DeviceSize dataSize, vk::ShaderStageFlags shaderStages);
@@ -55,6 +57,7 @@ private:
 		SetBindingMap setBindings);
 
 public:
+
 	~ShaderResources();
 
 	DescriptorSetWriter writer(uint32_t set);
