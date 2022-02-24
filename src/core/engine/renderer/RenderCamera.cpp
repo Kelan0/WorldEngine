@@ -3,6 +3,8 @@
 RenderCamera::RenderCamera() :
 	m_transform(),
 	m_prevTransform(),
+	m_projection(),
+	m_prevProjection(),
 	m_viewMatrix(1.0F),
 	m_projectionMatrix(1.0F),
 	m_viewProjectionMatrix(1.0F),
@@ -18,19 +20,25 @@ RenderCamera::~RenderCamera() {
 }
 
 void RenderCamera::update() {
-	m_prevTransform = m_transform;
 	m_prevViewMatrix = m_viewMatrix;
 	m_prevProjectionMatrix = m_projectionMatrix;
 	m_prevViewProjectionMatrix = m_viewProjectionMatrix;
 
-	m_projectionMatrix = m_projection.getProjectionMatrix();
-	//m_projectionMatrix = glm::scale(m_projectionMatrix, glm::vec3(1.0F, -1.0F, 1.0F));
-	m_inverseProjectionMatrix = glm::inverse(m_projectionMatrix);
+	if (m_projection != m_prevProjection) {
+		m_projectionMatrix = m_projection.getProjectionMatrix();
+		//m_projectionMatrix = glm::scale(m_projectionMatrix, glm::vec3(1.0F, -1.0F, 1.0F));
+		m_inverseProjectionMatrix = glm::inverse(m_projectionMatrix);
+	}
 
+	//if (m_transform != m_prevTransform) {
 	m_inverseViewMatrix = m_transform.getMatrix();
 	m_viewMatrix = glm::inverse(m_inverseViewMatrix);
 	m_viewProjectionMatrix = m_projectionMatrix * m_viewMatrix;
 	m_inverseViewProjectionMatrix = glm::inverse(m_viewProjectionMatrix);
+	//}
+
+	m_prevProjection = m_projection;
+	m_prevTransform = m_transform;
 }
 
 Transform& RenderCamera::transform() {

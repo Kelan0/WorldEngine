@@ -51,6 +51,7 @@ private:
 	Transform m_prevTransform;
 
 	Camera m_projection;
+	Camera m_prevProjection;
 
 	glm::mat4 m_viewMatrix;
 	glm::mat4 m_projectionMatrix;

@@ -3,6 +3,12 @@
 #include "../../../core.h"
 #include <entt/signal/dispatcher.hpp>
 
+class EventDispacher;
+
+struct EventDispacherDestroyedEvent {
+	EventDispacher* eventDispacher;
+};
+
 class EventDispacher {
 private:
 
@@ -51,10 +57,25 @@ public:
 	template<class Event>
 	void trigger(const Event& event);
 
+	template<class Event>
+	void repeatTo(EventDispacher* eventDispacher);
+
+	void repeatAll(EventDispacher* eventDispacher);
+
+	template<class Event>
+	bool isRepeatingTo(EventDispacher* eventDispacher);
+
+	bool isRepeatingAll(EventDispacher* eventDispacher);
+
+private:
+	void onEventDispacherDestroyed(const EventDispacherDestroyedEvent& event);
+
 private:
 	entt::dispatcher m_dispacher;
 	std::unordered_map<std::type_index, std::unordered_map<size_t, void*>> m_eventListeners;
 	std::unordered_map<void*, std::unordered_map<std::type_index, std::unordered_set<size_t>>> m_instanceEventBindings;
+	std::vector<EventDispacher*> m_repeatAllDispachers;
+	std::unordered_map<std::type_index, std::vector<EventDispacher*>> m_repeatEventDispachers;
 };
 
 template<class Event>
@@ -196,8 +217,47 @@ inline void EventDispacher::disconnect(T* instance) {
 template<class Event>
 inline void EventDispacher::trigger(const Event& event) {
 	m_dispacher.trigger<Event>(event);
+
+	auto& dispachers = m_repeatEventDispachers[std::type_index(typeid(Event))];
+	for (auto it = dispachers.begin(); it != dispachers.end(); ++it) {
+		(*it)->trigger(event);
+	}
+
+	for (auto it = m_repeatAllDispachers.begin(); it != m_repeatAllDispachers.end(); ++it) {
+		(*it)->trigger(event);
+	}
 }
 
+template<class Event>
+inline void EventDispacher::repeatTo(EventDispacher* eventDispacher) {
+	if (eventDispacher == NULL)
+		return;
+
+	if (isRepeatingTo<Event>(eventDispacher))
+		return;
+
+	auto& dispachers = m_repeatEventDispachers[std::type_index(typeid(Event))];
+	dispachers.emplace_back(eventDispacher);
+	eventDispacher->connect<EventDispacherDestroyedEvent>(&EventDispacher::onEventDispacherDestroyed, this);
+}
+
+template<class Event>
+inline bool EventDispacher::isRepeatingTo(EventDispacher* eventDispacher) {
+	if (eventDispacher == NULL)
+		return false;
+
+	if (isRepeatingAll(eventDispacher))
+		return true;
+
+	auto& dispachers = m_repeatEventDispachers[std::type_index(typeid(Event))];
+
+	for (auto it = dispachers.begin(); it != dispachers.end(); ++it) {
+		if ((*it) == eventDispacher)
+			return true;
+	}
+
+	return false;
+}
 
 template<class Event>
 inline void EventDispacher::Listener<Event>::receive(const Event& event) {

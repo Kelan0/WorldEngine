@@ -26,13 +26,13 @@ public:
 
 	static bool copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset = 0, vk::DeviceSize dstOffset = 0);
 
-	static bool upload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, void* data);
+	static bool upload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data);
 
 	bool copyFrom(Buffer* srcBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset = 0, vk::DeviceSize dstOffset = 0);
 
 	bool copyTo(Buffer* dstBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset = 0, vk::DeviceSize dstOffset = 0);
 
-	bool upload(vk::DeviceSize offset, vk::DeviceSize size, void* data);
+	bool upload(vk::DeviceSize offset, vk::DeviceSize size, const void* data);
 
 	std::shared_ptr<vkr::Device> getDevice() const;
 
@@ -49,9 +49,9 @@ public:
 
 	static void resetStagingBuffer();
 
-	static bool stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, void* data);
+	static bool stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data);
 
-	static bool mappedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, void* data);
+	static bool mappedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data);
 
 private:
 	static void resizeStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSize size);

@@ -30,7 +30,6 @@ GraphicsManager::GraphicsManager() {
 	m_device.physicalDevice = NULL;
 	m_surface.surface = NULL;
 	m_swapchain.swapchain = NULL;
-	m_swapchain.maxFramesInFlight = 2;
 	m_swapchain.currentFrameIndex = 0;
 	m_graphicsPipeline = NULL;
 	m_commandPool = NULL;
@@ -614,7 +613,7 @@ bool GraphicsManager::recreateSwapchain() {
 	m_device.device->waitIdle();
 
 	m_swapchain.commandBuffers.clear();
-	for (int i = 0; i < m_swapchain.maxFramesInFlight; ++i)
+	for (int i = 0; i < CONCURRENT_FRAMES; ++i)
 		if (m_commandPool->hasCommandBuffer("swapchain_cmd" + std::to_string(i)))
 			m_commandPool->freeCommandBuffer("swapchain_cmd" + std::to_string(i));
 
@@ -629,8 +628,6 @@ bool GraphicsManager::recreateSwapchain() {
 	if (m_surface.capabilities.maxImageCount > 0) {
 		imageCount = glm::min(imageCount, m_surface.capabilities.maxImageCount);
 	}
-
-	m_swapchain.maxFramesInFlight = 5;
 
 	vk::SwapchainCreateInfoKHR createInfo;
 	createInfo.setSurface(**m_surface.surface);
@@ -672,30 +669,24 @@ bool GraphicsManager::recreateSwapchain() {
 		return false;
 	}
 
-	m_swapchain.commandBuffers.resize(m_swapchain.maxFramesInFlight);
-	for (int i = 0; i < m_swapchain.maxFramesInFlight; ++i) {
+	m_swapchain.commandBuffers.resize(CONCURRENT_FRAMES);
+	for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
 		std::shared_ptr<vkr::CommandBuffer> commandBuffer = m_commandPool->allocateCommandBuffer("swapchain_cmd" + std::to_string(i), { vk::CommandBufferLevel::ePrimary });
 		m_swapchain.commandBuffers[i] = std::move(commandBuffer);
 	}
 
-	m_swapchain.imageAvailableSemaphores.clear();
-	m_swapchain.imageAvailableSemaphores.resize(m_swapchain.maxFramesInFlight);
-
-	m_swapchain.renderFinishedSemaphores.clear();
-	m_swapchain.renderFinishedSemaphores.resize(m_swapchain.maxFramesInFlight);
-
-	m_swapchain.inFlightFences.clear();
-	m_swapchain.inFlightFences.resize(m_swapchain.maxFramesInFlight);
 
 	vk::SemaphoreCreateInfo semaphoreCreateInfo;
 	vk::FenceCreateInfo fenceCreateInfo;
 	fenceCreateInfo.setFlags(vk::FenceCreateFlagBits::eSignaled);
 
-	for (int i = 0; i < m_swapchain.maxFramesInFlight; ++i) {
+	for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
+		m_swapchain.imageAvailableSemaphores[i].reset();
+		m_swapchain.renderFinishedSemaphores[i].reset();
+		m_swapchain.inFlightFences[i].reset();
+
 		m_swapchain.imageAvailableSemaphores[i] = std::make_unique<vkr::Semaphore>(*m_device.device, semaphoreCreateInfo);
-
 		m_swapchain.renderFinishedSemaphores[i] = std::make_unique<vkr::Semaphore>(*m_device.device, semaphoreCreateInfo);
-
 		m_swapchain.inFlightFences[i] = std::make_unique<vkr::Fence>(*m_device.device, fenceCreateInfo);
 	}
 
@@ -880,7 +871,7 @@ void GraphicsManager::endFrame() {
 		return;
 	}
 
-	m_swapchain.currentFrameIndex = (m_swapchain.currentFrameIndex + 1) % m_swapchain.maxFramesInFlight;
+	m_swapchain.currentFrameIndex = (m_swapchain.currentFrameIndex + 1) % CONCURRENT_FRAMES;
 }
 
 std::shared_ptr<vkr::Device> GraphicsManager::getDevice() const {
@@ -893,6 +884,10 @@ const vk::PhysicalDevice& GraphicsManager::getPhysicalDevice() const {
 
 const vk::PhysicalDeviceMemoryProperties& GraphicsManager::getDeviceMemoryProperties() const {
 	return m_device.memoryProperties;
+}
+
+uint32_t GraphicsManager::getCurrentFrameIndex() const {
+	return m_swapchain.currentFrameIndex;
 }
 
 const vk::CommandBuffer& GraphicsManager::getCurrentCommandBuffer() const {

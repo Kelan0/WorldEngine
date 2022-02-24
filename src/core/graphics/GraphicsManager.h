@@ -60,12 +60,11 @@ struct SwapchainDetails {
 	std::vector<std::shared_ptr<vkr::Framebuffer>> framebuffers;
 	std::vector<std::shared_ptr<vkr::CommandBuffer>> commandBuffers;
 	vk::Extent2D imageExtent;
-	std::vector<std::unique_ptr<vkr::Semaphore>> imageAvailableSemaphores;
-	std::vector<std::unique_ptr<vkr::Semaphore>> renderFinishedSemaphores;
-	std::vector<std::unique_ptr<vkr::Fence>> inFlightFences;
+	std::array<std::unique_ptr<vkr::Semaphore>, CONCURRENT_FRAMES> imageAvailableSemaphores;
+	std::array<std::unique_ptr<vkr::Semaphore>, CONCURRENT_FRAMES> renderFinishedSemaphores;
+	std::array<std::unique_ptr<vkr::Fence>, CONCURRENT_FRAMES> inFlightFences;
 	std::vector<vk::Fence> imagesInFlight;
 
-	uint32_t maxFramesInFlight;
 	uint32_t currentFrameIndex;
 	uint32_t currentImageIndex;
 };
@@ -118,6 +117,8 @@ public:
 	const vk::PhysicalDevice& getPhysicalDevice() const;
 
 	const vk::PhysicalDeviceMemoryProperties& getDeviceMemoryProperties() const;
+
+	uint32_t getCurrentFrameIndex() const;
 
 	const vk::CommandBuffer& getCurrentCommandBuffer() const;
 

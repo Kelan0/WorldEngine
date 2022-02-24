@@ -1,6 +1,8 @@
 #include "DescriptorSet.h"
 #include "Buffer.h"
 #include "Texture.h"
+#include "../application/Application.h"
+#include "../graphics/GraphicsManager.h"
 
 DescriptorSetLayout::Cache DescriptorSetLayout::s_descriptorSetLayoutCache;
 
@@ -38,7 +40,7 @@ std::shared_ptr<DescriptorSetLayout> DescriptorSetLayout::get(std::weak_ptr<vkr:
 		vk::DescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 		vk::Result result = (**device.lock()).createDescriptorSetLayout(&descriptorSetLayoutCreateInfo, NULL, &descriptorSetLayout);
 		if (result != vk::Result::eSuccess) {
-			printf("Failed to get descriptor setOrtho layout: %s\n", vk::to_string(result).c_str());
+			printf("Failed to create descriptor setOrtho layout: %s\n", vk::to_string(result).c_str());
 			return NULL;
 		}
 
@@ -68,6 +70,48 @@ void DescriptorSetLayout::clearCache() {
 #endif
 
 	s_descriptorSetLayoutCache.clear();
+}
+
+DescriptorSet* DescriptorSetLayout::createDescriptorSet(std::shared_ptr<DescriptorPool> descriptorPool) {
+	DescriptorSet* descriptorSet = NULL;
+	if (!createDescriptorSets(descriptorPool, 1, &descriptorSet))
+		return NULL;
+	return descriptorSet;
+}
+
+bool DescriptorSetLayout::createDescriptorSets(std::shared_ptr<DescriptorPool> descriptorPool, uint32_t count, DescriptorSet** outDescriptorSets) {
+	assert(descriptorPool->getDevice() == m_device);
+
+	std::shared_ptr<DescriptorSetLayout> selfPointer = get(m_device, m_key); // shared_ptr from this
+	assert(selfPointer.get() == this); // Sanity check
+
+	for (int i = 0; i < count; ++i) {
+		outDescriptorSets[i] = DescriptorSet::create(selfPointer, descriptorPool);
+		if (outDescriptorSets[i] == NULL) {
+			for (; i >= 0; --i) {
+				delete outDescriptorSets[i];
+				outDescriptorSets[i] = NULL;
+			}
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool DescriptorSetLayout::createDescriptorSets(std::shared_ptr<DescriptorPool> descriptorPool, uint32_t count, std::shared_ptr<DescriptorSet>* outDescriptorSets) {
+	DescriptorSet** tempDescriptorSets = new DescriptorSet*[count];
+
+	if (!createDescriptorSets(descriptorPool, count, tempDescriptorSets)) {
+		delete[] tempDescriptorSets;
+		return false;
+	}
+
+	for (int i = 0; i < count; ++i) {
+		outDescriptorSets[i] = std::shared_ptr<DescriptorSet>(tempDescriptorSets[i]);
+	}
+	delete[] tempDescriptorSets;
+	return true;
 }
 
 std::shared_ptr<vkr::Device> DescriptorSetLayout::getDevice() const {
@@ -209,13 +253,13 @@ DescriptorSet::~DescriptorSet() {
 	}
 }
 
-std::shared_ptr<DescriptorSet> DescriptorSet::get(const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, std::weak_ptr<DescriptorPool> descriptorPool) {
+DescriptorSet* DescriptorSet::create(const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, std::weak_ptr<DescriptorPool> descriptorPool) {
 	assert(!descriptorPool.expired());
 	std::shared_ptr<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayout::get(descriptorPool.lock()->getDevice(), descriptorSetLayoutCreateInfo);
-	return DescriptorSet::get(descriptorSetLayout, descriptorPool);
+	return DescriptorSet::create(descriptorSetLayout, descriptorPool);
 }
 
-std::shared_ptr<DescriptorSet> DescriptorSet::get(std::weak_ptr<DescriptorSetLayout> descriptorSetLayout, std::weak_ptr<DescriptorPool> descriptorPool) {
+DescriptorSet* DescriptorSet::create(std::weak_ptr<DescriptorSetLayout> descriptorSetLayout, std::weak_ptr<DescriptorPool> descriptorPool) {
 	assert(!descriptorSetLayout.expired() && !descriptorPool.expired());
 	std::shared_ptr<DescriptorSetLayout> descriptorSetLayoutPtr = descriptorSetLayout.lock();
 	std::shared_ptr<DescriptorPool> descriptorPoolPtr = descriptorPool.lock();
@@ -227,7 +271,7 @@ std::shared_ptr<DescriptorSet> DescriptorSet::get(std::weak_ptr<DescriptorSetLay
 	bool allocated = descriptorPoolPtr->allocate(descriptorSetLayoutPtr->getDescriptorSetLayout(), descriptorSet);
 	assert(allocated && descriptorSet);
 
-	return std::shared_ptr<DescriptorSet>(new DescriptorSet(device, descriptorPool, descriptorSetLayout, descriptorSet));
+	return new DescriptorSet(device, descriptorPool, descriptorSetLayout, descriptorSet);
 }
 
 const vk::DescriptorSet& DescriptorSet::getDescriptorSet() const {
@@ -248,8 +292,16 @@ std::shared_ptr<DescriptorSetLayout> DescriptorSet::getLayout() const {
 
 
 
-DescriptorSetWriter::DescriptorSetWriter(std::weak_ptr<DescriptorSet> descriptorSet):
+DescriptorSetWriter::DescriptorSetWriter(DescriptorSet* descriptorSet) :
 	m_descriptorSet(descriptorSet) {
+}
+
+DescriptorSetWriter::DescriptorSetWriter(std::shared_ptr<DescriptorSet> descriptorSet) :
+	m_descriptorSet(descriptorSet.get()) {
+}
+
+DescriptorSetWriter::DescriptorSetWriter(std::weak_ptr<DescriptorSet> descriptorSet):
+	m_descriptorSet(descriptorSet.lock().get()) {
 }
 
 DescriptorSetWriter::~DescriptorSetWriter() {
@@ -338,6 +390,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Texture2D
 
 bool DescriptorSetWriter::write() {
 	const auto& device = m_descriptorSet->getDevice();
+	//vkDeviceWaitIdle(**device);
 	device->updateDescriptorSets(m_writes, {});
 	return true;
 }
@@ -410,4 +463,104 @@ size_t DescriptorSetLayout::KeyHasher::operator()(const DescriptorSetLayout::Key
 		std::hash_combine(s, descriptorSetLayoutKey.pBindings[i].pImmutableSamplers);
 	}
 	return s;
+}
+
+DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(std::weak_ptr<vkr::Device> device, vk::DescriptorSetLayoutCreateFlags flags):
+	m_device(device),
+	m_flags(flags) {
+}
+
+DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(vk::DescriptorSetLayoutCreateFlags flags):
+	m_device(Application::instance()->graphics()->getDevice()),
+	m_flags(flags) {
+}
+
+DescriptorSetLayoutBuilder::~DescriptorSetLayoutBuilder() {
+}
+
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBlock(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t sizeBytes) {
+#if _DEBUG
+	if (m_bindings.count(binding) != 0) {
+		printf("Unable to add DescriptorSetLayout UniformBlock binding %d - The binding is already added\n", binding);
+		assert(false);
+	}
+	if (sizeBytes % 4 != 0) {
+		printf("Unable to add DescriptorSetLayout UniformBlock binding %d - Uniform block size must be a multiple of 4 bytes\n", binding);
+		assert(false);
+	}
+#endif
+	vk::DescriptorSetLayoutBinding bindingInfo;
+	bindingInfo.setBinding(binding);
+	bindingInfo.setDescriptorType(vk::DescriptorType::eUniformBuffer);
+	bindingInfo.setDescriptorCount(1);
+	bindingInfo.setStageFlags(shaderStages);
+	bindingInfo.setPImmutableSamplers(NULL);
+	m_bindings.insert(std::make_pair(binding, bindingInfo));
+	return *this;
+}
+
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampler(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t arraySize) {
+#if _DEBUG
+	if (m_bindings.count(binding) != 0) {
+		printf("Unable to add DescriptorSetLayout Sampler binding %d - The binding is already added\n", binding);
+		assert(false);
+	}
+	if (arraySize == 0) {
+		printf("Unable to add DescriptorSetLayout Sampler binding %d - Array size must not be zero\n", binding);
+		assert(false);
+	}
+#endif
+	vk::DescriptorSetLayoutBinding bindingInfo;
+	bindingInfo.setBinding(binding);
+	bindingInfo.setDescriptorType(vk::DescriptorType::eSampler);
+	bindingInfo.setDescriptorCount(arraySize);
+	bindingInfo.setStageFlags(shaderStages);
+	bindingInfo.setPImmutableSamplers(NULL);
+	m_bindings.insert(std::make_pair(binding, bindingInfo));
+	return *this;
+}
+
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addCombinedImageSampler(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t arraySize) {
+#if _DEBUG
+	if (m_bindings.count(binding) != 0) {
+		printf("Unable to add DescriptorSetLayout CombinedImageSampler binding %d - The binding is already added\n", binding);
+		assert(false);
+	}
+	if (arraySize == 0) {
+		printf("Unable to add DescriptorSetLayout CombinedImageSampler binding %d - Array size must not be zero\n", binding);
+		assert(false);
+	}
+#endif
+	vk::DescriptorSetLayoutBinding bindingInfo;
+	bindingInfo.setBinding(binding);
+	bindingInfo.setDescriptorType(vk::DescriptorType::eCombinedImageSampler);
+	bindingInfo.setDescriptorCount(arraySize);
+	bindingInfo.setStageFlags(shaderStages);
+	bindingInfo.setPImmutableSamplers(NULL);
+	m_bindings.insert(std::make_pair(binding, bindingInfo));
+	return *this;
+}
+
+std::shared_ptr<DescriptorSetLayout> DescriptorSetLayoutBuilder::build() {
+	assert(!m_device.expired());
+
+	std::vector<vk::DescriptorSetLayoutBinding> bindings;
+	bindings.reserve(m_bindings.size());
+	for (auto it = m_bindings.begin(); it != m_bindings.end(); ++it) {
+		bindings.emplace_back(it->second);
+	}
+
+	vk::DescriptorSetLayoutCreateInfo createInfo;
+	createInfo.setFlags(m_flags);
+	createInfo.setBindings(bindings);
+
+	reset();
+
+	return DescriptorSetLayout::get(m_device, createInfo);
+}
+
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::reset(vk::DescriptorSetLayoutCreateFlags flags) {
+	m_flags = flags;
+	m_bindings.clear();
+	return *this;
 }

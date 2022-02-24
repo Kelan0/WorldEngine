@@ -38,6 +38,10 @@ Camera& Camera::setFov(double fov) {
     return *this;
 }
 
+Camera& Camera::setFovDegrees(double fov) {
+    return setFov(glm::radians(fov));
+}
+
 Camera& Camera::setAspect(double aspect) {
     if (m_isOrtho) {
         // Set orthographic aspect ratio. Maintain height, center and orientation
@@ -60,6 +64,10 @@ Camera& Camera::setClippingPlanes(double near, double far) {
 
 double Camera::getFov() const {
     return glm::atan(glm::abs(m_top - m_bottom) / m_near) * 2.0;
+}
+
+double Camera::getFovDegrees() const {
+    return glm::degrees(getFov());
 }
 
 double Camera::getAspect() const {

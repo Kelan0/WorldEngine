@@ -47,3 +47,5 @@ namespace vkr = vk::raii;
 
 
 #define INT_DIV_CEIL(num, denom) (((num) + (denom) - 1) / (denom))
+
+constexpr uint32_t CONCURRENT_FRAMES = 3;

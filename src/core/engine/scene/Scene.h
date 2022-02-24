@@ -3,6 +3,7 @@
 #include "../../core.h"
 #include "Entity.h"
 #include "event/EventDispacher.h"
+#include "event/Events.h"
 #include <entt/entt.hpp>
 
 template<class T>
@@ -47,10 +48,22 @@ public:
 
 	EventDispacher* getEventDispacher() const;
 
+	entt::registry* registry();
+
+	bool setMainCamera(const Entity& entity);
+
+	const Entity& getMainCamera() const;
+
+private:
+	void onScreenResize(const ScreenResizeEvent& event);
+
 private:
 	entt::registry m_registry;
 	EventDispacher* m_eventDispacher;
 	//std::unordered_map<entt::entity, std::vector<Entity*>> m_entityRefTracker;
+
+	Entity m_mainCameraEntity;
+	Entity m_defaultCamera;
 };
 
 template<class Component>

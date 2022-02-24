@@ -7,6 +7,9 @@ class Sampler;
 class ImageView2D;
 class Texture2D;
 
+class DescriptorSet;
+class DescriptorPool;
+
 struct DescriptorPoolConfiguration {
 	std::weak_ptr<vkr::Device> device;
 	vk::DescriptorPoolCreateFlags flags;
@@ -60,6 +63,12 @@ public:
 
 	static void clearCache();
 
+	DescriptorSet* createDescriptorSet(std::shared_ptr<DescriptorPool> descriptorPool);
+
+	bool createDescriptorSets(std::shared_ptr<DescriptorPool> descriptorPool, uint32_t count, DescriptorSet** outDescriptorSets);
+
+	bool createDescriptorSets(std::shared_ptr<DescriptorPool> descriptorPool, uint32_t count, std::shared_ptr<DescriptorSet>* outDescriptorSets);
+
 	std::shared_ptr<vkr::Device> getDevice() const;
 
 	const vk::DescriptorSetLayout& getDescriptorSetLayout() const;
@@ -88,6 +97,32 @@ private:
 	static Cache s_descriptorSetLayoutCache;
 };
 
+
+
+class DescriptorSetLayoutBuilder {
+	NO_COPY(DescriptorSetLayoutBuilder);
+public:
+	DescriptorSetLayoutBuilder(std::weak_ptr<vkr::Device> device, vk::DescriptorSetLayoutCreateFlags flags = {});
+
+	DescriptorSetLayoutBuilder(vk::DescriptorSetLayoutCreateFlags flags = {});
+
+	~DescriptorSetLayoutBuilder();
+
+	DescriptorSetLayoutBuilder& addUniformBlock(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t sizeBytes);
+
+	DescriptorSetLayoutBuilder& addSampler(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t arraySize = 1);
+
+	DescriptorSetLayoutBuilder& addCombinedImageSampler(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t arraySize = 1);
+
+	std::shared_ptr<DescriptorSetLayout> build();
+
+	DescriptorSetLayoutBuilder& reset(vk::DescriptorSetLayoutCreateFlags flags = {});
+
+private:
+	std::weak_ptr<vkr::Device> m_device;
+	vk::DescriptorSetLayoutCreateFlags m_flags;
+	std::unordered_map<uint32_t, vk::DescriptorSetLayoutBinding> m_bindings;
+};
 
 
 class DescriptorPool {
@@ -126,9 +161,9 @@ private:
 public:
 	~DescriptorSet();
 
-	static std::shared_ptr<DescriptorSet> get(const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, std::weak_ptr<DescriptorPool> descriptorPool);
+	static DescriptorSet* create(const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, std::weak_ptr<DescriptorPool> descriptorPool);
 
-	static std::shared_ptr<DescriptorSet> get(std::weak_ptr<DescriptorSetLayout> descriptorSetLayout, std::weak_ptr<DescriptorPool> descriptorPool);
+	static DescriptorSet* create(std::weak_ptr<DescriptorSetLayout> descriptorSetLayout, std::weak_ptr<DescriptorPool> descriptorPool);
 
 	const vk::DescriptorSet& getDescriptorSet() const;
 
@@ -149,6 +184,10 @@ private:
 class DescriptorSetWriter {
 	NO_COPY(DescriptorSetWriter);
 public:
+	DescriptorSetWriter(DescriptorSet* descriptorSet);
+
+	DescriptorSetWriter(std::shared_ptr<DescriptorSet> descriptorSet);
+
 	DescriptorSetWriter(std::weak_ptr<DescriptorSet> descriptorSet);
 
 	~DescriptorSetWriter();
@@ -171,7 +210,7 @@ public:
 
 private:
 	std::vector<vk::WriteDescriptorSet> m_writes;
-	std::shared_ptr<DescriptorSet> m_descriptorSet;
+	DescriptorSet* m_descriptorSet;
 
 	std::vector<vk::DescriptorBufferInfo> m_tempBufferInfo;
 	std::vector<vk::DescriptorImageInfo> m_tempImageInfo;

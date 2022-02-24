@@ -2,6 +2,10 @@
 
 #include "Entity.h"
 #include "EntityHierarchy.h"
+#include "Camera.h"
+#include "Transform.h"
+#include "event/Events.h"
+#include "../../application/Application.h"
 
 Scene::Scene() {
 	m_eventDispacher = new EventDispacher();
@@ -22,20 +26,23 @@ Scene::~Scene() {
 void Scene::init() {
 	enableEvents<EntityHierarchy>();
 
-	//m_eventDispacher->connect<ComponentAddedEvent<EntityHierarchy>>([](const ComponentAddedEvent<EntityHierarchy>& event) {
-	//	printf("EntityHierarchy added to entity %llu\n", (uint64_t)event.entity);
-	//});
-
 	m_eventDispacher->connect<ComponentRemovedEvent<EntityHierarchy>>([](const ComponentRemovedEvent<EntityHierarchy>& event) {
-		printf("EntityHierarchy for entity %llu was deleted\n", (uint64_t)event.entity);
 		for (auto it = EntityHierarchy::begin(event.entity); it != EntityHierarchy::end(event.entity); ++it)
 			EntityHierarchy::detach(*it);
 		EntityHierarchy::detach(event.entity);
 	});
+
+	m_eventDispacher->connect<ScreenResizeEvent>(&Scene::onScreenResize, this);
+
+	m_defaultCamera = createEntity("Default Camera");
+	m_defaultCamera.addComponent<Camera>().setFovDegrees(90.0).setClippingPlanes(0.05, 500.0);
+	m_defaultCamera.addComponent<Transform>();
+	setMainCamera(nullptr);
 }
 
 Entity Scene::createEntity(const std::string& name) {
 	entt::entity id = m_registry.create();
+
 	Entity entity(this, id);
 
 	entity.addComponent<EntityNameComponent>(name);
@@ -61,4 +68,32 @@ void Scene::destroyEntity(const Entity& entity) {
 
 EventDispacher* Scene::getEventDispacher() const {
 	return m_eventDispacher;
+}
+
+entt::registry* Scene::registry() {
+	return &m_registry;
+}
+
+bool Scene::setMainCamera(const Entity& entity) {
+	if (entity == nullptr) {
+		m_mainCameraEntity = m_defaultCamera;
+		return true;
+	}
+
+	if (!entity.hasComponent<Camera>() || !entity.hasComponent<Transform>()) {
+		printf("Scene::setMainCamera - Entity \"%s\" must have a Camera and Transform component in order to be used as the main scene camera\n", entity.getName().c_str());
+		return false;
+	}
+	m_mainCameraEntity = entity;
+	return true;
+}
+
+const Entity& Scene::getMainCamera() const {
+	return m_mainCameraEntity;
+}
+
+void Scene::onScreenResize(const ScreenResizeEvent& event) {
+	printf("SCENE - screen resized\n");
+	double aspectRatio = (double)event.newSize.x / (double)event.newSize.y;
+	m_defaultCamera.getComponent<Camera>().setAspect(aspectRatio);
 }

@@ -14,13 +14,25 @@ ImageData::ImageData(uint8_t* data, uint32_t width, uint32_t height, ImagePixelL
 	m_height(height),
 	m_pixelLayout(pixelLayout),
 	m_pixelFormat(pixelFormat),
-	m_stbiAllocated(stbiAllocated) {
+	m_stbiAllocated(stbiAllocated),
+	m_externallyAllocated(false) {
+}
+
+ImageData::ImageData(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat) :
+	m_data(data),
+	m_width(width),
+	m_height(height),
+	m_pixelLayout(pixelLayout),
+	m_pixelFormat(pixelFormat),
+	m_stbiAllocated(false),
+	m_externallyAllocated(true) {
 }
 
 ImageData::~ImageData() {
 	if (m_stbiAllocated) {
 		stbi_image_free(m_data);
-	} else {
+
+	} else if (!m_externallyAllocated) {
 		free(m_data);
 	}
 }

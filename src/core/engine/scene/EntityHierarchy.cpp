@@ -138,7 +138,7 @@ bool EntityHierarchy::detach(const Entity& entity) {
     const Entity& child = entity;
     const Entity& parent = getParent(child);
 
-    printf("Detaching entity %llu from parent %llu\n", (uint64_t)entity, (uint64_t)parent);
+    //printf("Detaching entity %llu from parent %llu\n", (uint64_t)entity, (uint64_t)parent);
 
     if (parent == nullptr)
         return true; // Already detached
@@ -181,11 +181,11 @@ Entity EntityHierarchy::createChild(const Entity& entity, const std::string& nam
 EntityHierarchy& EntityHierarchy::getNode(const Entity& entity) {
 #if _DEBUG
     if (entity == nullptr) {
-        printf("Cannot get EntityHierarchy of NULL entity\n");
+        printf("Cannot create EntityHierarchy of NULL entity\n");
         assert(false);
     }
     if (!entity.hasComponent<EntityHierarchy>()) {
-        printf("Cannot get EntityHierarchy of non-hierarchy entity\n");
+        printf("Cannot create EntityHierarchy of non-hierarchy entity\n");
         assert(false);
     }
 #endif

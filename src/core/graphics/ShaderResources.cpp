@@ -20,7 +20,7 @@ ShaderResources::Builder& ShaderResources::Builder::addUniformBlock(uint32_t set
 #if _DEBUG
 	auto it = bindings.find(binding);
 	if (it != bindings.end()) {
-		printf("Unable to add uniform block (setOrtho = %d, binding = %d): The binding is already used\n", set, binding);
+		printf("Unable to add uniform block (set = %d, binding = %d): The binding is already used\n", set, binding);
 		assert(false);
 		return *this;
 	}
@@ -43,7 +43,7 @@ ShaderResources::Builder& ShaderResources::Builder::addTextureSampler(uint32_t s
 #if _DEBUG
 	auto it = bindings.find(binding);
 	if (it != bindings.end()) {
-		printf("Unable to add texture sampler (setOrtho = %d, binding = %d): The binding is already used\n", set, binding);
+		printf("Unable to add texture sampler (set = %d, binding = %d): The binding is already used\n", set, binding);
 		assert(false);
 		return *this;
 	}
@@ -85,7 +85,7 @@ ShaderResources* ShaderResources::Builder::build() const {
 
 		vk::DescriptorSetLayoutCreateInfo layoutCreateInfo;
 		layoutCreateInfo.setBindings(bindings);
-		std::shared_ptr<DescriptorSet> descriptorSet = DescriptorSet::get(layoutCreateInfo, m_descriptorPool);
+		std::shared_ptr<DescriptorSet> descriptorSet(DescriptorSet::create(layoutCreateInfo, m_descriptorPool));
 
 		DescriptorSetWriter writer(descriptorSet);
 		for (int i = 0; i < descriptorSet->getLayout()->getBindingCount(); ++i) {
@@ -100,7 +100,7 @@ ShaderResources* ShaderResources::Builder::build() const {
 					writer.writeImage(bindingInfo.binding, bindingInfo.sampler, bindingInfo.imageView, bindingInfo.imageLayout);
 				break;
 			default:
-				printf("Unable to write descriptor setOrtho binding %d: The descriptor type %s is not implemented\n", i, vk::to_string(bindingInfo.descriptorType).c_str());
+				printf("Unable to write descriptor set binding %d: The descriptor type %s is not implemented\n", i, vk::to_string(bindingInfo.descriptorType).c_str());
 				break;
 			}
 		}
@@ -138,12 +138,12 @@ void ShaderResources::update(uint32_t set, uint32_t binding, void* data, vk::Dev
 
 #if _DEBUG
 	if (m_activeWriters.count(set) > 0) {
-		printf("Unable to update buffer [setOrtho = %d, binding = %d] for this uniform buffer: batch write for setOrtho index %d was not ended\n", set);
+		printf("Unable to update buffer [set = %d, binding = %d] for this uniform buffer: batch write for set index %d was not ended\n", set);
 		assert(false);
 		return;
 	}
 	if (offset >= bindingInfo.bufferRange) {
-		printf("Unable to update buffer [setOrtho = %d, binding = %d] for this uniform buffer: buffer offset out of range\n", set, binding);
+		printf("Unable to update buffer [set = %d, binding = %d] for this uniform buffer: buffer offset out of range\n", set, binding);
 		assert(false);
 		return;
 	}
@@ -154,7 +154,7 @@ void ShaderResources::update(uint32_t set, uint32_t binding, void* data, vk::Dev
 
 #if _DEBUG
 	if (offset + range > bindingInfo.bufferRange) {
-		printf("Unable to update buffer [setOrtho = %d, binding = %d] for this uniform buffer: buffer range out of range\n", set, binding);
+		printf("Unable to update buffer [set = %d, binding = %d] for this uniform buffer: buffer range out of range\n", set, binding);
 		assert(false);
 		return;
 	}
@@ -166,12 +166,12 @@ void ShaderResources::update(uint32_t set, uint32_t binding, void* data, vk::Dev
 void ShaderResources::bind(uint32_t set, uint32_t shaderSet, const vk::CommandBuffer& commandBuffer, const GraphicsPipeline& graphicsPipeline) {
 #if _DEBUG
 	if (m_descriptorSets.count(set) == 0) {
-		printf("Unable to bind descriptor setOrtho: setOrtho index %d does not exist\n", set);
+		printf("Unable to bind descriptor set: set index %d does not exist\n", set);
 		assert(false);
 		return;
 	}
 	if (m_activeWriters.count(set) > 0) {
-		printf("Unable to bind descriptor setOrtho: batch write for setOrtho index %d was not ended\n", set);
+		printf("Unable to bind descriptor set: batch write for set index %d was not ended\n", set);
 		assert(false);
 		return;
 	}
@@ -185,12 +185,12 @@ void ShaderResources::bind(std::vector<uint32_t> sets, uint32_t firstShaderSet, 
 #if _DEBUG
 	for (int i = 0; i < sets.size(); ++i) {
 		if (m_descriptorSets.count(sets[i]) == 0) {
-			printf("Unable to bind descriptor sets: setOrtho index %d does not exist\n", sets[i]);
+			printf("Unable to bind descriptor sets: set index %d does not exist\n", sets[i]);
 			assert(false);
 			return;
 		}
 		if (m_activeWriters.count(sets[i]) > 0) {
-			printf("Unable to bind descriptor sets: batch write for setOrtho index %d was not ended\n", sets[i]);
+			printf("Unable to bind descriptor sets: batch write for set index %d was not ended\n", sets[i]);
 			assert(false);
 			return;
 		}
@@ -212,7 +212,7 @@ void ShaderResources::bind(std::vector<uint32_t> sets, uint32_t firstShaderSet, 
 DescriptorSetWriter ShaderResources::writer(uint32_t set) {
 #if _DEBUG
 	if (m_descriptorSets.count(set) == 0) {
-		printf("Unable to create descriptor setOrtho writer: setOrtho index %d does not exist\n", set);
+		printf("Unable to create descriptor set writer: set index %d does not exist\n", set);
 		assert(false);
 	}
 #endif
@@ -226,12 +226,12 @@ void ShaderResources::writeImage(uint32_t set, uint32_t binding, const vk::Descr
 void ShaderResources::startBatchWrite(uint32_t set) {
 #if _DEBUG
 	if (m_descriptorSets.count(set) == 0) {
-		printf("Unable to create descriptor setOrtho writer: setOrtho index %d does not exist\n", set);
+		printf("Unable to create descriptor set writer: set index %d does not exist\n", set);
 		assert(false);
 		return;
 	}
 	if (m_activeWriters.count(set) != 0) {
-		printf("Batch write for setOrtho %d of this uniform buffer was already started\n", set);
+		printf("Batch write for set %d of this uniform buffer was already started\n", set);
 		assert(false);
 		return;
 	}
@@ -244,7 +244,7 @@ void ShaderResources::endBatchWrite(uint32_t set) {
 	auto it = m_activeWriters.find(set);
 #if _DEBUG
 	if (it == m_activeWriters.end()) {
-		printf("Unable to end batch write for setOrtho %d of this uniform buffer. It was never started\n", set);
+		printf("Unable to end batch write for set %d of this uniform buffer. It was never started\n", set);
 		assert(false);
 		return;
 	}
@@ -313,7 +313,7 @@ void ShaderResources::writeImage(uint32_t set, uint32_t binding, Texture2D* text
 const vk::DescriptorSetLayout& ShaderResources::getDescriptorSetLayout(uint32_t set) const {
 #if _DEBUG
 	if (m_descriptorSets.count(set) == 0) {
-		printf("Unable to get descriptor setOrtho layout: setOrtho index %d does not exist\n", set);
+		printf("Unable to create descriptor set layout: set index %d does not exist\n", set);
 		assert(false);
 	}
 #endif

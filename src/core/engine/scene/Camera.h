@@ -18,11 +18,15 @@ public:
 
 	Camera& setFov(double fov);
 
+	Camera& setFovDegrees(double fov);
+
 	Camera& setAspect(double aspect);
 
 	Camera& setClippingPlanes(double near, double far);
 
 	double getFov() const;
+
+	double getFovDegrees() const;
 	
 	double getAspect() const;
 

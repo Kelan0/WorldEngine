@@ -27,8 +27,11 @@ enum class ImagePixelFormat {
 
 class ImageData {
 	//NO_COPY(ImageData)
-public:
+private:
 	ImageData(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, bool stbiAllocated);
+
+public:
+	ImageData(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat);
 
 	~ImageData();
 
@@ -65,6 +68,7 @@ private:
 	ImagePixelLayout m_pixelLayout;
 	ImagePixelFormat m_pixelFormat;
 	bool m_stbiAllocated;
+	bool m_externallyAllocated;
 
 	static std::map<std::string, ImageData*> s_imageCache;
 };

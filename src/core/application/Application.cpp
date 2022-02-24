@@ -70,8 +70,11 @@ bool Application::initInternal() {
 	m_scene = new Scene();
 	m_scene->init();
 
+	m_eventDispacher->repeatAll(m_scene->getEventDispacher());
+
 	m_sceneRenderer = new SceneRenderer();
 	m_sceneRenderer->setScene(m_scene);
+	m_sceneRenderer->init();
 
 	init();
 }
@@ -141,6 +144,9 @@ void Application::destroy() {
 
 void Application::start() {
 	m_running = true;
+
+	// Trigger a ScreenResizeEvent at the beginning of the render loop so that anything that needs it can be initialized easily
+	m_eventDispacher->trigger(ScreenResizeEvent{ getWindowSize(), getWindowSize() }); 
 
 	std::vector<double> frameTimes;
 
@@ -256,6 +262,11 @@ glm::ivec2 Application::getWindowSize() const {
 	glm::ivec2 size;
 	SDL_GetWindowSize(m_windowHandle, &size.x, &size.y);
 	return size;
+}
+
+double Application::getWindowAspectRatio() const {
+	const glm::ivec2& windowSize = getWindowSize();
+	return (double)windowSize.x / (double)windowSize.y;
 }
 
 bool Application::isViewportInverted() const {

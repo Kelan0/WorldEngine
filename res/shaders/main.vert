@@ -7,12 +7,12 @@ layout(location = 2) in vec2 texture;
 layout(location = 0) out vec3 fs_normal;
 layout(location = 1) out vec2 fs_texture;
 
-layout(set = 0, binding = 0) uniform UBO1 {
-    mat4 modelMatrix;
+layout(set = 0, binding = 0) uniform UBO2 {
+    mat4 viewProjectionMatrix;
 };
 
-layout(set = 1, binding = 0) uniform UBO2 {
-    mat4 viewProjectionMatrix;
+layout(set = 1, binding = 0) uniform UBO1 {
+    mat4 modelMatrix;
 };
 
 void main() {

@@ -14,6 +14,7 @@ void main() {
     float NdotL = dot(N, L);
 
     vec3 albedo = texture(testTexture, fs_texture).rgb;
+    //vec3 albedo = vec3(1.0);
 
     vec3 surfaceColour = NdotL * albedo;
     outColor = vec4(surfaceColour, 1.0);

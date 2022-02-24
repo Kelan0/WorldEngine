@@ -44,6 +44,8 @@ public:
 
 	glm::ivec2 getWindowSize() const;
 
+	double getWindowAspectRatio() const;
+
 	bool isViewportInverted() const;
 
 private:

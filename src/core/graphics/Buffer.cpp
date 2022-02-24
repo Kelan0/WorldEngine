@@ -132,7 +132,7 @@ bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk:
 	return true;
 }
 
-bool Buffer::upload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, void* data) {
+bool Buffer::upload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data) {
 #if _DEBUG
 	if (dstBuffer == NULL) {
 		printf("Cannot upload to NULL buffer\n");
@@ -179,7 +179,7 @@ bool Buffer::copyTo(Buffer* dstBuffer, vk::DeviceSize size, vk::DeviceSize srcOf
 	return Buffer::copy(this, dstBuffer, size, srcOffset, dstOffset);
 }
 
-bool Buffer::upload(vk::DeviceSize offset, vk::DeviceSize size, void* data) {
+bool Buffer::upload(vk::DeviceSize offset, vk::DeviceSize size, const void* data) {
 	return Buffer::upload(this, offset, size, data);
 }
 
@@ -215,12 +215,12 @@ void Buffer::resetStagingBuffer() {
 	s_stagingBuffer.reset();
 }
 
-bool Buffer::stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, void* data) {
+bool Buffer::stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data) {
 	reserveStagingBuffer(dstBuffer->getDevice(), size);
 
 	vk::DeviceSize stageSize = glm::min(s_stagingBuffer->getSize(), size);
 	vk::DeviceSize stageOffset = 0;
-	uint8_t* stageData = static_cast<uint8_t*>(data);
+	const uint8_t* stageData = static_cast<const uint8_t*>(data);
 
 	vk::DeviceSize stages = (size + stageSize - 1) / stageSize; // round-up integer division
 
@@ -241,7 +241,7 @@ bool Buffer::stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSi
 	return true;
 }
 
-bool Buffer::mappedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, void* data) {
+bool Buffer::mappedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data) {
 	const vk::Device& device = **dstBuffer->getDevice();
 	void* mappedBuffer = NULL;
 
