@@ -10,7 +10,8 @@ DescriptorSetLayout::Cache DescriptorSetLayout::s_descriptorSetLayoutCache;
 DescriptorSetLayout::DescriptorSetLayout(std::weak_ptr<vkr::Device> device, vk::DescriptorSetLayout descriptorSetLayout, Key key):
 	m_device(device),
 	m_descriptorSetLayout(descriptorSetLayout), 
-	m_key(key) {
+	m_key(key), 
+	m_resourceId(GraphicsManager::nextResourceId()) {
 	//printf("Create DescriptorSetLayout\n");
 }
 
@@ -164,6 +165,10 @@ bool DescriptorSetLayout::operator!=(const DescriptorSetLayout& rhs) const {
 	return !(*this == rhs);
 }
 
+const GraphicsResource& DescriptorSetLayout::getResourceId() const {
+	return m_resourceId;
+}
+
 
 
 
@@ -172,7 +177,8 @@ bool DescriptorSetLayout::operator!=(const DescriptorSetLayout& rhs) const {
 DescriptorPool::DescriptorPool(std::weak_ptr<vkr::Device> device, vk::DescriptorPool descriptorPool, bool canFreeDescriptorSets):
 	m_device(device),
 	m_descriptorPool(descriptorPool), 
-	m_canFreeDescriptorSets(canFreeDescriptorSets) {
+	m_canFreeDescriptorSets(canFreeDescriptorSets),
+	m_resourceId(GraphicsManager::nextResourceId()) {
 }
 
 DescriptorPool::~DescriptorPool() {
@@ -236,13 +242,18 @@ bool DescriptorPool::canFreeDescriptorSets() const {
 	return m_canFreeDescriptorSets;
 }
 
+const GraphicsResource& DescriptorPool::getResourceId() const {
+	return m_resourceId;
+}
+
 
 
 DescriptorSet::DescriptorSet(std::weak_ptr<vkr::Device> device, std::weak_ptr<DescriptorPool> pool, std::weak_ptr<DescriptorSetLayout> layout, vk::DescriptorSet descriptorSet):
 	m_device(device),
 	m_pool(pool),
 	m_layout(layout),
-	m_descriptorSet(descriptorSet) {
+	m_descriptorSet(descriptorSet),
+	m_resourceId(GraphicsManager::nextResourceId()) {
 	//printf("Create DescriptorSet\n");
 }
 
@@ -288,6 +299,10 @@ std::shared_ptr<DescriptorPool> DescriptorSet::getPool() const {
 
 std::shared_ptr<DescriptorSetLayout> DescriptorSet::getLayout() const {
 	return m_layout;
+}
+
+const GraphicsResource& DescriptorSet::getResourceId() const {
+	return m_resourceId;
 }
 
 
@@ -344,48 +359,85 @@ DescriptorSetWriter& DescriptorSetWriter::writeBuffer(uint32_t binding, Buffer* 
 	return writeBuffer(binding, bufferInfo);
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, const vk::DescriptorImageInfo& imageInfo) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, const vk::DescriptorImageInfo* imageInfos, uint32_t arrayCount, uint32_t arrayIndex) {
 	int bindingIndex = m_descriptorSet->getLayout()->findBindingIndex(binding);
 	assert(bindingIndex >= 0);
 
 	const auto& bindingInfo = m_descriptorSet->getLayout()->getBinding(bindingIndex);
 
-	assert(bindingInfo.descriptorCount == 1);
+	assert(arrayCount > 0);
+	assert((arrayIndex + arrayCount) <= bindingInfo.descriptorCount);
 
-	m_tempImageInfo.emplace_back(imageInfo);
+	uint32_t firstIndex = m_tempImageInfo.size();
+	for (uint32_t i = 0; i < arrayCount; ++i) {
+		m_tempImageInfo.emplace_back(imageInfos[i]);
+	}
 
 	vk::WriteDescriptorSet& write = m_writes.emplace_back();
 	write.setDstSet(m_descriptorSet->getDescriptorSet());
 	write.setDescriptorType(bindingInfo.descriptorType);
 	write.setDstBinding(binding);
-	write.setPImageInfo(&m_tempImageInfo.back());
-	write.setDescriptorCount(1);
+	write.setPImageInfo(&m_tempImageInfo[firstIndex]);
+	write.setDescriptorCount(arrayCount);
+	write.setDstArrayElement(arrayIndex);
 
 	return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, vk::Sampler sampler, vk::ImageView imageView, vk::ImageLayout imageLayout) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, const vk::DescriptorImageInfo& imageInfo, uint32_t arrayIndex) {
+	return writeImage(binding, &imageInfo, 1, arrayIndex);
+}
+
+DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, vk::Sampler* samplers, vk::ImageView* imageViews, vk::ImageLayout* imageLayouts, uint32_t arrayCount, uint32_t arrayIndex) {
+	vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
+	for (uint32_t i = 0; i < arrayCount; ++i) {
+		imageInfos[i].setSampler(samplers[i]);
+		imageInfos[i].setImageView(imageViews[i]);
+		imageInfos[i].setImageLayout(imageLayouts[i]);
+	}
+	writeImage(binding, imageInfos, arrayCount, arrayIndex);
+	delete[] imageInfos;
+	return *this;
+}
+
+DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, vk::Sampler sampler, vk::ImageView imageView, vk::ImageLayout imageLayout, uint32_t arrayIndex) {
 	vk::DescriptorImageInfo imageInfo;
 	imageInfo.setSampler(sampler);
 	imageInfo.setImageView(imageView);
 	imageInfo.setImageLayout(imageLayout);
-	return writeImage(binding, imageInfo);
+	return writeImage(binding, &imageInfo, 1, arrayIndex);
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Sampler* sampler, ImageView2D* imageView, vk::ImageLayout imageLayout) {
-	vk::DescriptorImageInfo imageInfo;
-	imageInfo.setSampler(sampler->getSampler());
-	imageInfo.setImageView(imageView->getImageView());
-	imageInfo.setImageLayout(imageLayout);
-	return writeImage(binding, imageInfo);
+DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Sampler** samplers, ImageView2D** imageViews, vk::ImageLayout* imageLayouts, uint32_t arrayCount, uint32_t arrayIndex) {
+	vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
+	for (uint32_t i = 0; i < arrayCount; ++i) {
+		imageInfos[i].setSampler(samplers[i]->getSampler());
+		imageInfos[i].setImageView(imageViews[i]->getImageView());
+		imageInfos[i].setImageLayout(imageLayouts[i]);
+	}
+	writeImage(binding, imageInfos, arrayCount, arrayIndex);
+	delete[] imageInfos;
+	return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Texture2D* texture, vk::ImageLayout imageLayout) {
-	vk::DescriptorImageInfo imageInfo;
-	imageInfo.setSampler(texture->getSampler()->getSampler());
-	imageInfo.setImageView(texture->getImageView()->getImageView());
-	imageInfo.setImageLayout(imageLayout);
-	return writeImage(binding, imageInfo);
+DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Sampler* samplers, ImageView2D* imageViews, vk::ImageLayout imageLayouts, uint32_t arrayIndex) {
+	return writeImage(binding, &samplers, &imageViews, &imageLayouts, 1, arrayIndex);
+}
+
+DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Texture2D** textures, vk::ImageLayout* imageLayouts, uint32_t arrayCount, uint32_t arrayIndex) {
+	vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
+	for (uint32_t i = 0; i < arrayCount; ++i) {
+		imageInfos[i].setSampler(textures[i]->getSampler()->getSampler());
+		imageInfos[i].setImageView(textures[i]->getImageView()->getImageView());
+		imageInfos[i].setImageLayout(imageLayouts[i]);
+	}
+	writeImage(binding, imageInfos, arrayCount, arrayIndex);
+	delete[] imageInfos;
+	return *this;
+}
+
+DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Texture2D* texture, vk::ImageLayout imageLayout, uint32_t arrayIndex) {
+	return writeImage(binding, &texture, &imageLayout, 1, arrayIndex);
 }
 
 bool DescriptorSetWriter::write() {
@@ -492,6 +544,27 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBlock(uint32_t
 	vk::DescriptorSetLayoutBinding bindingInfo;
 	bindingInfo.setBinding(binding);
 	bindingInfo.setDescriptorType(vk::DescriptorType::eUniformBuffer);
+	bindingInfo.setDescriptorCount(1);
+	bindingInfo.setStageFlags(shaderStages);
+	bindingInfo.setPImmutableSamplers(NULL);
+	m_bindings.insert(std::make_pair(binding, bindingInfo));
+	return *this;
+}
+
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageBlock(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t sizeBytes) {
+#if _DEBUG
+	if (m_bindings.count(binding) != 0) {
+		printf("Unable to add DescriptorSetLayout StorageBlock binding %d - The binding is already added\n", binding);
+		assert(false);
+	}
+	if (sizeBytes % 4 != 0) {
+		printf("Unable to add DescriptorSetLayout StorageBlock binding %d - Storage block size must be a multiple of 4 bytes\n", binding);
+		assert(false);
+	}
+#endif
+	vk::DescriptorSetLayoutBinding bindingInfo;
+	bindingInfo.setBinding(binding);
+	bindingInfo.setDescriptorType(vk::DescriptorType::eStorageBuffer);
 	bindingInfo.setDescriptorCount(1);
 	bindingInfo.setStageFlags(shaderStages);
 	bindingInfo.setPImmutableSamplers(NULL);

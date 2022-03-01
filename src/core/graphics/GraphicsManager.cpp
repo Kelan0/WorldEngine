@@ -7,6 +7,7 @@
 #include "DescriptorSet.h"
 #include "Buffer.h"
 
+uint64_t GraphicsManager::s_nextResourceID = 0;
 
 enum QueueType {
 	QUEUE_TYPE_GRAPHICS_BIT = VK_QUEUE_GRAPHICS_BIT,
@@ -85,16 +86,34 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
 		return false;
 	}
 
-	std::vector<const char*> deviceLayers;
+	std::vector<const char*> deviceLayers; 
 	std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 	std::unordered_map<std::string, uint32_t> queueLayout;
 	queueLayout.insert(std::make_pair(QUEUE_GRAPHICS_MAIN, QUEUE_TYPE_GRAPHICS_BIT | QUEUE_TYPE_PRESENT_BIT));
 	queueLayout.insert(std::make_pair(QUEUE_COMPUTE_MAIN, QUEUE_TYPE_COMPUTE_BIT));
 	queueLayout.insert(std::make_pair(QUEUE_TRANSFER_MAIN, QUEUE_TYPE_TRANSFER_BIT));
 
-	vk::PhysicalDeviceFeatures enabledFeatures;
-	enabledFeatures.fillModeNonSolid = true;
-	if (!createLogicalDevice(deviceLayers, deviceExtensions, &enabledFeatures, queueLayout)) {
+	vk::PhysicalDeviceFeatures deviceFeatures;
+	deviceFeatures.fillModeNonSolid = true;
+	deviceFeatures.shaderSampledImageArrayDynamicIndexing = true;
+	deviceFeatures.shaderUniformBufferArrayDynamicIndexing = true;
+	deviceFeatures.shaderStorageImageArrayDynamicIndexing = true;
+	deviceFeatures.shaderStorageBufferArrayDynamicIndexing = true;
+
+	vk::PhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures;
+	descriptorIndexingFeatures.shaderInputAttachmentArrayDynamicIndexing = true;
+	descriptorIndexingFeatures.shaderUniformTexelBufferArrayDynamicIndexing = true;
+	descriptorIndexingFeatures.shaderStorageTexelBufferArrayDynamicIndexing = true;
+	descriptorIndexingFeatures.shaderUniformBufferArrayNonUniformIndexing = true;
+	descriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing = true;
+	descriptorIndexingFeatures.shaderStorageBufferArrayNonUniformIndexing = true;
+	descriptorIndexingFeatures.shaderStorageImageArrayNonUniformIndexing = true;
+	descriptorIndexingFeatures.shaderInputAttachmentArrayNonUniformIndexing = true;
+	descriptorIndexingFeatures.shaderUniformTexelBufferArrayNonUniformIndexing = true;
+	descriptorIndexingFeatures.shaderStorageTexelBufferArrayNonUniformIndexing = true;
+	descriptorIndexingFeatures.runtimeDescriptorArray = true;
+
+	if (!createLogicalDevice(deviceLayers, deviceExtensions, &deviceFeatures, &descriptorIndexingFeatures, queueLayout)) {
 		return false;
 	}
 
@@ -469,7 +488,7 @@ bool GraphicsManager::selectPhysicalDevice() {
 	return true;
 }
 
-bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enabledLayers, std::vector<const char*> const& enabledExtensions, vk::PhysicalDeviceFeatures* enabledFeatures, std::unordered_map<std::string, uint32_t> queueLayout) {
+bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enabledLayers, std::vector<const char*> const& enabledExtensions, vk::PhysicalDeviceFeatures* enabledFeatures, vk::PhysicalDeviceDescriptorIndexingFeatures* descriptorIndexingFeatures, std::unordered_map<std::string, uint32_t> queueLayout) {
 	printf("Creating logical device\n");
 
 	std::set<uint32_t> uniqueQueueFamilyIndices;
@@ -529,6 +548,7 @@ bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enable
 	}
 
 	vk::DeviceCreateInfo createInfo;
+	createInfo.setPNext(descriptorIndexingFeatures);
 	createInfo.setQueueCreateInfos(deviceQueueCreateInfos);
 	createInfo.setPEnabledLayerNames(enabledLayers);
 	createInfo.setPEnabledExtensionNames(enabledExtensions);
@@ -680,6 +700,9 @@ bool GraphicsManager::recreateSwapchain() {
 	vk::FenceCreateInfo fenceCreateInfo;
 	fenceCreateInfo.setFlags(vk::FenceCreateFlagBits::eSignaled);
 
+	//const vk::Device& device = **m_device.device;
+	//device.createSemaphore(semaphoreCreateInfo);
+
 	for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
 		m_swapchain.imageAvailableSemaphores[i].reset();
 		m_swapchain.renderFinishedSemaphores[i].reset();
@@ -765,6 +788,8 @@ bool GraphicsManager::createSwapchainFramebuffers() {
 }
 
 bool GraphicsManager::beginFrame() {
+
+	m_debugInfo.reset();
 
 	if (m_recreateSwapchain) {
 		m_resolutionChanged = false;
@@ -915,6 +940,18 @@ void GraphicsManager::setPreferredPresentMode(vk::PresentModeKHR presentMode) {
 
 bool GraphicsManager::didResolutionChange() const {
 	return m_resolutionChanged;
+}
+
+DebugUtils::RenderInfo& GraphicsManager::debugInfo() {
+	return m_debugInfo;
+}
+
+const DebugUtils::RenderInfo& GraphicsManager::getDebugInfo() const {
+	return m_debugInfo;
+}
+
+GraphicsResource GraphicsManager::nextResourceId() {
+	return ++s_nextResourceID;
 }
 
 std::shared_ptr<GraphicsPipeline> GraphicsManager::pipeline() {

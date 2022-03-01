@@ -16,6 +16,7 @@
 #include "core/engine/scene/event/Events.h"
 #include "core/engine/renderer/RenderComponent.h"
 #include "core/engine/renderer/RenderCamera.h"
+#include "core/engine/renderer/SceneRenderer.h"
 
 #include <iostream>
 
@@ -26,74 +27,23 @@ struct UniformData {
 
 class App : public Application {
 
-	//std::shared_ptr<ShaderProgram> shaderProgram;
-	Image2D* testImage = NULL;
-	std::shared_ptr<Texture2D> testTexture;
+	std::vector<Image2D*> images;
 	RenderCamera camera;
 	double cameraPitch = 0.0F;
 	double cameraYaw = 0.0F;
 
-	std::array<std::shared_ptr<DescriptorSet>, CONCURRENT_FRAMES> globalDescriptorSet;
-	std::array<std::shared_ptr<DescriptorSet>, CONCURRENT_FRAMES> objectDescriptorSet;
-	std::array<std::shared_ptr<DescriptorSet>, CONCURRENT_FRAMES> materialDescriptorSet;
-	std::array<Buffer*, CONCURRENT_FRAMES> cameraInfoBuffer;
-	std::array<Buffer*, CONCURRENT_FRAMES> worldTransformBuffer;
-
-
-
-	//void onScreenResize(const ScreenResizeEvent& event) {
-	//	printf("onScreenResize %f\n", (double)event.newSize.x / (double)event.newSize.y);
-	//	cameraEntity.getComponent<Camera>().setAspect((double)event.newSize.x / (double)event.newSize.y);
-	//}
-	//
-	//void onScreenShow(const ScreenShowEvent& event) {
-	//	printf("onScreenShow %f\n", (double)event.size.x / (double)event.size.y);
-	//	cameraEntity.getComponent<Camera>().setAspect((double)event.size.x / (double)event.size.y);
-	//}
-
+	
     void init() override {
 		//eventDispacher()->connect<ScreenResizeEvent>(&App::onScreenResize, this);
 
-		BufferConfiguration uniformDataBufferConfig;
-		uniformDataBufferConfig.device = graphics()->getDevice();
-		uniformDataBufferConfig.size = sizeof(UniformData);
-		uniformDataBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-		uniformDataBufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer;
-
-		for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
-			cameraInfoBuffer[i] = Buffer::create(uniformDataBufferConfig);
-			worldTransformBuffer[i] = Buffer::create(uniformDataBufferConfig);
-		}
-
-
-		DescriptorSetLayoutBuilder builder;
-
-		auto globalDescriptorSetLayout = builder.addUniformBlock(0, vk::ShaderStageFlagBits::eVertex, sizeof(glm::mat4)).build();
-		auto objectDescriptorSetLayout = builder.addUniformBlock(0, vk::ShaderStageFlagBits::eVertex, sizeof(glm::mat4)).build();
-		auto materialDescriptorSetLayout = builder.addCombinedImageSampler(0, vk::ShaderStageFlagBits::eFragment, 1).build();
-
-		globalDescriptorSetLayout->createDescriptorSets(this->graphics()->descriptorPool(), CONCURRENT_FRAMES, globalDescriptorSet.data());
-		objectDescriptorSetLayout->createDescriptorSets(graphics()->descriptorPool(), CONCURRENT_FRAMES, objectDescriptorSet.data());
-		materialDescriptorSetLayout->createDescriptorSets(graphics()->descriptorPool(), CONCURRENT_FRAMES, materialDescriptorSet.data());
-
-		//ShaderResources* shaderResources = ShaderResources::Builder()
-		//	.addUniformBlock<glm::mat4>(0, 0, vk::ShaderStageFlagBits::eVertex)
-		//	.addUniformBlock<glm::mat4>(1, 0, vk::ShaderStageFlagBits::eVertex)
-		//	.addTextureSampler(2, 0, vk::ShaderStageFlagBits::eFragment)
-		//	.build();
 
 		GraphicsPipelineConfiguration pipelineConfig;
 		pipelineConfig.vertexShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.vert";
 		pipelineConfig.fragmentShader = "D:/Code/ActiveProjects/WorldEngine/res/shaders/main.frag";
 		pipelineConfig.vertexInputBindings = Mesh::getVertexBindingDescriptions();
 		pipelineConfig.vertexInputAttributes = Mesh::getVertexAttributeDescriptions();
-		pipelineConfig.descriptorSetLayous.emplace_back(globalDescriptorSetLayout->getDescriptorSetLayout());
-		pipelineConfig.descriptorSetLayous.emplace_back(objectDescriptorSetLayout->getDescriptorSetLayout());
-		pipelineConfig.descriptorSetLayous.emplace_back(materialDescriptorSetLayout->getDescriptorSetLayout());
-		//shaderResources->initPipelineConfiguration(pipelineConfig);
+		renderer()->initPipelineDescriptorSetLayouts(pipelineConfig);
 		graphics()->configurePipeline(pipelineConfig);
-
-		//shaderProgram = std::shared_ptr<ShaderProgram>(ShaderProgram::create(std::shared_ptr<ShaderResources>(shaderResources), graphics()->pipeline()));
 
 
 
@@ -102,7 +52,8 @@ class App : public Application {
 		testTextureImageConfig.filePath = "D:/Code/ActiveProjects/WorldEngine/res/textures/Brick_Wall_017_SD/Brick_Wall_017_basecolor.jpg";
 		testTextureImageConfig.usage = vk::ImageUsageFlagBits::eSampled;
 		testTextureImageConfig.format = vk::Format::eR8G8B8A8Srgb;
-		testImage = Image2D::create(testTextureImageConfig);
+		Image2D* testImage = Image2D::create(testTextureImageConfig);
+		images.emplace_back(testImage);
 
 		SamplerConfiguration testTextureSamplerConfig;
 		testTextureSamplerConfig.device = graphics()->getDevice();
@@ -112,22 +63,32 @@ class App : public Application {
 		testTextureImageViewConfig.device = graphics()->getDevice();
 		testTextureImageViewConfig.image = testImage->getImage();
 		testTextureImageViewConfig.format = testImage->getFormat();
-		testTexture = std::shared_ptr<Texture2D>(Texture2D::create(testTextureImageViewConfig, testTextureSamplerConfig));
+		std::shared_ptr<Texture2D> testTexture = std::shared_ptr<Texture2D>(Texture2D::create(testTextureImageViewConfig, testTextureSamplerConfig));
 
 		MeshData testMeshData;
-		//testMeshData.pushTransform();
-		//testMeshData.scale(0.5F);
-		//for (int i = 0; i < 10; ++i) {
-		//	testMeshData.rotateDegrees(36.0F, 0.0F, 0.0F, 1.0F);
-		//	testMeshData.pushTransform();
-		//	testMeshData.translate(2.0F, 0.0F, 0.0F);
-		//	testMeshData.createCuboid(glm::vec3(-0.5F), glm::vec3(0.5F));
-		//	testMeshData.popTransform();
-		//}
-		//testMeshData.popTransform();
-		//testMeshData.createUVSphere(glm::vec3(0.0F), 0.5F, 30, 30);
+		testMeshData.createCuboid(glm::vec3(-0.5, 2, -0.5), glm::vec3(+0.5, 3, +0.5));
+		testMeshData.scale(10.0);
+		testMeshData.createQuad(glm::vec3(-1.0F, 0.0F, -1.0F), glm::vec3(-1.0F, 0.0F, +1.0F), glm::vec3(+1.0F, 0.0F, +1.0F), glm::vec3(+1.0F, 0.0F, -1.0F), glm::vec3(0, 1, 0));
+		MeshConfiguration floorMeshConfig;
+		floorMeshConfig.device = graphics()->getDevice();
+		floorMeshConfig.setMeshData(&testMeshData);
+		std::shared_ptr<Mesh> floorMesh = std::shared_ptr<Mesh>(Mesh::create(floorMeshConfig));
 
+		Entity floorEntity = EntityHierarchy::create(scene(), "floorEntity");
+		floorEntity.addComponent<Transform>().translate(0.0, 0.0, 0.0);
+		floorEntity.addComponent<RenderComponent>().setMesh(floorMesh).setTexture(testTexture);
+
+
+
+
+		testMeshData = MeshData();
+		testMeshData.scale(0.5);
 		MeshLoader::loadOBJ("D:/Code/ActiveProjects/WorldEngine/res/meshes/bunny.obj", testMeshData);
+		glm::vec3 centerBottom = testMeshData.calculateBoundingBox() * glm::vec4(0, -1, 0, 1);
+		testMeshData.translate(-1.0F * centerBottom);
+		testMeshData.applyTransform();
+
+		printf("Loaded bunny.obj :- %llu polygons\n", testMeshData.getPolygonCount());
 
 
 
@@ -136,31 +97,63 @@ class App : public Application {
 		testMeshConfig.setMeshData(&testMeshData);
 		std::shared_ptr<Mesh> testMesh = std::shared_ptr<Mesh>(Mesh::create(testMeshConfig));
 
-		Entity testEntity = EntityHierarchy::create(scene(), "testEntity");
-		testEntity.addComponent<Transform>().translate(1.0, 0.0, -2.0);
-		testEntity.addComponent<RenderComponent>().setMesh(testMesh);// .setTexture(testTexture);
+		const int xCount = 50;
+		const int zCount = 50;
+		const double spacing = 0.75;
+		
+		glm::u8vec4 pixel;
+		pixel.a = 0xFF;
 
-		for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
-			DescriptorSetWriter(globalDescriptorSet[i]).writeBuffer(0, cameraInfoBuffer[i], 0, sizeof(glm::mat4)).write();
-			DescriptorSetWriter(objectDescriptorSet[i]).writeBuffer(0, worldTransformBuffer[i], 0, sizeof(glm::mat4)).write();
+		for (int i = 0; i < xCount; ++i) {
+			pixel.r = (uint8_t)((double)i / (double)xCount * 0xFF);
+			for (int j = 0; j < zCount; ++j) {
+				pixel.g = (uint8_t)((double)j / (double)zCount * 0xFF);
+				pixel.b = rand() % 0xFF;
+
+				ImageData imageData(&pixel[0], 1, 1, ImagePixelLayout::RGBA, ImagePixelFormat::UInt8);
+
+
+				Image2DConfiguration bunnyTextureImageConfig;
+				bunnyTextureImageConfig.device = graphics()->getDevice();
+				bunnyTextureImageConfig.imageData = &imageData;
+				bunnyTextureImageConfig.usage = vk::ImageUsageFlagBits::eSampled;
+				bunnyTextureImageConfig.format = vk::Format::eR8G8B8A8Srgb;
+				Image2D* bunnyImage = Image2D::create(bunnyTextureImageConfig);
+				images.emplace_back(bunnyImage);
+
+				SamplerConfiguration bunnyTextureSamplerConfig;
+				bunnyTextureSamplerConfig.device = graphics()->getDevice();
+				bunnyTextureSamplerConfig.minFilter = vk::Filter::eNearest;
+				bunnyTextureSamplerConfig.magFilter = vk::Filter::eNearest;
+				ImageView2DConfiguration bunnyTextureImageViewConfig;
+				bunnyTextureImageViewConfig.device = graphics()->getDevice();
+				bunnyTextureImageViewConfig.image = bunnyImage->getImage();
+				bunnyTextureImageViewConfig.format = bunnyImage->getFormat();
+				std::shared_ptr<Texture2D> bunnyTexture = std::shared_ptr<Texture2D>(Texture2D::create(bunnyTextureImageViewConfig, bunnyTextureSamplerConfig));
+
+				Entity entity = EntityHierarchy::create(scene(), "testEntity[" + std::to_string(i) + ", " + std::to_string(j) + "]");
+				entity.addComponent<Transform>().translate(-0.5 * spacing * xCount + i * spacing, 0.0, -0.5 * spacing * zCount + j * spacing);
+				entity.addComponent<RenderComponent>().setMesh(testMesh).setTexture(bunnyTexture);
+			}
 		}
-		//shaderProgram->getShaderResources()->writeImage(2, 0, testTexture.get(), vk::ImageLayout::eShaderReadOnlyOptimal);
+
+
+
+		//Entity testEntity = EntityHierarchy::create(scene(), "testEntity");
+		//testEntity.addComponent<Transform>().translate(1.0, 0.0, -2.0);
+		//testEntity.addComponent<RenderComponent>().setMesh(testMesh).setTexture(testTexture);
+		//
+		//Entity testEntity2 = EntityHierarchy::create(scene(), "testEntity2");
+		//testEntity2.addComponent<Transform>().translate(0.0, 0.4, -2.0);
+		//testEntity2.addComponent<RenderComponent>().setMesh(testMesh).setTexture(testTexture);
+
 
 		scene()->getMainCamera().getComponent<Transform>().setTranslation(0.0F, 2.0F, 2.0F);
     }
 
 	void cleanup() override {
-		for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
-			delete cameraInfoBuffer[i];
-			delete worldTransformBuffer[i];
-			globalDescriptorSet[i].reset();
-			objectDescriptorSet[i].reset();
-			materialDescriptorSet[i].reset();
-		}
-		//shaderProgram.reset();
-
-		testTexture.reset();
-		delete testImage;
+		for (int i = 0; i < images.size(); ++i)
+			delete images[i];
 	}
 
 	void handleUserInput(double dt) {
@@ -168,16 +161,6 @@ class App : public Application {
 			input()->toggleMouseGrabbed();
 		}
 
-		//if (input()->keyPressed(SDL_SCANCODE_F1)) {
-		//	// TODO: not reinitialize the graphics pipeline each time...
-		//	// We should have a dedicated wireframe pipeline and shaders, and just switch to it.
-		//	if (pipelineConfig.polygonMode == vk::PolygonMode::eFill) {
-		//		pipelineConfig.polygonMode = vk::PolygonMode::eLine;
-		//	} else {
-		//		pipelineConfig.polygonMode = vk::PolygonMode::eFill;
-		//	}
-		//	graphics()->initializeGraphicsPipeline(pipelineConfig);
-		//}
 
 		if (input()->isMouseGrabbed()) {
 			Transform& cameraTransform = scene()->getMainCamera().getComponent<Transform>();
@@ -210,44 +193,7 @@ class App : public Application {
 	}
 
     void render(double dt) override {
-
 		handleUserInput(dt);
-		
-		//const Entity& cameraEntity = scene()->getMainCamera();
-		//camera.setTransform(cameraEntity.getComponent<Transform>());
-		//camera.setProjection(cameraEntity.getComponent<Camera>());
-		//camera.update();
-		//cameraInfoBuffer[graphics()->getCurrentFrameIndex()]->upload(0, sizeof(glm::mat4), &camera.getViewProjectionMatrix());
-		//
-		//auto& commandBuffer = graphics()->getCurrentCommandBuffer();
-		//
-		//const auto& renderEntities = scene()->registry()->group<RenderComponent>(entt::get<Transform>);
-		//
-		//
-		//for (auto id : renderEntities) {
-		//	const RenderComponent& renderComponent = renderEntities.get<RenderComponent>(id);
-		//	const Transform& transform = renderEntities.get<Transform>(id);
-		//
-		//	if (renderComponent.texture != NULL) {
-		//		DescriptorSetWriter(materialDescriptorSet[graphics()->getCurrentFrameIndex()])
-		//			.writeImage(0, renderComponent.texture.get(), vk::ImageLayout::eShaderReadOnlyOptimal).write();
-		//	}
-		//
-		//	glm::mat4 modelMatrix = transform.getMatrix();
-		//	worldTransformBuffer[graphics()->getCurrentFrameIndex()]->upload(0, sizeof(glm::mat4), &modelMatrix);
-		//
-		//	std::vector<vk::DescriptorSet> descriptorSets = {
-		//		globalDescriptorSet[graphics()->getCurrentFrameIndex()]->getDescriptorSet(),
-		//		objectDescriptorSet[graphics()->getCurrentFrameIndex()]->getDescriptorSet(),
-		//		materialDescriptorSet[graphics()->getCurrentFrameIndex()]->getDescriptorSet(),
-		//	};
-		//
-		//	std::vector<uint32_t> dynamicOffsets = {};
-		//
-		//	graphics()->pipeline()->bind(commandBuffer);
-		//	commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphics()->pipeline()->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
-		//	renderComponent.mesh->draw(commandBuffer);
-		//}
     }
 };
 

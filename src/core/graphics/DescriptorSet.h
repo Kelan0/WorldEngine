@@ -89,10 +89,14 @@ public:
 
 	bool operator!=(const DescriptorSetLayout& rhs) const;
 
+	const GraphicsResource& getResourceId() const;
+
 private:
 	std::shared_ptr<vkr::Device> m_device;
 	vk::DescriptorSetLayout m_descriptorSetLayout;
 	Key m_key;
+
+	GraphicsResource m_resourceId;
 
 	static Cache s_descriptorSetLayoutCache;
 };
@@ -109,6 +113,8 @@ public:
 	~DescriptorSetLayoutBuilder();
 
 	DescriptorSetLayoutBuilder& addUniformBlock(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t sizeBytes);
+
+	DescriptorSetLayoutBuilder& addStorageBlock(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t sizeBytes);
 
 	DescriptorSetLayoutBuilder& addSampler(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t arraySize = 1);
 
@@ -145,10 +151,14 @@ public:
 
 	bool canFreeDescriptorSets() const;
 
+	const GraphicsResource& getResourceId() const;
+
 private:
 	std::shared_ptr<vkr::Device> m_device;
 	vk::DescriptorPool m_descriptorPool;
 	bool m_canFreeDescriptorSets;
+
+	GraphicsResource m_resourceId;
 };
 
 
@@ -173,11 +183,14 @@ public:
 
 	std::shared_ptr<DescriptorSetLayout> getLayout() const;
 
+	const GraphicsResource& getResourceId() const;
+
 private:
 	std::shared_ptr<vkr::Device> m_device;
 	std::shared_ptr<DescriptorPool> m_pool;
 	std::shared_ptr<DescriptorSetLayout> m_layout;
 	vk::DescriptorSet m_descriptorSet;
+	GraphicsResource m_resourceId;
 };
 
 
@@ -193,18 +206,17 @@ public:
 	~DescriptorSetWriter();
 
 	DescriptorSetWriter& writeBuffer(uint32_t binding, const vk::DescriptorBufferInfo& bufferInfo);
-
 	DescriptorSetWriter& writeBuffer(uint32_t binding, vk::Buffer buffer, vk::DeviceSize offset = 0, vk::DeviceSize range = VK_WHOLE_SIZE);
-
 	DescriptorSetWriter& writeBuffer(uint32_t binding, Buffer* buffer, vk::DeviceSize offset = 0, vk::DeviceSize range = VK_WHOLE_SIZE);
 
-	DescriptorSetWriter& writeImage(uint32_t binding, const vk::DescriptorImageInfo& imageInfo);
-
-	DescriptorSetWriter& writeImage(uint32_t binding, vk::Sampler sampler, vk::ImageView imageView, vk::ImageLayout imageLayout);
-
-	DescriptorSetWriter& writeImage(uint32_t binding, Sampler* sampler, ImageView2D* imageView, vk::ImageLayout imageLayout);
-
-	DescriptorSetWriter& writeImage(uint32_t binding, Texture2D* texture, vk::ImageLayout imageLayout);
+	DescriptorSetWriter& writeImage(uint32_t binding, const vk::DescriptorImageInfo* imageInfos, uint32_t arrayCount = 1, uint32_t arrayIndex = 0);
+	DescriptorSetWriter& writeImage(uint32_t binding, const vk::DescriptorImageInfo& imageInfo, uint32_t arrayIndex = 0);
+	DescriptorSetWriter& writeImage(uint32_t binding, vk::Sampler* samplers, vk::ImageView* imageViews, vk::ImageLayout* imageLayouts, uint32_t arrayCount = 1, uint32_t arrayIndex = 0);
+	DescriptorSetWriter& writeImage(uint32_t binding, vk::Sampler sampler, vk::ImageView imageView, vk::ImageLayout imageLayout, uint32_t arrayIndex = 0);
+	DescriptorSetWriter& writeImage(uint32_t binding, Sampler** samplers, ImageView2D** imageViews, vk::ImageLayout* imageLayouts, uint32_t arrayCount = 1, uint32_t arrayIndex = 0);
+	DescriptorSetWriter& writeImage(uint32_t binding, Sampler* samplers, ImageView2D* imageViews, vk::ImageLayout imageLayouts, uint32_t arrayIndex = 0);
+	DescriptorSetWriter& writeImage(uint32_t binding, Texture2D** textures, vk::ImageLayout* imageLayouts, uint32_t arrayCount = 1, uint32_t arrayIndex = 0);
+	DescriptorSetWriter& writeImage(uint32_t binding, Texture2D* texture, vk::ImageLayout imageLayout, uint32_t arrayIndex = 0);
 
 	bool write();
 

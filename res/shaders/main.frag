@@ -1,11 +1,17 @@
 #version 450
 
+#extension GL_EXT_nonuniform_qualifier : enable
+
+
 layout(location = 0) in vec3 fs_normal;
 layout(location = 1) in vec2 fs_texture;
+layout(location = 2) in flat uint fs_textureIndex;
 
 layout(location = 0) out vec4 outColor;
 
-layout(set = 2, binding = 0) uniform sampler2D testTexture;
+//layout(set = 2, binding = 0) uniform sampler2D testTexture;
+
+layout(set = 2, binding = 0) uniform sampler2D textures[];
 
 void main() {
     //outColor = vec4(1.0, 0.0, 0.0, 1.0);
@@ -13,7 +19,7 @@ void main() {
     vec3 N = normalize(fs_normal);
     float NdotL = dot(N, L);
 
-    vec3 albedo = texture(testTexture, fs_texture).rgb;
+    vec3 albedo = texture(textures[(fs_textureIndex)], fs_texture).rgb;
     //vec3 albedo = vec3(1.0);
 
     vec3 surfaceColour = NdotL * albedo;

@@ -73,8 +73,11 @@ public:
 
 	std::shared_ptr<Sampler> getSampler() const;
 
+	const GraphicsResource& getResourceId() const;
+
 private:
 	std::shared_ptr<ImageView2D> m_imageView;
 	std::shared_ptr<Sampler> m_sampler;
+	GraphicsResource m_resourceId;
 };
 

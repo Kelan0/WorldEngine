@@ -6,12 +6,13 @@
 std::unique_ptr<Buffer> Buffer::s_stagingBuffer = NULL;
 vk::DeviceSize Buffer::s_maxStagingBufferSize = 128 * 1024 * 1024; // 128 MiB
 
-Buffer::Buffer(std::weak_ptr<vkr::Device> device, vk::Buffer buffer, vk::DeviceMemory deviceMemory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties):
+Buffer::Buffer(std::weak_ptr<vkr::Device> device, vk::Buffer buffer, vk::DeviceMemory deviceMemory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties, GraphicsResource resourceId):
 	m_device(device),
 	m_buffer(buffer),
 	m_deviceMemory(deviceMemory),
 	m_size(size),
-	m_memoryProperties(memoryProperties) {
+	m_memoryProperties(memoryProperties), 
+	m_resourceId(resourceId) {
 	//printf("Create Buffer\n");
 }
 Buffer::~Buffer() {
@@ -69,7 +70,7 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
 
 	device.bindBufferMemory(buffer, deviceMemory, 0);
 
-	Buffer* returnBuffer = new Buffer(bufferConfiguration.device, buffer, deviceMemory, bufferConfiguration.size, bufferConfiguration.memoryProperties);
+	Buffer* returnBuffer = new Buffer(bufferConfiguration.device, buffer, deviceMemory, bufferConfiguration.size, bufferConfiguration.memoryProperties, GraphicsManager::nextResourceId());
 	
 	if (bufferConfiguration.data != NULL) {
 		if (!returnBuffer->upload(0, bufferConfiguration.size, bufferConfiguration.data)) {
@@ -205,6 +206,10 @@ bool Buffer::hasMemoryProperties(vk::MemoryPropertyFlags memoryProperties, bool 
 	} else {
 		return (m_memoryProperties & memoryProperties) == memoryProperties;
 	}
+}
+
+const GraphicsResource& Buffer::getResourceId() const {
+	return m_resourceId;
 }
 
 const std::unique_ptr<Buffer>& Buffer::getStagingBuffer() {

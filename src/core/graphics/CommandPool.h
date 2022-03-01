@@ -34,9 +34,13 @@ public:
 
 	bool hasCommandBuffer(const std::string& name) const;
 
+	const GraphicsResource& getResourceId() const;
+
 private:
 	std::shared_ptr<vkr::Device> m_device;
 	std::unique_ptr<vkr::CommandPool> m_commandPool;
 	std::unordered_map<std::string, std::shared_ptr<vkr::CommandBuffer>> m_commandBuffers;
+
+	GraphicsResource m_resourceId;
 };
 

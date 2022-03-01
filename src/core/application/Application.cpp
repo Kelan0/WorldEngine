@@ -85,11 +85,12 @@ void Application::cleanupInternal() {
 
 void Application::renderInternal(double dt) {
 
+
 	auto& commandBuffer = graphics()->getCurrentCommandBuffer();
 	auto& framebuffer = graphics()->getCurrentFramebuffer();
 
 	std::array<vk::ClearValue, 2> clearValues;
-	clearValues[0].color.setFloat32({ 0.0F, 0.0F, 0.0F, 1.0F });
+	clearValues[0].color.setFloat32({ 0.0F, 0.0F, 0.25F, 1.0F });
 	clearValues[1].depthStencil.setDepth(1.0F).setStencil(0);
 
 	vk::RenderPassBeginInfo renderPassBeginInfo;
@@ -149,12 +150,15 @@ void Application::start() {
 	m_eventDispacher->trigger(ScreenResizeEvent{ getWindowSize(), getWindowSize() }); 
 
 	std::vector<double> frameTimes;
+	std::vector<double> cpuFrameTimes;
 
 	auto lastDebug = std::chrono::high_resolution_clock::now();
 	auto lastFrame = std::chrono::high_resolution_clock::now();
 	auto lastTime = std::chrono::high_resolution_clock::now();
 
 	double partialFrames = 0.0;
+
+	DebugUtils::RenderInfo tempDebugInfo;
 
 	while (m_running) {
 		auto now = std::chrono::high_resolution_clock::now();
@@ -177,13 +181,19 @@ void Application::start() {
 				uint64_t frameElapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastFrame).count();
 				double dt = frameElapsedNanos / 1e+9;
 
+				auto cpuBegin = std::chrono::high_resolution_clock::now();
 				renderInternal(dt);
+				auto cpuEnd = std::chrono::high_resolution_clock::now();
+
 				graphics()->endFrame();
+
+				tempDebugInfo += graphics()->debugInfo();
 
 				lastFrame = now;
 
 				auto endFrame = std::chrono::high_resolution_clock::now();
 				frameTimes.emplace_back(std::chrono::duration_cast<std::chrono::nanoseconds>(endFrame - beginFrame).count() / 1000000.0);
+				cpuFrameTimes.emplace_back(std::chrono::duration_cast<std::chrono::nanoseconds>(cpuEnd - cpuBegin).count() / 1000000.0);
 			}
 		}
 
@@ -216,8 +226,25 @@ void Application::start() {
 				dtLow1 += frameTimes[i];
 			dtLow1 /= glm::max(size_t(1), INT_DIV_CEIL(frameTimes.size(), 100));
 
-			printf("%.2f FPS (AVG %.3f msec, MAX %.3f msec 1%%LO %.3f msec, 10%%LO %.3f msec, 50%%LO %.3f msec)\n", 
-				fps, dtAvg, dtMax, dtLow1, dtLow10, dtLow50);
+			double dtAvgCpu = 0.0;
+			for (int i = 0; i < cpuFrameTimes.size(); ++i)
+				dtAvgCpu += cpuFrameTimes[i];
+			dtAvgCpu /= cpuFrameTimes.size();
+
+			printf("%.2f FPS (AVG %.3f msec, AVG-CPU %.3f msec,    MAX %.3f msec 1%%LO %.3f msec, 10%%LO %.3f msec, 50%%LO %.3f msec)\n", 
+				fps, dtAvg, dtAvgCpu, dtMax, dtLow1, dtLow10, dtLow50);
+
+			printf("%f polygons/sec - Average frame rendered %f polygons, %f vertices, %f indices - %f draw calls, %f instances, %.2f msec for draw calls\n",
+				(double)tempDebugInfo.renderedPolygons / secondsElapsed,
+				(double)tempDebugInfo.renderedPolygons / (double)frameTimes.size(),
+				(double)tempDebugInfo.renderedVertices / (double)frameTimes.size(),
+				(double)tempDebugInfo.renderedIndices / (double)frameTimes.size(),
+				(double)tempDebugInfo.drawCalls / (double)frameTimes.size(),
+				(double)tempDebugInfo.drawInstances / (double)frameTimes.size(),
+				((double)tempDebugInfo.elapsedDrawNanosCPU / (double)frameTimes.size()) / (1e+6)
+			);
+
+			tempDebugInfo.reset();
 			frameTimes.clear();
 			lastDebug = now;
 		}

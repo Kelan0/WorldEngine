@@ -15,7 +15,7 @@ struct BufferConfiguration {
 class Buffer {
 	NO_COPY(Buffer)
 private:
-	Buffer(std::weak_ptr<vkr::Device> device, vk::Buffer buffer, vk::DeviceMemory deviceMemory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties);
+	Buffer(std::weak_ptr<vkr::Device> device, vk::Buffer buffer, vk::DeviceMemory deviceMemory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties, GraphicsResource resourceId);
 
 public:
 	//Buffer(Buffer&& buffer);
@@ -44,6 +44,8 @@ public:
 
 	bool hasMemoryProperties(vk::MemoryPropertyFlags memoryProperties, bool any = false);
 
+	const GraphicsResource& getResourceId() const;
+
 public:
 	static const std::unique_ptr<Buffer>& getStagingBuffer();
 
@@ -64,6 +66,8 @@ private:
 	vk::DeviceMemory m_deviceMemory;
 	vk::MemoryPropertyFlags m_memoryProperties;
 	vk::DeviceSize m_size;
+
+	GraphicsResource m_resourceId;
 
 	static std::unique_ptr<Buffer> s_stagingBuffer;
 	static vk::DeviceSize s_maxStagingBufferSize;

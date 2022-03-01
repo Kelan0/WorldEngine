@@ -150,6 +150,8 @@ public:
 
 	vk::Format getFormat() const;
 
+	const GraphicsResource& getResourceId() const;
+
 	static vk::Format selectSupportedFormat(const vk::PhysicalDevice& physicalDevice, const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features);
 
 private:
@@ -163,6 +165,7 @@ private:
 	uint32_t m_width;
 	uint32_t m_height;
 	vk::Format m_format;
+	GraphicsResource m_ResourceId;
 };
 
 
@@ -196,7 +199,10 @@ public:
 
 	const vk::ImageView& getImageView() const;
 
+	const GraphicsResource& getResourceId() const;
+
 private:
 	std::shared_ptr<vkr::Device> m_device;
 	vk::ImageView m_imageView;
+	GraphicsResource m_ResourceId;
 };

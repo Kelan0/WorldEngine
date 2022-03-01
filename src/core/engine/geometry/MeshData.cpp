@@ -91,7 +91,31 @@ MeshData::Vertex& MeshData::Triangle::getVertex(MeshData& meshData, Index index)
 	return getVertex(meshData.m_vertices, index);
 }
 
-glm::vec3 MeshData::Triangle::getFacing(std::vector<Vertex>& vertices) const {
+const MeshData::Vertex& MeshData::Triangle::getVertex(const std::vector<MeshData::Vertex>& vertices, MeshData::Index index) const {
+#if _DEBUG
+	if (index < 0 || index >= 3) {
+		printf("Get triangle vertex: internal triangle index %d is out of range [0..3]\n", index);
+		assert(false);
+	}
+#endif
+
+	const Index& vertexIndex = indices[index];
+
+#if _DEBUG
+	if (vertexIndex < 0 || vertexIndex >= vertices.size()) {
+		printf("Triangle vertex index %d is out of range [0..%d]\n", vertexIndex, vertices.size());
+		assert(false);
+	}
+#endif
+
+	return vertices.at(vertexIndex);
+}
+
+const MeshData::Vertex& MeshData::Triangle::getVertex(const MeshData& meshData, MeshData::Index index) const {
+	return getVertex(meshData.m_vertices, index);
+}
+
+glm::vec3 MeshData::Triangle::getFacing(const std::vector<Vertex>& vertices) const {
 	const glm::vec3& v0 = getVertex(vertices, 0).position;
 	const glm::vec3& v1 = getVertex(vertices, 1).position;
 	const glm::vec3& v2 = getVertex(vertices, 2).position;
@@ -99,15 +123,15 @@ glm::vec3 MeshData::Triangle::getFacing(std::vector<Vertex>& vertices) const {
 	return glm::cross(v1 - v0, v2 - v0);
 }
 
-glm::vec3 MeshData::Triangle::getFacing(MeshData& meshData) const {
+glm::vec3 MeshData::Triangle::getFacing(const MeshData& meshData) const {
 	return getFacing(meshData.m_vertices);
 }
 
-glm::vec3 MeshData::Triangle::getNormal(std::vector<Vertex>& vertices) const {
+glm::vec3 MeshData::Triangle::getNormal(const std::vector<Vertex>& vertices) const {
 	return glm::normalize(getFacing(vertices));
 }
 
-glm::vec3 MeshData::Triangle::getNormal(MeshData& meshData) const {
+glm::vec3 MeshData::Triangle::getNormal(const MeshData& meshData) const {
 	return getNormal(meshData.m_vertices);
 }
 
@@ -179,6 +203,13 @@ void MeshData::scale(float s) {
 	scale(glm::vec3(s));
 }
 
+void MeshData::applyTransform(bool currentStateOnly) {
+	size_t firstVertex = currentStateOnly ? m_currentState.baseVertex : 0;
+	for (int i = firstVertex; i < m_vertices.size(); ++i) {
+		m_vertices[i] *= m_currentTransform;
+	}
+}
+
 void MeshData::pushState() {
 	m_stateStack.push(m_currentState);
 	m_currentState.baseVertex = m_vertices.size();
@@ -195,6 +226,20 @@ void MeshData::popState() {
 #endif
 	m_currentState = m_stateStack.top();
 	m_stateStack.pop();
+}
+
+void MeshData::clear() {
+	m_currentTransform = glm::mat4(1.0F);
+	m_currentState = State();
+
+	while (!m_stateStack.empty())
+		m_stateStack.pop();
+	
+	while (!m_transfromStack.empty())
+		m_transfromStack.pop();
+
+	m_vertices.clear();
+	m_triangles.clear();
 }
 
 void MeshData::createTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2) {
@@ -364,6 +409,73 @@ const std::vector<MeshData::Vertex>& MeshData::getVertices() const {
 const std::vector<MeshData::Triangle>& MeshData::getTriangles() const {
 	return m_triangles;
 }
+
+glm::vec3 MeshData::calculateCenterOffset(bool currentStateOnly) const {
+	glm::dvec3 center(0.0F);
+
+	uint32_t bucketCount = 0;
+
+	const uint32_t maxBucketSize = 1000;
+	uint32_t bucketSize = 0;
+	glm::dvec3 bucketCenter = glm::dvec3(0.0F);
+
+	const size_t firstTriangle = currentStateOnly ? m_currentState.baseTriangle : 0;
+
+	for (int i = firstTriangle; i < m_triangles.size(); ++i) {
+		bucketCenter += m_triangles[i].getVertex(m_vertices, 0).position;
+		bucketCenter += m_triangles[i].getVertex(m_vertices, 1).position;
+		bucketCenter += m_triangles[i].getVertex(m_vertices, 2).position;
+		++bucketSize;
+
+		if (bucketSize == maxBucketSize) {
+			center += bucketCenter / (bucketSize * 3.0);
+			++bucketCount;
+			bucketSize = 0;
+			bucketCenter = glm::dvec3(0.0);
+		}
+	}
+
+	return center / (double)bucketCount;
+}
+
+glm::mat4 MeshData::calculateBoundingBox(bool currentStateOnly) const {
+	glm::vec3 minExtent = glm::vec3(+INFINITY);
+	glm::vec3 maxExtent = glm::vec3(-INFINITY);
+
+	const size_t firstTriangle = currentStateOnly ? m_currentState.baseTriangle : 0;
+
+	for (int i = firstTriangle; i < m_triangles.size(); ++i) {
+		for (int j = 0; j < 3; ++j) {
+			const glm::vec3& pos = m_triangles[i].getVertex(m_vertices, 0).position;
+
+			minExtent = glm::min(minExtent, pos);
+			maxExtent = glm::max(maxExtent, pos);
+		}
+	}
+
+	glm::vec3 halfExtent = (maxExtent - minExtent) * 0.5F;
+	glm::vec3 center = (maxExtent + minExtent) * 0.5F;
+
+	glm::mat4 bbMat(1.0F);
+	bbMat[0] *= halfExtent.x;
+	bbMat[1] *= halfExtent.y;
+	bbMat[2] *= halfExtent.z;
+	bbMat[3] = glm::vec4(center, 1.0F);
+	return bbMat;
+}
+
+size_t MeshData::getVertexCount() const {
+	return m_vertices.size();
+}
+
+size_t MeshData::getIndexCount() const {
+	return m_triangles.size() * 3;
+}
+
+size_t MeshData::getPolygonCount() const {
+	return m_triangles.size();
+}
+
 
 
 

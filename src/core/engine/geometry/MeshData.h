@@ -52,13 +52,17 @@ public:
 
 		Vertex& getVertex(MeshData& meshData, Index index) const;
 
-		glm::vec3 getFacing(std::vector<Vertex>& vertices) const;
+		const Vertex& getVertex(const std::vector<Vertex>& vertices, Index index) const;
 
-		glm::vec3 getFacing(MeshData& meshData) const;
+		const Vertex& getVertex(const MeshData& meshData, Index index) const;
 
-		glm::vec3 getNormal(std::vector<Vertex>& vertices) const;
+		glm::vec3 getFacing(const std::vector<Vertex>& vertices) const;
 
-		glm::vec3 getNormal(MeshData& meshData) const;
+		glm::vec3 getFacing(const MeshData& meshData) const;
+
+		glm::vec3 getNormal(const std::vector<Vertex>& vertices) const;
+
+		glm::vec3 getNormal(const MeshData& meshData) const;
 
 	} Triangle;
 
@@ -101,9 +105,13 @@ public:
 
 	void scale(float scale);
 
+	void applyTransform(bool currentStateOnly = true);
+
 	void pushState();
 
 	void popState();
+
+	void clear();
 
 	void createTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2);
 
@@ -138,6 +146,18 @@ public:
 	const std::vector<Vertex>& getVertices() const;
 
 	const std::vector<Triangle>& getTriangles() const;
+
+	glm::vec3 calculateCenterOffset(bool currentStateOnly = true) const;
+
+	// Transforming a vector where any component is 0 or 1 by this matrix will result in a point on the bounding box.
+	// e.g. (-1,-1,-1) will be BB min, (+1,+1,+1) will be BB max, (0,+1,0) will be center top etc.
+	glm::mat4 calculateBoundingBox(bool currentStateOnly = true) const;
+
+	size_t getVertexCount() const;
+
+	size_t getIndexCount() const;
+
+	size_t getPolygonCount() const;
 
 private:
 	std::vector<Vertex> m_vertices;

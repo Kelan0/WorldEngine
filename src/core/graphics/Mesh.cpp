@@ -1,6 +1,7 @@
 #include "Mesh.h"
 #include "GPUMemory.h"
 #include "../application/Application.h"
+#include <chrono>
 
 
 
@@ -32,7 +33,8 @@ void MeshConfiguration::setMeshData(MeshData* meshData) {
 
 
 Mesh::Mesh(std::weak_ptr<vkr::Device> device):
-	m_device(device) {
+	m_device(device),
+	m_resourceId(GraphicsManager::nextResourceId()) {
 }
 
 Mesh::~Mesh() {
@@ -121,14 +123,30 @@ bool Mesh::uploadIndices(const std::vector<MeshData::Index>& indices) {
 	return uploadIndices(indices.data(), indices.size());
 }
 
-void Mesh::draw(const vk::CommandBuffer& commandBuffer) {
+void Mesh::draw(const vk::CommandBuffer& commandBuffer, uint32_t instanceCount, uint32_t firstInstance) {
+
 	const vk::Buffer& vertexBuffer = m_vertexBuffer->getBuffer();
 	vk::DeviceSize offset = 0;
 
 	commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer, &offset);
 	commandBuffer.bindIndexBuffer(m_indexBuffer->getBuffer(), 0, vk::IndexType::eUint32);
 
-	commandBuffer.drawIndexed(getIndexCount(), 1, 0, 0, 0);
+	auto start = std::chrono::high_resolution_clock::now();
+	//printf("Drawing mesh 0x%p with %d instances\n", this, instanceCount);
+	commandBuffer.drawIndexed(getIndexCount(), instanceCount, 0, 0, firstInstance);
+	auto end = std::chrono::high_resolution_clock::now();
+
+	uint64_t elapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+
+	// if debug
+	size_t numIndices = m_indexBuffer->getSize() / sizeof(MeshData::Index);
+	size_t numVertices = m_vertexBuffer->getSize() / sizeof(MeshData::Vertex);
+	Application::instance()->graphics()->debugInfo().renderedPolygons += (numIndices / 3) * instanceCount;
+	Application::instance()->graphics()->debugInfo().renderedIndices += numIndices * instanceCount;
+	Application::instance()->graphics()->debugInfo().renderedVertices += numVertices * instanceCount;
+	Application::instance()->graphics()->debugInfo().drawCalls++;
+	Application::instance()->graphics()->debugInfo().drawInstances += instanceCount;
+	Application::instance()->graphics()->debugInfo().elapsedDrawNanosCPU += elapsedNanos;
 }
 
 uint32_t Mesh::getVertexCount() const {
@@ -137,4 +155,8 @@ uint32_t Mesh::getVertexCount() const {
 
 uint32_t Mesh::getIndexCount() const {
 	return m_indexBuffer->getSize() / sizeof(MeshData::Index);
+}
+
+const GraphicsResource& Mesh::getResourceId() const {
+	return m_resourceId;
 }

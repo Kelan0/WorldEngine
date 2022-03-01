@@ -41,11 +41,13 @@ public:
 
 	bool uploadIndices(const std::vector<MeshData::Index>& indices);
 
-	void draw(const vk::CommandBuffer& commandBuffer);
+	void draw(const vk::CommandBuffer& commandBuffer, uint32_t instanceCount, uint32_t firstInstance);
 
 	uint32_t getVertexCount() const;
 
 	uint32_t getIndexCount() const;
+
+	const GraphicsResource& getResourceId() const;
 
 	template<class T = MeshData::Vertex>
 	static std::vector<vk::VertexInputBindingDescription> getVertexBindingDescriptions();
@@ -57,6 +59,7 @@ private:
 	std::shared_ptr<vkr::Device> m_device;
 	Buffer* m_vertexBuffer;
 	Buffer* m_indexBuffer;
+	GraphicsResource m_resourceId;
 };
 
 template<>

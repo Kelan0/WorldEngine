@@ -1,6 +1,7 @@
 #include "SceneRenderer.h"
 #include "RenderCamera.h"
 #include "RenderComponent.h"
+#include "../scene/event/EventDispacher.h"
 #include "../scene/Scene.h"
 #include "../scene/Transform.h"
 #include "../../application/Application.h"
@@ -19,12 +20,9 @@ SceneRenderer::~SceneRenderer() {
     m_missingTextureImage.reset();
     m_cameraInfoBuffer.reset();
     m_worldTransformBuffer.reset();
-
-    for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
-        m_globalDescriptorSet[i].reset();
-        m_objectDescriptorSet[i].reset();
-        m_materialDescriptorSet[i].reset();
-    }
+    m_globalDescriptorSet.reset();
+    m_objectDescriptorSet.reset();
+    m_materialDescriptorSet.reset();
 }
 
 void SceneRenderer::init() {
@@ -35,12 +33,15 @@ void SceneRenderer::init() {
     DescriptorSetLayoutBuilder builder(descriptorPool->getDevice());
 
     auto globalDescriptorSetLayout = builder.addUniformBlock(0, vk::ShaderStageFlagBits::eVertex, sizeof(CameraInfoUBO)).build();
-    auto objectDescriptorSetLayout = builder.addUniformBlock(0, vk::ShaderStageFlagBits::eVertex, sizeof(WorldTransformUBO)).build();
-    auto materialDescriptorSetLayout = builder.addCombinedImageSampler(0, vk::ShaderStageFlagBits::eFragment, 1).build();
+    auto objectDescriptorSetLayout = builder.addStorageBlock(0, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, sizeof(ObjectDataOBO)).build();
+    auto materialDescriptorSetLayout = builder.addCombinedImageSampler(0, vk::ShaderStageFlagBits::eFragment, 100000).build();
         
-    globalDescriptorSetLayout->createDescriptorSets(descriptorPool, CONCURRENT_FRAMES, m_globalDescriptorSet.data());
-    objectDescriptorSetLayout->createDescriptorSets(descriptorPool, CONCURRENT_FRAMES, m_objectDescriptorSet.data());
-    materialDescriptorSetLayout->createDescriptorSets(descriptorPool, CONCURRENT_FRAMES, m_materialDescriptorSet.data());
+    FrameResource<DescriptorSet>::create(m_globalDescriptorSet, globalDescriptorSetLayout, descriptorPool);
+    FrameResource<DescriptorSet>::create(m_objectDescriptorSet, objectDescriptorSetLayout, descriptorPool);
+    FrameResource<DescriptorSet>::create(m_materialDescriptorSet, materialDescriptorSetLayout, descriptorPool);
+    //globalDescriptorSetLayout->createDescriptorSets(descriptorPool, CONCURRENT_FRAMES, m_globalDescriptorSet.data());
+    //objectDescriptorSetLayout->createDescriptorSets(descriptorPool, CONCURRENT_FRAMES, m_objectDescriptorSet.data());
+    //materialDescriptorSetLayout->createDescriptorSets(descriptorPool, CONCURRENT_FRAMES, m_materialDescriptorSet.data());
 
     BufferConfiguration cameraInfoBufferConfig;
     cameraInfoBufferConfig.device = Application::instance()->graphics()->getDevice();
@@ -50,17 +51,32 @@ void SceneRenderer::init() {
 
     BufferConfiguration worldTransformBufferConfig;
     worldTransformBufferConfig.device = Application::instance()->graphics()->getDevice();
-    worldTransformBufferConfig.size = sizeof(WorldTransformUBO);
-    worldTransformBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-    worldTransformBufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer;
+    worldTransformBufferConfig.size = sizeof(ObjectDataOBO) * 100000;
+    worldTransformBufferConfig.memoryProperties = 
+        vk::MemoryPropertyFlagBits::eDeviceLocal;
+        //vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+    worldTransformBufferConfig.usage = vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst;
 
     FrameResource<Buffer>::create(m_cameraInfoBuffer, cameraInfoBufferConfig);
     FrameResource<Buffer>::create(m_worldTransformBuffer, worldTransformBufferConfig);
 
+    std::vector<Texture2D*> initialTextures;
+    initialTextures.resize(100000, m_missingTexture.get());
+
+    std::vector<vk::ImageLayout> initialImageLayouts;
+    initialImageLayouts.resize(100000, vk::ImageLayout::eShaderReadOnlyOptimal);
+
     for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i) {
-        DescriptorSetWriter(m_globalDescriptorSet[i]).writeBuffer(0, m_cameraInfoBuffer[i], 0, sizeof(CameraInfoUBO)).write();
-        DescriptorSetWriter(m_objectDescriptorSet[i]).writeBuffer(0, m_worldTransformBuffer[i], 0, sizeof(WorldTransformUBO)).write();
+        DescriptorSetWriter(m_globalDescriptorSet[i]).writeBuffer(0, m_cameraInfoBuffer[i], 0, m_cameraInfoBuffer->getSize()).write();
+        DescriptorSetWriter(m_objectDescriptorSet[i]).writeBuffer(0, m_worldTransformBuffer[i], 0, m_worldTransformBuffer->getSize()).write();
+
+        DescriptorSetWriter(m_materialDescriptorSet[i])
+            .writeImage(0, initialTextures.data(), initialImageLayouts.data(), 100000, 0).write();
     }
+
+    m_scene->enableEvents<RenderComponent>();
+    m_scene->getEventDispacher()->connect<ComponentAddedEvent<RenderComponent>>(&SceneRenderer::onRenderComponentAdded, this);
+    m_scene->getEventDispacher()->connect<ComponentRemovedEvent<RenderComponent>>(&SceneRenderer::onRenderComponentRemoved, this);
 }
 
 void SceneRenderer::render(double dt) {
@@ -79,6 +95,14 @@ void SceneRenderer::render(double dt, RenderCamera* renderCamera) {
     cameraInfo.viewProjectionMatrix = renderCamera->getViewProjectionMatrix();
     m_cameraInfoBuffer->upload(0, sizeof(CameraInfoUBO), &cameraInfo);
 
+    if (m_needsSortRenderableEntities) {
+        m_needsSortRenderableEntities = false;
+        sortRenderableEntities();
+    }
+
+    updateMaterialsBuffer();
+    updateEntityWorldTransforms();
+
     const vk::CommandBuffer& commandBuffer = Application::instance()->graphics()->getCurrentCommandBuffer();
     recordRenderCommands(dt, commandBuffer);
 }
@@ -91,52 +115,60 @@ Scene* SceneRenderer::getScene() const {
     return m_scene;
 }
 
+void SceneRenderer::initPipelineDescriptorSetLayouts(GraphicsPipelineConfiguration& graphicsPipelineConfiguration) const {
+    graphicsPipelineConfiguration.descriptorSetLayous.emplace_back(m_globalDescriptorSet->getLayout()->getDescriptorSetLayout());
+    graphicsPipelineConfiguration.descriptorSetLayous.emplace_back(m_objectDescriptorSet->getLayout()->getDescriptorSetLayout());
+    graphicsPipelineConfiguration.descriptorSetLayous.emplace_back(m_materialDescriptorSet->getLayout()->getDescriptorSetLayout());
+}
+
 void SceneRenderer::recordRenderCommands(double dt, vk::CommandBuffer commandBuffer) {
     GraphicsManager* graphics = Application::instance()->graphics();
     const uint32_t currentFrameIndex = graphics->getCurrentFrameIndex();
+    const vk::Device& device = **graphics->getDevice();
+
 
     const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
 
     std::shared_ptr<GraphicsPipeline> pipeline = Application::instance()->graphics()->pipeline();
 
+
+    std::vector<vk::DescriptorSet> descriptorSets = {
+        m_globalDescriptorSet->getDescriptorSet(),
+        m_objectDescriptorSet->getDescriptorSet(),
+        m_materialDescriptorSet->getDescriptorSet(),
+    };
+
+    std::vector<uint32_t> dynamicOffsets = {};
+
+    graphics->pipeline()->bind(commandBuffer);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphics->pipeline()->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
+
+    uint32_t firstInstance = 0;
+    uint32_t instanceCount = 0;
+    Mesh* currMesh = NULL;
+
     for (auto id : renderEntities) {
         const RenderComponent& renderComponent = renderEntities.get<RenderComponent>(id);
-        const Transform& transform = renderEntities.get<Transform>(id);
 
-        std::shared_ptr<Texture2D> texture = renderComponent.texture;
-        if (texture == NULL)
-            texture = m_missingTexture;
+        if (currMesh == NULL) {
+            currMesh = renderComponent.mesh.get();
+            instanceCount = 0;
+            firstInstance = 0;
 
-        DescriptorSetWriter(m_materialDescriptorSet[currentFrameIndex])
-            .writeImage(0, texture.get(), vk::ImageLayout::eShaderReadOnlyOptimal).write();
+        } else if (currMesh != renderComponent.mesh.get()) {
+            currMesh->draw(commandBuffer, instanceCount, firstInstance);
+            currMesh = renderComponent.mesh.get();
+            firstInstance += instanceCount;
+            instanceCount = 0;
+        }
 
-        glm::mat4 modelMatrix = transform.getMatrix();
-        m_worldTransformBuffer[currentFrameIndex]->upload(0, sizeof(glm::mat4), &modelMatrix);
-
-        std::vector<vk::DescriptorSet> descriptorSets = {
-            m_globalDescriptorSet[currentFrameIndex]->getDescriptorSet(),
-            m_objectDescriptorSet[currentFrameIndex]->getDescriptorSet(),
-            m_materialDescriptorSet[currentFrameIndex]->getDescriptorSet(),
-        };
-
-        std::vector<uint32_t> dynamicOffsets = {};
-
-        graphics->pipeline()->bind(commandBuffer);
-        commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphics->pipeline()->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
-        renderComponent.mesh->draw(commandBuffer);
+        ++instanceCount;
     }
-}
 
-std::shared_ptr<DescriptorSet> SceneRenderer::globalDescriptorSet() {
-    return m_globalDescriptorSet[Application::instance()->graphics()->getCurrentFrameIndex()];
-}
+    if (currMesh != NULL) {
+        currMesh->draw(commandBuffer, instanceCount, firstInstance);
+    }
 
-std::shared_ptr<DescriptorSet> SceneRenderer::objectDescriptorSet() {
-    return m_objectDescriptorSet[Application::instance()->graphics()->getCurrentFrameIndex()];
-}
-
-std::shared_ptr<DescriptorSet> SceneRenderer::materialDescriptorSet() {
-    return m_materialDescriptorSet[Application::instance()->graphics()->getCurrentFrameIndex()];
 }
 
 void SceneRenderer::initMissingTexture() {
@@ -168,4 +200,85 @@ void SceneRenderer::initMissingTexture() {
     missingTextureSamplerConfig.minFilter = vk::Filter::eNearest;
     missingTextureSamplerConfig.magFilter = vk::Filter::eNearest;
     m_missingTexture = std::shared_ptr<Texture2D>(Texture2D::create(missingTextureImageViewConfig, missingTextureSamplerConfig));
+}
+
+void SceneRenderer::sortRenderableEntities() const {
+    const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
+
+    // Group all meshes of the same type to be contiguous in the array
+    renderEntities.sort([renderEntities](const entt::entity& lhs, const entt::entity& rhs) {
+        const RenderComponent& lhsRC = renderEntities.get<RenderComponent>(lhs);
+        const RenderComponent& rhsRC = renderEntities.get<RenderComponent>(rhs);
+        return lhsRC.mesh->getResourceId() < rhsRC.mesh->getResourceId();
+    });
+}
+
+void SceneRenderer::updateEntityWorldTransforms() const {
+
+    const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
+
+    std::vector<ObjectDataOBO> objectDataArray;
+
+    for (auto id : renderEntities) {
+        const Transform& transform = renderEntities.get<Transform>(id);
+        const RenderComponent& renderComponent = renderEntities.get<RenderComponent>(id);
+
+        ObjectDataOBO& objectData = objectDataArray.emplace_back();
+        objectData.modelMatrix = transform.getMatrix();
+        objectData.textureIndex = 0;
+
+        auto it = m_textureDescriptorIndices.find(renderComponent.texture.get());
+        if (it != m_textureDescriptorIndices.end()) {
+            objectData.textureIndex = it->second;
+        }
+    }
+
+    size_t bufferSize = sizeof(ObjectDataOBO) * objectDataArray.size();
+    m_worldTransformBuffer->upload(0, bufferSize, objectDataArray.data());
+}
+
+void SceneRenderer::updateMaterialsBuffer() {
+    uint32_t descriptorCount = m_materialDescriptorSet->getLayout()->findBinding(0).descriptorCount;
+
+    m_textureDescriptorIndices.clear();
+
+    std::vector<Texture2D*> textures;
+    textures.reserve(descriptorCount);
+    textures.emplace_back(m_missingTexture.get());
+    m_textureDescriptorIndices.insert(std::make_pair(nullptr, 0)); // NULL texture = index 0
+
+    std::vector<vk::ImageLayout> imageLayouts;
+    imageLayouts.reserve(descriptorCount);
+    imageLayouts.emplace_back(vk::ImageLayout::eShaderReadOnlyOptimal);
+
+    const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
+
+    for (auto id : renderEntities) {
+        const RenderComponent& renderComponent = renderEntities.get<RenderComponent>(id);
+
+        if (renderComponent.texture != NULL) {
+
+            auto it = m_textureDescriptorIndices.find(renderComponent.texture.get());
+            if (it == m_textureDescriptorIndices.end()) {
+                uint32_t index = textures.size();
+                m_textureDescriptorIndices.insert(std::make_pair(renderComponent.texture.get(), index));
+                textures.emplace_back(renderComponent.texture.get());
+                imageLayouts.emplace_back(vk::ImageLayout::eShaderReadOnlyOptimal);
+            }
+        }
+    }
+
+    uint32_t arrayCount = glm::min((uint32_t)textures.size(), descriptorCount);
+    DescriptorSetWriter(m_materialDescriptorSet.get())
+        .writeImage(0, textures.data(), imageLayouts.data(), arrayCount, 0).write();
+}
+
+void SceneRenderer::onRenderComponentAdded(const ComponentAddedEvent<RenderComponent>& event) {
+    //printf("SceneRenderer::onRenderComponentAdded");
+    m_needsSortRenderableEntities = true;
+}
+
+void SceneRenderer::onRenderComponentRemoved(const ComponentRemovedEvent<RenderComponent>& event) {
+    //printf("SceneRenderer::onRenderComponentRemoved");
+    m_needsSortRenderableEntities = true;
 }

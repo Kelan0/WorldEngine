@@ -1,5 +1,5 @@
 #include "Texture.h"
-
+#include "GraphicsManager.h"
 
 std::unordered_map<Sampler::Key, std::weak_ptr<Sampler>, Sampler::KeyHasher> Sampler::s_cachedSamplers;
 
@@ -134,7 +134,8 @@ size_t Sampler::KeyHasher::operator()(const Key& samplerKey) const {
 
 Texture2D::Texture2D(std::weak_ptr<ImageView2D> image, std::weak_ptr<Sampler> sampler):
 	m_imageView(std::move(image)),
-	m_sampler(std::move(sampler)) {
+	m_sampler(std::move(sampler)),
+	m_resourceId(GraphicsManager::nextResourceId()) {
 }
 
 Texture2D::~Texture2D() {
@@ -182,4 +183,8 @@ std::shared_ptr<ImageView2D> Texture2D::getImageView() const {
 
 std::shared_ptr<Sampler> Texture2D::getSampler() const {
 	return m_sampler;
+}
+
+const GraphicsResource& Texture2D::getResourceId() const {
+	return m_resourceId;
 }

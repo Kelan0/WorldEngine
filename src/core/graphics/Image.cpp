@@ -518,7 +518,8 @@ Image2D::Image2D(std::weak_ptr<vkr::Device> device, vk::Image image, vk::DeviceM
 	m_deviceMemory(deviceMemory),
 	m_width(width),
 	m_height(height),
-	m_format(format) {
+	m_format(format), 
+	m_ResourceId(GraphicsManager::nextResourceId()) {
 	//printf("Create image\n");
 }
 
@@ -801,6 +802,10 @@ vk::Format Image2D::getFormat() const {
 	return m_format;
 }
 
+const GraphicsResource& Image2D::getResourceId() const {
+	return m_ResourceId;
+}
+
 vk::Format Image2D::selectSupportedFormat(const vk::PhysicalDevice& physicalDevice, const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features) {
 	for (int i = 0; i < candidates.size(); ++i) {
 		const vk::Format& format = candidates[i];
@@ -840,7 +845,8 @@ bool Image2D::validateImageRegion(Image2D* image, ImageRegion& imageRegion) {
 
 ImageView2D::ImageView2D(std::weak_ptr<vkr::Device> device, vk::ImageView imageView):
 	m_device(device),
-	m_imageView(imageView) {
+	m_imageView(imageView), 
+	m_ResourceId(GraphicsManager::nextResourceId()) {
 	//printf("Create ImageView\n");
 }
 
@@ -890,6 +896,10 @@ std::shared_ptr<vkr::Device> ImageView2D::getDevice() const {
 
 const vk::ImageView& ImageView2D::getImageView() const {
 	return m_imageView;
+}
+
+const GraphicsResource& ImageView2D::getResourceId() const {
+	return m_ResourceId;
 }
 
 

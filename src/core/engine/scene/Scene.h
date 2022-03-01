@@ -21,6 +21,9 @@ struct ComponentRemovedEvent {
 class Scene {
 	friend class Entity;
 	friend class SceneRenderer;
+public:
+	typedef entt::registry Registry;
+
 private:
 	template<class Component>
 	struct ComponentEvents {

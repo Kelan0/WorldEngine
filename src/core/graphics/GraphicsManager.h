@@ -8,6 +8,8 @@
 #include "GraphicsPipeline.h"
 #include "DescriptorSet.h"
 #include "Image.h"
+#include "FrameResource.h"
+#include "../util/DebugUtils.h"
 
 #define QUEUE_GRAPHICS_MAIN "graphics_main"
 #define QUEUE_COMPUTE_MAIN "compute_main"
@@ -97,7 +99,7 @@ private:
 
 	bool selectPhysicalDevice();
 
-	bool createLogicalDevice(std::vector<const char*> const& enabledLayers, std::vector<const char*> const& enabledExtensions, vk::PhysicalDeviceFeatures* enabledFeatures, std::unordered_map<std::string, uint32_t> queueLayout);
+	bool createLogicalDevice(std::vector<const char*> const& enabledLayers, std::vector<const char*> const& enabledExtensions, vk::PhysicalDeviceFeatures* deviceFeatures, vk::PhysicalDeviceDescriptorIndexingFeatures* descriptorIndexingFeatures, std::unordered_map<std::string, uint32_t> queueLayout);
 
 	bool initSurfaceDetails();
 
@@ -153,6 +155,13 @@ public:
 	void setPreferredPresentMode(vk::PresentModeKHR presentMode);
 
 	bool didResolutionChange() const;
+
+	DebugUtils::RenderInfo& debugInfo();
+
+	const DebugUtils::RenderInfo& getDebugInfo() const;
+
+	static GraphicsResource nextResourceId();
+
 private:
 	vkr::Context m_context;
 	std::unique_ptr<vkr::Instance> m_instance;
@@ -173,5 +182,9 @@ private:
 	bool m_isInitialized;
 	bool m_recreateSwapchain;
 	bool m_resolutionChanged;
+
+	DebugUtils::RenderInfo m_debugInfo;
+
+	static uint64_t s_nextResourceID;
 };
 

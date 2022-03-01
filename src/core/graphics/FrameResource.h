@@ -22,6 +22,8 @@ public:
 
 	~FrameResource();
 
+	T* operator*() const;
+
 	T* operator->() const;
 
 	T* operator[](int index) const;
@@ -67,6 +69,11 @@ inline FrameResource<T>::FrameResource():
 template<typename T>
 inline FrameResource<T>::~FrameResource() {
 	reset();
+}
+
+template<typename T>
+inline T* FrameResource<T>::operator*() const {
+	return get();
 }
 
 template<typename T>

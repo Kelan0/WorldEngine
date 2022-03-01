@@ -2,7 +2,8 @@
 
 CommandPool::CommandPool(std::weak_ptr<vkr::Device> device, std::unique_ptr<vkr::CommandPool> commandPool):
 	m_device(device),
-	m_commandPool(std::move(commandPool)) {
+	m_commandPool(std::move(commandPool)), 
+	m_resourceId(GraphicsManager::nextResourceId()) {
 }
 
 CommandPool::~CommandPool() {
@@ -73,4 +74,8 @@ void CommandPool::freeCommandBuffer(const std::string name) {
 
 bool CommandPool::hasCommandBuffer(const std::string& name) const {
 	return m_commandBuffers.count(name) > 0;
+}
+
+const GraphicsResource& CommandPool::getResourceId() const {
+	return m_resourceId;
 }
