@@ -1,5 +1,5 @@
 #include "Mesh.h"
-#include "GPUMemory.h"
+#include "DeviceMemory.h"
 #include "../application/Application.h"
 #include <chrono>
 

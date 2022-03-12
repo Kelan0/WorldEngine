@@ -8,6 +8,7 @@
 #include "core/graphics/Mesh.h"
 #include "core/graphics/ShaderProgram.h"
 #include "core/graphics/Texture.h"
+#include "core/graphics/DeviceMemory.h"
 #include "core/engine/scene/Scene.h"
 #include "core/engine/scene/EntityHierarchy.h"
 #include "core/engine/scene/Transform.h"
@@ -197,6 +198,73 @@ class App : public Application {
     }
 };
 
+size_t findBlockIndex(const std::vector<size_t> blocks, size_t size) {
+	//size_t startIndex = 0;
+	//size_t endIndex = blocks.size() - 1;
+	//
+	//while (true) {
+	//	if (startIndex >= endIndex) {
+	//		if (blocks[endIndex] >= size)
+	//			return endIndex;
+	//		break;
+	//	}
+	//
+	//	size_t midIndex = (startIndex + endIndex) / 2;
+	//
+	//	if (blocks[midIndex] < size) {
+	//		startIndex = midIndex + 1;
+	//		continue;
+	//	}
+	//
+	//	if (blocks[midIndex] > size) {
+	//		endIndex = midIndex;
+	//		continue;
+	//	}
+	//}
+	//
+	//return (size_t)(-1);
+
+	auto it = std::lower_bound(blocks.begin(), blocks.end(), size);
+	return it == blocks.end() ? size_t(-1) : size_t(it - blocks.begin());
+}
+
+
 int main(int argc, char* argv[]) {
-    return Application::create<App>();
+
+	//std::vector<size_t> blocks;
+	//blocks.emplace_back(1000);
+	//blocks.emplace_back(2100);
+	//blocks.emplace_back(1900);
+	//blocks.emplace_back(1400);
+	//blocks.emplace_back(220);
+	//blocks.emplace_back(180);
+	//blocks.emplace_back(970);
+	//blocks.emplace_back(170);
+	//blocks.emplace_back(190);
+	//blocks.emplace_back(232);
+	//blocks.emplace_back(1650);
+	//blocks.emplace_back(3075);
+	//
+	//std::sort(blocks.begin(), blocks.end());
+	//
+	//size_t idx = findBlockIndex(blocks, 3076);
+	//
+	//return 0;
+
+	DeviceMemoryHeap* heap = new DeviceMemoryHeap(10000);
+	DeviceMemoryBlock* b0 = heap->allocateBlock(100);
+	DeviceMemoryBlock* b1 = heap->allocateBlock(200);
+	DeviceMemoryBlock* b2 = heap->allocateBlock(80);
+	DeviceMemoryBlock* b3 = heap->allocateBlock(800);
+	DeviceMemoryBlock* b4 = heap->allocateBlock(100);
+	DeviceMemoryBlock* b5 = heap->allocateBlock(100);
+	DeviceMemoryBlock* b6 = heap->allocateBlock(160);
+
+	heap->freeBlock(b4);
+	DeviceMemoryBlock* b7 = heap->allocateBlock(100);
+	heap->freeBlock(b6);
+	heap->freeBlock(b5);
+
+    //return Application::create<App>();
+	return 0;
 }

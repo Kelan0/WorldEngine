@@ -18,7 +18,7 @@
 class GraphicsPipeline;
 class CommandPool;
 class DescriptorPool;
-class GPUMemory;
+class DeviceMemoryManager;
 class DescriptorAllocator;
 class DescriptorLayoutCache;
 
@@ -136,7 +136,7 @@ public:
 
 	std::shared_ptr<DescriptorPool> descriptorPool();
 
-	GPUMemory& gpuMemory();
+	DeviceMemoryManager& memory();
 
 	glm::ivec2 getResolution() const;
 
@@ -172,7 +172,7 @@ private:
 	std::shared_ptr<GraphicsPipeline> m_graphicsPipeline;
 	std::shared_ptr<CommandPool> m_commandPool;
 	std::shared_ptr<DescriptorPool> m_descriptorPool;
-	GPUMemory* m_gpuMemory;
+	DeviceMemoryManager* m_memory;
 
 	std::unique_ptr<vkr::DebugUtilsMessengerEXT> m_debugMessenger;
 

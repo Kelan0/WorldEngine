@@ -1,5 +1,5 @@
 #include "Buffer.h"
-#include "GPUMemory.h"
+#include "DeviceMemory.h"
 #include "CommandPool.h"
 #include "../application/Application.h"
 
@@ -49,7 +49,7 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
 	const vk::MemoryRequirements& memoryRequirements = device.getBufferMemoryRequirements(buffer);
 
 	uint32_t memoryTypeIndex;
-	if (!GPUMemory::selectMemoryType(memoryRequirements.memoryTypeBits, bufferConfiguration.memoryProperties, memoryTypeIndex)) {
+	if (!DeviceMemoryHeap::selectMemoryType(memoryRequirements.memoryTypeBits, bufferConfiguration.memoryProperties, memoryTypeIndex)) {
 		device.destroyBuffer(buffer);
 		printf("Buffer memory allocation failed\n");
 		return NULL;

@@ -1,6 +1,6 @@
 #include "Image.h"
 #include "Buffer.h"
-#include "GPUMemory.h"
+#include "DeviceMemory.h"
 #include "CommandPool.h"
 #include "GraphicsManager.h"
 #include "../application/Application.h"
@@ -626,7 +626,7 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration) {
 	const vk::MemoryRequirements& memoryRequirements = device.getImageMemoryRequirements(image);
 	
 	uint32_t memoryTypeIndex;
-	if (!GPUMemory::selectMemoryType(memoryRequirements.memoryTypeBits, image2DConfiguration.memoryProperties, memoryTypeIndex)) {
+	if (!DeviceMemoryHeap::selectMemoryType(memoryRequirements.memoryTypeBits, image2DConfiguration.memoryProperties, memoryTypeIndex)) {
 		device.destroyImage(image);
 		printf("Image memory allocation failed\n");
 		return NULL;

@@ -2,7 +2,7 @@
 #include "../application/Application.h"
 #include "GraphicsPipeline.h"
 #include "CommandPool.h"
-#include "GPUMemory.h"
+#include "DeviceMemory.h"
 #include "Mesh.h"
 #include "DescriptorSet.h"
 #include "Buffer.h"
@@ -35,7 +35,7 @@ GraphicsManager::GraphicsManager() {
 	m_graphicsPipeline = NULL;
 	m_commandPool = NULL;
 	m_descriptorPool = NULL;
-	m_gpuMemory = NULL;
+	m_memory = NULL;
 	m_debugMessenger = NULL;
 	m_preferredPresentMode = vk::PresentModeKHR::eMailbox;
 	m_isInitialized = false;
@@ -61,7 +61,7 @@ GraphicsManager::~GraphicsManager() {
 	if (m_commandPool.use_count() > 1)
 		printf("Destroyed GraphicsManager but CommandPool has %d external references\n", m_commandPool.use_count() - 1);
 
-	delete m_gpuMemory;
+	delete m_memory;
 	m_descriptorPool.reset();
 	m_commandPool.reset();
 	//delete m_pipeline;
@@ -986,8 +986,8 @@ vk::Format GraphicsManager::getDepthFormat() const {
 	return m_surface.depthFormat;
 }
 
-GPUMemory& GraphicsManager::gpuMemory() {
-	return *m_gpuMemory;
+DeviceMemoryManager& GraphicsManager::memory() {
+	return *m_memory;
 }
 
 vk::ColorSpaceKHR GraphicsManager::getColourSpace() const {
