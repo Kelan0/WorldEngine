@@ -126,6 +126,7 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
 		return false;
 	m_graphicsPipeline = std::shared_ptr<GraphicsPipeline>(graphicsPipeline);
 
+	m_memory = new DeviceMemoryManager(m_device.device);
 	//GPUMemoryConfiguration memoryConfig;
 	//memoryConfig.device = m_device.device;
 	//memoryConfig.size = (size_t)(6.0 * 1024 * 1024 * 1024); // Allocate 8 GiB

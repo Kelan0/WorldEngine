@@ -512,10 +512,10 @@ bool ImageData::getPixelLayoutAndFormat(vk::Format format, ImagePixelLayout& out
 
 
 
-Image2D::Image2D(std::weak_ptr<vkr::Device> device, vk::Image image, vk::DeviceMemory deviceMemory, uint32_t width, uint32_t height, vk::Format format):
+Image2D::Image2D(std::weak_ptr<vkr::Device> device, vk::Image image, DeviceMemoryBlock* memory, uint32_t width, uint32_t height, vk::Format format):
 	m_device(device),
 	m_image(image),
-	m_deviceMemory(deviceMemory),
+	m_memory(memory),
 	m_width(width),
 	m_height(height),
 	m_format(format), 
@@ -526,7 +526,7 @@ Image2D::Image2D(std::weak_ptr<vkr::Device> device, vk::Image image, vk::DeviceM
 Image2D::~Image2D() {
 	//printf("Destroying image\n");
 	(**m_device).destroyImage(m_image);
-	(**m_device).freeMemory(m_deviceMemory);
+	m_memory->free();
 }
 
 Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration) {
@@ -624,30 +624,16 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration) {
 	}
 
 	const vk::MemoryRequirements& memoryRequirements = device.getImageMemoryRequirements(image);
-	
-	uint32_t memoryTypeIndex;
-	if (!DeviceMemoryHeap::selectMemoryType(memoryRequirements.memoryTypeBits, image2DConfiguration.memoryProperties, memoryTypeIndex)) {
+	DeviceMemoryBlock* memory = vmalloc(memoryRequirements, image2DConfiguration.memoryProperties);
+	if (memory == NULL) {
 		device.destroyImage(image);
 		printf("Image memory allocation failed\n");
 		return NULL;
 	}
 
-	vk::MemoryAllocateInfo allocateInfo;
-	allocateInfo.setAllocationSize(memoryRequirements.size);
-	allocateInfo.setMemoryTypeIndex(memoryTypeIndex);
+	memory->bindImage(image);
 
-	vk::DeviceMemory deviceMemory = VK_NULL_HANDLE;
-	result = device.allocateMemory(&allocateInfo, NULL, &deviceMemory);
-
-	if (result != vk::Result::eSuccess) {
-		device.destroyImage(image);
-		printf("Failed to allocate device memory for image: %s\n", vk::to_string(result));
-		return NULL;
-	}
-
-	device.bindImageMemory(image, deviceMemory, 0);
-
-	Image2D* returnImage = new Image2D(image2DConfiguration.device, image, deviceMemory, width, height, imageCreateInfo.format);
+	Image2D* returnImage = new Image2D(image2DConfiguration.device, image, memory, width, height, imageCreateInfo.format);
 
 	if (imageData != NULL) {
 		ImageRegion uploadRegion;

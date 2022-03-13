@@ -7,10 +7,19 @@
 
 constexpr vk::DeviceSize MAX_ADDR = std::numeric_limits<vk::DeviceSize>::max();
 
-bool findSmallestFreeBlock(const vk::DeviceSize& size, const DeviceMemoryHeap::BlockRange& block) {
-	if (!block.free)
-		return false;
-	return size < block.size;
+
+struct SizeAlignment {
+	vk::DeviceSize size;
+	vk::DeviceSize alignment;
+};
+
+
+bool findSmallestFreeBlock(const DeviceMemoryHeap::BlockRange& block, const SizeAlignment& size) {
+	if (!block.free) return true; // Consider allocated blocks to have 0 size
+	const vk::DeviceSize blockBegin = DeviceMemoryManager::getAlignedOffset(block.offset, size.alignment);
+	const vk::DeviceSize blockEnd = block.offset + block.size;
+	const vk::DeviceSize blockSize = blockEnd - blockBegin;
+	return blockSize < size.size;
 }
 
 bool compareFreeBlocks(const DeviceMemoryHeap::BlockRange& lhs, const DeviceMemoryHeap::BlockRange& rhs) {
@@ -36,23 +45,106 @@ bool compareBlocks(const DeviceMemoryHeap::BlockRange& lhs, const DeviceMemoryHe
 }
 
 
+
+
+
+DeviceMemoryManager::DeviceMemoryManager(std::weak_ptr<vkr::Device> device):
+	m_device(device),
+	m_heapGenSizeBytes(1024 * 1024 * 128) {
+}
+
+DeviceMemoryManager::~DeviceMemoryManager() {
+	for (auto it = m_memoryHeaps.begin(); it != m_memoryHeaps.end(); ++it) {
+		std::vector<DeviceMemoryHeap*> heaps = it->second;
+
+		for (auto it1 = heaps.begin(); it1 != heaps.end(); ++it1) {
+			delete *it1;
+		}
+	}
+	m_memoryHeaps.clear();
+}
+
+bool DeviceMemoryManager::selectMemoryType(uint32_t memoryTypeBits, vk::MemoryPropertyFlags memoryPropertyFlags, uint32_t& outMemoryType) {
+
+	const vk::PhysicalDeviceMemoryProperties& deviceMemProps = Application::instance()->graphics()->getDeviceMemoryProperties();
+
+	for (uint32_t i = 0; i < deviceMemProps.memoryTypeCount; ++i) {
+		if ((memoryTypeBits & (1 << i)) != 0 && (deviceMemProps.memoryTypes[i].propertyFlags & memoryPropertyFlags) == memoryPropertyFlags) {
+			outMemoryType = i;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+vk::DeviceSize DeviceMemoryManager::getAlignedOffset(vk::DeviceSize offset, vk::DeviceSize alignment) {
+	if (alignment <= 1)
+		return offset;
+	return offset + (alignment - (offset % alignment)) % alignment;
+}
+
+DeviceMemoryBlock* DeviceMemoryManager::allocate(vk::MemoryRequirements requirements, vk::MemoryPropertyFlags memoryProperties) {
+	DeviceMemoryHeap* heap = getHeap(requirements, memoryProperties);
+	if (heap == NULL)
+		return NULL;
+
+	return heap->allocateBlock(requirements.size, requirements.alignment);
+}
+
+void DeviceMemoryManager::free(DeviceMemoryBlock* block) const {
+	block->free();
+}
+
+DeviceMemoryHeap* DeviceMemoryManager::getHeap(vk::MemoryRequirements requirements, vk::MemoryPropertyFlags memoryProperties) {
+	uint32_t memoryTypeIndex;
+	if (!selectMemoryType(requirements.memoryTypeBits, memoryProperties, memoryTypeIndex))
+		return NULL;
+
+	auto it0 = m_memoryHeaps.find(memoryTypeIndex);
+	if (it0 == m_memoryHeaps.end()) {
+		it0 = m_memoryHeaps.insert(std::make_pair(memoryTypeIndex, std::vector<DeviceMemoryHeap*>())).first;
+	}
+
+	std::vector<DeviceMemoryHeap*>& heaps = it0->second;
+
+	// Find the heap with the smallest amount of available memory that is still big enough for the required size
+	auto it1 = std::upper_bound(heaps.begin(), heaps.end(), requirements, [](const vk::MemoryRequirements& requirements, const DeviceMemoryHeap* heap) {
+		return requirements.size < heap->getMaxAllocatableSize(requirements.alignment);
+	});
+
+	if (it1 == heaps.end()) {
+		DeviceMemoryConfiguration memoryConfiguration;
+		memoryConfiguration.device = m_device;
+		memoryConfiguration.memoryProperties = memoryProperties;
+		memoryConfiguration.memoryTypeFlags = requirements.memoryTypeBits;
+		memoryConfiguration.size = INT_DIV_CEIL(requirements.size, m_heapGenSizeBytes) * m_heapGenSizeBytes;
+		
+		DeviceMemoryHeap* heap = DeviceMemoryHeap::create(memoryConfiguration);
+		if (heap == NULL)
+			return NULL;
+
+		heaps.emplace_back(heap);
+		return heap;
+	}
+
+	return *it1;
+}
+
+
+
+
+
+
 DeviceMemoryHeap::DeviceMemoryHeap(std::weak_ptr<vkr::Device> device, vk::DeviceMemory deviceMemory, vk::DeviceSize size):
 	m_device(device),
 	m_deviceMemory(deviceMemory),
 	m_size(size) {
 
-	m_allocatedRange = 0;
-	m_allocatedBytes = 0;
-	BlockRange block;
-	block.offset = 0;
-	block.size = m_size;
-	block.free = true;
-	insertBlock(block);
-}
+	m_mappedOffset = 0;
+	m_mappedSize = 0;
+	m_mappedPtr = NULL;
 
-DeviceMemoryHeap::DeviceMemoryHeap(vk::DeviceSize size) {
-	m_size = (size);
-	m_allocatedRange = 0;
 	m_allocatedBytes = 0;
 	BlockRange block;
 	block.offset = 0;
@@ -62,17 +154,23 @@ DeviceMemoryHeap::DeviceMemoryHeap(vk::DeviceSize size) {
 }
 
 DeviceMemoryHeap::~DeviceMemoryHeap() {
-	(**m_device).freeMemory(m_deviceMemory);
+	const vk::Device& device = **m_device;
+	if (m_mappedPtr != NULL)
+		device.unmapMemory(m_deviceMemory);
+	device.freeMemory(m_deviceMemory);
 }
 
 DeviceMemoryHeap* DeviceMemoryHeap::create(const DeviceMemoryConfiguration& deviceMemoryConfiguration) {
 	assert(!deviceMemoryConfiguration.device.expired());
 
+	char sizeLebel[6] = "";
+	printf("Allocating device memory heap: %.3f %s\n", Util::getMemorySizeMagnitude(deviceMemoryConfiguration.size, sizeLebel), sizeLebel);
+
 	const vk::Device& device = **deviceMemoryConfiguration.device.lock();
 
 	uint32_t memoryTypeIndex;
 
-	if (!selectMemoryType(deviceMemoryConfiguration.memoryTypeFlags, deviceMemoryConfiguration.memoryProperties, memoryTypeIndex)) {
+	if (!DeviceMemoryManager::selectMemoryType(deviceMemoryConfiguration.memoryTypeFlags, deviceMemoryConfiguration.memoryProperties, memoryTypeIndex)) {
 		printf("Failed to allocate device memory: Memory type 0x%08X was not found with memory properties 0x%08X\n", deviceMemoryConfiguration.memoryTypeFlags, (uint32_t)deviceMemoryConfiguration.memoryProperties);
 		return NULL;
 	}
@@ -126,25 +224,11 @@ void DeviceMemoryHeap::bindImageMemory(const Image2D* image, vk::DeviceSize offs
 	bindImageMemory(image->getImage(), offset);
 }
 
-bool DeviceMemoryHeap::selectMemoryType(uint32_t memoryTypeBits, vk::MemoryPropertyFlags memoryPropertyFlags, uint32_t& outMemoryType) {
-
-	const vk::PhysicalDeviceMemoryProperties& deviceMemProps = Application::instance()->graphics()->getDeviceMemoryProperties();
-
-	for (uint32_t i = 0; i < deviceMemProps.memoryTypeCount; ++i) {
-		if ((memoryTypeBits & (1 << i)) != 0 && (deviceMemProps.memoryTypes[i].propertyFlags & memoryPropertyFlags) == memoryPropertyFlags) {
-			outMemoryType = i;
-			return true;
-		}
-	}
-
-	return false;
-}
-
-DeviceMemoryBlock* DeviceMemoryHeap::allocateBlock(vk::DeviceSize size) {
+DeviceMemoryBlock* DeviceMemoryHeap::allocateBlock(vk::DeviceSize size, vk::DeviceSize alignment) {
 	if (size == 0)
 		return NULL;
 
-	size_t parentIndex = findBlockIndex(size);
+	size_t parentIndex = findBlockIndex(size, alignment);
 	if (parentIndex >= m_blocks.size()) {
 		printf("Failed to allocate device memory block of %llu bytes\n", size);
 		return NULL;
@@ -163,10 +247,9 @@ DeviceMemoryBlock* DeviceMemoryHeap::allocateBlock(vk::DeviceSize size) {
 	updateBlock(parentIndex, parentBlock);
 	insertBlock(block);
 
-	DeviceMemoryBlock* memoryBlock = new DeviceMemoryBlock(this, block.offset, block.size);
+	DeviceMemoryBlock* memoryBlock = new DeviceMemoryBlock(this, block.offset, block.size, alignment);
 	m_allocatedBlocks.insert(memoryBlock);
 
-	m_allocatedRange = glm::max(m_allocatedRange, block.offset + block.size);
 	m_allocatedBytes += size;
 
 	return memoryBlock;
@@ -193,9 +276,14 @@ bool DeviceMemoryHeap::freeBlock(DeviceMemoryBlock* block) {
 		return false;
 	}
 
+	block->unmap();
+	delete block;
+
 	size_t index = it0 - m_blocks.begin();
 	BlockRange newBlock = m_blocks[index];
 	newBlock.free = true;
+
+	m_allocatedBytes -= newBlock.size;
 
 	index = updateBlock(index, newBlock);
 
@@ -205,7 +293,7 @@ bool DeviceMemoryHeap::freeBlock(DeviceMemoryBlock* block) {
 	}
 
 	size_t endIndex = index;
-	while (endIndex < m_blocks.size() && m_blocks[endIndex + 1].free) {
+	while (endIndex + 1 < m_blocks.size() && m_blocks[endIndex + 1].free) {
 		if (!isContiguous(endIndex, endIndex + 1)) break;
 		++endIndex;
 	}
@@ -220,16 +308,29 @@ bool DeviceMemoryHeap::freeBlock(DeviceMemoryBlock* block) {
 	updateBlock(index, newBlock);
 }
 
-size_t DeviceMemoryHeap::findBlockIndex(vk::DeviceSize size) {
+vk::DeviceSize DeviceMemoryHeap::getMaxAllocatableSize(vk::DeviceSize alignment) const {
+	if (m_blockSizeSequence.size() == 0)
+		return 0;
+
+	size_t idx = m_blockSizeSequence[m_blockSizeSequence.size() - 1];
+	assert(m_blocks[idx].free);
+	vk::DeviceSize size = m_blocks[idx].size;
+
+	if (alignment != 0) {
+		size -= (DeviceMemoryManager::getAlignedOffset(m_blocks[idx].offset, alignment) - m_blocks[idx].offset);
+	}
+
+	return size;
+}
+
+size_t DeviceMemoryHeap::findBlockIndex(vk::DeviceSize size, vk::DeviceSize alignment) {
 	// // Returns first free Block with a size greater than or equal to the required size
 	// // Assuming m_blocks is sorted, this should be the smallest such block.
 	// return std::lower_bound(m_blocks.begin(), m_blocks.end(), size, findSmallestFreeBlock);
 
-
-	auto it = std::lower_bound(m_blockSizeSequence.begin(), m_blockSizeSequence.end(), size, [this](const size_t& blockIndex, vk::DeviceSize size) {
-		const BlockRange& block = m_blocks[blockIndex];
-		if (!block.free) return true; // Consider allocated blocks to have 0 size
-		return block.size < size;
+	SizeAlignment alignedSize{ size, alignment };
+	auto it = std::lower_bound(m_blockSizeSequence.begin(), m_blockSizeSequence.end(), alignedSize, [this](const size_t& blockIndex, const SizeAlignment& alignedSize) {
+		return findSmallestFreeBlock(m_blocks[blockIndex], alignedSize);
 	});
 
 	if (it == m_blockSizeSequence.end())
@@ -284,13 +385,8 @@ size_t DeviceMemoryHeap::updateBlock(size_t blockIndex, const BlockRange& newBlo
 
 	if (newBlock.size == 0) {
 
-		if (oldBlock.free) {
-			size_t startIndex = getBlockSequenceIndex(oldBlock);
-			m_blockSizeSequence.erase(m_blockSizeSequence.begin() + startIndex);
-			decrementBlockSequences(startIndex, m_blockSizeSequence.size() - startIndex);
-			--m_numFreeBlocks;
-		}
-
+		if (oldBlock.free)
+			eraseBlockSequence(getBlockSequenceIndex(oldBlock));
 		m_blocks.erase(m_blocks.begin() + blockIndex);
 
 		return (size_t)(-1);
@@ -299,30 +395,43 @@ size_t DeviceMemoryHeap::updateBlock(size_t blockIndex, const BlockRange& newBlo
 		if (equalBlocks(oldBlock, newBlock))
 			return blockIndex;
 
+		if (newBlock.free && oldBlock.free && newBlock.size != oldBlock.size) {
+			// If the size of a free block changed, then move the blockSizeSequence entry accordingly.
+			size_t oldSequenceIndex = getBlockSequenceIndex(oldBlock);
+			size_t newSequenceIndex = oldSequenceIndex; // TODO: This can likely be replaced with upper_bound and achieve O(log n) rather than O(n)
+			if (newBlock.size > oldBlock.size)
+				while (newSequenceIndex + 1 < m_blockSizeSequence.size() && m_blocks[m_blockSizeSequence[newSequenceIndex + 1]].size < newBlock.size)
+					++newSequenceIndex;
+			else
+				while (newSequenceIndex > 0 && m_blocks[m_blockSizeSequence[newSequenceIndex - 1]].size > newBlock.size)
+					--newSequenceIndex;
+			Util::moveIter(m_blockSizeSequence.begin() + oldSequenceIndex, m_blockSizeSequence.begin() + newSequenceIndex);
+		}
+
 		m_blocks[blockIndex] = newBlock;
 
-		size_t dstIndex = blockIndex;
-		auto begin = m_blocks.begin() + (newBlock.free ? freeBlocksBeginIndex() : allocatedBlocksBeginIndex());
-		auto end = m_blocks.begin() + (newBlock.free ? freeBlocksEndIndex() : allocatedBlocksEndIndex());
-
 		if (!oldBlock.free && newBlock.free) {
-			m_blockSizeSequence.insert(m_blockSizeSequence.begin() + getBlockSequenceIndex(newBlock), dstIndex);
+			m_blockSizeSequence.insert(m_blockSizeSequence.begin() + getBlockSequenceIndex(newBlock), blockIndex);
 			++m_numFreeBlocks;
 
 		} else if (oldBlock.free && !newBlock.free) {
-			m_blockSizeSequence.erase(m_blockSizeSequence.begin() + getBlockSequenceIndex(newBlock));
+			eraseBlockSequence(getBlockSequenceIndex(newBlock));
 			--m_numFreeBlocks;
+
 		}
 
-
 		if (oldBlock.offset != newBlock.offset || oldBlock.free != newBlock.free) {
+			auto begin = m_blocks.begin() + (newBlock.free ? freeBlocksBeginIndex() : allocatedBlocksBeginIndex());
+			auto end = m_blocks.begin() + (newBlock.free ? freeBlocksEndIndex() : allocatedBlocksEndIndex());
 			auto comparator = newBlock.free ? compareFreeBlocks : compareAllocatedBlocks;
 			auto dstPos = std::lower_bound(begin, end, newBlock, comparator);
 			if (dstPos == end) --dstPos;
-			dstIndex = dstPos - m_blocks.begin();
+			size_t dstIndex = dstPos - m_blocks.begin();
 			moveBlock(blockIndex, dstIndex);
+			return dstIndex;
 		}
-		return dstIndex;
+
+		return blockIndex;
 	}
 }
 
@@ -342,30 +451,22 @@ size_t DeviceMemoryHeap::getBlockSequenceIndex(const BlockRange& block) {
 	if (!block.free)
 		return (size_t)(-1);
 
-	auto it = std::lower_bound(m_blockSizeSequence.begin(), m_blockSizeSequence.end(), block, [this](const size_t& blockIndex, const BlockRange& block) {
-		if (m_blocks[blockIndex].size == block.size)
-			return m_blocks[blockIndex].offset < block.offset;
-		return m_blocks[blockIndex].size < block.size;
+	auto it = std::upper_bound(m_blockSizeSequence.begin(), m_blockSizeSequence.end(), block, [this](const BlockRange& block, const size_t& blockIndex) {
+		if (block.size == m_blocks[blockIndex].size)
+			return block.offset <= m_blocks[blockIndex].offset;
+		return block.size < m_blocks[blockIndex].size;
 	});
 
 	return it - m_blockSizeSequence.begin();
 }
 
-size_t DeviceMemoryHeap::getBlockSequence(const BlockRange& block) {
-	size_t index = getBlockSequenceIndex(block);
-	if (index == (size_t)(-1))
-		return (size_t)(-1);
-	return m_blockSizeSequence[index];
-}
-
-void DeviceMemoryHeap::incrementBlockSequences(size_t startIndex, size_t count) {
-	for (size_t i = 0; i < count; ++i)
-		++m_blockSizeSequence[startIndex + i];
-}
-
-void DeviceMemoryHeap::decrementBlockSequences(size_t startIndex, size_t count) {
-	for (size_t i = 0; i < count; ++i)
-		--m_blockSizeSequence[startIndex + i];
+void DeviceMemoryHeap::eraseBlockSequence(size_t index) {
+	size_t sequence = m_blockSizeSequence[index];
+	m_blockSizeSequence.erase(m_blockSizeSequence.begin() + index);
+	for (size_t i = 0; i < m_blockSizeSequence.size(); ++i)
+		if (m_blockSizeSequence[i] > sequence)
+			--m_blockSizeSequence[i];
+	--m_numFreeBlocks;
 }
 
 bool DeviceMemoryHeap::isContiguous(size_t firstIndex, size_t secondIndex) {
@@ -378,12 +479,57 @@ bool DeviceMemoryHeap::equalBlocks(const BlockRange& lhs, const BlockRange& rhs)
 	return lhs.offset == rhs.offset && lhs.size == rhs.size && lhs.free == rhs.free;
 }
 
+void DeviceMemoryHeap::map(DeviceMemoryBlock* block) {
+	if (block->isMapped())
+		return;
 
-DeviceMemoryBlock::DeviceMemoryBlock(DeviceMemoryHeap* heap, vk::DeviceSize offset, vk::DeviceSize size):
+	if (m_mappedPtr == NULL) {
+		const vk::Device& device = **m_device;
+		vk::Result result = device.mapMemory(m_deviceMemory, 0, m_size, {}, &m_mappedPtr);
+		if (result != vk::Result::eSuccess) {
+#if _DEBUG
+			printf("Failed to map device memory heap: %s\n", vk::to_string(result).c_str());
+#endif
+			return;
+		}
+
+		block->m_mappedPtr = static_cast<char*>(m_mappedPtr) + (block->m_offset - m_mappedOffset);
+		m_mappedOffset = 0;
+		m_mappedSize = m_size;
+	}
+
+	m_mappedBlocks.insert(block);
+}
+
+void DeviceMemoryHeap::unmap(DeviceMemoryBlock* block) {
+	if (!block->isMapped())
+		return;
+
+	m_mappedBlocks.erase(block);
+	if (m_mappedBlocks.size() == 0) {
+		const vk::Device& device = **m_device;
+		device.unmapMemory(m_deviceMemory);
+		m_mappedPtr = NULL;
+		m_mappedOffset = 0;
+		m_mappedSize = 0;
+		block->m_mappedPtr = NULL;
+	}
+}
+
+
+DeviceMemoryBlock::DeviceMemoryBlock(DeviceMemoryHeap* heap, vk::DeviceSize offset, vk::DeviceSize size, vk::DeviceSize alignment):
 	m_heap(heap),
 	m_offset(offset),
 	m_size(size),
+	m_alignment(alignment),
 	m_mappedPtr(NULL) {
+}
+
+DeviceMemoryBlock::~DeviceMemoryBlock() {
+}
+
+void DeviceMemoryBlock::free() {
+	m_heap->freeBlock(this);
 }
 
 const vk::DeviceSize& DeviceMemoryBlock::getOffset() const {
@@ -394,6 +540,42 @@ const vk::DeviceSize& DeviceMemoryBlock::getSize() const {
 	return m_size;
 }
 
-DeviceMemoryBlock::~DeviceMemoryBlock() {
-	m_heap->freeBlock(this);
+void DeviceMemoryBlock::bindBuffer(const vk::Buffer& buffer) const {
+	m_heap->bindBufferMemory(buffer, DeviceMemoryManager::getAlignedOffset(m_offset, m_alignment));
+}
+
+void DeviceMemoryBlock::bindBuffer(const Buffer* buffer) const {
+	m_heap->bindBufferMemory(buffer, DeviceMemoryManager::getAlignedOffset(m_offset, m_alignment));
+}
+
+void DeviceMemoryBlock::bindImage(const vk::Image& image) const {
+	m_heap->bindImageMemory(image, DeviceMemoryManager::getAlignedOffset(m_offset, m_alignment));
+}
+
+void DeviceMemoryBlock::bindImage(const Image2D* image) const {
+	m_heap->bindImageMemory(image, DeviceMemoryManager::getAlignedOffset(m_offset, m_alignment));
+}
+
+bool DeviceMemoryBlock::isMapped() const {
+	return m_mappedPtr != NULL;
+}
+
+void* DeviceMemoryBlock::map() {
+	m_heap->map(this);
+	return m_mappedPtr;
+}
+
+void DeviceMemoryBlock::unmap() {
+	m_heap->unmap(this);
+}
+
+
+
+
+DeviceMemoryBlock* vmalloc(vk::MemoryRequirements requirements, vk::MemoryPropertyFlags memoryProperties) {
+	return Application::instance()->graphics()->memory().allocate(requirements, memoryProperties);
+}
+
+void vfree(DeviceMemoryBlock* memory) {
+	return Application::instance()->graphics()->memory().free(memory);
 }

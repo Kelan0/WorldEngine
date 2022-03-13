@@ -6,10 +6,10 @@
 std::unique_ptr<Buffer> Buffer::s_stagingBuffer = NULL;
 vk::DeviceSize Buffer::s_maxStagingBufferSize = 128 * 1024 * 1024; // 128 MiB
 
-Buffer::Buffer(std::weak_ptr<vkr::Device> device, vk::Buffer buffer, vk::DeviceMemory deviceMemory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties, GraphicsResource resourceId):
+Buffer::Buffer(std::weak_ptr<vkr::Device> device, vk::Buffer buffer, DeviceMemoryBlock* memory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties, GraphicsResource resourceId):
 	m_device(device),
 	m_buffer(buffer),
-	m_deviceMemory(deviceMemory),
+	m_memory(memory),
 	m_size(size),
 	m_memoryProperties(memoryProperties), 
 	m_resourceId(resourceId) {
@@ -18,7 +18,7 @@ Buffer::Buffer(std::weak_ptr<vkr::Device> device, vk::Buffer buffer, vk::DeviceM
 Buffer::~Buffer() {
 	//printf("Destroy Buffer\n");
 	(**m_device).destroyBuffer(m_buffer);
-	(**m_device).freeMemory(m_deviceMemory);
+	vfree(m_memory);
 }
 
 Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
@@ -47,30 +47,17 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
 	}
 
 	const vk::MemoryRequirements& memoryRequirements = device.getBufferMemoryRequirements(buffer);
+	DeviceMemoryBlock* memory = vmalloc(memoryRequirements, bufferConfiguration.memoryProperties);
 
-	uint32_t memoryTypeIndex;
-	if (!DeviceMemoryHeap::selectMemoryType(memoryRequirements.memoryTypeBits, bufferConfiguration.memoryProperties, memoryTypeIndex)) {
-		device.destroyBuffer(buffer);
-		printf("Buffer memory allocation failed\n");
-		return NULL;
-	}
-
-	vk::MemoryAllocateInfo allocateInfo;
-	allocateInfo.setAllocationSize(memoryRequirements.size);
-	allocateInfo.setMemoryTypeIndex(memoryTypeIndex);
-
-	vk::DeviceMemory deviceMemory = VK_NULL_HANDLE;
-	result = device.allocateMemory(&allocateInfo, NULL, &deviceMemory);
-
-	if (result != vk::Result::eSuccess) {
+	if (memory == NULL) {
 		device.destroyBuffer(buffer);
 		printf("Failed to allocate device memory for buffer: %s\n", vk::to_string(result).c_str());
 		return NULL;
 	}
 
-	device.bindBufferMemory(buffer, deviceMemory, 0);
+	memory->bindBuffer(buffer);
 
-	Buffer* returnBuffer = new Buffer(bufferConfiguration.device, buffer, deviceMemory, bufferConfiguration.size, bufferConfiguration.memoryProperties, GraphicsManager::nextResourceId());
+	Buffer* returnBuffer = new Buffer(bufferConfiguration.device, buffer, memory, bufferConfiguration.size, bufferConfiguration.memoryProperties, GraphicsManager::nextResourceId());
 	
 	if (bufferConfiguration.data != NULL) {
 		if (!returnBuffer->upload(0, bufferConfiguration.size, bufferConfiguration.data)) {
@@ -248,17 +235,13 @@ bool Buffer::stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSi
 
 bool Buffer::mappedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data) {
 	const vk::Device& device = **dstBuffer->getDevice();
-	void* mappedBuffer = NULL;
-
-	vk::Result result = device.mapMemory(dstBuffer->m_deviceMemory, offset, size, {}, &mappedBuffer);
-	if (result != vk::Result::eSuccess) {
-		printf("Failed to map device memory for buffer: %s\n", vk::to_string(result).c_str());
+	if (dstBuffer->m_memory->map() == NULL) {
+		printf("Failed to map device memory for buffer\n");
 		return false;
 	}
-	
-	memcpy(mappedBuffer, data, size);
-	
-	device.unmapMemory(dstBuffer->m_deviceMemory);
+
+	memcpy(dstBuffer->m_memory->map(), data, size);
+	dstBuffer->m_memory->unmap();
 
 	return true;
 }

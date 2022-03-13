@@ -19,6 +19,7 @@ class GraphicsPipeline;
 class CommandPool;
 class DescriptorPool;
 class DeviceMemoryManager;
+class DeviceMemoryBlock;
 class DescriptorAllocator;
 class DescriptorLayoutCache;
 
@@ -187,4 +188,3 @@ private:
 
 	static uint64_t s_nextResourceID;
 };
-

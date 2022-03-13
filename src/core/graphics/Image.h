@@ -2,6 +2,7 @@
 
 #include "../core.h"
 
+class DeviceMemoryBlock;
 
 enum class ImagePixelLayout {
 	Invalid = 0,
@@ -127,7 +128,7 @@ struct Image2DConfiguration {
 class Image2D {
 	NO_COPY(Image2D);
 private:
-	Image2D(std::weak_ptr<vkr::Device> device, vk::Image image, vk::DeviceMemory deviceMemory, uint32_t width, uint32_t height, vk::Format format);
+	Image2D(std::weak_ptr<vkr::Device> device, vk::Image image, DeviceMemoryBlock* memory, uint32_t width, uint32_t height, vk::Format format);
 
 public:
 	~Image2D();
@@ -161,7 +162,7 @@ private:
 private:
 	std::shared_ptr<vkr::Device> m_device;
 	vk::Image m_image;
-	vk::DeviceMemory m_deviceMemory;
+	DeviceMemoryBlock* m_memory;
 	uint32_t m_width;
 	uint32_t m_height;
 	vk::Format m_format;

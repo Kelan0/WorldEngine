@@ -15,7 +15,7 @@ struct BufferConfiguration {
 class Buffer {
 	NO_COPY(Buffer)
 private:
-	Buffer(std::weak_ptr<vkr::Device> device, vk::Buffer buffer, vk::DeviceMemory deviceMemory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties, GraphicsResource resourceId);
+	Buffer(std::weak_ptr<vkr::Device> device, vk::Buffer buffer, DeviceMemoryBlock* memory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties, GraphicsResource resourceId);
 
 public:
 	//Buffer(Buffer&& buffer);
@@ -63,7 +63,7 @@ private:
 private:
 	std::shared_ptr<vkr::Device> m_device;
 	vk::Buffer m_buffer;
-	vk::DeviceMemory m_deviceMemory;
+	DeviceMemoryBlock* m_memory;
 	vk::MemoryPropertyFlags m_memoryProperties;
 	vk::DeviceSize m_size;
 
