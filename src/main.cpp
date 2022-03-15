@@ -29,10 +29,12 @@ struct UniformData {
 class App : public Application {
 
 	std::vector<Image2D*> images;
+	std::vector<std::shared_ptr<Texture2D>> textures;
 	RenderCamera camera;
 	double cameraPitch = 0.0F;
 	double cameraYaw = 0.0F;
 
+	std::vector<Entity> testEntities;
 	
     void init() override {
 		//eventDispacher()->connect<ScreenResizeEvent>(&App::onScreenResize, this);
@@ -98,43 +100,59 @@ class App : public Application {
 		testMeshConfig.setMeshData(&testMeshData);
 		std::shared_ptr<Mesh> testMesh = std::shared_ptr<Mesh>(Mesh::create(testMeshConfig));
 
-		const int xCount = 50;
-		const int zCount = 50;
-		const double spacing = 0.75;
+		const int xCount = 316;
+		const int zCount = 316;
+		const double spacing = 1.1F;
 		
 		glm::u8vec4 pixel;
 		pixel.a = 0xFF;
 
+		testMeshData = MeshData();
+		testMeshData.createCuboid(glm::vec3(-0.5, -0.5F, -0.5), glm::vec3(+0.5, +0.5F, +0.5));
+
+		MeshConfiguration cubeMeshConfig;
+		cubeMeshConfig.device = graphics()->getDevice();
+		cubeMeshConfig.setMeshData(&testMeshData);
+		std::shared_ptr<Mesh> cubeMesh = std::shared_ptr<Mesh>(Mesh::create(cubeMeshConfig));
+
+		for (int i = 0; i < 10000; ++i) {
+			pixel.r = rand() % 0xFF; //(uint8_t)((double)i / (double)xCount * 0xFF);
+			pixel.g = rand() % 0xFF; //(uint8_t)((double)j / (double)zCount * 0xFF);
+			pixel.b = rand() % 0xFF;
+
+			ImageData imageData(&pixel[0], 1, 1, ImagePixelLayout::RGBA, ImagePixelFormat::UInt8);
+
+			Image2DConfiguration bunnyTextureImageConfig;
+			bunnyTextureImageConfig.device = graphics()->getDevice();
+			bunnyTextureImageConfig.imageData = &imageData;
+			bunnyTextureImageConfig.usage = vk::ImageUsageFlagBits::eSampled;
+			bunnyTextureImageConfig.format = vk::Format::eR8G8B8A8Srgb;
+			Image2D* bunnyImage = Image2D::create(bunnyTextureImageConfig);
+			images.emplace_back(bunnyImage);
+
+			SamplerConfiguration bunnyTextureSamplerConfig;
+			bunnyTextureSamplerConfig.device = graphics()->getDevice();
+			bunnyTextureSamplerConfig.minFilter = vk::Filter::eNearest;
+			bunnyTextureSamplerConfig.magFilter = vk::Filter::eNearest;
+			ImageView2DConfiguration bunnyTextureImageViewConfig;
+			bunnyTextureImageViewConfig.device = graphics()->getDevice();
+			bunnyTextureImageViewConfig.image = bunnyImage->getImage();
+			bunnyTextureImageViewConfig.format = bunnyImage->getFormat();
+			std::shared_ptr<Texture2D> texture = std::shared_ptr<Texture2D>(Texture2D::create(bunnyTextureImageViewConfig, bunnyTextureSamplerConfig));
+
+			textures.emplace_back(texture);
+
+		}
+
+
 		for (int i = 0; i < xCount; ++i) {
-			pixel.r = (uint8_t)((double)i / (double)xCount * 0xFF);
 			for (int j = 0; j < zCount; ++j) {
-				pixel.g = (uint8_t)((double)j / (double)zCount * 0xFF);
-				pixel.b = rand() % 0xFF;
-
-				ImageData imageData(&pixel[0], 1, 1, ImagePixelLayout::RGBA, ImagePixelFormat::UInt8);
-
-
-				Image2DConfiguration bunnyTextureImageConfig;
-				bunnyTextureImageConfig.device = graphics()->getDevice();
-				bunnyTextureImageConfig.imageData = &imageData;
-				bunnyTextureImageConfig.usage = vk::ImageUsageFlagBits::eSampled;
-				bunnyTextureImageConfig.format = vk::Format::eR8G8B8A8Srgb;
-				Image2D* bunnyImage = Image2D::create(bunnyTextureImageConfig);
-				images.emplace_back(bunnyImage);
-
-				SamplerConfiguration bunnyTextureSamplerConfig;
-				bunnyTextureSamplerConfig.device = graphics()->getDevice();
-				bunnyTextureSamplerConfig.minFilter = vk::Filter::eNearest;
-				bunnyTextureSamplerConfig.magFilter = vk::Filter::eNearest;
-				ImageView2DConfiguration bunnyTextureImageViewConfig;
-				bunnyTextureImageViewConfig.device = graphics()->getDevice();
-				bunnyTextureImageViewConfig.image = bunnyImage->getImage();
-				bunnyTextureImageViewConfig.format = bunnyImage->getFormat();
-				std::shared_ptr<Texture2D> bunnyTexture = std::shared_ptr<Texture2D>(Texture2D::create(bunnyTextureImageViewConfig, bunnyTextureSamplerConfig));
 
 				Entity entity = EntityHierarchy::create(scene(), "testEntity[" + std::to_string(i) + ", " + std::to_string(j) + "]");
 				entity.addComponent<Transform>().translate(-0.5 * spacing * xCount + i * spacing, 0.0, -0.5 * spacing * zCount + j * spacing);
-				entity.addComponent<RenderComponent>().setMesh(testMesh).setTexture(bunnyTexture);
+				entity.addComponent<RenderComponent>().setMesh(cubeMesh).setTexture(textures[rand() % textures.size()]);
+
+				testEntities.push_back(entity);
 			}
 		}
 
@@ -195,6 +213,22 @@ class App : public Application {
 
     void render(double dt) override {
 		handleUserInput(dt);
+
+		//size_t f = 100;
+		//
+		//for (size_t i = 0; i < testEntities.size() / f; ++i) {
+		//	size_t idx = std::min((i * f) + (rand() % f), testEntities.size());
+		//
+		//	Entity& entity = testEntities[idx];
+		//	entity.getComponent<RenderComponent>().setTexture(textures[rand() % textures.size()]);
+		//}
+		
+
+		
+		//for (int i = 0; i < testEntities.size(); ++i) {
+		//	Transform& t = testEntities[i].getComponent<Transform>();
+		//	t.rotate(0.0, 1.0, 0.0, dt * glm::radians(360.0F));
+		//}
     }
 };
 

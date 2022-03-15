@@ -3,7 +3,7 @@
 #include "CommandPool.h"
 #include "../application/Application.h"
 
-std::unique_ptr<Buffer> Buffer::s_stagingBuffer = NULL;
+FrameResource<Buffer> Buffer::s_stagingBuffer = NULL;
 vk::DeviceSize Buffer::s_maxStagingBufferSize = 128 * 1024 * 1024; // 128 MiB
 
 Buffer::Buffer(std::weak_ptr<vkr::Device> device, vk::Buffer buffer, DeviceMemoryBlock* memory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties, GraphicsResource resourceId):
@@ -195,12 +195,24 @@ bool Buffer::hasMemoryProperties(vk::MemoryPropertyFlags memoryProperties, bool 
 	}
 }
 
+void* Buffer::map() {
+	return m_memory->map();
+}
+
+void Buffer::unmap() {
+	m_memory->unmap();
+}
+
+bool Buffer::isMapped() const {
+	return m_memory->isMapped();
+}
+
 const GraphicsResource& Buffer::getResourceId() const {
 	return m_resourceId;
 }
 
-const std::unique_ptr<Buffer>& Buffer::getStagingBuffer() {
-	return s_stagingBuffer;
+const Buffer* Buffer::getStagingBuffer() {
+	return s_stagingBuffer.get();
 }
 
 void Buffer::resetStagingBuffer() {
@@ -258,7 +270,7 @@ void Buffer::resizeStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSi
 			return; // Do nothing, we are resizing to the same size.
 		}
 
-		Buffer::resetStagingBuffer();
+		resetStagingBuffer();
 	}
 
 	printf("Resizing staging buffer from %s to %llu bytes\n", startSize.c_str(), size);
@@ -268,7 +280,8 @@ void Buffer::resizeStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSi
 	stagingBufferConfig.size = size;
 	stagingBufferConfig.usage = vk::BufferUsageFlagBits::eTransferSrc;
 	stagingBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-	s_stagingBuffer = std::unique_ptr<Buffer>(Buffer::create(stagingBufferConfig));
+	FrameResource<Buffer>::create(s_stagingBuffer, stagingBufferConfig);
+	//s_stagingBuffer = std::unique_ptr<Buffer>(Buffer::create(stagingBufferConfig));
 	assert(!!s_stagingBuffer);
 }
 

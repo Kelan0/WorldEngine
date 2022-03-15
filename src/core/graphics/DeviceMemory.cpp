@@ -480,40 +480,45 @@ bool DeviceMemoryHeap::equalBlocks(const BlockRange& lhs, const BlockRange& rhs)
 }
 
 void DeviceMemoryHeap::map(DeviceMemoryBlock* block) {
+	if (block->m_heap != this)
+		return;
+
 	if (block->isMapped())
 		return;
 
-	if (m_mappedPtr == NULL) {
-		const vk::Device& device = **m_device;
-		vk::Result result = device.mapMemory(m_deviceMemory, 0, m_size, {}, &m_mappedPtr);
-		if (result != vk::Result::eSuccess) {
-#if _DEBUG
-			printf("Failed to map device memory heap: %s\n", vk::to_string(result).c_str());
-#endif
-			return;
-		}
+	const vk::Device& device = **m_device;
 
-		block->m_mappedPtr = static_cast<char*>(m_mappedPtr) + (block->m_offset - m_mappedOffset);
+	if (m_mappedPtr == NULL) {
+
 		m_mappedOffset = 0;
 		m_mappedSize = m_size;
+
+		m_mappedPtr = device.mapMemory(m_deviceMemory, m_mappedOffset, m_mappedSize);
+		if (m_mappedPtr == NULL)
+			return;
 	}
 
-	m_mappedBlocks.insert(block);
+	block->m_mappedPtr = static_cast<char*>(m_mappedPtr) + (block->m_offset - m_mappedOffset);
 }
 
 void DeviceMemoryHeap::unmap(DeviceMemoryBlock* block) {
 	if (!block->isMapped())
 		return;
 
-	m_mappedBlocks.erase(block);
-	if (m_mappedBlocks.size() == 0) {
-		const vk::Device& device = **m_device;
-		device.unmapMemory(m_deviceMemory);
-		m_mappedPtr = NULL;
-		m_mappedOffset = 0;
-		m_mappedSize = 0;
-		block->m_mappedPtr = NULL;
-	}
+	block->m_mappedPtr = NULL;
+
+	// We leave the memory of this heap mapped permenantly for now.
+	// TODO: avoid map/unmap wherever possible - Keep frequently accessed regions mapped
+
+	//m_mappedBlocks.erase(block);
+	//if (m_mappedBlocks.size() == 0) {
+	//	const vk::Device& device = **m_device;
+	//	device.unmapMemory(m_deviceMemory);
+	//	m_mappedPtr = NULL;
+	//	m_mappedOffset = 0;
+	//	m_mappedSize = 0;
+	//	block->m_mappedPtr = NULL;
+	//}
 }
 
 

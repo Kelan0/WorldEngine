@@ -2,8 +2,9 @@
 #include <utility>
 #include <glm/glm.hpp>
 
-// Why isn't this included in the standard library?
 namespace std {
+
+	// Why isn't this included in the standard library?
 	template<class T>
 	static inline void hash_combine(std::size_t& seed, const T& v) {
 		std::hash<T> h;

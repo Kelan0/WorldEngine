@@ -128,7 +128,6 @@ private:
 	vk::DeviceSize m_mappedOffset;
 	vk::DeviceSize m_mappedSize;
 	void* m_mappedPtr;
-	std::unordered_set<DeviceMemoryBlock*> m_mappedBlocks;
 };
 
 

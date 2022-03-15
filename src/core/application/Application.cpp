@@ -165,7 +165,7 @@ void Application::start() {
 		uint64_t elapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastTime).count();
 		lastTime = now;
 
-		bool uncappedFramerate = false;
+		bool uncappedFramerate = true;
 		double frameDurationNanos = uncappedFramerate ? 1.0 : (1e+9 / 144.0);
 
 		partialFrames += elapsedNanos / frameDurationNanos;

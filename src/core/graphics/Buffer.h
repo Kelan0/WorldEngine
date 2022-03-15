@@ -2,6 +2,7 @@
 
 #include "../core.h"
 #include "GraphicsManager.h"
+#include "FrameResource.h"
 
 struct BufferConfiguration {
 	std::weak_ptr<vkr::Device> device;
@@ -44,10 +45,16 @@ public:
 
 	bool hasMemoryProperties(vk::MemoryPropertyFlags memoryProperties, bool any = false);
 
+	void* map();
+
+	void unmap();
+
+	bool isMapped() const;
+
 	const GraphicsResource& getResourceId() const;
 
 public:
-	static const std::unique_ptr<Buffer>& getStagingBuffer();
+	static const Buffer* getStagingBuffer();
 
 	static void resetStagingBuffer();
 
@@ -69,6 +76,6 @@ private:
 
 	GraphicsResource m_resourceId;
 
-	static std::unique_ptr<Buffer> s_stagingBuffer;
+	static FrameResource<Buffer> s_stagingBuffer;
 	static vk::DeviceSize s_maxStagingBufferSize;
 };

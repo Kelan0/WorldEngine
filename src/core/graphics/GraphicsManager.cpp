@@ -383,7 +383,6 @@ bool GraphicsManager::isPhysicalDeviceSuitable(const vkr::PhysicalDevice& physic
 }
 
 bool GraphicsManager::selectQueueFamilies(const vkr::PhysicalDevice& physicalDevice, const std::vector<vk::QueueFamilyProperties>& queueFamilyProperties, uint32_t requiredQueueFlags, QueueDetails& queueFamilyIndices) {
-
 	bool requiresGraphics = (requiredQueueFlags & QUEUE_TYPE_GRAPHICS_BIT) != 0;
 	bool requiresCompute = (requiredQueueFlags & QUEUE_TYPE_COMPUTE_BIT) != 0;
 	bool requiresTransfer = (requiredQueueFlags & QUEUE_TYPE_TRANSFER_BIT) != 0;

@@ -32,17 +32,28 @@ public:
 
 	T* get() const;
 
+	void set(int index, T*&& resource);
+
+	void set(T*&& resource);
+
+	void set(ArrayType& resource);
+
 	void reset();
 
 	FrameResource<T>& operator=(ArrayType& resource);
 
+	FrameResource<T>& operator=(T*&& resource);
+
 	FrameResource<T>& operator=(std::nullptr_t);
+
+	bool operator==(std::nullptr_t);
+
+	bool operator!=(std::nullptr_t);
+
+	operator bool();
 
 	template<typename ...Args>
 	static bool create(FrameResource<T>& outResource, Args&&... args);
-
-private:
-	void set(ArrayType& resource);
 };
 
 template<typename T>
@@ -97,17 +108,40 @@ inline T* FrameResource<T>::get() const {
 }
 
 template<typename T>
+inline void FrameResource<T>::set(int index, T*&& resource) {
+	if (get(index) == resource)
+		return;
+	delete ArrayType::at(index);
+	ArrayType::at(index) = std::exchange(resource, nullptr);
+}
+
+template<typename T>
+inline void FrameResource<T>::set(T*&& resource) {
+	set(Application::instance()->graphics()->getCurrentFrameIndex(), std::move(resource));
+}
+
+template<typename T>
+inline void FrameResource<T>::set(ArrayType& resource) {
+	for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+		set(i, std::move(resource[i]));
+}
+
+template<typename T>
 inline void FrameResource<T>::reset() {
-	for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
-		delete ArrayType::at(i);
-		ArrayType::at(i) = nullptr;
-	}
+	for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+		set(i, nullptr);
 }
 
 template<typename T>
 inline FrameResource<T>& FrameResource<T>::operator=(ArrayType& resource) {
-	reset();
+	//reset();
 	set(resource);
+	return *this;
+}
+
+template<typename T>
+inline FrameResource<T>& FrameResource<T>::operator=(T*&& resource) {
+	set(std::move(resource));
 	return *this;
 }
 
@@ -118,10 +152,18 @@ inline FrameResource<T>& FrameResource<T>::operator=(std::nullptr_t) {
 }
 
 template<typename T>
-inline void FrameResource<T>::set(ArrayType& resource) {
-	for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
-		ArrayType::at(i) = std::exchange(resource[i], nullptr);
-	}
+inline bool FrameResource<T>::operator==(std::nullptr_t) {
+	return get() == nullptr;
+}
+
+template<typename T>
+inline bool FrameResource<T>::operator!=(std::nullptr_t) {
+	return !((*this) == nullptr);
+}
+
+template<typename T>
+inline FrameResource<T>::operator bool() {
+	return (*this) != nullptr;
 }
 
 template<typename T>

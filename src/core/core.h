@@ -35,6 +35,7 @@
 #include <stb_image.h>
 
 #define ENTT_ID_TYPE uint64_t
+#define ENTT_DISABLE_ASSERT 1
 
 #include "hash.h"
 
