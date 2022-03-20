@@ -199,8 +199,8 @@ EntityHierarchy& EntityHierarchy::getNode(const Entity& entity) {
 
 
 EntityHierarchy::iterator::iterator(const Entity& ptr, bool reverse):
-    m_ptr(ptr), 
-    m_reverse(reverse) {
+        m_ptr(ptr),
+        m_reverse(reverse) {
     if (m_ptr != nullptr) {
         const EntityHierarchy& node = m_ptr.getComponent<EntityHierarchy>();
         m_prev = node.m_prevSibling;

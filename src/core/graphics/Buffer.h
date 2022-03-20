@@ -1,81 +1,85 @@
-#pragma once
+
+#ifndef WORLDENGINE_BUFFER_H
+#define WORLDENGINE_BUFFER_H
 
 #include "../core.h"
 #include "GraphicsManager.h"
 #include "FrameResource.h"
 
 struct BufferConfiguration {
-	std::weak_ptr<vkr::Device> device;
-	vk::BufferUsageFlags usage;
-	vk::MemoryPropertyFlags memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-	vk::DeviceSize size;
-	void* data = NULL;
+    std::weak_ptr<vkr::Device> device;
+    vk::BufferUsageFlags usage;
+    vk::MemoryPropertyFlags memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+    vk::DeviceSize size;
+    void* data = NULL;
 };
 
 
 class Buffer {
-	NO_COPY(Buffer)
+    NO_COPY(Buffer)
 private:
-	Buffer(std::weak_ptr<vkr::Device> device, vk::Buffer buffer, DeviceMemoryBlock* memory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties, GraphicsResource resourceId);
+    Buffer(std::weak_ptr<vkr::Device> device, vk::Buffer buffer, DeviceMemoryBlock* memory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties, GraphicsResource resourceId);
 
 public:
-	//Buffer(Buffer&& buffer);
+    //Buffer(Buffer&& buffer);
 
-	~Buffer();
+    ~Buffer();
 
-	static Buffer* create(const BufferConfiguration& bufferConfiguration);
+    static Buffer* create(const BufferConfiguration& bufferConfiguration);
 
-	static bool copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset = 0, vk::DeviceSize dstOffset = 0);
+    static bool copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset = 0, vk::DeviceSize dstOffset = 0);
 
-	static bool upload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data);
+    static bool upload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data);
 
-	bool copyFrom(Buffer* srcBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset = 0, vk::DeviceSize dstOffset = 0);
+    bool copyFrom(Buffer* srcBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset = 0, vk::DeviceSize dstOffset = 0);
 
-	bool copyTo(Buffer* dstBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset = 0, vk::DeviceSize dstOffset = 0);
+    bool copyTo(Buffer* dstBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset = 0, vk::DeviceSize dstOffset = 0);
 
-	bool upload(vk::DeviceSize offset, vk::DeviceSize size, const void* data);
+    bool upload(vk::DeviceSize offset, vk::DeviceSize size, const void* data);
 
-	std::shared_ptr<vkr::Device> getDevice() const;
+    std::shared_ptr<vkr::Device> getDevice() const;
 
-	const vk::Buffer& getBuffer() const;
+    const vk::Buffer& getBuffer() const;
 
-	vk::DeviceSize getSize() const;
+    vk::DeviceSize getSize() const;
 
-	vk::MemoryPropertyFlags getMemoryProperties() const;
+    vk::MemoryPropertyFlags getMemoryProperties() const;
 
-	bool hasMemoryProperties(vk::MemoryPropertyFlags memoryProperties, bool any = false);
+    bool hasMemoryProperties(vk::MemoryPropertyFlags memoryProperties, bool any = false);
 
-	void* map();
+    void* map();
 
-	void unmap();
+    void unmap();
 
-	bool isMapped() const;
+    bool isMapped() const;
 
-	const GraphicsResource& getResourceId() const;
+    const GraphicsResource& getResourceId() const;
 
 public:
-	static const Buffer* getStagingBuffer();
+    static const Buffer* getStagingBuffer();
 
-	static void resetStagingBuffer();
+    static void resetStagingBuffer();
 
-	static bool stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data);
+    static bool stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data);
 
-	static bool mappedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data);
-
-private:
-	static void resizeStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSize size);
-
-	static void reserveStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSize size);
+    static bool mappedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data);
 
 private:
-	std::shared_ptr<vkr::Device> m_device;
-	vk::Buffer m_buffer;
-	DeviceMemoryBlock* m_memory;
-	vk::MemoryPropertyFlags m_memoryProperties;
-	vk::DeviceSize m_size;
+    static void resizeStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSize size);
 
-	GraphicsResource m_resourceId;
+    static void reserveStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSize size);
 
-	static FrameResource<Buffer> s_stagingBuffer;
-	static vk::DeviceSize s_maxStagingBufferSize;
+private:
+    std::shared_ptr<vkr::Device> m_device;
+    vk::Buffer m_buffer;
+    DeviceMemoryBlock* m_memory;
+    vk::MemoryPropertyFlags m_memoryProperties;
+    vk::DeviceSize m_size;
+
+    GraphicsResource m_resourceId;
+
+    static FrameResource<Buffer> s_stagingBuffer;
+    static vk::DeviceSize s_maxStagingBufferSize;
 };
+
+#endif //WORLDENGINE_BUFFER_H

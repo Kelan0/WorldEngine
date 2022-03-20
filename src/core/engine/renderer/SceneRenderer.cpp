@@ -13,6 +13,8 @@
 #include "../../graphics/Texture.h"
 #include <thread>
 
+//#include "../thread/ThreadUtils.h"
+
 SceneRenderer::SceneRenderer() {
 }
 
@@ -35,7 +37,7 @@ void SceneRenderer::init() {
 
     DescriptorSetLayoutBuilder builder(descriptorPool->getDevice());
 
-    constexpr size_t maxTextures = 100000;
+    constexpr size_t maxTextures = 0xFFFF;
 
     std::vector<Texture2D*> initialTextures;
     initialTextures.resize(maxTextures, m_missingTexture.get());
@@ -46,7 +48,7 @@ void SceneRenderer::init() {
     m_globalDescriptorSetLayout = builder.addUniformBlock(0, vk::ShaderStageFlagBits::eVertex, sizeof(CameraInfoUBO)).build();
     m_objectDescriptorSetLayout = builder.addStorageBlock(0, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, sizeof(ObjectDataUBO)).build();
     m_materialDescriptorSetLayout = builder.addCombinedImageSampler(0, vk::ShaderStageFlagBits::eFragment, maxTextures).build();
-        
+
     for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_resources.set(i, new RenderResources());
         m_resources[i]->globalDescriptorSet = DescriptorSet::create(m_globalDescriptorSetLayout, descriptorPool);
@@ -61,10 +63,10 @@ void SceneRenderer::init() {
         m_resources[i]->cameraInfoBuffer = Buffer::create(cameraInfoBufferConfig);
 
         DescriptorSetWriter(m_resources[i]->globalDescriptorSet)
-            .writeBuffer(0, m_resources[i]->cameraInfoBuffer, 0, m_resources[i]->cameraInfoBuffer->getSize()).write();
+                .writeBuffer(0, m_resources[i]->cameraInfoBuffer, 0, m_resources[i]->cameraInfoBuffer->getSize()).write();
 
         DescriptorSetWriter(m_resources[i]->materialDescriptorSet)
-            .writeImage(0, initialTextures.data(), initialImageLayouts.data(), maxTextures, 0).write();
+                .writeImage(0, initialTextures.data(), initialImageLayouts.data(), maxTextures, 0).write();
     }
 
     m_scene->enableEvents<RenderComponent>();
@@ -131,9 +133,9 @@ void SceneRenderer::recordRenderCommands(double dt, vk::CommandBuffer commandBuf
 
 
     std::vector<vk::DescriptorSet> descriptorSets = {
-        m_resources->globalDescriptorSet->getDescriptorSet(),
-        m_resources->objectDescriptorSet->getDescriptorSet(),
-        m_resources->materialDescriptorSet->getDescriptorSet(),
+            m_resources->globalDescriptorSet->getDescriptorSet(),
+            m_resources->objectDescriptorSet->getDescriptorSet(),
+            m_resources->materialDescriptorSet->getDescriptorSet(),
     };
 
     std::vector<uint32_t> dynamicOffsets = {};
@@ -215,46 +217,63 @@ void SceneRenderer::updateEntityWorldTransforms() {
 
     const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
 
-    //ObjectDataUBO* objectDataBuffer = mappedWorldTransformsBuffer(renderEntities.size());
+    constexpr size_t numThreads = 8;
 
-    size_t index = 0;
-    for (auto id : renderEntities) {
-        Transform& transform = renderEntities.get<Transform>(id);
+    size_t renderEntitiesPerThread = INT_DIV_CEIL(renderEntities.size(), numThreads);
+    std::vector<std::future<void>> tasks;
 
-        if (transform.hasChanged()) {
-            transform.update();
-        
-            for (int i = 0; i < CONCURRENT_FRAMES; ++i)
-                if (index < m_resources.get(i)->objectEntities.size())
-                    m_resources.get(i)->objectEntities[index] = entt::null;
-        }
-        
-        if (m_resources->objectEntities[index] != id) {
-          m_resources->objectEntities[index] = id;
-          transform.fillMatrix(m_resources->objectBuffer[index].modelMatrix);
-        }
+    for (size_t i = 0; i < numThreads; ++i) {
+        size_t startIndex = i * renderEntitiesPerThread;
+        size_t endIndex = std::min(startIndex + renderEntitiesPerThread, renderEntities.size());
+        if (startIndex == endIndex)
+            break;
 
-        ++index;
+        //std::future<int> x = ThreadUtils::async([&](int t1, int t2) {
+        //    return 1;
+        //}, 4, 9);
+
+        tasks.push_back(std::async(std::launch::async, [&](const size_t& startIndex, const size_t& endIndex) {
+            for (size_t index = startIndex; index != endIndex; ++index) {
+                auto id = renderEntities[index];
+                Transform& transform = renderEntities.get<Transform>(id);
+
+                if (transform.hasChanged()) {
+                    transform.update();
+
+                    for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+                        if (index < m_resources.get(i)->objectEntities.size())
+                            m_resources.get(i)->objectEntities[index] = entt::null;
+                }
+
+                if (m_resources->objectEntities[index] != id) {
+                    m_resources->objectEntities[index] = id;
+                    transform.fillMatrix(m_resources->objectBuffer[index].modelMatrix);
+                }
+            }
+        }, startIndex, endIndex));
     }
-}
 
-void SceneRenderer::updateEntityWorldTransformsRange(size_t start, size_t end) {
-    //const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
+    for (size_t i = 0; i < tasks.size(); ++i)
+        tasks[i].wait();
+
+    //size_t index = 0;
+    //for (auto id : renderEntities) {
+    //    Transform& transform = renderEntities.get<Transform>(id);
     //
-    //ObjectDataUBO* objectDataBuffer = mappedWorldTransformsBuffer(renderEntities.size());
+    //    if (transform.hasChanged()) {
+    //        transform.update();
+    //    
+    //        for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+    //            if (index < m_resources.get(i)->objectEntities.size())
+    //                m_resources.get(i)->objectEntities[index] = entt::null;
+    //    }
+    //    
+    //    if (m_resources->objectEntities[index] != id) {
+    //      m_resources->objectEntities[index] = id;
+    //      transform.fillMatrix(m_resources->objectBuffer[index].modelMatrix);
+    //    }
     //
-    //for (size_t index = start; index != end; ++index) {
-    //    auto id = renderEntities[index];
-    //    const Transform& transform = renderEntities.get<Transform>(id);
-    //    const RenderComponent& renderComponent = renderEntities.get<RenderComponent>(id);
-    //
-    //    EntityRenderState& renderState = getEntityRenderState(id);
-    //
-    //    ObjectDataUBO& objectData = objectDataBuffer[index];
-    //
-    //    transform.fillMatrix(objectData.modelMatrix);
-    //
-    //    objectData.textureIndex = renderState.textureIndex;
+    //    ++index;
     //}
 }
 
@@ -314,8 +333,8 @@ void SceneRenderer::updateMaterialsBuffer() {
 
         printf("Writing textures [%d to %d]\n", firstNewTextureIndex, lastNewTextureIndex);
         DescriptorSetWriter(m_resources->materialDescriptorSet)
-            .writeImage(0, &materialBufferTextures[firstNewTextureIndex], &materialBufferImageLayouts[0], arrayCount, firstNewTextureIndex)
-            .write();
+                .writeImage(0, &materialBufferTextures[firstNewTextureIndex], &materialBufferImageLayouts[0], arrayCount, firstNewTextureIndex)
+                .write();
     }
 }
 
@@ -354,7 +373,7 @@ ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
         worldTransformBufferConfig.device = Application::instance()->graphics()->getDevice();
         worldTransformBufferConfig.size = newBufferSize;
         worldTransformBufferConfig.memoryProperties =
-            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+                vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         //vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         worldTransformBufferConfig.usage = vk::BufferUsageFlagBits::eStorageBuffer;// | vk::BufferUsageFlagBits::eTransferDst;
         m_resources->worldTransformBuffer = std::move(Buffer::create(worldTransformBufferConfig));
@@ -367,25 +386,3 @@ ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
     void* mappedBuffer = m_resources->worldTransformBuffer->map();
     return static_cast<ObjectDataUBO*>(mappedBuffer);
 }
-
-//EntityRenderState& SceneRenderer::getEntityRenderState(entt::entity id) {
-//    auto it = m_resources->entityRenderStates.find(id);
-//    if (it == m_resources->entityRenderStates.end()) {
-//        EntityRenderState defaultRenderState;
-//        defaultRenderState.modelMatrix = glm::mat4x3(0.0);
-//        defaultRenderState.textureIndex = 0;
-//        it = m_resources->entityRenderStates.insert(std::make_pair(id, defaultRenderState)).first;
-//    }
-//    return it->second;
-//
-//
-//    //EntityRenderState* renderState = m_scene->registry()->try_get<EntityRenderState>(id);
-//    //if (renderState == NULL) {
-//    //    EntityRenderState defaultRenderState;
-//    //    defaultRenderState.modelMatrix = glm::mat4x3(0.0);
-//    //    defaultRenderState.textureIndex = 0;
-//    //    return m_scene->registry()->emplace<EntityRenderState>(id, defaultRenderState);
-//    //} else {
-//    //    return *renderState;
-//    //}
-//}

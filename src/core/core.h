@@ -1,4 +1,6 @@
-#pragma once
+
+#ifndef WORLDENGINE_CORE_H
+#define WORLDENGINE_CORE_H
 
 #include <iostream>
 #include <assert.h>
@@ -16,11 +18,14 @@
 #include <cstddef>
 #include <typeinfo>
 #include <typeindex>
+#include <execution>
+#include <future>
+#include <cmath>
 
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
-//#define GLM_SWIZZLE 
+//#define GLM_SWIZZLE
 #include <glm/glm.hpp>
 #include <glm/matrix.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -28,7 +33,7 @@
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 
-#define VULKAN_HPP_NO_SPACESHIP_OPERATOR 
+#define VULKAN_HPP_NO_SPACESHIP_OPERATOR
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_raii.hpp>
 
@@ -38,6 +43,7 @@
 #define ENTT_DISABLE_ASSERT 1
 
 #include "hash.h"
+#include "util/Exception.h"
 
 namespace vkr = vk::raii;
 
@@ -52,3 +58,5 @@ namespace vkr = vk::raii;
 constexpr uint32_t CONCURRENT_FRAMES = 3;
 
 typedef uint64_t GraphicsResource;
+
+#endif //WORLDENGINE_CORE_H

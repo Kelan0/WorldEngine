@@ -1,68 +1,72 @@
-#pragma once
+
+#ifndef WORLDENGINE_CAMERA_H
+#define WORLDENGINE_CAMERA_H
 
 #include "../../core.h"
 
 class Camera {
 public:
-	Camera();
+    Camera();
 
-	Camera(double fov, double aspect, double near, double far);
+    Camera(double fov, double aspect, double near, double far);
 
-	Camera(double left, double right, double bottom, double top, double near, double far, bool isOrtho = false);
+    Camera(double left, double right, double bottom, double top, double near, double far, bool isOrtho = false);
 
-	Camera& setPerspective(double fov, double aspect, double near, double far);
+    Camera& setPerspective(double fov, double aspect, double near, double far);
 
-	Camera& setPerspective(double left, double right, double bottom, double top, double near, double far);
+    Camera& setPerspective(double left, double right, double bottom, double top, double near, double far);
 
-	Camera& setOrtho(double left, double right, double bottom, double top, double near, double far);
+    Camera& setOrtho(double left, double right, double bottom, double top, double near, double far);
 
-	Camera& setFov(double fov);
+    Camera& setFov(double fov);
 
-	Camera& setFovDegrees(double fov);
+    Camera& setFovDegrees(double fov);
 
-	Camera& setAspect(double aspect);
+    Camera& setAspect(double aspect);
 
-	Camera& setClippingPlanes(double near, double far);
+    Camera& setClippingPlanes(double near, double far);
 
-	double getFov() const;
+    double getFov() const;
 
-	double getFovDegrees() const;
-	
-	double getAspect() const;
+    double getFovDegrees() const;
 
-	double getLeft() const;
+    double getAspect() const;
 
-	double getRight() const;
+    double getLeft() const;
 
-	double getBottom() const;
+    double getRight() const;
 
-	double getTop() const;
+    double getBottom() const;
 
-	double getNear() const;
+    double getTop() const;
 
-	double getFar() const;
+    double getNear() const;
 
-	glm::mat4 getProjectionMatrix() const;
+    double getFar() const;
 
-	bool isOrtho() const;
+    glm::mat4 getProjectionMatrix() const;
 
-	Camera& operator=(const Camera& other);
+    bool isOrtho() const;
 
-	bool operator==(const Camera& other) const;
+    Camera& operator=(const Camera& other);
 
-	bool operator!=(const Camera& other) const;
+    bool operator==(const Camera& other) const;
 
-	operator glm::mat4() const;
+    bool operator!=(const Camera& other) const;
+
+    operator glm::mat4() const;
 private:
-	void set(double left, double right, double bottom, double top, double near, double far, bool ortho);
+    void set(double left, double right, double bottom, double top, double near, double far, bool ortho);
 
 private:
-	double m_left;
-	double m_right;
-	double m_bottom;
-	double m_top;
-	double m_near;
-	double m_far;
-	bool m_isOrtho;
+    double m_left;
+    double m_right;
+    double m_bottom;
+    double m_top;
+    double m_near;
+    double m_far;
+    bool m_isOrtho;
 };
 
+
+#endif //WORLDENGINE_CAMERA_H

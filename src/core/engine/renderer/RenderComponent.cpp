@@ -1,6 +1,5 @@
 #include "RenderComponent.h"
-
-#include "../../graphics/ShaderProgram.h"
+#include "../scene/Scene.h"
 
 RenderComponent& RenderComponent::setMesh(const std::shared_ptr<Mesh>& mesh) {
     this->mesh = mesh;
