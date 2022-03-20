@@ -2,7 +2,7 @@
 #ifndef WORLDENGINE_RENDERCOMPONENT_H
 #define WORLDENGINE_RENDERCOMPONENT_H
 
-#include "../../core.h"
+#include "core/core.h"
 
 class Texture2D;
 class Mesh;

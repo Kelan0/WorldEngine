@@ -1,9 +1,9 @@
-#include "Image.h"
-#include "Buffer.h"
-#include "DeviceMemory.h"
-#include "CommandPool.h"
-#include "GraphicsManager.h"
-#include "../application/Application.h"
+#include "core/graphics/Image.h"
+#include "core/graphics/Buffer.h"
+#include "core/graphics/DeviceMemory.h"
+#include "core/graphics/CommandPool.h"
+#include "core/graphics/GraphicsManager.h"
+#include "core/application/Application.h"
 
 
 std::map<std::string, ImageData*> ImageData::s_imageCache;

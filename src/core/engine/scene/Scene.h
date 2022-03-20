@@ -2,10 +2,10 @@
 #ifndef WORLDENGINE_SCENE_H
 #define WORLDENGINE_SCENE_H
 
-#include "../../core.h"
-#include "Entity.h"
-#include "event/EventDispacher.h"
-#include "event/Events.h"
+#include "core/core.h"
+#include "core/engine/scene/Entity.h"
+#include "core/engine/scene/event/EventDispacher.h"
+#include "core/engine/scene/event/Events.h"
 #include <entt/entt.hpp>
 
 template<class T>

@@ -2,7 +2,7 @@
 #ifndef WORLDENGINE_EVENTS_H
 #define WORLDENGINE_EVENTS_H
 
-#include "../../../core.h"
+#include "core/core.h"
 
 struct ScreenResizeEvent {
     glm::uvec2 oldSize;

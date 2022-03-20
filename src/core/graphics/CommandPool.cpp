@@ -1,4 +1,4 @@
-#include "CommandPool.h"
+#include "core/graphics/CommandPool.h"
 
 CommandPool::CommandPool(std::weak_ptr<vkr::Device> device, std::unique_ptr<vkr::CommandPool> commandPool):
         m_device(device),

@@ -2,11 +2,11 @@
 #ifndef WORLDENGINE_MESH_H
 #define WORLDENGINE_MESH_H
 
-#include "../core.h"
+#include "core/core.h"
 
-#include "GraphicsManager.h"
-#include "Buffer.h"
-#include "../engine/geometry/MeshData.h"
+#include "core/graphics/GraphicsManager.h"
+#include "core/graphics/Buffer.h"
+#include "core/engine/geometry/MeshData.h"
 
 
 struct MeshConfiguration {

@@ -2,11 +2,10 @@
 #ifndef WORLDENGINE_SCENERENDERER_H
 #define WORLDENGINE_SCENERENDERER_H
 
-#include "../../core.h"
-#include "RenderCamera.h"
-#include "../../graphics/FrameResource.h"
-
-#include "../scene/Scene.h"
+#include "core/core.h"
+#include "core/graphics/FrameResource.h"
+#include "core/engine/renderer/RenderCamera.h"
+#include "core/engine/scene/Scene.h"
 
 struct RenderComponent;
 class Buffer;

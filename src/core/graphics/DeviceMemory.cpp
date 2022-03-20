@@ -1,9 +1,9 @@
-#include "DeviceMemory.h"
-#include "../application/Application.h"
-#include "GraphicsManager.h"
-#include "Buffer.h"
-#include "Image.h"
-#include "../util/Util.h"
+#include "core/graphics/DeviceMemory.h"
+#include "core/graphics/GraphicsManager.h"
+#include "core/graphics/Buffer.h"
+#include "core/graphics/Image.h"
+#include "core/application/Application.h"
+#include "core/util/Util.h"
 
 constexpr vk::DeviceSize MAX_ADDR = std::numeric_limits<vk::DeviceSize>::max();
 

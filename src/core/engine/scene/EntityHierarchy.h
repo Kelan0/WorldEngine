@@ -2,8 +2,8 @@
 #ifndef WORLDENGINE_ENTITYHIERARCHY_H
 #define WORLDENGINE_ENTITYHIERARCHY_H
 
-#include "Entity.h"
-#include "Scene.h"
+#include "core/engine/scene/Entity.h"
+#include "core/engine/scene/Scene.h"
 
 class EntityHierarchy {
 public:

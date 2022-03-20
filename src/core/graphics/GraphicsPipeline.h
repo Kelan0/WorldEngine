@@ -2,7 +2,7 @@
 #ifndef WORLDENGINE_GRAPHICSPIPELINE_H
 #define WORLDENGINE_GRAPHICSPIPELINE_H
 
-#include "../core.h"
+#include "core/core.h"
 
 struct GraphicsPipelineConfiguration {
     std::weak_ptr<vkr::Device> device;

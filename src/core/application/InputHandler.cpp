@@ -1,5 +1,5 @@
-#include "InputHandler.h"
-#include "Application.h"
+#include "core/application/InputHandler.h"
+#include "core/application/Application.h"
 
 
 InputHandler::InputHandler(SDL_Window* windowHandle) {

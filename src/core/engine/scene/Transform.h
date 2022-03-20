@@ -2,7 +2,7 @@
 #ifndef WORLDENGINE_TRANSFORM_H
 #define WORLDENGINE_TRANSFORM_H
 
-#include "../../core.h"
+#include "core/core.h"
 
 class Transform {
 public:

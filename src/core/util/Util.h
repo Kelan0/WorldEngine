@@ -2,7 +2,7 @@
 #ifndef WORLDENGINE_UTIL_H
 #define WORLDENGINE_UTIL_H
 
-#include "../core.h"
+#include "core/core.h"
 
 namespace Util {
     template<class FwdIt1, class FwdIt2>

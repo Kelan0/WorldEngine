@@ -2,10 +2,10 @@
 #ifndef WORLDENGINE_RENDERCAMERA_H
 #define WORLDENGINE_RENDERCAMERA_H
 
-#include "../../core.h"
+#include "core/core.h"
 
-#include "../scene/Transform.h"
-#include "../scene/Camera.h"
+#include "core/engine/scene/Transform.h"
+#include "core/engine/scene/Camera.h"
 
 class RenderCamera {
 public:

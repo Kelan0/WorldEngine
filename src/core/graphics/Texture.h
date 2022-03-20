@@ -3,8 +3,8 @@
 #define WORLDENGINE_TEXTURE_H
 
 
-#include "../core.h"
-#include "Image.h"
+#include "core/core.h"
+#include "core/graphics/Image.h"
 
 struct SamplerConfiguration {
     std::weak_ptr<vkr::Device> device;

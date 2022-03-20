@@ -2,7 +2,7 @@
 #ifndef WORLDENGINE_CAMERA_H
 #define WORLDENGINE_CAMERA_H
 
-#include "../../core.h"
+#include "core/core.h"
 
 class Camera {
 public:

@@ -2,7 +2,7 @@
 #ifndef WORLDENGINE_ENTITY_H
 #define WORLDENGINE_ENTITY_H
 
-#include "../../core.h"
+#include "core/core.h"
 
 #include <entt/entt.hpp>
 

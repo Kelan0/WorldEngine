@@ -2,7 +2,7 @@
 #ifndef WORLDENGINE_EVENTDISPACHER_H
 #define WORLDENGINE_EVENTDISPACHER_H
 
-#include "../../../core.h"
+#include "core/core.h"
 #include <entt/signal/dispatcher.hpp>
 
 class EventDispacher;

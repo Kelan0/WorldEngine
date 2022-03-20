@@ -57,6 +57,7 @@ set(STB_IMAGE_LIBRARIES stb_image)
 
 
 include_directories(
+        ${PROJECT_SOURCE_DIR}/src
         ${SDL2_INCLUDE_DIR}
         ${Vulkan_INCLUDE_DIR}
         ${GLM_INCLUDE_DIR}

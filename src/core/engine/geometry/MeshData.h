@@ -2,7 +2,7 @@
 #ifndef WORLDENGINE_MESHDATA_H
 #define WORLDENGINE_MESHDATA_H
 
-#include "../../core.h"
+#include "core/core.h"
 
 class MeshData {
 public:

@@ -1,6 +1,6 @@
-#include "GraphicsPipeline.h"
-#include "../application/Application.h"
-#include "GraphicsManager.h"
+#include "core/graphics/GraphicsPipeline.h"
+#include "core/application/Application.h"
+#include "core/graphics/GraphicsManager.h"
 #include <fstream>
 #include <filesystem>
 

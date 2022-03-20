@@ -2,9 +2,9 @@
 #ifndef WORLDENGINE_BUFFER_H
 #define WORLDENGINE_BUFFER_H
 
-#include "../core.h"
-#include "GraphicsManager.h"
-#include "FrameResource.h"
+#include "core/core.h"
+#include "core/graphics/GraphicsManager.h"
+#include "core/graphics/FrameResource.h"
 
 struct BufferConfiguration {
     std::weak_ptr<vkr::Device> device;

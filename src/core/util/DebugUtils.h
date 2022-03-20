@@ -2,7 +2,7 @@
 #ifndef WORLDENGINE_DEBUGUTILS_H
 #define WORLDENGINE_DEBUGUTILS_H
 
-#include "../core.h"
+#include "core/core.h"
 
 namespace DebugUtils {
     struct RenderInfo {

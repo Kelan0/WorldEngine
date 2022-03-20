@@ -1,4 +1,4 @@
-#include "DebugUtils.h"
+#include "core/util/DebugUtils.h"
 
 void DebugUtils::RenderInfo::reset() {
     renderedPolygons = 0;

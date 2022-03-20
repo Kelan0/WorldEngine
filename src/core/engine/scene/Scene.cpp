@@ -1,12 +1,12 @@
 #include "Scene.h"
 
-#include "Entity.h"
-#include "EntityHierarchy.h"
-#include "Camera.h"
-#include "Transform.h"
-#include "event/Events.h"
-#include "../../application/Application.h"
-#include "../../graphics/GraphicsManager.h"
+#include "core/engine/scene/Entity.h"
+#include "core/engine/scene/EntityHierarchy.h"
+#include "core/engine/scene/Camera.h"
+#include "core/engine/scene/Transform.h"
+#include "core/engine/scene/event/Events.h"
+#include "core/application/Application.h"
+#include "core/graphics/GraphicsManager.h"
 
 Scene::Scene() {
     m_eventDispacher = new EventDispacher();

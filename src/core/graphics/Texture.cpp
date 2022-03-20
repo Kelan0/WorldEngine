@@ -1,5 +1,5 @@
-#include "Texture.h"
-#include "GraphicsManager.h"
+#include "core/graphics/Texture.h"
+#include "core/graphics/GraphicsManager.h"
 
 std::unordered_map<Sampler::Key, std::weak_ptr<Sampler>, Sampler::KeyHasher> Sampler::s_cachedSamplers;
 

@@ -2,17 +2,16 @@
 #ifndef WORLDENGINE_GRAPHICSMANAGER_H
 #define WORLDENGINE_GRAPHICSMANAGER_H
 
-
-#include "../core.h"
+#include "core/core.h"
+#include "core/graphics/GraphicsPipeline.h"
+#include "core/graphics/DescriptorSet.h"
+#include "core/graphics/Image.h"
+#include "core/graphics/FrameResource.h"
+#include "core/util/DebugUtils.h"
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_raii.hpp>
 #include <SDL.h>
 #include <SDL_vulkan.h>
-#include "GraphicsPipeline.h"
-#include "DescriptorSet.h"
-#include "Image.h"
-#include "FrameResource.h"
-#include "../util/DebugUtils.h"
 
 #define QUEUE_GRAPHICS_MAIN "graphics_main"
 #define QUEUE_COMPUTE_MAIN "compute_main"

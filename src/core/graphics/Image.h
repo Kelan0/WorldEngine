@@ -2,7 +2,7 @@
 #ifndef WORLDENGINE_IMAGE_H
 #define WORLDENGINE_IMAGE_H
 
-#include "../core.h"
+#include "core/core.h"
 
 class DeviceMemoryBlock;
 

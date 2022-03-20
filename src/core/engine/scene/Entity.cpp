@@ -1,5 +1,5 @@
-#include "Entity.h"
-#include "Scene.h"
+#include "core/engine/scene/Entity.h"
+#include "core/engine/scene/Scene.h"
 
 Entity::Entity(Scene* scene, const entt::entity& entity) :
         m_scene(scene),

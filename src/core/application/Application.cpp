@@ -1,12 +1,12 @@
-#include "Application.h"
-#include "InputHandler.h"
-#include "../engine/scene/Scene.h"
-#include "../engine/renderer/SceneRenderer.h"
-#include "../graphics/GraphicsManager.h"
-#include "../graphics/GraphicsPipeline.h"
-#include "../graphics/Mesh.h"
-#include "../engine/scene/event/EventDispacher.h"
-#include "../engine/scene/event/Events.h"
+#include "core/application/Application.h"
+#include "core/application/InputHandler.h"
+#include "core/engine/scene/Scene.h"
+#include "core/engine/renderer/SceneRenderer.h"
+#include "core/engine/scene/event/EventDispacher.h"
+#include "core/engine/scene/event/Events.h"
+#include "core/graphics/GraphicsManager.h"
+#include "core/graphics/GraphicsPipeline.h"
+#include "core/graphics/Mesh.h"
 #include <chrono>
 
 

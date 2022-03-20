@@ -1,5 +1,5 @@
 
-#include "Exception.h"
+#include "core/util/Exception.h"
 
 Exception::Exception(const std::string& message):
     m_message(message) {

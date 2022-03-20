@@ -1,8 +1,8 @@
-#include "DescriptorSet.h"
-#include "Buffer.h"
-#include "Texture.h"
-#include "../application/Application.h"
-#include "../graphics/GraphicsManager.h"
+#include "core/graphics/DescriptorSet.h"
+#include "core/graphics/Buffer.h"
+#include "core/graphics/Texture.h"
+#include "core/application/Application.h"
+#include "core/graphics/GraphicsManager.h"
 
 DescriptorSetLayout::Cache DescriptorSetLayout::s_descriptorSetLayoutCache;
 

@@ -1,11 +1,11 @@
-#include "GraphicsManager.h"
-#include "../application/Application.h"
-#include "GraphicsPipeline.h"
-#include "CommandPool.h"
-#include "DeviceMemory.h"
-#include "Mesh.h"
-#include "DescriptorSet.h"
-#include "Buffer.h"
+#include "core/graphics/GraphicsManager.h"
+#include "core/graphics/GraphicsPipeline.h"
+#include "core/graphics/CommandPool.h"
+#include "core/graphics/DeviceMemory.h"
+#include "core/graphics/Mesh.h"
+#include "core/graphics/DescriptorSet.h"
+#include "core/graphics/Buffer.h"
+#include "core/application/Application.h"
 
 uint64_t GraphicsManager::s_nextResourceID = 0;
 

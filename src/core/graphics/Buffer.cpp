@@ -1,7 +1,7 @@
-#include "Buffer.h"
-#include "DeviceMemory.h"
-#include "CommandPool.h"
-#include "../application/Application.h"
+#include "core/graphics/Buffer.h"
+#include "core/graphics/DeviceMemory.h"
+#include "core/graphics/CommandPool.h"
+#include "core/application/Application.h"
 
 FrameResource<Buffer> Buffer::s_stagingBuffer = NULL;
 vk::DeviceSize Buffer::s_maxStagingBufferSize = 128 * 1024 * 1024; // 128 MiB

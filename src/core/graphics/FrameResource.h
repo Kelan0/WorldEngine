@@ -3,9 +3,9 @@
 #define WORLDENGINE_FRAMERESOURCE_H
 
 
-#include "../core.h"
-#include "../application/Application.h"
-#include "GraphicsManager.h"
+#include "core/core.h"
+#include "core/application/Application.h"
+#include "core/graphics/GraphicsManager.h"
 
 template<typename T>
 class FrameResource : protected std::array<T*, CONCURRENT_FRAMES> {

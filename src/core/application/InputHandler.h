@@ -2,7 +2,7 @@
 #ifndef WORLDENGINE_INPUTHANDLER_H
 #define WORLDENGINE_INPUTHANDLER_H
 
-#include "../core.h"
+#include "core/core.h"
 #include <SDL.h>
 
 #define KEYBOARD_SIZE 256

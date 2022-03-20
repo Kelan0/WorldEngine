@@ -2,7 +2,7 @@
 #ifndef WORLDENGINE_APPLICATION_H
 #define WORLDENGINE_APPLICATION_H
 
-#include "../core.h"
+#include "core/core.h"
 #include <SDL.h>
 
 class GraphicsManager;

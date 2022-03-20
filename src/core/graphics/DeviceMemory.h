@@ -2,7 +2,7 @@
 #ifndef WORLDENGINE_DEVICEMEMORY_H
 #define WORLDENGINE_DEVICEMEMORY_H
 
-#include "../core.h"
+#include "core/core.h"
 
 class Buffer;
 class Image2D;

@@ -1,6 +1,6 @@
-#include "Mesh.h"
-#include "DeviceMemory.h"
-#include "../application/Application.h"
+#include "core/graphics/Mesh.h"
+#include "core/graphics/DeviceMemory.h"
+#include "core/application/Application.h"
 #include <chrono>
 
 

@@ -2,7 +2,7 @@
 #ifndef WORLDENGINE_DESCRIPTORSET_H
 #define WORLDENGINE_DESCRIPTORSET_H
 
-#include "../core.h"
+#include "core/core.h"
 
 class Buffer;
 class Sampler;

@@ -2,8 +2,8 @@
 #ifndef WORLDENGINE_COMMANDPOOL_H
 #define WORLDENGINE_COMMANDPOOL_H
 
-#include "../core.h"
-#include "GraphicsManager.h"
+#include "core/core.h"
+#include "core/graphics/GraphicsManager.h"
 
 struct CommandPoolConfiguration {
     std::weak_ptr<vkr::Device> device;
