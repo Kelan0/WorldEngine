@@ -217,64 +217,64 @@ void SceneRenderer::updateEntityWorldTransforms() {
 
     const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
 
-    constexpr size_t numThreads = 8;
-
-    size_t renderEntitiesPerThread = INT_DIV_CEIL(renderEntities.size(), numThreads);
-    std::vector<std::future<void>> tasks;
-
-    for (size_t i = 0; i < numThreads; ++i) {
-        size_t startIndex = i * renderEntitiesPerThread;
-        size_t endIndex = std::min(startIndex + renderEntitiesPerThread, renderEntities.size());
-        if (startIndex == endIndex)
-            break;
+//    constexpr size_t numThreads = 8;
+//
+//    size_t renderEntitiesPerThread = INT_DIV_CEIL(renderEntities.size(), numThreads);
+//    std::vector<std::future<void>> tasks;
+//
+//    for (size_t i = 0; i < numThreads; ++i) {
+//        size_t startIndex = i * renderEntitiesPerThread;
+//        size_t endIndex = std::min(startIndex + renderEntitiesPerThread, renderEntities.size());
+//        if (startIndex == endIndex)
+//            break;
 
         //std::future<int> x = ThreadUtils::async([&](int t1, int t2) {
         //    return 1;
         //}, 4, 9);
 
-        tasks.push_back(std::async(std::launch::async, [&](const size_t& startIndex, const size_t& endIndex) {
-            for (size_t index = startIndex; index != endIndex; ++index) {
-                auto id = renderEntities[index];
-                Transform& transform = renderEntities.get<Transform>(id);
+//        tasks.push_back(std::async(std::launch::async, [&](const size_t& startIndex, const size_t& endIndex) {
+//            for (size_t index = startIndex; index != endIndex; ++index) {
+//                auto id = renderEntities[index];
+//                Transform& transform = renderEntities.get<Transform>(id);
+//
+//                if (transform.hasChanged()) {
+//                    transform.update();
+//
+//                    for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+//                        if (index < m_resources.get(i)->objectEntities.size())
+//                            m_resources.get(i)->objectEntities[index] = entt::null;
+//                }
+//
+//                if (m_resources->objectEntities[index] != id) {
+//                    m_resources->objectEntities[index] = id;
+//                    transform.fillMatrix(m_resources->objectBuffer[index].modelMatrix);
+//                }
+//            }
+//        }, startIndex, endIndex));
+//    }
+//
+//    for (size_t i = 0; i < tasks.size(); ++i)
+//        tasks[i].wait();
 
-                if (transform.hasChanged()) {
-                    transform.update();
+    size_t index = 0;
+    for (auto id : renderEntities) {
+        Transform& transform = renderEntities.get<Transform>(id);
 
-                    for (int i = 0; i < CONCURRENT_FRAMES; ++i)
-                        if (index < m_resources.get(i)->objectEntities.size())
-                            m_resources.get(i)->objectEntities[index] = entt::null;
-                }
+        if (transform.hasChanged()) {
+            transform.update();
 
-                if (m_resources->objectEntities[index] != id) {
-                    m_resources->objectEntities[index] = id;
-                    transform.fillMatrix(m_resources->objectBuffer[index].modelMatrix);
-                }
-            }
-        }, startIndex, endIndex));
+            for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+                if (index < m_resources.get(i)->objectEntities.size())
+                    m_resources.get(i)->objectEntities[index] = entt::null;
+        }
+
+        if (m_resources->objectEntities[index] != id) {
+          m_resources->objectEntities[index] = id;
+          transform.fillMatrix(m_resources->objectBuffer[index].modelMatrix);
+        }
+
+        ++index;
     }
-
-    for (size_t i = 0; i < tasks.size(); ++i)
-        tasks[i].wait();
-
-    //size_t index = 0;
-    //for (auto id : renderEntities) {
-    //    Transform& transform = renderEntities.get<Transform>(id);
-    //
-    //    if (transform.hasChanged()) {
-    //        transform.update();
-    //    
-    //        for (int i = 0; i < CONCURRENT_FRAMES; ++i)
-    //            if (index < m_resources.get(i)->objectEntities.size())
-    //                m_resources.get(i)->objectEntities[index] = entt::null;
-    //    }
-    //    
-    //    if (m_resources->objectEntities[index] != id) {
-    //      m_resources->objectEntities[index] = id;
-    //      transform.fillMatrix(m_resources->objectBuffer[index].modelMatrix);
-    //    }
-    //
-    //    ++index;
-    //}
 }
 
 void SceneRenderer::updateMaterialsBuffer() {

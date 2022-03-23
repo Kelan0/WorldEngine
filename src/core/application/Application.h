@@ -76,6 +76,7 @@ private:
 
 template<class T>
 inline int Application::create() {
+    setbuf(stdout, 0);
     printf("Creating application\n");
 
     constexpr bool isApplication = std::is_base_of<Application, T>::value;

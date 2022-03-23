@@ -51,7 +51,8 @@ namespace vkr = vk::raii;
 	ClassName(const ClassName&) = delete; \
 	ClassName& operator=(const ClassName&) = delete;
 
-
+#define NO_MOVE(ClassName) \
+    ClassName(ClassName&&) = delete;
 
 #define INT_DIV_CEIL(num, denom) (((num) + (denom) - 1) / (denom))
 

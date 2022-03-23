@@ -1,5 +1,4 @@
 #include "core/engine/renderer/RenderComponent.h"
-#include "core/scene/Scene.h"
 
 RenderComponent& RenderComponent::setMesh(const std::shared_ptr<Mesh>& mesh) {
     this->mesh = mesh;
