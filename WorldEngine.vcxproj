@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{0657ce47-ee56-4e84-89fe-d3a77624f0b4}</ProjectGuid>
+    <RootNamespace>WorldEngine</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>D:\Code\Libraries\glm-0.9.9.8;D:\Code\Libraries\SDL2-2.0.20\include;D:\Code\Libraries\entt;D:\Code\Libraries\stb;D:\Code\VulkanSDK\1.2.198.1\Include;D:\Code\ActiveProjects\WorldEngine\src;C:\Program Files %28x86%29\Intel\oneAPI\vtune\2022.2.0\sdk\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>vulkan-1.lib;SDL2main.lib;SDL2.lib;libittnotify.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:\Code\Libraries\SDL2-2.0.20\lib\x86;D:\Code\VulkanSDK\1.2.198.1\Lib32;C:\Program Files (x86)\Intel\oneAPI\vtune\2022.2.0\sdk\lib32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <PostBuildEvent>
+      <Command>
+xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x86\SDL2.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>D:\Code\Libraries\glm-0.9.9.8;D:\Code\Libraries\SDL2-2.0.20\include;D:\Code\Libraries\entt;D:\Code\Libraries\stb;D:\Code\VulkanSDK\1.2.198.1\Include;D:\Code\ActiveProjects\WorldEngine\src;C:\Program Files %28x86%29\Intel\oneAPI\vtune\2022.2.0\sdk\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>vulkan-1.lib;SDL2main.lib;SDL2.lib;libittnotify.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:\Code\Libraries\SDL2-2.0.20\lib\x86;D:\Code\VulkanSDK\1.2.198.1\Lib32;C:\Program Files (x86)\Intel\oneAPI\vtune\2022.2.0\sdk\lib32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <PostBuildEvent>
+      <Command>
+xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x86\SDL2.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>D:\Code\Libraries\glm-0.9.9.8;D:\Code\Libraries\SDL2-2.0.20\include;D:\Code\Libraries\entt;D:\Code\Libraries\stb;D:\Code\VulkanSDK\1.2.198.1\Include;D:\Code\ActiveProjects\WorldEngine\src;C:\Program Files %28x86%29\Intel\oneAPI\vtune\2022.2.0\sdk\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>vulkan-1.lib;SDL2main.lib;SDL2.lib;libittnotify.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:\Code\Libraries\SDL2-2.0.20\lib\x64;D:\Code\VulkanSDK\1.2.198.1\Lib;C:\Program Files (x86)\Intel\oneAPI\vtune\2022.2.0\sdk\lib64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <PostBuildEvent>
+      <Command>
+xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>D:\Code\Libraries\glm-0.9.9.8;D:\Code\Libraries\SDL2-2.0.20\include;D:\Code\Libraries\entt;D:\Code\Libraries\stb;D:\Code\VulkanSDK\1.2.198.1\Include;D:\Code\ActiveProjects\WorldEngine\src;C:\Program Files %28x86%29\Intel\oneAPI\vtune\2022.2.0\sdk\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>vulkan-1.lib;SDL2main.lib;SDL2.lib;libittnotify.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:\Code\Libraries\SDL2-2.0.20\lib\x64;D:\Code\VulkanSDK\1.2.198.1\Lib;C:\Program Files (x86)\Intel\oneAPI\vtune\2022.2.0\sdk\lib64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <PostBuildEvent>
+      <Command>
+xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="src\core\application\Application.cpp" />
+    <ClCompile Include="src\core\application\InputHandler.cpp" />
+    <ClCompile Include="src\core\engine\geometry\MeshData.cpp" />
+    <ClCompile Include="src\core\engine\renderer\RenderCamera.cpp" />
+    <ClCompile Include="src\core\engine\renderer\RenderComponent.cpp" />
+    <ClCompile Include="src\core\engine\renderer\SceneRenderer.cpp" />
+    <ClCompile Include="src\core\engine\scene\Camera.cpp" />
+    <ClCompile Include="src\core\engine\scene\Entity.cpp" />
+    <ClCompile Include="src\core\engine\scene\EntityHierarchy.cpp" />
+    <ClCompile Include="src\core\engine\scene\event\EventDispacher.cpp" />
+    <ClCompile Include="src\core\engine\scene\Scene.cpp" />
+    <ClCompile Include="src\core\engine\scene\Transform.cpp" />
+    <ClCompile Include="src\core\graphics\Buffer.cpp" />
+    <ClCompile Include="src\core\graphics\CommandPool.cpp" />
+    <ClCompile Include="src\core\graphics\DescriptorSet.cpp" />
+    <ClCompile Include="src\core\graphics\DeviceMemory.cpp" />
+    <ClCompile Include="src\core\graphics\FrameResource.cpp" />
+    <ClCompile Include="src\core\graphics\GraphicsManager.cpp" />
+    <ClCompile Include="src\core\graphics\GraphicsPipeline.cpp" />
+    <ClCompile Include="src\core\graphics\Image.cpp" />
+    <ClCompile Include="src\core\graphics\Mesh.cpp" />
+    <ClCompile Include="src\core\graphics\Texture.cpp" />
+    <ClCompile Include="src\core\stb_image_impl.cpp" />
+    <ClCompile Include="src\core\thread\Scheduler.cpp" />
+    <ClCompile Include="src\core\thread\Task.cpp" />
+    <ClCompile Include="src\core\thread\ThreadPool.cpp" />
+    <ClCompile Include="src\core\thread\ThreadUtils.cpp" />
+    <ClCompile Include="src\core\util\DebugUtils.cpp" />
+    <ClCompile Include="src\core\util\Exception.cpp" />
+    <ClCompile Include="src\core\util\Profiler.cpp" />
+    <ClCompile Include="src\core\util\Util.cpp" />
+    <ClCompile Include="src\main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\core\application\Application.h" />
+    <ClInclude Include="src\core\application\InputHandler.h" />
+    <ClInclude Include="src\core\core.h" />
+    <ClInclude Include="src\core\engine\geometry\MeshData.h" />
+    <ClInclude Include="src\core\engine\renderer\RenderCamera.h" />
+    <ClInclude Include="src\core\engine\renderer\RenderComponent.h" />
+    <ClInclude Include="src\core\engine\renderer\SceneRenderer.h" />
+    <ClInclude Include="src\core\engine\scene\Camera.h" />
+    <ClInclude Include="src\core\engine\scene\Entity.h" />
+    <ClInclude Include="src\core\engine\scene\EntityHierarchy.h" />
+    <ClInclude Include="src\core\engine\scene\event\EventDispacher.h" />
+    <ClInclude Include="src\core\engine\scene\event\Events.h" />
+    <ClInclude Include="src\core\engine\scene\Scene.h" />
+    <ClInclude Include="src\core\engine\scene\Transform.h" />
+    <ClInclude Include="src\core\graphics\Buffer.h" />
+    <ClInclude Include="src\core\graphics\CommandPool.h" />
+    <ClInclude Include="src\core\graphics\DescriptorSet.h" />
+    <ClInclude Include="src\core\graphics\DeviceMemory.h" />
+    <ClInclude Include="src\core\graphics\FrameResource.h" />
+    <ClInclude Include="src\core\graphics\GraphicsManager.h" />
+    <ClInclude Include="src\core\graphics\GraphicsPipeline.h" />
+    <ClInclude Include="src\core\graphics\Image.h" />
+    <ClInclude Include="src\core\graphics\Mesh.h" />
+    <ClInclude Include="src\core\graphics\Texture.h" />
+    <ClInclude Include="src\core\hash.h" />
+    <ClInclude Include="src\core\thread\Scheduler.h" />
+    <ClInclude Include="src\core\thread\Task.h" />
+    <ClInclude Include="src\core\thread\ThreadPool.h" />
+    <ClInclude Include="src\core\thread\ThreadUtils.h" />
+    <ClInclude Include="src\core\util\DebugUtils.h" />
+    <ClInclude Include="src\core\util\Exception.h" />
+    <ClInclude Include="src\core\util\Profiler.h" />
+    <ClInclude Include="src\core\util\Util.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

@@ -284,7 +284,7 @@ bool GraphicsManager::createSurface(SDL_Window* windowHandle) {
     printf("Creating Vulkan SDL surface\n");
 
     VkSurfaceKHR surface;
-    if (!SDL_Vulkan_CreateSurface(windowHandle, **m_instance, &surface)) {
+    if (!SDL_Vulkan_CreateSurface(windowHandle, (VkInstance)**m_instance, &surface)) {
         printf("Failed to create Vulkan surface for SDL window: %s\n", SDL_GetError());
         return false;
     }
@@ -725,7 +725,7 @@ bool GraphicsManager::createSwapchainImages() {
     for (int i = 0; i < images.size(); ++i) {
         ImageView2DConfiguration imageViewConfig;
         imageViewConfig.device = m_device.device;
-        imageViewConfig.image = images[i];
+        imageViewConfig.image = vk::Image(images[i]);
         imageViewConfig.format = m_surface.surfaceFormat.format;
         m_swapchain.imageViews[i] = std::shared_ptr<ImageView2D>(ImageView2D::create(imageViewConfig));
     }

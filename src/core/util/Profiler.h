@@ -26,6 +26,12 @@ public:
 
     static moment_t now();
 
+    static uint64_t nanoseconds(const duration_t& duration);
+
+    static uint64_t nanoseconds(const moment_t& startTime, const moment_t& endTime);
+
+    static uint64_t nanoseconds(const moment_t& startTime);
+
     static double milliseconds(const duration_t& duration);
 
     static double milliseconds(const moment_t& startTime, const moment_t& endTime);

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.2)
 project(WorldEngine)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -13,6 +13,10 @@ set(STB_IMAGE_PATH "D:/Code/Libraries/stb")
 #    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -O1")
 #    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O1")
 #ENDIF(CMAKE_COMPILER_IS_GNUCC)
+
+if (MSVC)
+set_target_properties(${BUILD_TARGET} PROPERTIES LINK_FLAGS "/PROFILE")
+endif()
 
 if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
 add_compile_definitions(_DEBUG)
@@ -53,6 +57,9 @@ set(STB_IMAGE_INCLUDE_DIR "${STB_IMAGE_PATH}")
 add_library(stb_image "src/core/stb_image_impl.cpp")
 set(STB_IMAGE_LIBRARIES stb_image)
 
+# INIT WSQ LIBRARY
+set(WDQ_INCLUDE_DIR "${WSQ_PATH}")
+
 
 
 
@@ -73,7 +80,7 @@ file(GLOB_RECURSE PROJECT_SOURCE_FILES
         ${CMAKE_SOURCE_DIR}/src/*.hpp
         ${CMAKE_SOURCE_DIR}/src/*.h)
 
-add_executable(${PROJECT_NAME} src/main.cpp src/core/core.h src/core/hash.h src/core/application/Application.cpp src/core/application/Application.h src/core/application/InputHandler.cpp src/core/application/InputHandler.h src/core/engine/geometry/MeshData.cpp src/core/engine/geometry/MeshData.h src/core/engine/renderer/RenderCamera.cpp src/core/engine/renderer/RenderCamera.h src/core/engine/renderer/RenderComponent.cpp src/core/engine/renderer/RenderComponent.h src/core/engine/renderer/SceneRenderer.cpp src/core/engine/renderer/SceneRenderer.h src/core/engine/scene/Camera.cpp src/core/engine/scene/Camera.h src/core/engine/scene/Entity.cpp src/core/engine/scene/Entity.h src/core/engine/scene/EntityHierarchy.cpp src/core/engine/scene/EntityHierarchy.h src/core/engine/scene/Scene.cpp src/core/engine/scene/Scene.h src/core/engine/scene/Transform.cpp src/core/engine/scene/Transform.h src/core/engine/scene/event/EventDispacher.cpp src/core/engine/scene/event/EventDispacher.h src/core/engine/scene/event/Events.h src/core/graphics/Buffer.cpp src/core/graphics/Buffer.h src/core/graphics/CommandPool.cpp src/core/graphics/CommandPool.h src/core/graphics/DescriptorSet.cpp src/core/graphics/DescriptorSet.h src/core/graphics/DeviceMemory.cpp src/core/graphics/DeviceMemory.h src/core/graphics/FrameResource.cpp src/core/graphics/FrameResource.h src/core/graphics/GraphicsManager.cpp src/core/graphics/GraphicsManager.h src/core/graphics/GraphicsPipeline.cpp src/core/graphics/GraphicsPipeline.h src/core/graphics/Image.cpp src/core/graphics/Image.h src/core/graphics/Mesh.cpp src/core/graphics/Mesh.h src/core/graphics/Texture.cpp src/core/graphics/Texture.h src/core/util/DebugUtils.cpp src/core/util/DebugUtils.h src/core/util/Exception.cpp src/core/util/Exception.h src/core/util/Util.cpp src/core/util/Util.h src/core/thread/ThreadUtils.cpp src/core/thread/ThreadUtils.h src/core/thread/ThreadPool.cpp src/core/thread/ThreadPool.h src/core/thread/WorkerThread.cpp src/core/thread/WorkerThread.h src/core/util/Profiler.cpp src/core/util/Profiler.h)
+add_executable(${PROJECT_NAME} src/main.cpp src/core/core.h src/core/hash.h src/core/application/Application.cpp src/core/application/Application.h src/core/application/InputHandler.cpp src/core/application/InputHandler.h src/core/engine/geometry/MeshData.cpp src/core/engine/geometry/MeshData.h src/core/engine/renderer/RenderCamera.cpp src/core/engine/renderer/RenderCamera.h src/core/engine/renderer/RenderComponent.cpp src/core/engine/renderer/RenderComponent.h src/core/engine/renderer/SceneRenderer.cpp src/core/engine/renderer/SceneRenderer.h src/core/engine/scene/Camera.cpp src/core/engine/scene/Camera.h src/core/engine/scene/Entity.cpp src/core/engine/scene/Entity.h src/core/engine/scene/EntityHierarchy.cpp src/core/engine/scene/EntityHierarchy.h src/core/engine/scene/Scene.cpp src/core/engine/scene/Scene.h src/core/engine/scene/Transform.cpp src/core/engine/scene/Transform.h src/core/engine/scene/event/EventDispacher.cpp src/core/engine/scene/event/EventDispacher.h src/core/engine/scene/event/Events.h src/core/graphics/Buffer.cpp src/core/graphics/Buffer.h src/core/graphics/CommandPool.cpp src/core/graphics/CommandPool.h src/core/graphics/DescriptorSet.cpp src/core/graphics/DescriptorSet.h src/core/graphics/DeviceMemory.cpp src/core/graphics/DeviceMemory.h src/core/graphics/FrameResource.cpp src/core/graphics/FrameResource.h src/core/graphics/GraphicsManager.cpp src/core/graphics/GraphicsManager.h src/core/graphics/GraphicsPipeline.cpp src/core/graphics/GraphicsPipeline.h src/core/graphics/Image.cpp src/core/graphics/Image.h src/core/graphics/Mesh.cpp src/core/graphics/Mesh.h src/core/graphics/Texture.cpp src/core/graphics/Texture.h src/core/util/DebugUtils.cpp src/core/util/DebugUtils.h src/core/util/Exception.cpp src/core/util/Exception.h src/core/util/Util.cpp src/core/util/Util.h src/core/util/Profiler.cpp src/core/util/Profiler.h src/core/thread/Scheduler.cpp src/core/thread/Scheduler.h src/core/thread/ThreadPool.cpp src/core/thread/ThreadPool.h src/core/thread/Task.cpp src/core/thread/Task.h src/core/util/TaskQueue.cpp src/core/util/TaskQueue.h src/core/thread/ThreadUtils.cpp src/core/thread/ThreadUtils.h)
 
 target_link_libraries(${PROJECT_NAME}
         ${Vulkan_LIBRARIES}

@@ -18,6 +18,7 @@
 #include "core/engine/renderer/RenderCamera.h"
 #include "core/engine/renderer/SceneRenderer.h"
 #include "core/thread/ThreadUtils.h"
+#include "core/util/Profiler.h"
 
 #include <iostream>
 
@@ -234,39 +235,12 @@ class App : public Application {
 };
 
 
-int main(int argc, char* argv[]) {
-    setbuf(stdout, 0);
 
-    char buffer[1024 * 1024];
+int main(int argc, char* argv[]) {
+    char* buffer = new char[1024 * 1024];
     setvbuf(stdout, buffer, _IOFBF, sizeof(buffer));
 
-    Profiler pf;
-
-//    return Application::create<App>();
-
-    size_t numRepeats = 1;
-
-    std::vector<std::future<void>> results;
-
-    pf.mark();
-
-//    ThreadUtils::POOL->batchTasks();
-    for (int i = 0; i < 8; ++i) {
-        results.push_back(ThreadUtils::POOL->run([]() {
-//            auto t0 = Profiler::now();
-//            while (Profiler::milliseconds(t0, Profiler::now()) < 1.0);
-        }));
-    }
-//    ThreadUtils::POOL->endBatch();
-
-    double msec = pf.markMsec();
-    printf("Took %.4f msec to dispatch tasks\n", msec);
-
-    for (int i = 0; i < results.size(); ++i)
-        results[i].wait();
-
-    msec = pf.markMsec();
-    printf("Took %.2f msec to execute tasks\n", msec);
+    return Application::create<App>();
 
     std::cout << std::endl;
     fflush(stdout);

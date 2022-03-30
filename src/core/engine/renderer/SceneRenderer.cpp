@@ -11,6 +11,8 @@
 #include "core/graphics/Buffer.h"
 #include "core/graphics/Mesh.h"
 #include "core/graphics/Texture.h"
+#include "core/thread/ThreadUtils.h"
+#include "core/util/Profiler.h"
 #include <thread>
 
 //#include "../thread/ThreadUtils.h"
@@ -217,64 +219,43 @@ void SceneRenderer::updateEntityWorldTransforms() {
 
     const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
 
-//    constexpr size_t numThreads = 8;
-//
-//    size_t renderEntitiesPerThread = INT_DIV_CEIL(renderEntities.size(), numThreads);
-//    std::vector<std::future<void>> tasks;
-//
-//    for (size_t i = 0; i < numThreads; ++i) {
-//        size_t startIndex = i * renderEntitiesPerThread;
-//        size_t endIndex = std::min(startIndex + renderEntitiesPerThread, renderEntities.size());
-//        if (startIndex == endIndex)
-//            break;
+    auto exec = [](
+            size_t rangeStart,
+            size_t rangeEnd,
+            decltype(renderEntities) renderEntities,
+            decltype(m_resources)* resourcesPtr) {
 
-        //std::future<int> x = ThreadUtils::async([&](int t1, int t2) {
-        //    return 1;
-        //}, 4, 9);
+        const auto& resources = *resourcesPtr;
 
-//        tasks.push_back(std::async(std::launch::async, [&](const size_t& startIndex, const size_t& endIndex) {
-//            for (size_t index = startIndex; index != endIndex; ++index) {
-//                auto id = renderEntities[index];
-//                Transform& transform = renderEntities.get<Transform>(id);
-//
-//                if (transform.hasChanged()) {
-//                    transform.update();
-//
-//                    for (int i = 0; i < CONCURRENT_FRAMES; ++i)
-//                        if (index < m_resources.get(i)->objectEntities.size())
-//                            m_resources.get(i)->objectEntities[index] = entt::null;
-//                }
-//
-//                if (m_resources->objectEntities[index] != id) {
-//                    m_resources->objectEntities[index] = id;
-//                    transform.fillMatrix(m_resources->objectBuffer[index].modelMatrix);
-//                }
-//            }
-//        }, startIndex, endIndex));
-//    }
-//
-//    for (size_t i = 0; i < tasks.size(); ++i)
-//        tasks[i].wait();
+        auto it = renderEntities.begin() + rangeStart;
+        for (size_t index = rangeStart; index != rangeEnd; ++index, ++it) {
+            auto id = *it;
+            Transform& transform = renderEntities.get<Transform>(id);
 
-    size_t index = 0;
-    for (auto id : renderEntities) {
-        Transform& transform = renderEntities.get<Transform>(id);
+            if (transform.hasChanged()) {
+                transform.update();
 
-        if (transform.hasChanged()) {
-            transform.update();
+                for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+                    if (index < resources.get(i)->objectEntities.size())
+                        resources.get(i)->objectEntities[index] = entt::null;
+            }
 
-            for (int i = 0; i < CONCURRENT_FRAMES; ++i)
-                if (index < m_resources.get(i)->objectEntities.size())
-                    m_resources.get(i)->objectEntities[index] = entt::null;
+            if (resources->objectEntities[index] != id) {
+                resources->objectEntities[index] = id;
+                transform.fillMatrix(resources->objectBuffer[index].modelMatrix);
+            }
         }
+    };
 
-        if (m_resources->objectEntities[index] != id) {
-          m_resources->objectEntities[index] = id;
-          transform.fillMatrix(m_resources->objectBuffer[index].modelMatrix);
-        }
+    //auto t0 = Profiler::now();
 
-        ++index;
-    }
+    //exec(0, renderEntities.size(), renderEntities, &m_resources);
+    ThreadUtils::parallel_range(renderEntities.size(), exec, renderEntities, &m_resources);
+
+    //auto t1 = Profiler::now();
+    //double msec = Profiler::milliseconds(t0, t1);
+    //if (msec > 6)
+    //    printf("updateEntityWorldTransforms Took %.4f msec\n", msec);
 }
 
 void SceneRenderer::updateMaterialsBuffer() {
