@@ -68,6 +68,7 @@ Mesh* Mesh::create(const MeshConfiguration& meshConfiguration) {
 }
 
 bool Mesh::uploadVertices(const MeshData::Vertex* vertices, size_t vertexCount) {
+    PROFILE_SCOPE("Mesh::uploadVertices")
     delete m_vertexBuffer;
 
     if (vertexCount <= 0) {
@@ -94,10 +95,12 @@ bool Mesh::uploadVertices(const MeshData::Vertex* vertices, size_t vertexCount) 
 }
 
 bool Mesh::uploadVertices(const std::vector<MeshData::Vertex>& vertices) {
+    PROFILE_SCOPE("Mesh::uploadVertices")
     return uploadVertices(vertices.data(), vertices.size());
 }
 
 bool Mesh::uploadIndices(const MeshData::Index* indices, size_t indexCount) {
+    PROFILE_SCOPE("Mesh::uploadIndices")
     delete m_indexBuffer;
 
     if (indexCount <= 0) {
@@ -122,10 +125,12 @@ bool Mesh::uploadIndices(const MeshData::Index* indices, size_t indexCount) {
 }
 
 bool Mesh::uploadIndices(const std::vector<MeshData::Index>& indices) {
+    PROFILE_SCOPE("Mesh::uploadIndices")
     return uploadIndices(indices.data(), indices.size());
 }
 
 void Mesh::draw(const vk::CommandBuffer& commandBuffer, uint32_t instanceCount, uint32_t firstInstance) {
+    PROFILE_SCOPE("Mesh::draw")
 
     const vk::Buffer& vertexBuffer = m_vertexBuffer->getBuffer();
     vk::DeviceSize offset = 0;

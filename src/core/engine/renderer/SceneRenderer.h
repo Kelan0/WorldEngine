@@ -27,7 +27,16 @@ struct ObjectDataUBO {
 
 struct EntityRenderState {
     glm::mat4x3 modelMatrix;
+    uint32_t prevTextureIndex = UINT32_MAX;
     uint32_t textureIndex;
+
+    //union {
+    //    struct {
+    //        bool textureChanged : 1;
+    //        bool meshChanged : 1;
+    //    };
+    //    uint8_t _data;
+    //};
 };
 
 class SceneRenderer {
@@ -53,9 +62,11 @@ private:
 
     void initMissingTexture();
 
-    void sortRenderableEntities() const;
+    void sortRenderableEntities();
 
     void updateEntityWorldTransforms();
+
+    void streamObjectData();
 
     void updateMaterialsBuffer();
 
@@ -94,6 +105,7 @@ private:
     bool m_needsSortRenderableEntities;
 
     std::unordered_map<Texture2D*, uint32_t> m_textureDescriptorIndices;
+    size_t m_numRenderEntities;
 };
 
 

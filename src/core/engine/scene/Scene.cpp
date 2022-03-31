@@ -17,6 +17,7 @@ Scene::~Scene() {
 }
 
 void Scene::init() {
+    PROFILE_SCOPE("Scene::init")
     enableEvents<EntityHierarchy>();
 
     m_eventDispacher->connect<ComponentRemovedEvent<EntityHierarchy>>([](const ComponentRemovedEvent<EntityHierarchy>& event) {
@@ -34,6 +35,7 @@ void Scene::init() {
 }
 
 Entity Scene::createEntity(const std::string& name) {
+    PROFILE_SCOPE("Scene::createEntity")
     entt::entity id = m_registry.create();
 
     Entity entity(this, id);
@@ -45,6 +47,7 @@ Entity Scene::createEntity(const std::string& name) {
 }
 
 void Scene::destroyEntity(const Entity& entity) {
+    PROFILE_SCOPE("Scene::destroyEntity")
     if (entity) {
         entity.getComponent<EntityEventDispacher>().dispacher.trigger<EntityDestroyEvent>(entity);
 
@@ -68,6 +71,7 @@ entt::registry* Scene::registry() {
 }
 
 bool Scene::setMainCamera(const Entity& entity) {
+    PROFILE_SCOPE("Scene::setMainCamera")
     if (entity == nullptr) {
         m_mainCameraEntity = m_defaultCamera;
         return true;

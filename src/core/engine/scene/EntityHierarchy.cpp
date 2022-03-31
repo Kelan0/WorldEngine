@@ -93,6 +93,7 @@ bool EntityHierarchy::isAncestor(const Entity& entity, const Entity& ancestor) {
 }
 
 bool EntityHierarchy::attachChild(const Entity& entity, const Entity& child) {
+    PROFILE_SCOPE("EntityHierarchy::attachChild")
     if (child == nullptr || !child.hasComponent<EntityHierarchy>())
         return false;
 
@@ -125,6 +126,7 @@ bool EntityHierarchy::attachChild(const Entity& entity, const Entity& child) {
 }
 
 bool EntityHierarchy::detachChild(const Entity& entity, const Entity& child) {
+    PROFILE_SCOPE("EntityHierarchy::detachChild")
     if (child == nullptr)
         return false;
 
@@ -135,6 +137,8 @@ bool EntityHierarchy::detachChild(const Entity& entity, const Entity& child) {
 }
 
 bool EntityHierarchy::detach(const Entity& entity) {
+    PROFILE_SCOPE("EntityHierarchy::detach")
+
     const Entity& child = entity;
     const Entity& parent = getParent(child);
 
@@ -167,18 +171,21 @@ bool EntityHierarchy::detach(const Entity& entity) {
 }
 
 Entity EntityHierarchy::create(Scene* scene, const std::string& name) {
+    PROFILE_SCOPE("EntityHierarchy::create")
     const Entity& entity = scene->createEntity(name);
     entity.addComponent<EntityHierarchy>();
     return entity;
 }
 
 Entity EntityHierarchy::createChild(const Entity& entity, const std::string& name) {
+    PROFILE_SCOPE("EntityHierarchy::createChild")
     const Entity& child = create(entity.getScene(), name);
     attachChild(entity, child);
     return child;
 }
 
 EntityHierarchy& EntityHierarchy::getNode(const Entity& entity) {
+    PROFILE_SCOPE("EntityHierarchy::getNode")
 #if _DEBUG
     if (entity == nullptr) {
         printf("Cannot create EntityHierarchy of NULL entity\n");

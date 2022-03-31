@@ -150,7 +150,7 @@ class App : public Application {
             for (int j = 0; j < zCount; ++j) {
 
                 Entity entity = EntityHierarchy::create(scene(), "testEntity[" + std::to_string(i) + ", " + std::to_string(j) + "]");
-                entity.addComponent<Transform>().translate(-0.5 * spacing * xCount + i * spacing, 0.0, -0.5 * spacing * zCount + j * spacing);
+                Transform& t = entity.addComponent<Transform>().translate(-0.5 * spacing * xCount + i * spacing, 0.0, -0.5 * spacing * zCount + j * spacing);
                 entity.addComponent<RenderComponent>().setMesh(cubeMesh).setTexture(textures[rand() % textures.size()]);
 
                 testEntities.push_back(entity);

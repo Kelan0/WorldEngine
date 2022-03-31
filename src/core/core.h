@@ -44,6 +44,7 @@
 
 #include "hash.h"
 #include "util/Exception.h"
+#include "util/Profiler.h"
 
 namespace vkr = vk::raii;
 

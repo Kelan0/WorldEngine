@@ -42,12 +42,16 @@ Application::~Application() {
 }
 
 bool Application::initInternal() {
+    PROFILE_SCOPE("Application::initInternal")
+
+    PROFILE_REGION("Init SDL")
 
     printf("Initializing SDL\n");
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         printf("Failed to initialize SDL: %s\n", SDL_GetError());
         return false;
     }
+
 
     printf("Creating window\n");
     uint32_t flags = SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE;
@@ -57,25 +61,33 @@ bool Application::initInternal() {
         return false;
     }
 
+    PROFILE_REGION("Init GraphicsManager")
+
     m_graphics = new GraphicsManager();
     if (!m_graphics->init(m_windowHandle, "WorldEngine")) {
         printf("Failed to initialize graphics engine\n");
         return false;
     }
 
+    PROFILE_REGION("Init EventDispacher")
     m_eventDispacher = new EventDispacher();
 
+    PROFILE_REGION("Init InputHandler")
     m_inputHandler = new InputHandler(m_windowHandle);
 
+    PROFILE_REGION("Init Scene")
     m_scene = new Scene();
     m_scene->init();
-
     m_eventDispacher->repeatAll(m_scene->getEventDispacher());
 
+
+    PROFILE_REGION("Init SceneRenderer")
     m_sceneRenderer = new SceneRenderer();
     m_sceneRenderer->setScene(m_scene);
     m_sceneRenderer->init();
 
+
+    PROFILE_REGION("Init Application")
     init();
 
     return true;
@@ -86,7 +98,7 @@ void Application::cleanupInternal() {
 }
 
 void Application::renderInternal(double dt) {
-
+    PROFILE_SCOPE("Application::renderInternal")
 
     auto& commandBuffer = graphics()->getCurrentCommandBuffer();
     auto& framebuffer = graphics()->getCurrentFramebuffer();
@@ -103,12 +115,17 @@ void Application::renderInternal(double dt) {
     renderPassBeginInfo.setClearValues(clearValues);
 
     commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+    PROFILE_REGION("Application::render - Implementation")
     render(dt);
+    PROFILE_END_REGION()
+
     m_sceneRenderer->render(dt);
+
     commandBuffer.endRenderPass();
 }
 
 void Application::processEventsInternal() {
+    PROFILE_SCOPE("Application::processEventsInternal")
     m_inputHandler->update();
 
     glm::ivec2 windowSize = getWindowSize();
@@ -146,6 +163,7 @@ void Application::destroy() {
 }
 
 void Application::start() {
+    PROFILE_SCOPE("Application::start")
     m_running = true;
 
     // Trigger a ScreenResizeEvent at the beginning of the render loop so that anything that needs it can be initialized easily
@@ -163,6 +181,7 @@ void Application::start() {
     DebugUtils::RenderInfo tempDebugInfo;
 
     while (m_running) {
+        PROFILE_SCOPE("Application::start/tick_loop")
         auto now = std::chrono::high_resolution_clock::now();
         uint64_t elapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastTime).count();
         lastTime = now;

@@ -5,6 +5,7 @@
 #include "core/core.h"
 
 class Transform {
+    friend class SceneRenderer;
 public:
     Transform();
 
@@ -116,15 +117,25 @@ public:
 
     void update();
 
-    const bool& hasChanged() const;
+    bool hasChanged() const;
 
+    static bool hasChanged(const size_t& index);
+
+    static void setChanged(const size_t& index, const bool& changed);
+
+    static void reindex(Transform& transform, const size_t& newIndex);
+
+    static bool ensureCapacity(const size_t& index);
 private:
+
     void change();
 private:
     glm::dvec3 m_translation;
     glm::mat3 m_rotation;
     glm::dvec3 m_scale;
-    bool m_changed;
+    uint32_t m_transformIndex = UINT32_MAX;
+
+    static std::vector<uint8_t> s_transformsChangedPacked;
 };
 
 

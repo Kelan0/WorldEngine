@@ -176,6 +176,7 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClCompile Include="src\core\engine\geometry\MeshData.cpp" />
     <ClCompile Include="src\core\engine\renderer\RenderCamera.cpp" />
     <ClCompile Include="src\core\engine\renderer\RenderComponent.cpp" />
+    <ClCompile Include="src\core\engine\renderer\RenderProperties.cpp" />
     <ClCompile Include="src\core\engine\renderer\SceneRenderer.cpp" />
     <ClCompile Include="src\core\engine\scene\Camera.cpp" />
     <ClCompile Include="src\core\engine\scene\Entity.cpp" />
@@ -211,6 +212,7 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClInclude Include="src\core\engine\geometry\MeshData.h" />
     <ClInclude Include="src\core\engine\renderer\RenderCamera.h" />
     <ClInclude Include="src\core\engine\renderer\RenderComponent.h" />
+    <ClInclude Include="src\core\engine\renderer\RenderProperties.h" />
     <ClInclude Include="src\core\engine\renderer\SceneRenderer.h" />
     <ClInclude Include="src\core\engine\scene\Camera.h" />
     <ClInclude Include="src\core\engine\scene\Entity.h" />

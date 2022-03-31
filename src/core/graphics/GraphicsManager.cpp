@@ -72,6 +72,8 @@ GraphicsManager::~GraphicsManager() {
 }
 
 bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName) {
+    PROFILE_SCOPE("GraphicsManager::init")
+
     printf("Initializing graphics engine\n");
 
     if (!createVulkanInstance(windowHandle, applicationName)) {
@@ -121,6 +123,8 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
         return false;
     }
 
+    PROFILE_REGION("Initialize graphics resources")
+
     GraphicsPipeline* graphicsPipeline = GraphicsPipeline::create(m_device.device);
     if (graphicsPipeline == NULL)
         return false;
@@ -160,6 +164,7 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
 }
 
 bool GraphicsManager::createVulkanInstance(SDL_Window* windowHandle, const char* applicationName) {
+    PROFILE_SCOPE("GraphicsManager::createVulkanInstance")
 
     vk::ApplicationInfo appInfo;
     appInfo.setPApplicationName(applicationName);
@@ -281,6 +286,7 @@ bool GraphicsManager::createDebugUtilsMessenger() {
 }
 
 bool GraphicsManager::createSurface(SDL_Window* windowHandle) {
+    PROFILE_SCOPE("GraphicsManager::createSurface")
     printf("Creating Vulkan SDL surface\n");
 
     VkSurfaceKHR surface;
@@ -445,6 +451,7 @@ bool GraphicsManager::selectQueueFamilies(const vkr::PhysicalDevice& physicalDev
 }
 
 bool GraphicsManager::selectPhysicalDevice() {
+    PROFILE_SCOPE("GraphicsManager::selectPhysicalDevice")
 
     std::vector<vkr::PhysicalDevice> physicalDevices = m_instance->enumeratePhysicalDevices();
 
@@ -489,6 +496,8 @@ bool GraphicsManager::selectPhysicalDevice() {
 }
 
 bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enabledLayers, std::vector<const char*> const& enabledExtensions, vk::PhysicalDeviceFeatures* enabledFeatures, vk::PhysicalDeviceDescriptorIndexingFeatures* descriptorIndexingFeatures, std::unordered_map<std::string, uint32_t> queueLayout) {
+    PROFILE_SCOPE("GraphicsManager::createLogicalDevice")
+
     printf("Creating logical device\n");
 
     std::set<uint32_t> uniqueQueueFamilyIndices;
@@ -568,6 +577,8 @@ bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enable
 }
 
 bool GraphicsManager::initSurfaceDetails() {
+    PROFILE_SCOPE("GraphicsManager::initSurfaceDetails")
+
     m_surface.capabilities = m_device.physicalDevice->getSurfaceCapabilitiesKHR(**m_surface.surface);
 
     glm::uvec2 windowSize = Application::instance()->getWindowSize();
@@ -623,6 +634,7 @@ bool GraphicsManager::initSurfaceDetails() {
 }
 
 bool GraphicsManager::recreateSwapchain() {
+    PROFILE_SCOPE("GraphicsManager::recreateSwapchain")
     m_recreateSwapchain = false;
 
     if (m_graphicsPipelineConfig.device.expired() || m_graphicsPipelineConfig.device.lock() != m_device.device) {
@@ -788,6 +800,7 @@ bool GraphicsManager::createSwapchainFramebuffers() {
 }
 
 bool GraphicsManager::beginFrame() {
+    PROFILE_SCOPE("GraphicsManager::beginFrame")
 
     m_debugInfo.reset();
 
@@ -848,6 +861,7 @@ bool GraphicsManager::beginFrame() {
 }
 
 void GraphicsManager::endFrame() {
+    PROFILE_SCOPE("GraphicsManager::endFrame")
     const vk::Device& device = **m_device.device;
     const vk::Semaphore& imageAvailableSemaphore = **m_swapchain.imageAvailableSemaphores[m_swapchain.currentFrameIndex];
     const vk::Semaphore& renderFinishedSemaphore = **m_swapchain.renderFinishedSemaphores[m_swapchain.currentFrameIndex];
@@ -855,6 +869,7 @@ void GraphicsManager::endFrame() {
     const vk::SwapchainKHR& swapchain = **m_swapchain.swapchain;
     const vk::CommandBuffer& commandBuffer = getCurrentCommandBuffer();
 
+    PROFILE_REGION("Wait for fences")
     commandBuffer.end();
 
     if (m_swapchain.imagesInFlight[m_swapchain.currentImageIndex]) {
@@ -879,6 +894,8 @@ void GraphicsManager::endFrame() {
 
     m_device.device->resetFences({ frameFence });
 
+    PROFILE_REGION("Submit queues")
+
     // Submit the queue, signal frameFence once the commands are executed
     queue.submit(submitInfos, frameFence);
 
@@ -889,6 +906,7 @@ void GraphicsManager::endFrame() {
     presentInfo.setPSwapchains(&swapchain);
     presentInfo.setPImageIndices(&m_swapchain.currentImageIndex);
 
+    PROFILE_REGION("Present queue")
     vk::Result result = queue.presentKHR(presentInfo);
 
     if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {

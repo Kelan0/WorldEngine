@@ -77,6 +77,7 @@ void SceneRenderer::init() {
 }
 
 void SceneRenderer::render(double dt) {
+    PROFILE_SCOPE("SceneRenderer::render")
     const Entity& cameraEntity = m_scene->getMainCamera();
     m_renderCamera.setProjection(cameraEntity.getComponent<Camera>());
     m_renderCamera.setTransform(cameraEntity.getComponent<Transform>());
@@ -86,6 +87,7 @@ void SceneRenderer::render(double dt) {
 }
 
 void SceneRenderer::render(double dt, RenderCamera* renderCamera) {
+    PROFILE_SCOPE("SceneRenderer::render")
     const uint32_t currentFrameIndex = Application::instance()->graphics()->getCurrentFrameIndex();
 
     CameraInfoUBO cameraInfo;
@@ -98,12 +100,13 @@ void SceneRenderer::render(double dt, RenderCamera* renderCamera) {
     }
 
     const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
-    void* objectBufferMap = mappedWorldTransformsBuffer(renderEntities.size());
+    m_numRenderEntities = renderEntities.size();
+    mappedWorldTransformsBuffer(m_numRenderEntities);
 
     updateMaterialsBuffer();
     updateEntityWorldTransforms();
+    streamObjectData();
 
-    memcpy(objectBufferMap, m_resources->objectBuffer.data(), sizeof(ObjectDataUBO) * renderEntities.size());
 
     const vk::CommandBuffer& commandBuffer = Application::instance()->graphics()->getCurrentCommandBuffer();
     recordRenderCommands(dt, commandBuffer);
@@ -124,6 +127,9 @@ void SceneRenderer::initPipelineDescriptorSetLayouts(GraphicsPipelineConfigurati
 }
 
 void SceneRenderer::recordRenderCommands(double dt, vk::CommandBuffer commandBuffer) {
+    PROFILE_SCOPE("SceneRenderer::recordRenderCommands")
+
+    PROFILE_REGION("Bind resources")
     GraphicsManager* graphics = Application::instance()->graphics();
     const uint32_t currentFrameIndex = graphics->getCurrentFrameIndex();
     const vk::Device& device = **graphics->getDevice();
@@ -149,6 +155,7 @@ void SceneRenderer::recordRenderCommands(double dt, vk::CommandBuffer commandBuf
     uint32_t instanceCount = 0;
     Mesh* currMesh = NULL;
 
+    PROFILE_REGION("Draw meshes")
     for (auto id : renderEntities) {
         const RenderComponent& renderComponent = renderEntities.get<RenderComponent>(id);
 
@@ -204,35 +211,65 @@ void SceneRenderer::initMissingTexture() {
     m_missingTexture = std::shared_ptr<Texture2D>(Texture2D::create(missingTextureImageViewConfig, missingTextureSamplerConfig));
 }
 
-void SceneRenderer::sortRenderableEntities() const {
+void SceneRenderer::sortRenderableEntities() {
+    PROFILE_SCOPE("SceneRenderer::sortRenderableEntities")
     const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
 
     // Group all meshes of the same type to be contiguous in the array
-    renderEntities.sort([renderEntities](const entt::entity& lhs, const entt::entity& rhs) {
+    renderEntities.sort([&renderEntities](const entt::entity& lhs, const entt::entity& rhs) {
         const RenderComponent& lhsRC = renderEntities.get<RenderComponent>(lhs);
         const RenderComponent& rhsRC = renderEntities.get<RenderComponent>(rhs);
         return lhsRC.mesh->getResourceId() < rhsRC.mesh->getResourceId();
     });
+
+    Transform::ensureCapacity(renderEntities.size() - 1);
+
+    size_t index = 0;
+    for (auto id : renderEntities) {
+        Transform& transform = renderEntities.get<Transform>(id);
+        Transform::reindex(transform, index++);
+    }
+    //ThreadUtils::parallel_range(renderEntities.size(), [this, &renderEntities](size_t rangeStart, size_t rangeEnd) {
+    //
+    //    auto it = renderEntities.begin() + rangeStart;
+    //    for (size_t index = rangeStart; index != rangeEnd; ++index, ++it) {
+    //        Transform& transform = renderEntities.get<Transform>(*it);
+    //        Transform::reindex(transform, index);
+    //    }
+    //});
 }
 
 void SceneRenderer::updateEntityWorldTransforms() {
+    PROFILE_SCOPE("SceneRenderer::updateEntityWorldTransforms")
 
-    const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
 
-    auto exec = [](
+    auto thread_exec = [this](
             size_t rangeStart,
-            size_t rangeEnd,
-            decltype(renderEntities) renderEntities,
-            decltype(m_resources)* resourcesPtr) {
+            size_t rangeEnd) {
 
-        const auto& resources = *resourcesPtr;
+        PROFILE_SCOPE("SceneRenderer::updateEntityWorldTransforms/thread_exec")
+
+        const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
+
+        const auto& resources = m_resources;
+
+        //printf("Updating world entity transforms for entities [%llu to %llu]\n", rangeStart, rangeEnd);
+
+        size_t maxDebugCounter = 256;
+        size_t debugCounter = 0;
 
         auto it = renderEntities.begin() + rangeStart;
         for (size_t index = rangeStart; index != rangeEnd; ++index, ++it) {
+
+            if (debugCounter == 0) {
+                PROFILE_REGION("Debug 256 entities");
+            }
+
             auto id = *it;
             Transform& transform = renderEntities.get<Transform>(id);
 
-            if (transform.hasChanged()) {
+            if (Transform::hasChanged(index)) {
+                PROFILE_SCOPE("Update transform")
                 transform.update();
 
                 for (int i = 0; i < CONCURRENT_FRAMES; ++i)
@@ -241,24 +278,47 @@ void SceneRenderer::updateEntityWorldTransforms() {
             }
 
             if (resources->objectEntities[index] != id) {
+                PROFILE_SCOPE("Upload matrix")
                 resources->objectEntities[index] = id;
                 transform.fillMatrix(resources->objectBuffer[index].modelMatrix);
             }
+
+            ++debugCounter;
+
+            if (debugCounter == maxDebugCounter) {
+                debugCounter = 0;
+                PROFILE_REGION("Debug 256 entities end");
+            }
+        }
+        if (debugCounter > 0) {
+            PROFILE_REGION("Debug 256 entities end");
         }
     };
 
-    //auto t0 = Profiler::now();
+    //auto t0 = Performance::now();
 
-    //exec(0, renderEntities.size(), renderEntities, &m_resources);
-    ThreadUtils::parallel_range(renderEntities.size(), exec, renderEntities, &m_resources);
+    //thread_exec(0, m_numRenderEntities);
+    ThreadUtils::parallel_range(m_numRenderEntities, thread_exec);
 
-    //auto t1 = Profiler::now();
-    //double msec = Profiler::milliseconds(t0, t1);
+    //auto t1 = Performance::now();
+    //double msec = Performance::milliseconds(t0, t1);
     //if (msec > 6)
     //    printf("updateEntityWorldTransforms Took %.4f msec\n", msec);
 }
 
+void SceneRenderer::streamObjectData() {
+    PROFILE_SCOPE("SceneRenderer::streamObjectData")
+
+    const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
+    ObjectDataUBO* objectBufferMap = mappedWorldTransformsBuffer(renderEntities.size());
+
+    size_t numCopyBytes = sizeof(ObjectDataUBO) * renderEntities.size();
+    memcpy(objectBufferMap, m_resources->objectBuffer.data(), numCopyBytes);
+}
+
 void SceneRenderer::updateMaterialsBuffer() {
+    PROFILE_SCOPE("SceneRenderer::updateMaterialsBuffer")
+
     uint32_t descriptorCount = m_resources->materialDescriptorSet->getLayout()->findBinding(0).descriptorCount;
 
     const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
@@ -274,6 +334,33 @@ void SceneRenderer::updateMaterialsBuffer() {
     uint32_t lastNewTextureIndex = (uint32_t)(-1);
     Texture2D* texture;
 
+    size_t numChangedTextures = 0;
+
+    //auto t0 = Performance::now();
+
+    //ThreadUtils::parallel_range(renderEntities.size(), [this](size_t rangeStart, size_t rangeEnd) {
+    //    const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
+    //    std::vector<Texture2D*>& objectTextures = m_resources->objectTextures;
+    //
+    //    auto it = renderEntities.begin() + rangeStart;
+    //
+    //    Texture2D* texture;
+    //
+    //    for (size_t index = rangeStart; index != rangeEnd; ++index, ++it) {
+    //        auto id = *it;
+    //        RenderComponent& renderComponent = renderEntities.get<RenderComponent>(id);
+    //
+    //        texture = renderComponent.texture.get();
+    //        if (texture == NULL)
+    //            texture = m_missingTexture.get();
+    //
+    //        if (objectTextures[index] != texture) {
+    //            renderComponent.flags.textureChanged = true;
+    //        } else {
+    //            renderComponent.flags.textureChanged = false;
+    //        }
+    //    }
+    //}, &renderEntities, &objectTextures);
 
     for (auto id : renderEntities) {
         const RenderComponent& renderComponent = renderEntities.get<RenderComponent>(id);
@@ -284,6 +371,8 @@ void SceneRenderer::updateMaterialsBuffer() {
 
         if (objectTextures[objectIndex] != texture) {
             objectTextures[objectIndex] = texture;
+
+            ++numChangedTextures;
 
             auto it = m_textureDescriptorIndices.find(texture);
             if (it == m_textureDescriptorIndices.end()) {
@@ -305,6 +394,9 @@ void SceneRenderer::updateMaterialsBuffer() {
         ++objectIndex;
     }
 
+    //auto t1 = Performance::now();
+    //printf("Took %.4f msec to update %llu changed textures in %llu entities\n", Performance::milliseconds(t0, t1), numChangedTextures, renderEntities.size());
+    
     uint32_t arrayCount = glm::min(lastNewTextureIndex - firstNewTextureIndex, descriptorCount);
     if (arrayCount > 0) {
 
@@ -322,18 +414,23 @@ void SceneRenderer::updateMaterialsBuffer() {
 void SceneRenderer::onRenderComponentAdded(const ComponentAddedEvent<RenderComponent>& event) {
     //printf("SceneRenderer::onRenderComponentAdded");
     m_needsSortRenderableEntities = true;
+    event.entity.addComponent<EntityRenderState>();
 }
 
 void SceneRenderer::onRenderComponentRemoved(const ComponentRemovedEvent<RenderComponent>& event) {
     //printf("SceneRenderer::onRenderComponentRemoved");
     m_needsSortRenderableEntities = true;
+    event.entity.removeComponent<EntityRenderState>();
 }
 
 ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
+    PROFILE_SCOPE("SceneRenderer::mappedWorldTransformsBuffer");
 
     vk::DeviceSize newBufferSize = sizeof(ObjectDataUBO) * maxObjects;
 
     if (m_resources->worldTransformBuffer == nullptr || newBufferSize > m_resources->worldTransformBuffer->getSize()) {
+        PROFILE_SCOPE("Allocate WorldTransformBuffer");
+
         printf("Allocating WorldTransformBuffer - %llu objects\n", maxObjects);
 
         m_textureDescriptorIndices.clear();
@@ -363,7 +460,8 @@ ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
         DescriptorSetWriter(m_resources->objectDescriptorSet).writeBuffer(0, m_resources->worldTransformBuffer, 0, newBufferSize).write();
     }
 
-
+    PROFILE_REGION("Map buffer");
     void* mappedBuffer = m_resources->worldTransformBuffer->map();
     return static_cast<ObjectDataUBO*>(mappedBuffer);
 }
+

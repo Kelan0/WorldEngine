@@ -39,10 +39,16 @@ public:
     T& setComponent(Args&&... args) const;
 
     template<typename T>
-    T& removeComponent() const;
+    bool removeComponent() const;
 
     template<typename T>
     T& getComponent() const;
+
+    template<typename T>
+    T* tryGetComponent() const;
+
+    template<typename T, typename... Ts>
+    std::tuple<T*, Ts*...> tryGetComponents() const;
 
     template<typename T>
     bool hasComponent() const;
@@ -111,15 +117,9 @@ inline T& Entity::setComponent(Args && ...args) const {
 }
 
 template<typename T>
-inline T& Entity::removeComponent() const {
-#if _DEBUG
-    if (!hasComponent<T>()) {
-		printf("Entity::removeComponent() : Component type \"%s\" is not attached to this m_entity\n", typeid(T).name());
-		assert(false);
-	}
-#endif
-    T& component = registry().remove<T>(m_entity);
-    return component;
+inline bool Entity::removeComponent() const {
+    size_t removed = registry().remove<T>(m_entity);
+    return removed != 0;
 }
 
 template<typename T>
@@ -134,7 +134,18 @@ inline T& Entity::getComponent() const {
 }
 
 template<typename T>
-inline bool Entity::hasComponent() const {
-    return registry().try_get<T>(m_entity) != NULL;
+inline T* Entity::tryGetComponent() const {
+    return registry().try_get<T>(m_entity);
 }
+
+template<typename T, typename ...Ts>
+inline std::tuple<T*, Ts*...> Entity::tryGetComponents() const {
+    return registry().try_get<T, Ts...>(m_entity);
+}
+
+template<typename T>
+inline bool Entity::hasComponent() const {
+    return tryGetComponent<T>() != nullptr;
+}
+
 #endif //WORLDENGINE_ENTITY_H

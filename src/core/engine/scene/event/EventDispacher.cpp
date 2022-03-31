@@ -22,6 +22,7 @@ EventDispacher::~EventDispacher() {
 }
 
 void EventDispacher::repeatAll(EventDispacher* eventDispacher) {
+    PROFILE_SCOPE("EntityHierarchy::repeatAll")
     // TODO: prevent circular references, where A repeats to B, then B repeats to A
     if (eventDispacher == NULL)
         return;
@@ -46,6 +47,7 @@ void EventDispacher::repeatAll(EventDispacher* eventDispacher) {
 }
 
 bool EventDispacher::isRepeatingAll(EventDispacher* eventDispacher) {
+    PROFILE_SCOPE("EntityHierarchy::isRepeatingAll")
     if (eventDispacher == NULL)
         return false;
 
@@ -58,6 +60,7 @@ bool EventDispacher::isRepeatingAll(EventDispacher* eventDispacher) {
 }
 
 void EventDispacher::onEventDispacherDestroyed(const EventDispacherDestroyedEvent& event) {
+    PROFILE_SCOPE("EntityHierarchy::onEventDispacherDestroyed")
     for (auto it = m_repeatAllDispachers.begin(); it != m_repeatAllDispachers.end();) {
         if ((*it) == event.eventDispacher) {
             it = m_repeatAllDispachers.erase(it);

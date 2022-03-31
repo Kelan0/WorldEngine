@@ -56,6 +56,7 @@ Task<Func, Args...>::~Task() {
 
 template<typename Func, typename... Args>
 void Task<Func, Args...>::exec() {
+    PROFILE_SCOPE("Task::exec")
 
     if constexpr (std::is_same<return_t, void>::value) {
         std::apply(m_func, m_args);
