@@ -816,12 +816,17 @@ bool GraphicsManager::beginFrame() {
         return false; // Skip this frame
     }
 
+    PROFILE_REGION("Wait for frame fence")
+
     const vk::Device& device = **m_device.device;
     const vk::Semaphore& imageAvailableSemaphore = **m_swapchain.imageAvailableSemaphores[m_swapchain.currentFrameIndex];
     const vk::Fence& frameFence = **m_swapchain.inFlightFences[m_swapchain.currentFrameIndex];
     const vk::SwapchainKHR& swapchain = **m_swapchain.swapchain;
 
     m_device.device->waitForFences({ frameFence }, true, UINT64_MAX);
+
+//    PROFILE_REGION("Reset frame fence")
+//    m_device.device->resetFences({ frameFence });
 
     if (m_swapchain.imageExtent.width != Application::instance()->getWindowSize().x ||
         m_swapchain.imageExtent.height != Application::instance()->getWindowSize().y) {
@@ -830,6 +835,7 @@ bool GraphicsManager::beginFrame() {
         return false;
     }
 
+    PROFILE_REGION("Acquire next image")
     vk::AcquireNextImageInfoKHR acquireInfo;
     acquireInfo.setDeviceMask(1); // I can't find any information in the documentation about deviceMask... Presumably setting bit 0 means select device 0
     acquireInfo.setSwapchain(swapchain);
@@ -855,6 +861,8 @@ bool GraphicsManager::beginFrame() {
     }
 
     vk::CommandBufferBeginInfo beginInfo;
+
+    PROFILE_REGION("Begin command buffer");
     commandBuffer.begin(beginInfo);
 
     return true;
@@ -869,14 +877,19 @@ void GraphicsManager::endFrame() {
     const vk::SwapchainKHR& swapchain = **m_swapchain.swapchain;
     const vk::CommandBuffer& commandBuffer = getCurrentCommandBuffer();
 
-    PROFILE_REGION("Wait for fences")
+    PROFILE_REGION("End command buffer")
     commandBuffer.end();
 
-    if (m_swapchain.imagesInFlight[m_swapchain.currentImageIndex]) {
-        device.waitForFences({ m_swapchain.imagesInFlight[m_swapchain.currentImageIndex] }, true, UINT64_MAX);
-    }
+    PROFILE_REGION("Wait for image fence")
 
+    if (m_swapchain.imagesInFlight[m_swapchain.currentImageIndex])
+        device.waitForFences({ m_swapchain.imagesInFlight[m_swapchain.currentImageIndex] }, true, UINT64_MAX);
     m_swapchain.imagesInFlight[m_swapchain.currentImageIndex] = frameFence;
+
+    PROFILE_REGION("Reset frame fence")
+    m_device.device->resetFences({ frameFence });
+
+    PROFILE_REGION("Submit queues")
 
     vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
 
@@ -891,10 +904,6 @@ void GraphicsManager::endFrame() {
     submitInfo.setPSignalSemaphores(&renderFinishedSemaphore);
 
     const vk::Queue& queue = **m_queues.queues["graphics_main"];
-
-    m_device.device->resetFences({ frameFence });
-
-    PROFILE_REGION("Submit queues")
 
     // Submit the queue, signal frameFence once the commands are executed
     queue.submit(submitInfos, frameFence);

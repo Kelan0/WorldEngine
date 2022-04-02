@@ -114,6 +114,9 @@
     <ClCompile Include="src\core\engine\renderer\RenderProperties.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\core\util\DenseFlagArray.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\application\Application.h">
@@ -216,6 +219,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\core\engine\renderer\RenderProperties.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\util\DenseFlagArray.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

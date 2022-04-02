@@ -7,6 +7,7 @@
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/GraphicsPipeline.h"
 #include "core/graphics/Mesh.h"
+#include "core/thread/ThreadUtils.h"
 #include <chrono>
 
 
@@ -196,6 +197,8 @@ void Application::start() {
 
             auto beginFrame = now;
 
+            ThreadUtils::wakeThreads();
+
             processEventsInternal();
 
             if (graphics()->beginFrame()) {
@@ -222,6 +225,7 @@ void Application::start() {
         uint64_t debugDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastDebug).count();
 
         if (debugDuration >= 1000000000u) {
+            PROFILE_SCOPE("Debug log")
             double secondsElapsed = debugDuration / 1000000000.0;
             std::sort(frameTimes.begin(), frameTimes.end(), [](const double& lhs, const double& rhs) { return lhs > rhs; });
             double dtAvg = 0.0;

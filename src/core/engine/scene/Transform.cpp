@@ -1,8 +1,7 @@
 #include "core/engine/scene/Transform.h"
 
 
-std::vector<uint8_t> Transform::s_transformsChangedPacked;
-constexpr size_t packBits = 8;
+EntityChangeTracker Transform::s_changeTracker;
 
 Transform::Transform():
         m_translation(0.0),
@@ -508,70 +507,21 @@ Transform::operator glm::dmat4() const {
 }
 
 void Transform::update() {
-    if (m_transformIndex != UINT32_MAX) {
-        Transform::setChanged(m_transformIndex, false);
-    }
+    changeTracker().setChanged(m_entityIndex, false);
 }
 
 void Transform::change() {
-    Transform::setChanged(m_transformIndex, false);
+    changeTracker().setChanged(m_entityIndex, true);
 }
 
 bool Transform::hasChanged() const {
-    return Transform::hasChanged(m_transformIndex);
+    return changeTracker().hasChanged(m_entityIndex);
 }
 
-bool Transform::hasChanged(const size_t& index) {
-    if (index >= UINT32_MAX)
-        return true;
-
-    if (index >= s_transformsChangedPacked.size() * packBits)
-        return true;
-
-    if constexpr (packBits == 1) {
-        if (index >= s_transformsChangedPacked.size())
-            return true;
-        return s_transformsChangedPacked[index];
-
-    } else {
-        uint8_t& bits = s_transformsChangedPacked[index / packBits];
-        const size_t bitIndex = index % packBits;
-        return (bits >> bitIndex) & 1;
-    }
-
+EntityChangeTracker& Transform::changeTracker() {
+    return s_changeTracker;
 }
 
-void Transform::setChanged(const size_t& index, const bool& changed) {
-    if (index >= UINT32_MAX)
-        return;
-
-    ensureCapacity(index);
-
-    uint8_t& bits = s_transformsChangedPacked[index / packBits];
-
-    const size_t bitIndex = index % packBits;
-    const uint8_t bit = 1 << bitIndex;
-    if (changed)
-        bits |= bit;
-    else
-        bits &= ~bit;
-}
-
-void Transform::reindex(Transform& transform, const size_t& newIndex) {
-    if (transform.m_transformIndex != UINT32_MAX) {
-        // TODO: swap the values around
-    }
-
-    setChanged(transform.m_transformIndex, true);
-    transform.m_transformIndex = newIndex;
-    setChanged(transform.m_transformIndex, true);
-}
-
-bool Transform::ensureCapacity(const size_t& index) {
-    const size_t packedIndex = index / packBits;
-    if (s_transformsChangedPacked.size() <= packedIndex) {
-        s_transformsChangedPacked.resize(packedIndex + packedIndex / 2, 0);
-        return true;
-    }
-    return false;
+void Transform::reindex(Transform& transform, const EntityChangeTracker::entity_index& newEntityIndex) {
+    s_changeTracker.reindex(transform.m_entityIndex, newEntityIndex);
 }

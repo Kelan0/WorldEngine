@@ -36,6 +36,7 @@ class App : public Application {
     double cameraYaw = 0.0F;
 
     std::vector<Entity> testEntities;
+    std::vector<Entity> dynamicEntities;
 
     void init() override {
         //eventDispacher()->connect<ScreenResizeEvent>(&App::onScreenResize, this);
@@ -150,10 +151,21 @@ class App : public Application {
             for (int j = 0; j < zCount; ++j) {
 
                 Entity entity = EntityHierarchy::create(scene(), "testEntity[" + std::to_string(i) + ", " + std::to_string(j) + "]");
-                Transform& t = entity.addComponent<Transform>().translate(-0.5 * spacing * xCount + i * spacing, 0.0, -0.5 * spacing * zCount + j * spacing);
-                entity.addComponent<RenderComponent>().setMesh(cubeMesh).setTexture(textures[rand() % textures.size()]);
+
+                Transform& t = entity.addComponent<Transform>()
+                    .translate(-0.5 * spacing * xCount + i * spacing, 0.0, -0.5 * spacing * zCount + j * spacing)
+                    .scale(0.75);
+
+                entity.addComponent<RenderComponent>()
+                    .setMesh(cubeMesh)
+                    .setTexture(textures[rand() % textures.size()]);
 
                 testEntities.push_back(entity);
+                double distSq = glm::dot(t.getTranslation(), t.getTranslation());
+                if (distSq < 10 * 10) {
+                  t.translate(0, 1, 0);
+                  dynamicEntities.push_back(entity);
+                }
             }
         }
 
@@ -215,6 +227,10 @@ class App : public Application {
 
     void render(double dt) override {
         handleUserInput(dt);
+
+        for (Entity& ent : dynamicEntities) {
+            ent.getComponent<Transform>().rotate(0, 1, 0, glm::radians(dt * 90.0));
+        }
 
         //size_t f = 100;
         //

@@ -79,12 +79,12 @@ private:
     static profile_id PFID_NAME(__pf_scp_id_) = Profiler::id(name); \
     ScopeProfiler PF_NAME(PFID_NAME(__pf_scp_id_));
 
-#define PROFILE_REGION(name) \
+#define PROFILE_REGION(name) {\
     static profile_id PFID_NAME(__pf_reg_id_) = Profiler::id(name); \
-    PF_NAME.beginRegion(PFID_NAME(__pf_reg_id_));
+    PF_NAME.beginRegion(PFID_NAME(__pf_reg_id_)); }
 
-#define PROFILE_END_REGION(x) \
-    PF_NAME.endRegion();
+#define PROFILE_END_REGION(x) { \
+    PF_NAME.endRegion(); }
 
 
 #endif //WORLDENGINE_PROFILER_H

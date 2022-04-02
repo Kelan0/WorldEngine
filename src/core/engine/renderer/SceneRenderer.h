@@ -57,6 +57,8 @@ public:
 
     void initPipelineDescriptorSetLayouts(GraphicsPipelineConfiguration& graphicsPipelineConfiguration) const;
 
+    uint32_t registerTexture(Texture2D* texture);
+
 private:
     void recordRenderCommands(double dt, vk::CommandBuffer commandBuffer);
 
@@ -87,11 +89,14 @@ private:
         DescriptorSet* globalDescriptorSet;
         DescriptorSet* objectDescriptorSet;
         DescriptorSet* materialDescriptorSet;
-        std::vector<entt::entity> objectEntities;
+        DenseFlagArray changedObjectTransforms;
+        DenseFlagArray changedObjectTextures;
+        //std::vector<entt::entity> objectEntities;
         std::vector<ObjectDataUBO> objectBuffer;
-        std::vector<Texture2D*> objectTextures;
-        std::vector<Texture2D*> materialBufferTextures;
-        std::vector<vk::ImageLayout> materialBufferImageLayouts;
+//        std::vector<Texture2D*> objectTextures;
+//        std::vector<Texture2D*> materialBufferTextures;
+//        std::vector<vk::ImageLayout> materialBufferImageLayouts;
+        size_t uploadedMaterialBufferTextures;
     };
 
     FrameResource<RenderResources> m_resources;
@@ -105,7 +110,11 @@ private:
     bool m_needsSortRenderableEntities;
 
     std::unordered_map<Texture2D*, uint32_t> m_textureDescriptorIndices;
+    std::vector<Texture2D*> m_materialBufferTextures;
+    std::vector<vk::ImageLayout> m_materialBufferImageLayouts;
     size_t m_numRenderEntities;
+
+    std::vector<std::pair<size_t, size_t>> m_objectBufferModifiedRegions;
 };
 
 

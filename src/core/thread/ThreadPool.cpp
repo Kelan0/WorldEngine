@@ -12,7 +12,7 @@ ThreadPool::ThreadPool(size_t concurrency) {
     m_pushThreadIndex = 0;
     m_taskCount = 0;
 
-    m_mainThreadId = std::this_thread::get_id();
+    m_isBatchingTasks = false;
 
     for (size_t i = 0; i < concurrency; ++i) {
         m_threads[i] = new Thread();
@@ -22,10 +22,13 @@ ThreadPool::ThreadPool(size_t concurrency) {
 }
 
 ThreadPool::~ThreadPool() {
-    for (size_t i = 0; i < m_threads.size(); ++i) {
+    for (size_t i = 0; i < m_threads.size(); ++i)
         m_threads[i]->running = false;
+
+    wakeThreads();
+
+    for (size_t i = 0; i < m_threads.size(); ++i)
         m_threads[i]->thread.join();
-    }
 }
 
 ThreadPool* ThreadPool::instance() {
@@ -41,15 +44,21 @@ size_t ThreadPool::getTaskCount() const {
     return m_taskCount + m_batchedTasks.size();
 }
 
-BaseTask* ThreadPool::nextTask() {
+BaseTask* ThreadPool::nextTask(Thread* currentThread) {
     PROFILE_SCOPE("ThreadPool::nextTask")
 
-    if (m_taskCount == 0) {
+
+    assert(currentThread != nullptr);
+    assert(currentThread->thread.get_id() == std::this_thread::get_id());
+
+    if (!wakeThreadCondition(currentThread)) {
         PROFILE_SCOPE("Wait for tasks")
 
         std::unique_lock<std::mutex> lock(m_tasksAvailableMutex);
-        while (m_taskCount == 0)
+        while (!wakeThreadCondition(currentThread))
             m_tasksAvailableCondition.wait(lock);
+
+        currentThread->forceWake = false;
     }
 
 //    if (m_taskCount == 0)
@@ -114,9 +123,12 @@ void ThreadPool::executor() {
     PROFILE_SCOPE("ThreadPool::executor")
     Thread* thread = getCurrentThread();
     assert(thread != nullptr);
+
+    thread->forceWake = false;
+
     while (thread->running) {
         PROFILE_SCOPE("ThreadPool::executor/task_loop")
-        BaseTask* task = nextTask();
+        BaseTask* task = nextTask(thread);
 
         if (task == nullptr)
             continue;
@@ -238,4 +250,20 @@ void ThreadPool::flushFrame() {
 //        Thread* thread = *it;
 //        thread->mutex.unlock();
 //    }
+}
+
+bool ThreadPool::wakeThreadCondition(Thread* thread) const {
+    return
+//    thread->forceWake ||
+    m_taskCount > 0;
+}
+
+void ThreadPool::wakeThreads() {
+//    PROFILE_SCOPE("ThreadPool::wakeThreads");
+//
+//    std::unique_lock<std::mutex> lock(m_tasksAvailableMutex);
+//    for (size_t i = 0; i < m_threads.size(); ++i)
+//        m_threads[i]->forceWake = true;
+//
+//    m_tasksAvailableCondition.notify_all();
 }

@@ -200,6 +200,7 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClCompile Include="src\core\thread\ThreadPool.cpp" />
     <ClCompile Include="src\core\thread\ThreadUtils.cpp" />
     <ClCompile Include="src\core\util\DebugUtils.cpp" />
+    <ClCompile Include="src\core\util\DenseFlagArray.cpp" />
     <ClCompile Include="src\core\util\Exception.cpp" />
     <ClCompile Include="src\core\util\Profiler.cpp" />
     <ClCompile Include="src\core\util\Util.cpp" />
@@ -237,6 +238,7 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClInclude Include="src\core\thread\ThreadPool.h" />
     <ClInclude Include="src\core\thread\ThreadUtils.h" />
     <ClInclude Include="src\core\util\DebugUtils.h" />
+    <ClInclude Include="src\core\util\DenseFlagArray.h" />
     <ClInclude Include="src\core\util\Exception.h" />
     <ClInclude Include="src\core\util\Profiler.h" />
     <ClInclude Include="src\core\util\Util.h" />

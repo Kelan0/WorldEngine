@@ -26,6 +26,7 @@ private:
         std::deque<BaseTask*> taskQueue;
         std::vector<BaseTask*> completeTasks;
         bool running;
+        bool forceWake;
     };
 
 public:
@@ -51,7 +52,9 @@ public:
 
     void endBatch();
 
-    BaseTask* nextTask();
+    BaseTask* nextTask(Thread* currentThread);
+
+    void wakeThreads();
 
 private:
     size_t getCurrentThreadIndex();
@@ -64,11 +67,10 @@ private:
 
     void syncBatchedTasks();
 
+    bool wakeThreadCondition(Thread* thread) const;
+
 private:
     std::vector<Thread*> m_threads;
-    std::thread::id m_mainThreadId;
-//    wsque<BaseTask*> m_mainThreadTaskQueue;
-//    std::mutex m_taskQueueMutex;
     std::atomic_size_t m_pushThreadIndex;
 
     std::atomic_size_t m_taskCount;
@@ -120,73 +122,6 @@ typename ThreadPool::future_t<Func, Args...> ThreadPool::pushTask(Task<Func, Arg
 
     return future;
 }
-
-//template<typename Func, typename... Args>
-//void ThreadPool::pushTasks(size_t count, Task<Func, Args...>** tasks, future_t<Func, Args...>* futures) {
-//    PROFILE_SCOPE("ThreadPool::pushTasks")
-//
-//    size_t pushThreadStartIndex = m_pushThreadIndex.fetch_add(count); // TODO: can we get away with memory_order_relaxed here?
-//
-//    PROFILE_REGION("Lock and push tasks")
-//
-//    size_t desiredThreads = std::min(count, m_threads.size());
-//
-//    constexpr size_t maxLockAttempts = 128;
-//    size_t failedLocks = 0;
-//    size_t numLocked = 0;
-//    std::vector<Thread*> lockedThreads(m_threads.size(), nullptr);
-//
-//    while (failedLocks < maxLockAttempts && numLocked < desiredThreads) {
-//        for (size_t i = 0; i < m_threads.size() && numLocked < desiredThreads; ++i) {
-//            if (lockedThreads[i] != nullptr) {
-//                continue; // Already locked
-//            }
-//
-//            if (!m_threads[i]->mutex.try_lock()) {
-//                ++failedLocks;
-//                continue; // Failed to lock
-//            }
-//
-//            lockedThreads[i] = m_threads[i];
-//            ++numLocked;
-//        }
-//    }
-//
-//    if (numLocked == 0) {
-//        size_t pushThreadIndex = pushThreadStartIndex % m_threads.size();
-//        m_threads[pushThreadIndex]->mutex.lock();
-//        lockedThreads[pushThreadIndex] = m_threads[pushThreadIndex];
-//    }
-//
-//    size_t taskIndex = 0;
-//    while (taskIndex < count) {
-//        for (size_t i = 0; i < lockedThreads.size(); ++i) {
-//            if (lockedThreads[i] != nullptr) {
-//                lockedThreads[i]->taskQueue.emplace_back(tasks[taskIndex]);
-//                futures[taskIndex] = std::move(tasks[taskIndex]->getFuture());
-//                ++taskIndex;
-//            }
-//        }
-//    }
-//    for (size_t i = 0; i < lockedThreads.size(); ++i) {
-//        if (lockedThreads[i] != nullptr) {
-//            lockedThreads[i]->mutex.unlock();
-//        }
-//    }
-//
-//    PROFILE_REGION("Lock and incr tasks")
-//    {
-//        std::unique_lock<std::mutex> lock(m_tasksAvailableMutex);
-//        m_taskCount.fetch_add(count);
-//    }
-//
-//    PROFILE_REGION("Notify tasks available")
-//    if (count == 1) {
-//        m_tasksAvailableCondition.notify_one();
-//    } else {
-//        m_tasksAvailableCondition.notify_all();
-//    }
-//}
 
 
 #endif //WORLDENGINE_THREADPOOL_H
