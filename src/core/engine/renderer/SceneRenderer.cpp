@@ -17,6 +17,15 @@
 
 //#include "../thread/ThreadUtils.h"
 
+
+struct DrawCommand {
+    Mesh* mesh = nullptr;
+    size_t instanceCount = 0;
+    size_t firstInstance = 0;
+};
+
+
+
 SceneRenderer::SceneRenderer():
     m_needsSortRenderableEntities(true),
     m_numRenderEntities(0) {
@@ -99,13 +108,14 @@ void SceneRenderer::render(double dt, RenderCamera* renderCamera) {
     cameraInfo.viewProjectionMatrix = renderCamera->getViewProjectionMatrix();
     m_resources->cameraInfoBuffer->upload(0, sizeof(CameraInfoUBO), &cameraInfo);
 
+    const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
+    m_numRenderEntities = renderEntities.size();
+
     if (m_needsSortRenderableEntities) {
         m_needsSortRenderableEntities = false;
         sortRenderableEntities();
     }
 
-    const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
-    m_numRenderEntities = renderEntities.size();
     mappedWorldTransformsBuffer(m_numRenderEntities);
 
     updateMaterialsBuffer();
@@ -134,13 +144,48 @@ void SceneRenderer::initPipelineDescriptorSetLayouts(GraphicsPipelineConfigurati
 void SceneRenderer::recordRenderCommands(double dt, vk::CommandBuffer commandBuffer) {
     PROFILE_SCOPE("SceneRenderer::recordRenderCommands")
 
+    auto thread_exec = [this](size_t rangeStart, size_t rangeEnd) {
+        PROFILE_SCOPE("SceneRenderer::recordRenderCommands/thread_exec")
+        const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
+
+        std::vector<DrawCommand> drawCommands;
+
+        DrawCommand currDrawCommand;
+        currDrawCommand.firstInstance = rangeStart;
+
+        auto it = renderEntities.begin() + rangeStart;
+        for (size_t index = rangeStart; index != rangeEnd; ++index, ++it) {
+            const RenderComponent& renderComponent = renderEntities.get<RenderComponent>(*it);
+
+            if (currDrawCommand.mesh == nullptr) {
+                currDrawCommand.mesh = renderComponent.mesh().get();
+                currDrawCommand.instanceCount = 0;
+
+            } else if (currDrawCommand.mesh != renderComponent.mesh().get()) {
+                drawCommands.emplace_back(currDrawCommand);
+                currDrawCommand.mesh = renderComponent.mesh().get();
+                currDrawCommand.firstInstance += currDrawCommand.instanceCount;
+                currDrawCommand.instanceCount = 0;
+            }
+
+            ++currDrawCommand.instanceCount;
+        }
+        drawCommands.emplace_back(currDrawCommand);
+
+        return drawCommands;
+    };
+
+//    std::vector<DrawCommand> drawCommands = thread_exec(0, m_numRenderEntities);
+
+    auto futures = ThreadUtils::parallel_range(m_numRenderEntities, (size_t)1, ThreadUtils::getThreadCount(), thread_exec);
+    auto drawCommands = ThreadUtils::getResults(futures);
+
     PROFILE_REGION("Bind resources")
     GraphicsManager* graphics = Application::instance()->graphics();
     const uint32_t currentFrameIndex = graphics->getCurrentFrameIndex();
     const vk::Device& device = **graphics->getDevice();
 
 
-    const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
 
     std::shared_ptr<GraphicsPipeline> pipeline = Application::instance()->graphics()->pipeline();
 
@@ -156,33 +201,14 @@ void SceneRenderer::recordRenderCommands(double dt, vk::CommandBuffer commandBuf
     graphics->pipeline()->bind(commandBuffer);
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphics->pipeline()->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
 
-    uint32_t firstInstance = 0;
-    uint32_t instanceCount = 0;
-    Mesh* currMesh = NULL;
 
     PROFILE_REGION("Draw meshes")
-    for (auto id : renderEntities) {
-        const RenderComponent& renderComponent = renderEntities.get<RenderComponent>(id);
+    for (auto& commands : drawCommands)
+        for (auto& command : commands)
+            command.mesh->draw(commandBuffer, command.instanceCount, command.firstInstance);
 
-        if (currMesh == NULL) {
-            currMesh = renderComponent.mesh().get();
-            instanceCount = 0;
-            firstInstance = 0;
-
-        } else if (currMesh != renderComponent.mesh().get()) {
-            currMesh->draw(commandBuffer, instanceCount, firstInstance);
-            currMesh = renderComponent.mesh().get();
-            firstInstance += instanceCount;
-            instanceCount = 0;
-        }
-
-        ++instanceCount;
-    }
-
-    if (currMesh != NULL) {
-        currMesh->draw(commandBuffer, instanceCount, firstInstance);
-    }
-
+//    for (size_t i = 0; i < drawCommands.size(); ++i)
+//        drawCommands[i].mesh->draw(commandBuffer, drawCommands[i].instanceCount, drawCommands[i].firstInstance);
 }
 
 void SceneRenderer::initMissingTexture() {
@@ -279,15 +305,6 @@ void SceneRenderer::updateEntityWorldTransforms() {
 
         PROFILE_REGION("Mark changed object transforms");
 
-//        for (size_t index = rangeStart; index != rangeEnd; ++index) {
-//
-//            if (Transform::changeTracker().hasChanged(index)) {
-//                Transform::changeTracker().setChanged(index, false);
-//                for (int i = 0; i < CONCURRENT_FRAMES; ++i)
-//                    m_resources.get(i)->changedObjectTransforms.set(index, true);
-//            }
-//        }
-
         size_t changeTrackStartIndex = SIZE_MAX;
 
         for (size_t index = rangeStart; index != rangeEnd; ++index) {
@@ -329,36 +346,6 @@ void SceneRenderer::updateEntityWorldTransforms() {
         if (firstModifiedIndex != SIZE_MAX)
             modifiedRegions.emplace_back(std::make_pair(firstModifiedIndex, lastModifiedIndex + 1));
 
-//        for (size_t index = rangeStart; index != rangeEnd; ++index) {
-//            if (m_resources->changedObjectTransforms[index]) {
-//                if (firstModifiedIndex == SIZE_MAX)
-//                    firstModifiedIndex = index;
-//                if (lastModifiedIndex != SIZE_MAX)
-//                    lastModifiedIndex = SIZE_MAX;
-//
-////                if (firstModifiedIndex == SIZE_MAX) {
-////                    firstModifiedIndex = index;
-////
-////                } else if (lastModifiedIndex + maxRegionMergeDist < index) {
-////                    modifiedRegions.emplace_back(std::make_pair(firstModifiedIndex, lastModifiedIndex + 1));
-////                    firstModifiedIndex = index;
-////                }
-//            } else {
-//                lastModifiedIndex = index - 1;
-//            }
-//
-//            if (lastModifiedIndex != SIZE_MAX && index >= lastModifiedIndex + maxRegionMergeDist) {
-//                modifiedRegions.emplace_back(std::make_pair(firstModifiedIndex, lastModifiedIndex + 1));
-//                firstModifiedIndex = SIZE_MAX;
-//                lastModifiedIndex = SIZE_MAX;
-//            }
-//        }
-//        if (firstModifiedIndex != SIZE_MAX)
-//            lastModifiedIndex = rangeEnd - 1;
-//
-//        if (lastModifiedIndex != SIZE_MAX)
-//            modifiedRegions.emplace_back(std::make_pair(firstModifiedIndex, lastModifiedIndex + 1));
-
         PROFILE_REGION("Update changed object transforms");
 
         size_t itOffset = rangeStart;
@@ -378,15 +365,6 @@ void SceneRenderer::updateEntityWorldTransforms() {
                 }
             }
         }
-
-//        auto it = renderEntities.begin() + rangeStart;
-//        for (size_t index = rangeStart; index != rangeEnd; ++index, ++it) {
-//            if (m_resources->changedObjectTransforms[index]) {
-//                glm::mat4& modelMatrix = m_resources->objectBuffer[index].modelMatrix;
-//                Transform& transform = renderEntities.get<Transform>(*it);
-//                transform.fillMatrix(modelMatrix);
-//            }
-//        }
 
         return modifiedRegions;
     };
