@@ -2,30 +2,50 @@
 #include "core/application/Application.h"
 #include "core/engine/renderer/SceneRenderer.h"
 
-EntityChangeTracker RenderComponent::s_textureChangeTracker;
-
 RenderComponent::RenderComponent():
     m_mesh(nullptr),
     m_texture(nullptr),
     m_textureIndex(UINT32_MAX),
-    m_entityIndex(EntityChangeTracker::INVALID_INDEX) {
+    m_entityIndex(EntityChangeTracker::INVALID_INDEX),
+    m_transformUpdateType(UpdateType_Static),
+    m_textureUpdateType(UpdateType_Static),
+    m_meshUpdateType(UpdateType_Static) {
 }
 
 RenderComponent& RenderComponent::setMesh(const std::shared_ptr<Mesh>& mesh) {
-    m_mesh = mesh;
+    if (mesh.get() != m_mesh.get()) {
+        Application::instance()->renderer()->notifyMeshChanged(m_meshUpdateType);
+        m_mesh = mesh;
+    }
     return *this;
 }
 
 RenderComponent& RenderComponent::setTexture(const std::shared_ptr<Texture2D>& texture) {
     uint32_t textureIndex = Application::instance()->renderer()->registerTexture(texture.get());
     if (textureIndex != m_textureIndex) {
-        textureChangeTracker().setChanged(m_entityIndex, true);
+        Application::instance()->renderer()->notifyTextureChanged(m_entityIndex);
         m_textureIndex = textureIndex;
+        m_texture = texture;
     }
 
-    m_texture = texture;
     return *this;
 }
+
+//RenderComponent &RenderComponent::setTransformUpdateType(const UpdateType& updateType) {
+//    if (updateType != m_transformUpdateType) {
+//        transformUpdateTypeChangeTracker().setChanged(m_entityIndex, true);
+//        m_transformUpdateType = updateType;
+//    }
+//    return *this;
+//}
+//
+//RenderComponent &RenderComponent::setTextureUpdateType(const UpdateType& updateType) {
+//    if (updateType != m_textureUpdateType) {
+//        textureUpdateTypeChangeTracker().setChanged(m_entityIndex, true);
+//        m_textureUpdateType = updateType;
+//    }
+//    return *this;
+//}
 
 const std::shared_ptr<Mesh>& RenderComponent::mesh() const {
     return m_mesh;
@@ -35,12 +55,22 @@ const std::shared_ptr<Texture2D>& RenderComponent::texture() const {
     return m_texture;
 }
 
-EntityChangeTracker& RenderComponent::textureChangeTracker() {
-    return s_textureChangeTracker;
+RenderComponent::UpdateType RenderComponent::transformUpdateType() const {
+    return m_transformUpdateType;
+}
+
+RenderComponent::UpdateType RenderComponent::textureUpdateType() const {
+    return m_textureUpdateType;
+}
+
+RenderComponent::UpdateType RenderComponent::meshUpdateType() const {
+    return m_meshUpdateType;
 }
 
 void RenderComponent::reindex(RenderComponent& renderComponent, const size_t& newEntityIndex) {
-    s_textureChangeTracker.reindex(renderComponent.m_entityIndex, newEntityIndex);
+    if (newEntityIndex == renderComponent.m_entityIndex)
+        return;
+    renderComponent.m_entityIndex = newEntityIndex;
 }
 
 const uint32_t& RenderComponent::getTextureIndex() const {

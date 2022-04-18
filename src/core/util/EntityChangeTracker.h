@@ -24,8 +24,6 @@ public:
 
     void setChanged(const entity_index& entityIndex, const size_t& count, const bool& changed);
 
-    void reindex(entity_index& entityIndex, const entity_index& newEntityIndex);
-
 private:
     DenseFlagArray m_changedFlags;
 };

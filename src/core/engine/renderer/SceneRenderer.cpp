@@ -25,9 +25,41 @@ struct DrawCommand {
 };
 
 
+template<typename T>
+struct StaticUpdateFlag { uint8_t _v; };
+
+template<typename T>
+struct DynamicUpdateFlag { uint8_t _v; };
+
+template<typename T>
+struct AlwaysUpdateFlag { uint8_t _v; };
+
+template<typename T>
+struct UpdateTypeHandler {
+    static void setEntityUpdateType(const Entity& entity, const RenderComponent::UpdateType& updateType) {
+        switch (updateType) {
+            case RenderComponent::UpdateType_Static: entity.addComponent<StaticUpdateFlag<T>>(); break;
+            case RenderComponent::UpdateType_Dynamic: entity.addComponent<DynamicUpdateFlag<T>>(); break;
+            case RenderComponent::UpdateType_Always: entity.addComponent<AlwaysUpdateFlag<T>>(); break;
+            default: assert(false); break;
+        }
+    }
+
+    static void removeEntityUpdateType(const Entity& entity, const RenderComponent::UpdateType& updateType) {
+        switch (updateType) {
+            case RenderComponent::UpdateType_Static: entity.removeComponent<StaticUpdateFlag<T>>(); break;
+            case RenderComponent::UpdateType_Dynamic: entity.removeComponent<DynamicUpdateFlag<T>>(); break;
+            case RenderComponent::UpdateType_Always: entity.removeComponent<AlwaysUpdateFlag<T>>(); break;
+        }
+    }
+};
+
+
+
+
 
 SceneRenderer::SceneRenderer():
-    m_needsSortRenderableEntities(true),
+//    m_needsSortRenderableEntities(true),
     m_numRenderEntities(0) {
 }
 
@@ -88,6 +120,10 @@ void SceneRenderer::init() {
     m_scene->enableEvents<RenderComponent>();
     m_scene->getEventDispacher()->connect<ComponentAddedEvent<RenderComponent>>(&SceneRenderer::onRenderComponentAdded, this);
     m_scene->getEventDispacher()->connect<ComponentRemovedEvent<RenderComponent>>(&SceneRenderer::onRenderComponentRemoved, this);
+
+    m_needsSortEntities[RenderComponent::UpdateType_Static] = true;
+    m_needsSortEntities[RenderComponent::UpdateType_Dynamic] = true;
+    m_needsSortEntities[RenderComponent::UpdateType_Always] = true;
 }
 
 void SceneRenderer::render(double dt) {
@@ -108,16 +144,13 @@ void SceneRenderer::render(double dt, RenderCamera* renderCamera) {
     cameraInfo.viewProjectionMatrix = renderCamera->getViewProjectionMatrix();
     m_resources->cameraInfoBuffer->upload(0, sizeof(CameraInfoUBO), &cameraInfo);
 
-    const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
+    const auto& renderEntities = m_scene->registry()->group<RenderComponent, Transform>();
     m_numRenderEntities = renderEntities.size();
 
-    if (m_needsSortRenderableEntities) {
-        m_needsSortRenderableEntities = false;
-        sortRenderableEntities();
-    }
+    sortRenderableEntities();
 
     mappedWorldTransformsBuffer(m_numRenderEntities);
-
+    findModifiedEntities();
     updateMaterialsBuffer();
     updateEntityWorldTransforms();
     streamObjectData();
@@ -146,7 +179,7 @@ void SceneRenderer::recordRenderCommands(double dt, vk::CommandBuffer commandBuf
 
     auto thread_exec = [this](size_t rangeStart, size_t rangeEnd) {
         PROFILE_SCOPE("SceneRenderer::recordRenderCommands/thread_exec")
-        const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
+        const auto& renderEntities = m_scene->registry()->group<RenderComponent, Transform>();
 
         std::vector<DrawCommand> drawCommands;
 
@@ -244,142 +277,221 @@ void SceneRenderer::initMissingTexture() {
 
 void SceneRenderer::sortRenderableEntities() {
     PROFILE_SCOPE("SceneRenderer::sortRenderableEntities")
-    const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
 
-    PROFILE_REGION("Sort entities")
 
-    // Group all meshes of the same type to be contiguous in the array
-    renderEntities.sort([&renderEntities](const entt::entity& lhs, const entt::entity& rhs) {
-        const RenderComponent& lhsRC = renderEntities.get<RenderComponent>(lhs);
-        const RenderComponent& rhsRC = renderEntities.get<RenderComponent>(rhs);
-        return lhsRC.mesh()->getResourceId() < rhsRC.mesh()->getResourceId();
-    });
+    // Group all meshes of the same type to be contiguous when iterated
+    auto renderComponentComp = [](const RenderComponent& lhs, const RenderComponent& rhs) {
+        return lhs.mesh()->getResourceId() < rhs.mesh()->getResourceId();
+    };
 
-    PROFILE_REGION("Reindex transforms")
-    Transform::changeTracker().ensureCapacity(m_numRenderEntities);
-    EntityChangeTracker::entity_index index = 0;
-    for (auto id : renderEntities) {
-        Transform& transform = renderEntities.get<Transform>(id);
-        Transform::reindex(transform, index++);
+    bool entityRenderSequenceChanged = false;
+
+    if (m_needsSortEntities[RenderComponent::UpdateType_Static]) {
+        PROFILE_REGION("Sort entities UpdateType_Static")
+
+        m_needsSortEntities[RenderComponent::UpdateType_Static] = false;
+
+        const auto &grp = m_scene->registry()->group<RenderComponent, Transform, StaticUpdateFlag<Mesh>>();
+        grp.sort([&grp, &comp = renderComponentComp](const entt::entity &lhs, const entt::entity &rhs) {
+            return comp(grp.get<RenderComponent>(lhs), grp.get<RenderComponent>(rhs));
+        }, entt::insertion_sort{});
+
+        entityRenderSequenceChanged = true;
     }
 
+    if (m_needsSortEntities[RenderComponent::UpdateType_Dynamic]) {
+        PROFILE_REGION("Sort entities UpdateType_Dynamic")
 
-    PROFILE_REGION("Reindex render components")
-    index = 0;
-    RenderComponent::textureChangeTracker().ensureCapacity(m_numRenderEntities);
-    for (auto id : renderEntities) {
-        RenderComponent& renderComponent = renderEntities.get<RenderComponent>(id);
-        RenderComponent::reindex(renderComponent, index++);
+        m_needsSortEntities[RenderComponent::UpdateType_Dynamic] = false;
+
+        const auto &grp = m_scene->registry()->group<RenderComponent, Transform, DynamicUpdateFlag<Mesh>>();
+        grp.sort([&grp, &comp = renderComponentComp](const entt::entity &lhs, const entt::entity &rhs) {
+            return comp(grp.get<RenderComponent>(lhs), grp.get<RenderComponent>(rhs));
+        }, entt::insertion_sort{});
+
+        entityRenderSequenceChanged = true;
     }
 
-    //ThreadUtils::parallel_range(renderEntities.size(), [this, &renderEntities](size_t rangeStart, size_t rangeEnd) {
-    //
-    //    auto it = renderEntities.begin() + rangeStart;
-    //    for (size_t index = rangeStart; index != rangeEnd; ++index, ++it) {
-    //        Transform& transform = renderEntities.get<Transform>(*it);
-    //        Transform::reindex(transform, index);
-    //    }
-    //});
+    if (m_needsSortEntities[RenderComponent::UpdateType_Always]) {
+        PROFILE_REGION("Sort entities UpdateType_Always")
+
+        m_needsSortEntities[RenderComponent::UpdateType_Always] = false;
+
+        const auto &grp = m_scene->registry()->group<RenderComponent, Transform, AlwaysUpdateFlag<Mesh>>();
+        grp.sort([&grp, &comp = renderComponentComp](const entt::entity &lhs, const entt::entity &rhs) {
+            return comp(grp.get<RenderComponent>(lhs), grp.get<RenderComponent>(rhs));
+        }, entt::insertion_sort{});
+
+        entityRenderSequenceChanged = true;
+    }
+
+    if (entityRenderSequenceChanged) {
+        const auto &renderEntities = m_scene->registry()->group<RenderComponent, Transform>();
+
+        PROFILE_REGION("Reindex transforms")
+        EntityChangeTracker::entity_index index = 0;
+        for (auto id: renderEntities) {
+            Transform &transform = renderEntities.get<Transform>(id);
+            Transform::reindex(transform, index++);
+        }
+
+        PROFILE_REGION("Reindex render components")
+        index = 0;
+        for (auto id: renderEntities) {
+            RenderComponent &renderComponent = renderEntities.get<RenderComponent>(id);
+            RenderComponent::reindex(renderComponent, index++);
+        }
+    }
 }
 
-void SceneRenderer::updateEntityWorldTransforms() {
-    PROFILE_SCOPE("SceneRenderer::updateEntityWorldTransforms")
+void SceneRenderer::markChangedObjectTransforms(const size_t& rangeStart, const size_t& rangeEnd) {
+//    if (rangeEnd < m_firstChangedTransformIndex || rangeStart >= m_lastChangedTransformIndex)
+//        return;
+//
+//    size_t changeTrackStartIndex = SIZE_MAX;
+//
+//    for (size_t index = rangeStart; index != rangeEnd; ++index) {
+//
+//        if (Transform::changeTracker().hasChanged(index)) {
+//            if (changeTrackStartIndex == SIZE_MAX)
+//                changeTrackStartIndex = index;
+//
+//        } else if (changeTrackStartIndex != SIZE_MAX) {
+//            Transform::changeTracker().setChanged(changeTrackStartIndex, index - changeTrackStartIndex, false);
+//            for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+//                m_resources.get(i)->changedObjectTransforms.set(changeTrackStartIndex, index - changeTrackStartIndex, true);
+//            changeTrackStartIndex = SIZE_MAX;
+//        }
+//    }
+//    if (changeTrackStartIndex != SIZE_MAX) {
+//        Transform::changeTracker().setChanged(changeTrackStartIndex, rangeEnd - changeTrackStartIndex, false);
+//        for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+//            m_resources.get(i)->changedObjectTransforms.set(changeTrackStartIndex, rangeEnd - changeTrackStartIndex, true);
+//    }
+}
 
-    PROFILE_REGION("Ensure changedObjectTransforms capacity")
-    for (int i = 0; i < CONCURRENT_FRAMES; ++i)
-        m_resources.get(i)->changedObjectTransforms.ensureSize(m_numRenderEntities, true);
+void SceneRenderer::markChangedTextureIndices(const size_t& rangeStart, const size_t& rangeEnd) {
+//    size_t changeTrackStartIndex = SIZE_MAX;
+//
+//    for (size_t index = rangeStart; index != rangeEnd; ++index) {
+//
+//        if (RenderComponent::textureChangeTracker().hasChanged(index)) {
+//            if (changeTrackStartIndex == SIZE_MAX)
+//                changeTrackStartIndex = index;
+//
+//        } else if (changeTrackStartIndex != SIZE_MAX) {
+//            RenderComponent::textureChangeTracker().setChanged(changeTrackStartIndex, index - changeTrackStartIndex, false);
+//            for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+//                m_resources.get(i)->changedObjectTextures.set(changeTrackStartIndex, index - changeTrackStartIndex, true);
+//            changeTrackStartIndex = SIZE_MAX;
+//        }
+//    }
+//
+//    if (changeTrackStartIndex != SIZE_MAX) {
+//        RenderComponent::textureChangeTracker().setChanged(changeTrackStartIndex, rangeEnd - changeTrackStartIndex, false);
+//        for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+//            m_resources.get(i)->changedObjectTextures.set(changeTrackStartIndex, rangeEnd - changeTrackStartIndex, true);
+//    }
+}
+//
+//void SceneRenderer::findModifiedEntities() {
+//    PROFILE_SCOPE("SceneRenderer::findModifiedEntities")
+//
+//    auto thread_exec = [this](size_t rangeStart, size_t rangeEnd) {
+//        PROFILE_SCOPE("SceneRenderer::findModifiedEntities/thread_exec")
+//
+//        const auto& renderEntities = m_scene->registry()->group<RenderComponent, Transform>();
+//
+////        PROFILE_REGION("Mark changed object transforms");
+////        markChangedObjectTransforms(rangeStart, rangeEnd);
+//
+////        PROFILE_REGION("Mark changed texture indices");
+////        markChangedTextureIndices(rangeStart, rangeEnd);
+//
+//        PROFILE_REGION("Find modified regions")
+//
+//        std::vector<std::pair<size_t, size_t>> modifiedRegions;
+//        size_t maxRegionMergeDist = 128;
+//        size_t firstModifiedIndex = SIZE_MAX;
+//        size_t lastModifiedIndex = SIZE_MAX;
+//
+//        for (size_t index = rangeStart; index != rangeEnd; ++index) {
+//            if (m_resources->changedObjectTransforms[index] || m_resources->changedObjectTextures[index]) {
+//                if (firstModifiedIndex == SIZE_MAX) {
+//                    firstModifiedIndex = index;
+//
+//                } else if (lastModifiedIndex + maxRegionMergeDist < index) {
+//                    modifiedRegions.emplace_back(std::make_pair(firstModifiedIndex, lastModifiedIndex + 1));
+//                    firstModifiedIndex = index;
+//                }
+//                lastModifiedIndex = index;
+//            }
+//        }
+//
+//        if (firstModifiedIndex != SIZE_MAX)
+//            modifiedRegions.emplace_back(std::make_pair(firstModifiedIndex, lastModifiedIndex + 1));
+//
+//        return modifiedRegions;
+//    };
+//
+//
+//    PROFILE_REGION("Submit work")
+//    auto futures = ThreadUtils::parallel_range(m_numRenderEntities, DenseFlagArray::pack_bits, ThreadUtils::getThreadCount() * 5, thread_exec);
+////    auto futures = ThreadUtils::run(thread_exec, 0, m_numRenderEntities);
+//
+//    PROFILE_REGION("Get thread results")
+//    auto threadResults = ThreadUtils::getResults(futures); // Blocks until results are available.
+//
+//    PROFILE_REGION("Consolidate modified regions")
+//
+//    m_objectBufferModifiedRegions.clear();
+//    for (auto&& regions : threadResults) {
+//        m_objectBufferModifiedRegions.insert(m_objectBufferModifiedRegions.end(), regions.begin(), regions.end());
+////        m_objectBufferModifiedRegions.emplace_back(regions);
+//    }
+//}
 
-    auto thread_exec = [this](
-            size_t rangeStart,
-            size_t rangeEnd) {
+void SceneRenderer::findModifiedEntities() {
+    PROFILE_SCOPE("SceneRenderer::findModifiedEntities")
 
-        PROFILE_SCOPE("SceneRenderer::updateEntityWorldTransforms/thread_exec")
+    auto thread_exec = [this](size_t rangeStart, size_t rangeEnd) {
+        PROFILE_SCOPE("SceneRenderer::findModifiedEntities/thread_exec")
 
-        const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
+        PROFILE_REGION("Find modified regions")
 
         std::vector<std::pair<size_t, size_t>> modifiedRegions;
-
         size_t maxRegionMergeDist = 128;
         size_t firstModifiedIndex = SIZE_MAX;
         size_t lastModifiedIndex = SIZE_MAX;
 
-        PROFILE_REGION("Mark changed object transforms");
-
-        size_t changeTrackStartIndex = SIZE_MAX;
-
         for (size_t index = rangeStart; index != rangeEnd; ++index) {
+            const uint32_t& entityIndex = m_sortedModifiedEntities[index];
+            if (firstModifiedIndex == SIZE_MAX) {
+                firstModifiedIndex = entityIndex;
 
-            if (Transform::changeTracker().hasChanged(index)) {
-                if (changeTrackStartIndex == SIZE_MAX)
-                    changeTrackStartIndex = index;
-
-            } else if (changeTrackStartIndex != SIZE_MAX) {
-                Transform::changeTracker().setChanged(changeTrackStartIndex, index - changeTrackStartIndex, false);
-                for (int i = 0; i < CONCURRENT_FRAMES; ++i)
-                    m_resources.get(i)->changedObjectTransforms.set(changeTrackStartIndex, index - changeTrackStartIndex, true);
-
-                changeTrackStartIndex = SIZE_MAX;
+            } else if (lastModifiedIndex + maxRegionMergeDist < entityIndex) {
+                modifiedRegions.emplace_back(std::make_pair(firstModifiedIndex, lastModifiedIndex + 1));
+                firstModifiedIndex = entityIndex;
             }
-        }
-
-        if (changeTrackStartIndex != SIZE_MAX) {
-            Transform::changeTracker().setChanged(changeTrackStartIndex, rangeEnd - changeTrackStartIndex, false);
-            for (int i = 0; i < CONCURRENT_FRAMES; ++i)
-                m_resources.get(i)->changedObjectTransforms.set(changeTrackStartIndex, rangeEnd - changeTrackStartIndex, true);
-        }
-
-        PROFILE_REGION("Find modified regions")
-
-        for (size_t index = rangeStart; index != rangeEnd; ++index) {
-            if (m_resources->changedObjectTransforms[index]) {
-                if (firstModifiedIndex == SIZE_MAX) {
-                    firstModifiedIndex = index;
-
-                } else if (lastModifiedIndex + maxRegionMergeDist < index) {
-                    modifiedRegions.emplace_back(std::make_pair(firstModifiedIndex, lastModifiedIndex + 1));
-                    firstModifiedIndex = index;
-                }
-                lastModifiedIndex = index;
-            }
+            lastModifiedIndex = entityIndex;
         }
 
         if (firstModifiedIndex != SIZE_MAX)
             modifiedRegions.emplace_back(std::make_pair(firstModifiedIndex, lastModifiedIndex + 1));
 
-        PROFILE_REGION("Update changed object transforms");
-
-        size_t itOffset = rangeStart;
-        auto it = renderEntities.begin() + itOffset;
-
-        for (auto& region : modifiedRegions) {
-            assert(region.first >= itOffset);
-
-            it += (region.first - itOffset);
-            itOffset = region.second;
-
-            for (size_t index = region.first; index != region.second; ++index, ++it) {
-                if (m_resources->changedObjectTransforms[index]) {
-                    glm::mat4& modelMatrix = m_resources->objectBuffer[index].modelMatrix;
-                    Transform& transform = renderEntities.get<Transform>(*it);
-                    transform.fillMatrix(modelMatrix);
-                }
-            }
-        }
-
         return modifiedRegions;
     };
 
+    PROFILE_REGION("Copy sorted modified entities")
+    m_sortedModifiedEntities.resize(m_modifiedEntities.size());
+    std::copy(m_modifiedEntities.begin(), m_modifiedEntities.end(), m_sortedModifiedEntities.begin());
+    m_modifiedEntities.clear();
+
     PROFILE_REGION("Submit work")
-//    thread_exec(0, m_numRenderEntities);
-    auto futures = ThreadUtils::parallel_range(m_numRenderEntities, DenseFlagArray::pack_bits, ThreadUtils::getThreadCount() * 5, thread_exec);
-//    auto futures = ThreadUtils::run(thread_exec, 0, m_numRenderEntities);
+    auto futures = ThreadUtils::parallel_range(m_sortedModifiedEntities.size(), thread_exec);
 
     PROFILE_REGION("Get thread results")
     auto threadResults = ThreadUtils::getResults(futures); // Blocks until results are available.
-
-    PROFILE_REGION("Reset modified transform flags")
-    
-    m_resources->changedObjectTransforms.set(0, m_resources->changedObjectTransforms.size(), false);
 
     PROFILE_REGION("Consolidate modified regions")
 
@@ -390,10 +502,146 @@ void SceneRenderer::updateEntityWorldTransforms() {
     }
 }
 
+void SceneRenderer::updateEntityWorldTransforms() {
+    PROFILE_SCOPE("SceneRenderer::updateEntityWorldTransforms")
+
+    auto thread_exec = [this](
+            size_t rangeStart,
+            size_t rangeEnd) {
+
+        PROFILE_SCOPE("SceneRenderer::updateEntityWorldTransforms/thread_exec")
+
+        const auto& renderEntities = m_scene->registry()->group<RenderComponent, Transform>();
+
+        PROFILE_REGION("Update changed object transforms");
+
+        bool anyTransformChanged = false;
+
+        size_t itOffset = rangeStart;
+        auto it = renderEntities.begin() + itOffset;
+
+        PROFILE_REGION("Find first region for thread")
+        size_t firstRegionIndex = 0;
+        for (; firstRegionIndex < m_objectBufferModifiedRegions.size(); ++firstRegionIndex) {
+            auto& region = m_objectBufferModifiedRegions[firstRegionIndex];
+            if (region.second >= rangeStart)
+                break;
+        }
+
+        PROFILE_REGION("Update transforms");
+        for (size_t i = firstRegionIndex; i < m_objectBufferModifiedRegions.size(); ++i) {
+            auto& region = m_objectBufferModifiedRegions[i];
+            if (region.first >= rangeEnd)
+                break; // Regions are sorted. Subsequent regions are also out of range.
+
+            size_t regionStart = std::max(region.first, rangeStart);
+            size_t regionEnd = std::min(region.second, rangeEnd);
+
+            assert(regionStart >= itOffset);
+
+            it += (regionStart - itOffset);
+            itOffset = regionEnd;
+
+            for (size_t index = regionStart; index != regionEnd; ++index, ++it) {
+                if (m_resources->changedObjectTransforms[index]) {
+                    glm::mat4& modelMatrix = m_resources->objectBuffer[index].modelMatrix;
+                    Transform& transform = renderEntities.get<Transform>(*it);
+                    transform.fillMatrix(modelMatrix);
+                    anyTransformChanged = true;
+                }
+            }
+        }
+
+        PROFILE_REGION("Reset modified transform flags")
+        if (anyTransformChanged)
+            m_resources->changedObjectTransforms.set(rangeStart, rangeEnd - rangeStart, false);
+    };
+
+    PROFILE_REGION("Submit work")
+//    thread_exec(0, m_numRenderEntities);
+    auto futures = ThreadUtils::parallel_range(m_numRenderEntities, DenseFlagArray::pack_bits, ThreadUtils::getThreadCount() * 5, thread_exec);
+//    auto futures = ThreadUtils::run(thread_exec, 0, m_numRenderEntities);
+
+    ThreadUtils::wait(futures);
+}
+
+void SceneRenderer::updateMaterialsBuffer() {
+    PROFILE_SCOPE("SceneRenderer::updateMaterialsBuffer")
+
+    auto thread_exec = [this](size_t rangeStart, size_t rangeEnd) {
+        PROFILE_SCOPE("SceneRenderer::updateMaterialsBuffer/thread_exec")
+
+        const auto& renderEntities = m_scene->registry()->group<RenderComponent, Transform>();
+
+        PROFILE_REGION("Update changed object textures");
+
+        bool anyTextureChanged = false;
+
+        size_t itOffset = rangeStart;
+        auto it = renderEntities.begin() + itOffset;
+
+        PROFILE_REGION("Find first region for thread")
+        size_t firstRegionIndex = 0;
+        for (; firstRegionIndex < m_objectBufferModifiedRegions.size(); ++firstRegionIndex) {
+            auto& region = m_objectBufferModifiedRegions[firstRegionIndex];
+            if (region.second >= rangeStart)
+                break;
+        }
+
+        PROFILE_REGION("Update texture indices");
+        for (size_t i = firstRegionIndex; i < m_objectBufferModifiedRegions.size(); ++i) {
+            auto& region = m_objectBufferModifiedRegions[i];
+            if (region.first >= rangeEnd)
+                break; // Regions are sorted. Subsequent regions are also out of range.
+
+            size_t regionStart = std::max(region.first, rangeStart);
+            size_t regionEnd = std::min(region.second, rangeEnd);
+
+            assert(regionStart >= itOffset);
+
+            it += (regionStart - itOffset);
+            itOffset = regionEnd;
+
+            for (size_t index = regionStart; index != regionEnd; ++index, ++it) {
+                if (m_resources->changedObjectTextures[index]) {
+                    const RenderComponent& renderComponent = renderEntities.get<RenderComponent>(*it);
+                    m_resources->objectBuffer[index].textureIndex = renderComponent.getTextureIndex();
+                    anyTextureChanged = true;
+                }
+            }
+        }
+
+        PROFILE_REGION("Reset modified texture flags")
+
+        if (anyTextureChanged)
+            m_resources->changedObjectTextures.set(rangeStart, rangeEnd - rangeStart, false);
+    };
+
+//    auto futures = ThreadUtils::run(thread_exec, 0, m_numRenderEntities);
+    auto futures = ThreadUtils::parallel_range(m_numRenderEntities, DenseFlagArray::pack_bits, ThreadUtils::getThreadCount() * 5, thread_exec);
+    ThreadUtils::wait(futures);
+
+    size_t firstNewTextureIndex = m_resources->uploadedMaterialBufferTextures;
+    size_t lastNewTextureIndex = m_materialBufferTextures.size();
+
+    size_t descriptorCount = m_resources->materialDescriptorSet->getLayout()->findBinding(0).descriptorCount;
+    size_t arrayCount = glm::min(lastNewTextureIndex - firstNewTextureIndex, descriptorCount);
+    if (arrayCount > 0) {
+        PROFILE_SCOPE("Write texture descriptors");
+
+        printf("Writing textures [%d to %d]\n", firstNewTextureIndex, lastNewTextureIndex);
+        DescriptorSetWriter(m_resources->materialDescriptorSet)
+                .writeImage(0, &m_materialBufferTextures[firstNewTextureIndex], &m_materialBufferImageLayouts[firstNewTextureIndex], arrayCount, firstNewTextureIndex)
+                .write();
+    }
+
+    m_resources->uploadedMaterialBufferTextures = m_materialBufferTextures.size();
+}
+
 void SceneRenderer::streamObjectData() {
     PROFILE_SCOPE("SceneRenderer::streamObjectData")
 
-    constexpr bool multithread = false;
+    constexpr bool multithread = true;
 
     auto thread_exec = [this](size_t rangeStart, size_t rangeEnd) {
         PROFILE_SCOPE("Copy modified region");
@@ -421,181 +669,6 @@ void SceneRenderer::streamObjectData() {
     //memcpy(&objectBufferMap[0], &m_resources->objectBuffer[0], m_resources->objectBuffer.size() * sizeof(ObjectDataUBO));
 }
 
-void SceneRenderer::updateMaterialsBuffer() {
-    PROFILE_SCOPE("SceneRenderer::updateMaterialsBuffer")
-
-
-    for (int i = 0; i < CONCURRENT_FRAMES; ++i)
-        m_resources.get(i)->changedObjectTextures.ensureSize(m_numRenderEntities, true);
-
-    auto thread_exec = [this](size_t rangeStart, size_t rangeEnd) {
-        PROFILE_SCOPE("SceneRenderer::updateMaterialsBuffer/thread_exec")
-
-        const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
-
-        PROFILE_REGION("Mark changed texture indices");
-
-        size_t changeTrackStartIndex = SIZE_MAX;
-
-        for (size_t index = rangeStart; index != rangeEnd; ++index) {
-
-            if (RenderComponent::textureChangeTracker().hasChanged(index)) {
-                if (changeTrackStartIndex == SIZE_MAX)
-                    changeTrackStartIndex = index;
-
-            } else if (changeTrackStartIndex != SIZE_MAX) {
-                RenderComponent::textureChangeTracker().setChanged(changeTrackStartIndex, index - changeTrackStartIndex, false);
-                for (int i = 0; i < CONCURRENT_FRAMES; ++i)
-                    m_resources.get(i)->changedObjectTextures.set(changeTrackStartIndex, index - changeTrackStartIndex, true);
-
-                changeTrackStartIndex = SIZE_MAX;
-            }
-        }
-
-        if (changeTrackStartIndex != SIZE_MAX) {
-            RenderComponent::textureChangeTracker().setChanged(changeTrackStartIndex, rangeEnd - changeTrackStartIndex, false);
-            for (int i = 0; i < CONCURRENT_FRAMES; ++i)
-                m_resources.get(i)->changedObjectTextures.set(changeTrackStartIndex, rangeEnd - changeTrackStartIndex, true);
-        }
-
-        PROFILE_REGION("Find modified regions")
-
-        std::vector<std::pair<size_t, size_t>> modifiedRegions;
-        size_t firstModifiedIndex = SIZE_MAX;
-        size_t lastModifiedIndex = SIZE_MAX;
-        size_t maxRegionMergeDist = 128;
-
-        for (size_t index = rangeStart; index != rangeEnd; ++index) {
-            if (m_resources->changedObjectTextures[index]) {
-                if (firstModifiedIndex == SIZE_MAX) {
-                    firstModifiedIndex = index;
-
-                } else if (lastModifiedIndex + maxRegionMergeDist < index) {
-                    modifiedRegions.emplace_back(std::make_pair(firstModifiedIndex, lastModifiedIndex + 1));
-                    firstModifiedIndex = index;
-                }
-                lastModifiedIndex = index;
-            }
-        }
-
-        if (firstModifiedIndex != SIZE_MAX)
-            modifiedRegions.emplace_back(std::make_pair(firstModifiedIndex, lastModifiedIndex + 1));
-
-        PROFILE_REGION("Update changed object textures");
-
-        bool anyTextureChanged = false;
-
-        size_t itOffset = rangeStart;
-        auto it = renderEntities.begin() + itOffset;
-
-        for (auto& region : modifiedRegions) {
-            assert(region.first >= itOffset);
-
-            it += (region.first - itOffset);
-            itOffset = region.second;
-
-            for (size_t index = region.first; index != region.second; ++index, ++it) {
-                if (m_resources->changedObjectTextures[index]) {
-                    const RenderComponent& renderComponent = renderEntities.get<RenderComponent>(*it);
-                    m_resources->objectBuffer[index].textureIndex = renderComponent.getTextureIndex();
-                    anyTextureChanged = true;
-                }
-            }
-        }
-
-        if (anyTextureChanged)
-            m_resources->changedObjectTextures.set(rangeStart, rangeEnd - rangeStart, false);
-    };
-
-    auto futures = ThreadUtils::parallel_range(m_numRenderEntities, DenseFlagArray::pack_bits, ThreadUtils::getThreadCount() * 5, thread_exec);
-    ThreadUtils::wait(futures);
-
-    size_t firstNewTextureIndex = m_resources->uploadedMaterialBufferTextures;
-    size_t lastNewTextureIndex = m_materialBufferTextures.size();
-
-    size_t descriptorCount = m_resources->materialDescriptorSet->getLayout()->findBinding(0).descriptorCount;
-    size_t arrayCount = glm::min(lastNewTextureIndex - firstNewTextureIndex, descriptorCount);
-    if (arrayCount > 0) {
-        PROFILE_SCOPE("Write texture descriptors");
-
-        printf("Writing textures [%d to %d]\n", firstNewTextureIndex, lastNewTextureIndex);
-        DescriptorSetWriter(m_resources->materialDescriptorSet)
-                .writeImage(0, &m_materialBufferTextures[firstNewTextureIndex], &m_materialBufferImageLayouts[firstNewTextureIndex], arrayCount, firstNewTextureIndex)
-                .write();
-    }
-
-    m_resources->uploadedMaterialBufferTextures = m_materialBufferTextures.size();
-}
-
-//void SceneRenderer::updateMaterialsBuffer() {
-//    PROFILE_SCOPE("SceneRenderer::updateMaterialsBuffer")
-//
-//    uint32_t descriptorCount = m_resources->materialDescriptorSet->getLayout()->findBinding(0).descriptorCount;
-//
-//    const auto& renderEntities = m_scene->registry()->group<RenderComponent>(entt::get<Transform>);
-//
-//    //ObjectDataUBO* objectDataBuffer = mappedWorldTransformsBuffer(renderEntities.size());
-//
-//    std::vector<Texture2D*>& objectTextures = m_resources->objectTextures;
-//    std::vector<Texture2D*>& materialBufferTextures = m_resources->materialBufferTextures;
-//
-//    uint32_t textureIndex;
-//    size_t objectIndex = 0;
-//    uint32_t firstNewTextureIndex = (uint32_t)(-1);
-//    uint32_t lastNewTextureIndex = (uint32_t)(-1);
-//    Texture2D* texture;
-//
-//    size_t numChangedTextures = 0;
-//
-//    for (auto id : renderEntities) {
-//        const RenderComponent& renderComponent = renderEntities.get<RenderComponent>(id);
-//
-//        texture = renderComponent.texture().get();
-//        if (texture == NULL)
-//            texture = m_missingTexture.get();
-//
-//        if (objectTextures[objectIndex] != texture) {
-//            objectTextures[objectIndex] = texture;
-//
-//            ++numChangedTextures;
-//
-//            auto it = m_textureDescriptorIndices.find(texture);
-//            if (it == m_textureDescriptorIndices.end()) {
-//                textureIndex = materialBufferTextures.size();
-//                materialBufferTextures.emplace_back(texture);
-//
-//                lastNewTextureIndex = textureIndex;
-//                if (firstNewTextureIndex == (uint32_t)(-1))
-//                    firstNewTextureIndex = textureIndex;
-//
-//                m_textureDescriptorIndices.insert(std::make_pair(texture, textureIndex));
-//            } else {
-//                textureIndex = it->second;
-//            }
-//
-//            m_resources->objectBuffer[objectIndex].textureIndex = textureIndex;
-//        }
-//
-//        ++objectIndex;
-//    }
-//
-//    //auto t1 = Performance::now();
-//    //printf("Took %.4f msec to update %llu changed textures in %llu entities\n", Performance::milliseconds(t0, t1), numChangedTextures, renderEntities.size());
-//
-//    uint32_t arrayCount = glm::min(lastNewTextureIndex - firstNewTextureIndex, descriptorCount);
-//    if (arrayCount > 0) {
-//
-//        std::vector<vk::ImageLayout>& materialBufferImageLayouts = m_resources->materialBufferImageLayouts;
-//        if (materialBufferImageLayouts.size() < arrayCount)
-//            materialBufferImageLayouts.resize(arrayCount, vk::ImageLayout::eShaderReadOnlyOptimal);
-//
-//        printf("Writing textures [%d to %d]\n", firstNewTextureIndex, lastNewTextureIndex);
-//        DescriptorSetWriter(m_resources->materialDescriptorSet)
-//                .writeImage(0, &materialBufferTextures[firstNewTextureIndex], &materialBufferImageLayouts[0], arrayCount, firstNewTextureIndex)
-//                .write();
-//    }
-//}
-
 uint32_t SceneRenderer::registerTexture(Texture2D* texture) {
     uint32_t textureIndex;
 
@@ -615,16 +688,44 @@ uint32_t SceneRenderer::registerTexture(Texture2D* texture) {
     return textureIndex;
 }
 
+void SceneRenderer::notifyMeshChanged(const RenderComponent::UpdateType& updateType) {
+    m_needsSortEntities[updateType] = true;
+}
+
+void SceneRenderer::notifyTransformChanged(const uint32_t& entityIndex) {
+    if (entityIndex == EntityChangeTracker::INVALID_INDEX)
+        return;
+
+    for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+        m_resources.get(i)->changedObjectTransforms.set(entityIndex, true);
+
+    notifyEntityModified(entityIndex);
+}
+
+void SceneRenderer::notifyTextureChanged(const uint32_t &entityIndex) {
+    if (entityIndex == EntityChangeTracker::INVALID_INDEX)
+        return;
+
+    for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+        m_resources.get(i)->changedObjectTextures.set(entityIndex, true);
+
+    notifyEntityModified(entityIndex);
+}
+
 void SceneRenderer::onRenderComponentAdded(const ComponentAddedEvent<RenderComponent>& event) {
-    //printf("SceneRenderer::onRenderComponentAdded");
-    m_needsSortRenderableEntities = true;
-    event.entity.addComponent<EntityRenderState>();
+    notifyMeshChanged(event.component->meshUpdateType());
+
+    UpdateTypeHandler<Transform>::setEntityUpdateType(event.entity, event.component->transformUpdateType());
+    UpdateTypeHandler<Texture2D>::setEntityUpdateType(event.entity, event.component->textureUpdateType());
+    UpdateTypeHandler<Mesh>::setEntityUpdateType(event.entity, event.component->meshUpdateType());
 }
 
 void SceneRenderer::onRenderComponentRemoved(const ComponentRemovedEvent<RenderComponent>& event) {
-    //printf("SceneRenderer::onRenderComponentRemoved");
-    m_needsSortRenderableEntities = true;
-    event.entity.removeComponent<EntityRenderState>();
+    notifyMeshChanged(event.component->meshUpdateType());
+
+    UpdateTypeHandler<Transform>::removeEntityUpdateType(event.entity, event.component->transformUpdateType());
+    UpdateTypeHandler<Texture2D>::removeEntityUpdateType(event.entity, event.component->textureUpdateType());
+    UpdateTypeHandler<Mesh>::removeEntityUpdateType(event.entity, event.component->meshUpdateType());
 }
 
 ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
@@ -639,17 +740,14 @@ ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
 
         m_textureDescriptorIndices.clear();
 
-// //        m_materialBufferTextures.clear();
-// //        m_materialBufferImageLayouts.clear();
-
-//        m_resources->materialBufferTextures.clear();
-//        m_resources->materialBufferImageLayouts.clear();
-//
-//        m_resources->objectTextures.clear();
-//        m_resources->objectTextures.resize(maxObjects, NULL);
-
         m_resources->changedObjectTransforms.clear();
         m_resources->changedObjectTransforms.resize(maxObjects, true);
+
+
+        for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
+            m_resources.get(i)->changedObjectTransforms.ensureSize(maxObjects, true);
+            m_resources.get(i)->changedObjectTextures.ensureSize(maxObjects, true);
+        }
 
         m_resources->objectBuffer.clear();
         m_resources->objectBuffer.resize(maxObjects, ObjectDataUBO{ .modelMatrix = glm::mat4(0.0), .textureIndex = 0 });
@@ -662,7 +760,7 @@ ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
                 vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         //vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         worldTransformBufferConfig.usage = vk::BufferUsageFlagBits::eStorageBuffer;// | vk::BufferUsageFlagBits::eTransferDst;
-        m_resources->worldTransformBuffer = std::move(Buffer::create(worldTransformBufferConfig));
+        m_resources->worldTransformBuffer = Buffer::create(worldTransformBufferConfig);
 
 
         DescriptorSetWriter(m_resources->objectDescriptorSet).writeBuffer(0, m_resources->worldTransformBuffer, 0, newBufferSize).write();
@@ -671,6 +769,10 @@ ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
     PROFILE_REGION("Map buffer");
     void* mappedBuffer = m_resources->worldTransformBuffer->map();
     return static_cast<ObjectDataUBO*>(mappedBuffer);
+}
+
+void SceneRenderer::notifyEntityModified(const uint32_t& entityIndex) {
+    m_modifiedEntities.insert(entityIndex);
 }
 
 

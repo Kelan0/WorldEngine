@@ -34,12 +34,3 @@ void EntityChangeTracker::setChanged(const EntityChangeTracker::entity_index& en
     m_changedFlags.expand(entityIndex + count, true);
     m_changedFlags.set(entityIndex, count, changed);
 }
-
-void EntityChangeTracker::reindex(entity_index& entityIndex, const entity_index& newEntityIndex) {
-    if (entityIndex != INVALID_INDEX) {
-        // TODO: swap the values around
-    }
-    setChanged(entityIndex, true);
-    entityIndex = newEntityIndex;
-    setChanged(entityIndex, true);
-}

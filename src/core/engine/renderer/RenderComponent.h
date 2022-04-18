@@ -8,9 +8,21 @@
 class Texture2D;
 class Mesh;
 
+
 class RenderComponent {
-private:
-    static EntityChangeTracker s_textureChangeTracker;
+public:
+    enum UpdateType {
+        // The entity is never changed. Doing so incurs a significant performance penalty.
+        // Useful for static level geometry.
+        UpdateType_Static = 0,
+
+        // The entity can change frequently, and is re-uploaded whenever a change is detected.
+        UpdateType_Dynamic = 1,
+
+        // The entity is expected to change every frame, so its data always gets re-uploaded
+        // without checking if it changed.
+        UpdateType_Always = 3,
+    };
 
 public:
     RenderComponent();
@@ -25,7 +37,11 @@ public:
 
     const std::shared_ptr<Texture2D>& texture() const;
 
-    static EntityChangeTracker& textureChangeTracker();
+    UpdateType transformUpdateType() const;
+
+    UpdateType textureUpdateType() const;
+
+    UpdateType meshUpdateType() const;
 
     static void reindex(RenderComponent& renderComponent, const size_t& newEntityIndex);
 
@@ -35,6 +51,12 @@ private:
 
     EntityChangeTracker::entity_index m_entityIndex;
     uint32_t m_textureIndex;
+
+    struct {
+        UpdateType m_transformUpdateType : 2;
+        UpdateType m_textureUpdateType : 2;
+        UpdateType m_meshUpdateType : 2;
+    };
 };
 
 

@@ -1,7 +1,7 @@
 #include "core/engine/scene/Transform.h"
+#include "core/application/Application.h"
+#include "core/engine/renderer/SceneRenderer.h"
 
-
-EntityChangeTracker Transform::s_changeTracker;
 
 Transform::Transform():
         m_translation(0.0),
@@ -506,22 +506,12 @@ Transform::operator glm::dmat4() const {
     return getMatrix();
 }
 
-void Transform::update() {
-    changeTracker().setChanged(m_entityIndex, false);
-}
-
 void Transform::change() {
-    changeTracker().setChanged(m_entityIndex, true);
-}
-
-bool Transform::hasChanged() const {
-    return changeTracker().hasChanged(m_entityIndex);
-}
-
-EntityChangeTracker& Transform::changeTracker() {
-    return s_changeTracker;
+    Application::instance()->renderer()->notifyTransformChanged(m_entityIndex);
 }
 
 void Transform::reindex(Transform& transform, const EntityChangeTracker::entity_index& newEntityIndex) {
-    s_changeTracker.reindex(transform.m_entityIndex, newEntityIndex);
+    if (newEntityIndex == transform.m_entityIndex)
+        return;
+    transform.m_entityIndex = newEntityIndex;
 }

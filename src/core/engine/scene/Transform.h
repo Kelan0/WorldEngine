@@ -116,12 +116,6 @@ public:
 
     operator glm::dmat4() const;
 
-    void update();
-
-    bool hasChanged() const;
-
-    static EntityChangeTracker& changeTracker();
-
     static void reindex(Transform& transform, const EntityChangeTracker::entity_index& newEntityIndex);
 
 private:
@@ -132,8 +126,6 @@ private:
     glm::mat3 m_rotation;
     glm::dvec3 m_scale;
     EntityChangeTracker::entity_index m_entityIndex = EntityChangeTracker::INVALID_INDEX;
-
-    static EntityChangeTracker s_changeTracker;
 };
 
 

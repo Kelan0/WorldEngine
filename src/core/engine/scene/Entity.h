@@ -107,12 +107,13 @@ inline T& Entity::addComponent(Args && ...args) const {
 		assert(false);
 	}
 #endif
-    return setComponent<T>(std::forward<Args>(args)...);
+    T& component = registry().emplace<T>(m_entity, std::forward<Args>(args)...);
+    return component;
 }
 
 template<typename T, typename ...Args>
 inline T& Entity::setComponent(Args && ...args) const {
-    T& component = registry().emplace<T>(m_entity, std::forward<Args>(args)...);
+    T& component = registry().emplace_or_replace<T>(m_entity, std::forward<Args>(args)...);
     return component;
 }
 

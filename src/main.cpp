@@ -226,20 +226,23 @@ class App : public Application {
     }
 
     void render(double dt) override {
+        PROFILE_SCOPE("custom render")
         handleUserInput(dt);
 
+        PROFILE_REGION("Change transform test")
         for (Entity& ent : dynamicEntities) {
             ent.getComponent<Transform>().rotate(0, 1, 0, glm::radians(dt * 90.0));
         }
 
-        //size_t f = 100;
-        //
-        //for (size_t i = 0; i < testEntities.size() / f; ++i) {
-        //	size_t idx = std::min((i * f) + (rand() % f), testEntities.size());
-        //
-        //	Entity& entity = testEntities[idx];
-        //	entity.getComponent<RenderComponent>().setTexture(textures[rand() % textures.size()]);
-        //}
+//        PROFILE_REGION("Random texture test")
+//
+//        size_t f = 100;
+//        for (size_t i = 0; i < testEntities.size() / f; ++i) {
+//        	size_t idx = std::min((i * f) + (rand() % f), testEntities.size());
+//
+//        	Entity& entity = testEntities[idx];
+//        	entity.getComponent<RenderComponent>().setTexture(textures[rand() % textures.size()]);
+//        }
 
 
 
