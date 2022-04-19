@@ -271,6 +271,7 @@ void Application::start() {
 
             tempDebugInfo.reset();
             frameTimes.clear();
+            cpuFrameTimes.clear();
             lastDebug = now;
         }
 

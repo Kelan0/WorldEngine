@@ -27,6 +27,10 @@ public:
 public:
     RenderComponent();
 
+    RenderComponent(const UpdateType& transformUpdateType,
+                    const UpdateType& textureUpdateType,
+                    const UpdateType& meshUpdateType);
+
     RenderComponent& setMesh(const std::shared_ptr<Mesh>& mesh);
 
     RenderComponent& setTexture(const std::shared_ptr<Texture2D>& texture);

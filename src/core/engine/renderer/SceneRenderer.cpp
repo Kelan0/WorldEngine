@@ -147,9 +147,9 @@ void SceneRenderer::render(double dt, RenderCamera* renderCamera) {
     const auto& renderEntities = m_scene->registry()->group<RenderComponent, Transform>();
     m_numRenderEntities = renderEntities.size();
 
-    sortRenderableEntities();
-
     mappedWorldTransformsBuffer(m_numRenderEntities);
+
+    sortRenderableEntities();
     findModifiedEntities();
     updateMaterialsBuffer();
     updateEntityWorldTransforms();
@@ -328,18 +328,24 @@ void SceneRenderer::sortRenderableEntities() {
     if (entityRenderSequenceChanged) {
         const auto &renderEntities = m_scene->registry()->group<RenderComponent, Transform>();
 
+        EntityChangeTracker::entity_index index;
+
         PROFILE_REGION("Reindex transforms")
-        EntityChangeTracker::entity_index index = 0;
-        for (auto id: renderEntities) {
+        index = 0;
+        for (auto id : renderEntities) {
             Transform &transform = renderEntities.get<Transform>(id);
-            Transform::reindex(transform, index++);
+            Transform::reindex(transform, index);
+            notifyTransformChanged(index);
+            ++index;
         }
 
         PROFILE_REGION("Reindex render components")
         index = 0;
-        for (auto id: renderEntities) {
+        for (auto id : renderEntities) {
             RenderComponent &renderComponent = renderEntities.get<RenderComponent>(id);
-            RenderComponent::reindex(renderComponent, index++);
+            RenderComponent::reindex(renderComponent, index);
+            notifyTextureChanged(index);
+            ++index;
         }
     }
 }
@@ -483,9 +489,9 @@ void SceneRenderer::findModifiedEntities() {
     };
 
     PROFILE_REGION("Copy sorted modified entities")
-    m_sortedModifiedEntities.resize(m_modifiedEntities.size());
-    std::copy(m_modifiedEntities.begin(), m_modifiedEntities.end(), m_sortedModifiedEntities.begin());
-    m_modifiedEntities.clear();
+    m_sortedModifiedEntities.resize(m_resources->modifiedEntities.size());
+    std::copy(m_resources->modifiedEntities.begin(), m_resources->modifiedEntities.end(), m_sortedModifiedEntities.begin());
+    m_resources->modifiedEntities.clear();
 
     PROFILE_REGION("Submit work")
     auto futures = ThreadUtils::parallel_range(m_sortedModifiedEntities.size(), thread_exec);
@@ -712,6 +718,11 @@ void SceneRenderer::notifyTextureChanged(const uint32_t &entityIndex) {
     notifyEntityModified(entityIndex);
 }
 
+void SceneRenderer::notifyEntityModified(const uint32_t& entityIndex) {
+    for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+        m_resources.get(i)->modifiedEntities.insert(entityIndex);
+}
+
 void SceneRenderer::onRenderComponentAdded(const ComponentAddedEvent<RenderComponent>& event) {
     notifyMeshChanged(event.component->meshUpdateType());
 
@@ -769,10 +780,6 @@ ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
     PROFILE_REGION("Map buffer");
     void* mappedBuffer = m_resources->worldTransformBuffer->map();
     return static_cast<ObjectDataUBO*>(mappedBuffer);
-}
-
-void SceneRenderer::notifyEntityModified(const uint32_t& entityIndex) {
-    m_modifiedEntities.insert(entityIndex);
 }
 
 

@@ -195,6 +195,7 @@ class App : public Application {
         }
 
 
+
         if (input()->isMouseGrabbed()) {
             Transform& cameraTransform = scene()->getMainCamera().getComponent<Transform>();
             glm::ivec2 dMouse = input()->getRelativeMouseState();

@@ -97,6 +97,7 @@ private:
         DenseFlagArray changedObjectTextures;
         std::vector<ObjectDataUBO> objectBuffer;
         size_t uploadedMaterialBufferTextures;
+        std::set<uint32_t> modifiedEntities;
     };
 
     FrameResource<RenderResources> m_resources;
@@ -113,11 +114,10 @@ private:
     std::vector<vk::ImageLayout> m_materialBufferImageLayouts;
     size_t m_numRenderEntities;
 
-    std::vector<std::pair<size_t, size_t>> m_objectBufferModifiedRegions;
 
     std::unordered_map<RenderComponent::UpdateType, bool> m_needsSortEntities;
-    std::set<uint32_t> m_modifiedEntities;
     std::vector<uint32_t> m_sortedModifiedEntities;
+    std::vector<std::pair<size_t, size_t>> m_objectBufferModifiedRegions;
 };
 
 

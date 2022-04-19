@@ -3,13 +3,19 @@
 #include "core/engine/renderer/SceneRenderer.h"
 
 RenderComponent::RenderComponent():
-    m_mesh(nullptr),
-    m_texture(nullptr),
-    m_textureIndex(UINT32_MAX),
-    m_entityIndex(EntityChangeTracker::INVALID_INDEX),
-    m_transformUpdateType(UpdateType_Static),
-    m_textureUpdateType(UpdateType_Static),
-    m_meshUpdateType(UpdateType_Static) {
+    RenderComponent(UpdateType_Dynamic, UpdateType_Static, UpdateType_Static) {
+}
+
+RenderComponent::RenderComponent(const UpdateType& transformUpdateType,
+                const UpdateType& textureUpdateType,
+                const UpdateType& meshUpdateType):
+        m_mesh(nullptr),
+        m_texture(nullptr),
+        m_textureIndex(UINT32_MAX),
+        m_entityIndex(EntityChangeTracker::INVALID_INDEX),
+        m_transformUpdateType(transformUpdateType),
+        m_textureUpdateType(textureUpdateType),
+        m_meshUpdateType(meshUpdateType) {
 }
 
 RenderComponent& RenderComponent::setMesh(const std::shared_ptr<Mesh>& mesh) {

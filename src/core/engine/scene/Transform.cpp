@@ -513,5 +513,7 @@ void Transform::change() {
 void Transform::reindex(Transform& transform, const EntityChangeTracker::entity_index& newEntityIndex) {
     if (newEntityIndex == transform.m_entityIndex)
         return;
+//    Application::instance()->renderer()->notifyTransformChanged(transform.m_entityIndex);
+//    Application::instance()->renderer()->notifyTransformChanged(newEntityIndex);
     transform.m_entityIndex = newEntityIndex;
 }
