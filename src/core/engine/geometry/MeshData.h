@@ -150,6 +150,10 @@ public:
 
     const std::vector<Triangle>& getTriangles() const;
 
+    std::vector<Vertex>& vertices();
+
+    std::vector<Triangle>& triangles();
+
     glm::vec3 calculateCenterOffset(bool currentStateOnly = true) const;
 
     // Transforming a vector where any component is 0 or 1 by this matrix will result in a point on the bounding box.
@@ -174,7 +178,9 @@ private:
 
 
 namespace MeshLoader {
-    bool loadOBJ(const std::string& filePath, MeshData& meshData);
+    bool loadOBJFile(const std::string& filePath, MeshData& meshData);
+
+    bool loadMeshData(const std::string& filePath, MeshData& meshData);
 };
 
 #endif //WORLDENGINE_MESHDATA_H

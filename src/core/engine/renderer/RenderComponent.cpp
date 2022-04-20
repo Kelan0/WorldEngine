@@ -11,7 +11,7 @@ RenderComponent::RenderComponent(const UpdateType& transformUpdateType,
                 const UpdateType& meshUpdateType):
         m_mesh(nullptr),
         m_texture(nullptr),
-        m_textureIndex(UINT32_MAX),
+        m_textureIndex(0), // missing texture
         m_entityIndex(EntityChangeTracker::INVALID_INDEX),
         m_transformUpdateType(transformUpdateType),
         m_textureUpdateType(textureUpdateType),

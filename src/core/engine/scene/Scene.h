@@ -55,9 +55,9 @@ public:
 
     entt::registry* registry();
 
-    bool setMainCamera(const Entity& entity);
+    bool setMainCameraEntity(const Entity& entity);
 
-    const Entity& getMainCamera() const;
+    const Entity& getMainCameraEntity() const;
 
 private:
     void onScreenResize(const ScreenResizeEvent& event);

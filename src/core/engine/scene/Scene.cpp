@@ -31,7 +31,7 @@ void Scene::init() {
     m_defaultCamera = createEntity("Default Camera");
     m_defaultCamera.addComponent<Camera>().setFovDegrees(90.0).setClippingPlanes(0.05, 500.0);
     m_defaultCamera.addComponent<Transform>();
-    setMainCamera(nullptr);
+    setMainCameraEntity(nullptr);
 }
 
 Entity Scene::createEntity(const std::string& name) {
@@ -70,22 +70,22 @@ entt::registry* Scene::registry() {
     return &m_registry;
 }
 
-bool Scene::setMainCamera(const Entity& entity) {
-    PROFILE_SCOPE("Scene::setMainCamera")
+bool Scene::setMainCameraEntity(const Entity& entity) {
+    PROFILE_SCOPE("Scene::setMainCameraEntity")
     if (entity == nullptr) {
         m_mainCameraEntity = m_defaultCamera;
         return true;
     }
 
     if (!entity.hasComponent<Camera>() || !entity.hasComponent<Transform>()) {
-        printf("Scene::setMainCamera - Entity \"%s\" must have a Camera and Transform component in order to be used as the main scene camera\n", entity.getName().c_str());
+        printf("Scene::setMainCameraEntity - Entity \"%s\" must have a Camera and Transform component in order to be used as the main scene camera\n", entity.getName().c_str());
         return false;
     }
     m_mainCameraEntity = entity;
     return true;
 }
 
-const Entity& Scene::getMainCamera() const {
+const Entity& Scene::getMainCameraEntity() const {
     return m_mainCameraEntity;
 }
 

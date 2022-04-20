@@ -19,6 +19,7 @@
 #include "core/engine/renderer/SceneRenderer.h"
 #include "core/thread/ThreadUtils.h"
 #include "core/util/Profiler.h"
+#include "core/engine/scene/bound/Intersection.h"
 
 #include <iostream>
 
@@ -88,7 +89,7 @@ class App : public Application {
 
         testMeshData = MeshData();
         testMeshData.scale(0.5);
-        MeshLoader::loadOBJ("res/meshes/bunny.obj", testMeshData);
+        MeshLoader::loadMeshData("res/meshes/bunny.obj", testMeshData);
         glm::vec3 centerBottom = testMeshData.calculateBoundingBox() * glm::vec4(0, -1, 0, 1);
         testMeshData.translate(-1.0F * centerBottom);
         testMeshData.applyTransform();
@@ -169,6 +170,18 @@ class App : public Application {
             }
         }
 
+        testMeshData.clear();
+        testMeshData.createUVSphere(glm::dvec3(0.0, 0.0, 0.0), 1.0, 32, 32);
+
+        MeshConfiguration testBoundMeshConfig;
+        testBoundMeshConfig.device = graphics()->getDevice();
+        testBoundMeshConfig.setMeshData(&testMeshData);
+        std::shared_ptr<Mesh> testBoundMesh = std::shared_ptr<Mesh>(Mesh::create(testBoundMeshConfig));
+
+
+        Entity testBound = scene()->createEntity("testBound");
+        testBound.addComponent<Transform>().setTranslation(0.0, 4.0, 0.0);
+        testBound.addComponent<RenderComponent>().setMesh(testBoundMesh);
 
 
         //Entity testEntity = EntityHierarchy::create(scene(), "testEntity");
@@ -180,7 +193,7 @@ class App : public Application {
         //testEntity2.addComponent<RenderComponent>().setMesh(testMesh).setTexture(testTexture);
 
 
-        scene()->getMainCamera().getComponent<Transform>().setTranslation(0.0F, 2.0F, 2.0F);
+        scene()->getMainCameraEntity().getComponent<Transform>().setTranslation(0.0F, 2.0F, 2.0F);
     }
 
     void cleanup() override {
@@ -194,10 +207,8 @@ class App : public Application {
             input()->toggleMouseGrabbed();
         }
 
-
-
         if (input()->isMouseGrabbed()) {
-            Transform& cameraTransform = scene()->getMainCamera().getComponent<Transform>();
+            Transform& cameraTransform = Application::instance()->scene()->getMainCameraEntity().getComponent<Transform>();
             glm::ivec2 dMouse = input()->getRelativeMouseState();
             if (isViewportInverted())
                 dMouse.y *= -1;
@@ -229,6 +240,20 @@ class App : public Application {
     void render(double dt) override {
         PROFILE_SCOPE("custom render")
         handleUserInput(dt);
+
+
+//        Entity mainCamera = Application::instance()->scene()->getMainCameraEntity();
+//        Transform& cameraTransform = mainCamera.getComponent<Transform>();
+//        Camera& cameraProjection = mainCamera.getComponent<Camera>();
+//        Frustum frustum(cameraTransform, cameraProjection);
+//
+//        Sphere sphere(0.0, 4.0, 0.0, 1.0);
+//
+//        if (Intersection::contains(frustum, sphere))
+//            printf("in view\n");
+
+
+
 
         PROFILE_REGION("Change transform test")
         for (Entity& ent : dynamicEntities) {

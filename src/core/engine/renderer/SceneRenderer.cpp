@@ -78,6 +78,10 @@ SceneRenderer::~SceneRenderer() {
 void SceneRenderer::init() {
     initMissingTexture();
 
+    // Missing texture needs to be at index 0
+    m_materialBufferTextures.clear();
+    m_materialBufferTextures.emplace_back(m_missingTexture.get());
+
     std::shared_ptr<DescriptorPool> descriptorPool = Application::instance()->graphics()->descriptorPool();
 
     DescriptorSetLayoutBuilder builder(descriptorPool->getDevice());
@@ -128,7 +132,7 @@ void SceneRenderer::init() {
 
 void SceneRenderer::render(double dt) {
     PROFILE_SCOPE("SceneRenderer::render")
-    const Entity& cameraEntity = m_scene->getMainCamera();
+    const Entity& cameraEntity = m_scene->getMainCameraEntity();
     m_renderCamera.setProjection(cameraEntity.getComponent<Camera>());
     m_renderCamera.setTransform(cameraEntity.getComponent<Transform>());
     m_renderCamera.update();
@@ -678,8 +682,10 @@ void SceneRenderer::streamObjectData() {
 uint32_t SceneRenderer::registerTexture(Texture2D* texture) {
     uint32_t textureIndex;
 
-    if (texture == nullptr)
+    if (texture == nullptr) {
         texture = m_missingTexture.get();
+        return 0; // Missing texture is expected to be at index 0
+    }
 
     auto it = m_textureDescriptorIndices.find(texture);
     if (it == m_textureDescriptorIndices.end()) {

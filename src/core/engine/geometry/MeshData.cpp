@@ -1,5 +1,6 @@
 #include "core/engine/geometry/MeshData.h"
 #include <fstream>
+#include <filesystem>
 
 #if _DEBUG
 
@@ -410,6 +411,14 @@ const std::vector<MeshData::Triangle>& MeshData::getTriangles() const {
     return m_triangles;
 }
 
+std::vector<MeshData::Vertex> &MeshData::vertices() {
+    return m_vertices;
+}
+
+std::vector<MeshData::Triangle> &MeshData::triangles() {
+    return m_triangles;
+}
+
 glm::vec3 MeshData::calculateCenterOffset(bool currentStateOnly) const {
     glm::dvec3 center(0.0F);
 
@@ -475,10 +484,6 @@ size_t MeshData::getIndexCount() const {
 size_t MeshData::getPolygonCount() const {
     return m_triangles.size();
 }
-
-
-
-
 
 
 inline std::string trim(const std::string& str, const std::string& whitespace = " \t") {
@@ -600,7 +605,9 @@ void compileOBJObject(
     currentObject.triangleEndIndex = triangles.size();
 }
 
-bool MeshLoader::loadOBJ(const std::string& filePath, MeshData& meshData) {
+bool MeshLoader::loadOBJFile(const std::string& filePath, MeshData& meshData) {
+    // TODO: this could be optimised a lot.
+
     printf("Loading OBJ file \"%s\"\n", filePath.c_str());
     std::ifstream stream(filePath.c_str(), std::ifstream::in);
 
@@ -818,5 +825,78 @@ bool MeshLoader::loadOBJ(const std::string& filePath, MeshData& meshData) {
         meshData.addTriangle(triangles[i].i0, triangles[i].i1, triangles[i].i2);
     }
 
+    return true;
+}
+
+bool readMeshCache(const std::filesystem::path& path, MeshData& meshData) {
+
+    std::ifstream file(path, std::ios::binary);
+    if (!file.is_open()) {
+        printf("Failed to open cached mesh file \"%s\"\n", path.c_str());
+        return false;
+    }
+
+    meshData.clear();
+    uint64_t vertexCount = 0;
+    uint64_t triangleCount = 0;
+    file.read((char*)(&vertexCount), 8);
+    file.read((char*)(&triangleCount), 8);
+    meshData.vertices().resize(vertexCount);
+    meshData.triangles().resize(triangleCount);
+    file.read((char*)(meshData.vertices().data()), vertexCount * sizeof(MeshData::Vertex));
+    file.read((char*)(meshData.triangles().data()), triangleCount * sizeof(MeshData::Triangle));
+    return true;
+}
+
+bool writeMeshCache(const std::filesystem::path& path, MeshData& meshData) {
+    std::ofstream file(path, std::ios::binary);
+    if (!file.is_open()) {
+        printf("Failed to create mesh cache file \"%s\"\n", path.c_str());
+        return false;
+    }
+
+    printf("Writing mesh cache file \"%s\"\n", path.c_str());
+
+    uint64_t vertexCount = meshData.vertices().size();
+    uint64_t triangleCount = meshData.triangles().size();
+
+    file.write((char*)(&vertexCount), 8);
+    file.write((char*)(&triangleCount), 8);
+    file.write((char*)(meshData.vertices().data()), vertexCount * sizeof(MeshData::Vertex));
+    file.write((char*)(meshData.triangles().data()), triangleCount * sizeof(MeshData::Triangle));
+    return true;
+}
+
+bool MeshLoader::loadMeshData(const std::string& filePath, MeshData &meshData) {
+    size_t extensionPos = filePath.find_last_of('.');
+
+//    std::string sourceExtension;
+//    if (extensionPos != std::string::npos)
+//        sourceExtension = filePath.substr(extensionPos + 1);
+
+    std::filesystem::path sourceMeshFilePath(filePath);
+    std::filesystem::path cachedMeshFilePath(filePath.substr(0, extensionPos) + ".mesh");
+
+    if (std::filesystem::exists(cachedMeshFilePath)) {
+
+        if (std::filesystem::exists(sourceMeshFilePath)) {
+            auto sourceMeshTimestamp = std::filesystem::last_write_time(sourceMeshFilePath);
+            auto cachedMeshTimestamp = std::filesystem::last_write_time(cachedMeshFilePath);
+            if (cachedMeshTimestamp < sourceMeshTimestamp) {
+                // Source was modified since it was last cached.
+                if (!loadOBJFile(sourceMeshFilePath.string(), meshData))
+                    return false;
+                writeMeshCache(cachedMeshFilePath, meshData);
+                return true;
+            }
+
+            return readMeshCache(cachedMeshFilePath, meshData);
+        }
+
+    }
+
+    if (!loadOBJFile(sourceMeshFilePath.string(), meshData))
+        return false;
+    writeMeshCache(cachedMeshFilePath, meshData);
     return true;
 }
