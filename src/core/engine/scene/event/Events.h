@@ -13,4 +13,8 @@ struct ScreenShowEvent {
     glm::uvec2 size;
 };
 
+struct RecreateSwapchainEvent {
+    uint8_t _v;
+};
+
 #endif //WORLDENGINE_EVENTS_H

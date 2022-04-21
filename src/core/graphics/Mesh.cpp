@@ -27,7 +27,11 @@ void MeshConfiguration::setIndices(const std::vector<MeshData::Triangle>& triang
 
 void MeshConfiguration::setMeshData(MeshData* meshData) {
     setVertices(meshData->getVertices());
-    setIndices(meshData->getTriangles());
+    setIndices(meshData->getIndices());
+}
+
+void MeshConfiguration::setPrimitiveType(const MeshPrimitiveType& primitiveType) {
+    this->primitiveType = primitiveType;
 }
 
 
@@ -129,6 +133,10 @@ bool Mesh::uploadIndices(const std::vector<MeshData::Index>& indices) {
     return uploadIndices(indices.data(), indices.size());
 }
 
+void Mesh::setPrimitiveType(const MeshPrimitiveType& primitiveType) {
+    m_primitiveType = primitiveType;
+}
+
 void Mesh::draw(const vk::CommandBuffer& commandBuffer, uint32_t instanceCount, uint32_t firstInstance) {
     PROFILE_SCOPE("Mesh::draw")
 
@@ -148,7 +156,7 @@ void Mesh::draw(const vk::CommandBuffer& commandBuffer, uint32_t instanceCount, 
     // if debug
     size_t numIndices = m_indexBuffer->getSize() / sizeof(MeshData::Index);
     size_t numVertices = m_vertexBuffer->getSize() / sizeof(MeshData::Vertex);
-    Application::instance()->graphics()->debugInfo().renderedPolygons += (numIndices / 3) * instanceCount;
+    Application::instance()->graphics()->debugInfo().renderedPolygons += MeshData::getPolygonCount(numIndices, m_primitiveType);
     Application::instance()->graphics()->debugInfo().renderedIndices += numIndices * instanceCount;
     Application::instance()->graphics()->debugInfo().renderedVertices += numVertices * instanceCount;
     Application::instance()->graphics()->debugInfo().drawCalls++;
@@ -162,6 +170,10 @@ uint32_t Mesh::getVertexCount() const {
 
 uint32_t Mesh::getIndexCount() const {
     return m_indexBuffer->getSize() / sizeof(MeshData::Index);
+}
+
+const MeshPrimitiveType& Mesh::getPrimitiveType() const {
+    return m_primitiveType;
 }
 
 const GraphicsResource& Mesh::getResourceId() const {

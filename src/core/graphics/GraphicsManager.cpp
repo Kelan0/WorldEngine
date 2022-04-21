@@ -6,6 +6,8 @@
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Buffer.h"
 #include "core/application/Application.h"
+#include "core/engine/scene/event/EventDispacher.h"
+#include "core/engine/scene/event/Events.h"
 
 uint64_t GraphicsManager::s_nextResourceID = 0;
 
@@ -32,7 +34,7 @@ GraphicsManager::GraphicsManager() {
     m_surface.surface = NULL;
     m_swapchain.swapchain = NULL;
     m_swapchain.currentFrameIndex = 0;
-    m_graphicsPipeline = NULL;
+    m_renderPass = NULL;
     m_commandPool = NULL;
     m_descriptorPool = NULL;
     m_memory = NULL;
@@ -125,10 +127,9 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
 
     PROFILE_REGION("Initialize graphics resources")
 
-    GraphicsPipeline* graphicsPipeline = GraphicsPipeline::create(m_device.device);
-    if (graphicsPipeline == NULL)
+    if (!createRenderPass()) {
         return false;
-    m_graphicsPipeline = std::shared_ptr<GraphicsPipeline>(graphicsPipeline);
+    }
 
     m_memory = new DeviceMemoryManager(m_device.device);
     //GPUMemoryConfiguration memoryConfig;
@@ -637,11 +638,6 @@ bool GraphicsManager::recreateSwapchain() {
     PROFILE_SCOPE("GraphicsManager::recreateSwapchain")
     m_recreateSwapchain = false;
 
-    if (m_graphicsPipelineConfig.device.expired() || m_graphicsPipelineConfig.device.lock() != m_device.device) {
-        printf("Unable to recreate swapchain: Graphics pipeline has not been configured\n");
-        return false;
-    }
-
     m_device.device->waitIdle();
 
     m_swapchain.commandBuffers.clear();
@@ -692,11 +688,6 @@ bool GraphicsManager::recreateSwapchain() {
         return false;
     }
 
-    if (!m_graphicsPipeline->recreate(m_graphicsPipelineConfig)) {
-        printf("Failed to recreate graphics pipeline\n");
-        return false;
-    }
-
     if (!createSwapchainFramebuffers()) {
         return false;
     }
@@ -726,6 +717,8 @@ bool GraphicsManager::recreateSwapchain() {
     }
 
     m_swapchain.currentFrameIndex = 0;
+
+    Application::instance()->eventDispacher()->trigger(RecreateSwapchainEvent());
 
     return true;
 }
@@ -788,7 +781,7 @@ bool GraphicsManager::createSwapchainFramebuffers() {
                 m_swapchain.depthImageView->getImageView()
         };
         vk::FramebufferCreateInfo framebufferCreateInfo;
-        framebufferCreateInfo.setRenderPass(m_graphicsPipeline->getRenderPass());
+        framebufferCreateInfo.setRenderPass(m_renderPass->getRenderPass());
         framebufferCreateInfo.setAttachments(attachments);
         framebufferCreateInfo.setWidth(m_swapchain.imageExtent.width);
         framebufferCreateInfo.setHeight(m_swapchain.imageExtent.height);
@@ -797,6 +790,46 @@ bool GraphicsManager::createSwapchainFramebuffers() {
         m_swapchain.framebuffers[i] = std::make_shared<vkr::Framebuffer>(*m_device.device, framebufferCreateInfo);
     }
     return true;
+}
+
+bool GraphicsManager::createRenderPass() {
+    RenderPassConfiguration renderPassConfig;
+    renderPassConfig.device = m_device.device;
+    vk::AttachmentDescription colourAttachment;
+    colourAttachment.setFormat(getColourFormat());
+    colourAttachment.setSamples(vk::SampleCountFlagBits::e1);
+    colourAttachment.setLoadOp(vk::AttachmentLoadOp::eClear);
+    colourAttachment.setStoreOp(vk::AttachmentStoreOp::eStore);
+    colourAttachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+    colourAttachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+    colourAttachment.setInitialLayout(vk::ImageLayout::eUndefined);
+    colourAttachment.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+    renderPassConfig.addAttachment(colourAttachment);
+    vk::AttachmentDescription depthAttachment;
+    depthAttachment.setFormat(getDepthFormat());
+    depthAttachment.setSamples(vk::SampleCountFlagBits::e1);
+    depthAttachment.setLoadOp(vk::AttachmentLoadOp::eClear);
+    depthAttachment.setStoreOp(vk::AttachmentStoreOp::eDontCare);
+    depthAttachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+    depthAttachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+    depthAttachment.setInitialLayout(vk::ImageLayout::eUndefined);
+    depthAttachment.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+    renderPassConfig.addAttachment(depthAttachment);
+    SubpassConfiguration subpassConfiguration;
+    subpassConfiguration.addColourAttachment(vk::AttachmentReference(0, vk::ImageLayout::eColorAttachmentOptimal));
+    subpassConfiguration.setDepthStencilAttachment(vk::AttachmentReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal));
+    renderPassConfig.addSubpass(subpassConfiguration);
+    vk::SubpassDependency subpassDependency;
+    subpassDependency.setSrcSubpass(VK_SUBPASS_EXTERNAL);
+    subpassDependency.setDstSubpass(0);
+    subpassDependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests);
+    subpassDependency.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests);
+    subpassDependency.setSrcAccessMask({});
+    subpassDependency.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+    renderPassConfig.addSubpassDependency(subpassDependency);
+
+    m_renderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig));
+    return m_renderPass != nullptr;
 }
 
 bool GraphicsManager::beginFrame() {
@@ -981,8 +1014,8 @@ GraphicsResource GraphicsManager::nextResourceId() {
     return ++s_nextResourceID;
 }
 
-std::shared_ptr<GraphicsPipeline> GraphicsManager::pipeline() {
-    return m_graphicsPipeline;
+std::shared_ptr<RenderPass> GraphicsManager::renderPass() {
+    return m_renderPass;
 }
 
 std::shared_ptr<CommandPool> GraphicsManager::commandPool() {
@@ -1019,14 +1052,4 @@ DeviceMemoryManager& GraphicsManager::memory() {
 
 vk::ColorSpaceKHR GraphicsManager::getColourSpace() const {
     return m_surface.surfaceFormat.colorSpace;
-}
-
-void GraphicsManager::configurePipeline(const GraphicsPipelineConfiguration& graphicsPipelineConfig) {
-    m_graphicsPipelineConfig = graphicsPipelineConfig;
-    m_graphicsPipelineConfig.device = m_device.device;
-    m_graphicsPipelineConfig.framebufferWidth = 0;
-    m_graphicsPipelineConfig.framebufferHeight = 0;
-    m_graphicsPipelineConfig.colourFormat = getColourFormat();
-    m_graphicsPipelineConfig.depthFormat = getDepthFormat();
-    recreateSwapchain();
 }

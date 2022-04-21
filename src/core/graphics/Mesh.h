@@ -11,10 +11,11 @@
 
 struct MeshConfiguration {
     std::weak_ptr<vkr::Device> device;
-    const MeshData::Vertex* vertices;
-    size_t vertexCount;
-    const MeshData::Index* indices;
-    size_t indexCount;
+    const MeshData::Vertex* vertices = nullptr;
+    size_t vertexCount = 0;
+    const MeshData::Index* indices = nullptr;
+    size_t indexCount = 0;
+    MeshPrimitiveType primitiveType = PrimitiveType_Triangle;
 
     void setVertices(const std::vector<MeshData::Vertex>& verticesArray);
 
@@ -23,6 +24,8 @@ struct MeshConfiguration {
     void setIndices(const std::vector<MeshData::Triangle>& triangleArray);
 
     void setMeshData(MeshData* meshData);
+
+    void setPrimitiveType(const MeshPrimitiveType& primitiveType);
 };
 
 class Mesh {
@@ -43,11 +46,15 @@ public:
 
     bool uploadIndices(const std::vector<MeshData::Index>& indices);
 
+    void setPrimitiveType(const MeshPrimitiveType& primitiveType);
+
     void draw(const vk::CommandBuffer& commandBuffer, uint32_t instanceCount, uint32_t firstInstance);
 
     uint32_t getVertexCount() const;
 
     uint32_t getIndexCount() const;
+
+    const MeshPrimitiveType& getPrimitiveType() const;
 
     const GraphicsResource& getResourceId() const;
 
@@ -61,6 +68,7 @@ private:
     std::shared_ptr<vkr::Device> m_device;
     Buffer* m_vertexBuffer;
     Buffer* m_indexBuffer;
+    MeshPrimitiveType m_primitiveType;
     GraphicsResource m_resourceId;
 };
 

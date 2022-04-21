@@ -6,13 +6,32 @@
 
 #define GLSL_COMPILER_EXECUTABLE "D:/Code/VulkanSDK/1.2.198.1/Bin/glslc.exe"
 
+
+void GraphicsPipelineConfiguration::setViewport(float width, float height, float x, float y, float minDepth, float maxDepth) {
+    viewport.x = x;
+    viewport.y = y;
+    viewport.width = width;
+    viewport.height = height;
+    viewport.minDepth = minDepth;
+    viewport.maxDepth = maxDepth;
+}
+
+void GraphicsPipelineConfiguration::setDynamicState(const vk::DynamicState& dynamicState, const bool& isDynamic) {
+    dynamicStates[dynamicState] = isDynamic;
+}
+
+void GraphicsPipelineConfiguration::setDynamicStates(const std::vector<vk::DynamicState>& dynamicStates, const bool& isDynamic) {
+    for (const auto& state : dynamicStates)
+        setDynamicState(state, isDynamic);
+}
+
 GraphicsPipeline::GraphicsPipeline(std::weak_ptr<vkr::Device> device):
         m_device(device) {
 }
 
 GraphicsPipeline::GraphicsPipeline(std::weak_ptr<vkr::Device> device,
                                    std::unique_ptr<vkr::Pipeline>& pipeline,
-                                   std::unique_ptr<vkr::RenderPass>& renderPass,
+                                   std::shared_ptr<RenderPass>& renderPass,
                                    std::unique_ptr<vkr::PipelineLayout>& pipelineLayout,
                                    const GraphicsPipelineConfiguration& config):
         m_device(std::move(device)),
@@ -44,18 +63,23 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
 bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration) {
     assert(!graphicsPipelineConfiguration.device.expired() && graphicsPipelineConfiguration.device.lock() == m_device);
 
-
     VkResult result;
 
     std::vector<vk::DynamicState> dynamicStates = {};
 
-    vk::Viewport viewport;
-    viewport.x = 0.0F;
-    viewport.y = 0.0F;
-    viewport.width = graphicsPipelineConfiguration.framebufferWidth == 0 ? Application::instance()->graphics()->getResolution().x : graphicsPipelineConfiguration.framebufferWidth;
-    viewport.height = graphicsPipelineConfiguration.framebufferHeight == 0 ? Application::instance()->graphics()->getResolution().y : graphicsPipelineConfiguration.framebufferHeight;
-    viewport.minDepth = 0.0F;
-    viewport.maxDepth = 1.0F;
+    for (auto it = graphicsPipelineConfiguration.dynamicStates.begin(); it != graphicsPipelineConfiguration.dynamicStates.end(); ++it)
+        if (it->second)
+            dynamicStates.emplace_back(it->first);
+
+    vk::Viewport viewport = graphicsPipelineConfiguration.viewport;
+    if (viewport.width < 1 || viewport.height < 1) {
+        viewport.width = (float)Application::instance()->graphics()->getResolution().x;
+        viewport.height = (float)Application::instance()->graphics()->getResolution().y;
+    }
+    if (viewport.maxDepth <= viewport.minDepth) {
+        viewport.minDepth = 0.0F;
+        viewport.maxDepth = 1.0F;
+    }
 
     printf("Recreating graphics pipeline [%f x %f]\n", viewport.width, viewport.height);
 
@@ -65,8 +89,8 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     vk::Rect2D scissor;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
-    scissor.extent.width = viewport.width;
-    scissor.extent.height = viewport.height;
+    scissor.extent.width = (uint32_t)viewport.width;
+    scissor.extent.height = (uint32_t)viewport.height;
 
     if (Application::instance()->isViewportInverted()) {
         viewport.y += viewport.height;
@@ -139,7 +163,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     vertexInputStateCreateInfo.setVertexAttributeDescriptions(graphicsPipelineConfiguration.vertexInputAttributes);
 
     vk::PipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo;
-    inputAssemblyStateCreateInfo.setTopology(vk::PrimitiveTopology::eTriangleList);
+    inputAssemblyStateCreateInfo.setTopology(graphicsPipelineConfiguration.primitiveTopology);
     inputAssemblyStateCreateInfo.setPrimitiveRestartEnable(false);
 
     vk::PipelineViewportStateCreateInfo viewportStateCreateInfo;
@@ -205,61 +229,44 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
 
     m_pipelineLayout = std::make_unique<vkr::PipelineLayout>(*m_device, pipelineLayoutCreateInfo);
 
-    std::vector<vk::AttachmentDescription> renderPassAttachments;
-    vk::AttachmentDescription& colourAttachment = renderPassAttachments.emplace_back();
-    colourAttachment.setFormat(graphicsPipelineConfiguration.colourFormat);
-    colourAttachment.setSamples(vk::SampleCountFlagBits::e1);
-    colourAttachment.setLoadOp(vk::AttachmentLoadOp::eClear);
-    colourAttachment.setStoreOp(vk::AttachmentStoreOp::eStore);
-    colourAttachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-    colourAttachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    colourAttachment.setInitialLayout(vk::ImageLayout::eUndefined);
-    colourAttachment.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+//    RenderPassConfiguration renderPassConfig;
+//    renderPassConfig.device = graphicsPipelineConfiguration.device;
+//    vk::AttachmentDescription colourAttachment;
+//    colourAttachment.setFormat(graphicsPipelineConfiguration.colourFormat);
+//    colourAttachment.setSamples(vk::SampleCountFlagBits::e1);
+//    colourAttachment.setLoadOp(vk::AttachmentLoadOp::eClear);
+//    colourAttachment.setStoreOp(vk::AttachmentStoreOp::eStore);
+//    colourAttachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+//    colourAttachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+//    colourAttachment.setInitialLayout(vk::ImageLayout::eUndefined);
+//    colourAttachment.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+//    renderPassConfig.addAttachment(colourAttachment);
+//    vk::AttachmentDescription depthAttachment;
+//    depthAttachment.setFormat(graphicsPipelineConfiguration.depthFormat);
+//    depthAttachment.setSamples(vk::SampleCountFlagBits::e1);
+//    depthAttachment.setLoadOp(vk::AttachmentLoadOp::eClear);
+//    depthAttachment.setStoreOp(vk::AttachmentStoreOp::eDontCare);
+//    depthAttachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+//    depthAttachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+//    depthAttachment.setInitialLayout(vk::ImageLayout::eUndefined);
+//    depthAttachment.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+//    renderPassConfig.addAttachment(depthAttachment);
+//    SubpassConfiguration subpassConfiguration;
+//    subpassConfiguration.addColourAttachment(vk::AttachmentReference(0, vk::ImageLayout::eColorAttachmentOptimal));
+//    subpassConfiguration.setDepthStencilAttachment(vk::AttachmentReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal));
+//    renderPassConfig.addSubpass(subpassConfiguration);
+//    vk::SubpassDependency subpassDependency;
+//    subpassDependency.setSrcSubpass(VK_SUBPASS_EXTERNAL);
+//    subpassDependency.setDstSubpass(0);
+//    subpassDependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests);
+//    subpassDependency.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests);
+//    subpassDependency.setSrcAccessMask({});
+//    subpassDependency.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+//    renderPassConfig.addSubpassDependency(subpassDependency);
+//
+//    m_renderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig));
 
-    vk::AttachmentDescription& depthAttachment = renderPassAttachments.emplace_back();
-    depthAttachment.setFormat(graphicsPipelineConfiguration.depthFormat);
-    depthAttachment.setSamples(vk::SampleCountFlagBits::e1);
-    depthAttachment.setLoadOp(vk::AttachmentLoadOp::eClear);
-    depthAttachment.setStoreOp(vk::AttachmentStoreOp::eDontCare);
-    depthAttachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-    depthAttachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    depthAttachment.setInitialLayout(vk::ImageLayout::eUndefined);
-    depthAttachment.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-    std::vector<std::vector<vk::AttachmentReference>> allSubpassColourAttachments;
-    std::vector<vk::SubpassDescription> subpasses;
-
-    std::vector<vk::AttachmentReference>& subpassColourAttachments = allSubpassColourAttachments.emplace_back();
-    vk::AttachmentReference& colourAttachmentReference = subpassColourAttachments.emplace_back();
-    colourAttachmentReference.setAttachment(0);
-    colourAttachmentReference.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
-    vk::AttachmentReference depthStencilAttachmentReference;
-    depthStencilAttachmentReference.setAttachment(1);
-    depthStencilAttachmentReference.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-    vk::SubpassDescription& subpassDescription = subpasses.emplace_back();
-    subpassDescription.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-    subpassDescription.setColorAttachments(subpassColourAttachments);
-    subpassDescription.setPResolveAttachments(NULL);
-    subpassDescription.setPDepthStencilAttachment(&depthStencilAttachmentReference);
-    subpassDescription.setPreserveAttachmentCount(0);
-    subpassDescription.setPPreserveAttachments(NULL);
-
-    std::vector<vk::SubpassDependency> subpassDependencies;
-    vk::SubpassDependency& subpassDependency = subpassDependencies.emplace_back();
-    subpassDependency.setSrcSubpass(VK_SUBPASS_EXTERNAL);
-    subpassDependency.setDstSubpass(0);
-    subpassDependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests);
-    subpassDependency.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests);
-    subpassDependency.setSrcAccessMask({});
-    subpassDependency.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite);
-
-    vk::RenderPassCreateInfo renderPassCreateInfo;
-    renderPassCreateInfo.setAttachments(renderPassAttachments);
-    renderPassCreateInfo.setSubpasses(subpasses);
-    renderPassCreateInfo.setDependencies(subpassDependencies);
-
-    m_renderPass = std::make_unique<vkr::RenderPass>(*m_device, renderPassCreateInfo);
+    m_renderPass = std::shared_ptr<RenderPass>(graphicsPipelineConfiguration.renderPass);
 
     vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo;
     graphicsPipelineCreateInfo.setStages(pipelineShaderStages);
@@ -273,7 +280,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     graphicsPipelineCreateInfo.setPColorBlendState(&colourBlendStateCreateInfo);
     graphicsPipelineCreateInfo.setPDynamicState(&dynamicStateCreateInfo);
     graphicsPipelineCreateInfo.setLayout(**m_pipelineLayout);
-    graphicsPipelineCreateInfo.setRenderPass(**m_renderPass);
+    graphicsPipelineCreateInfo.setRenderPass(m_renderPass->getRenderPass());
     graphicsPipelineCreateInfo.setSubpass(0);
     graphicsPipelineCreateInfo.setBasePipelineHandle(VK_NULL_HANDLE);
     graphicsPipelineCreateInfo.setBasePipelineIndex(-1);
@@ -291,8 +298,8 @@ const vk::Pipeline& GraphicsPipeline::getPipeline() const {
     return **m_pipeline;
 }
 
-const vk::RenderPass& GraphicsPipeline::getRenderPass() const {
-    return **m_renderPass;
+std::shared_ptr<RenderPass> GraphicsPipeline::getRenderPass() const {
+    return m_renderPass;
 }
 
 const vk::PipelineLayout& GraphicsPipeline::getPipelineLayout() const {

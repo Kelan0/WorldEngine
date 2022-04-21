@@ -112,6 +112,8 @@ private:
 
     bool createSwapchainFramebuffers();
 
+    bool createRenderPass();
+
 public:
     bool beginFrame();
 
@@ -133,7 +135,7 @@ public:
 
     bool hasQueue(const std::string& name) const;
 
-    std::shared_ptr<GraphicsPipeline> pipeline();
+    std::shared_ptr<RenderPass> renderPass();
 
     std::shared_ptr<CommandPool> commandPool();
 
@@ -153,8 +155,6 @@ public:
 
     vk::ColorSpaceKHR getColourSpace() const;
 
-    void configurePipeline(const GraphicsPipelineConfiguration& graphicsPipelineConfig);
-
     void setPreferredPresentMode(vk::PresentModeKHR presentMode);
 
     bool didResolutionChange() const;
@@ -172,14 +172,12 @@ private:
     QueueDetails m_queues;
     SurfaceDetails m_surface;
     SwapchainDetails m_swapchain;
-    std::shared_ptr<GraphicsPipeline> m_graphicsPipeline;
+    std::shared_ptr<RenderPass> m_renderPass;
     std::shared_ptr<CommandPool> m_commandPool;
     std::shared_ptr<DescriptorPool> m_descriptorPool;
     DeviceMemoryManager* m_memory;
 
     std::unique_ptr<vkr::DebugUtilsMessengerEXT> m_debugMessenger;
-
-    GraphicsPipelineConfiguration m_graphicsPipelineConfig;
 
     vk::PresentModeKHR m_preferredPresentMode;
     bool m_isInitialized;

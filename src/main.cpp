@@ -43,16 +43,6 @@ class App : public Application {
         //eventDispacher()->connect<ScreenResizeEvent>(&App::onScreenResize, this);
 
 
-        GraphicsPipelineConfiguration pipelineConfig;
-        pipelineConfig.vertexShader = "res/shaders/main.vert";
-        pipelineConfig.fragmentShader = "res/shaders/main.frag";
-        pipelineConfig.vertexInputBindings = Mesh::getVertexBindingDescriptions();
-        pipelineConfig.vertexInputAttributes = Mesh::getVertexAttributeDescriptions();
-        renderer()->initPipelineDescriptorSetLayouts(pipelineConfig);
-        graphics()->configurePipeline(pipelineConfig);
-
-
-
         Image2DConfiguration testTextureImageConfig;
         testTextureImageConfig.device = graphics()->getDevice();
         testTextureImageConfig.filePath = "res/textures/Brick_Wall_017_SD/Brick_Wall_017_basecolor.jpg";

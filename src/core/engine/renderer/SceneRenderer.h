@@ -4,6 +4,7 @@
 
 #include "core/core.h"
 #include "core/graphics/FrameResource.h"
+#include "core/graphics/GraphicsPipeline.h"
 #include "core/engine/renderer/RenderCamera.h"
 #include "core/engine/scene/Scene.h"
 #include "core/engine/renderer/RenderComponent.h"
@@ -82,6 +83,8 @@ private:
     ObjectDataUBO* mappedWorldTransformsBuffer(size_t maxObjects);
 
     void notifyEntityModified(const uint32_t& entityIndex);
+
+    void recreateSwapchain(const RecreateSwapchainEvent& event);
 private:
     Scene* m_scene;
     RenderCamera m_renderCamera;
@@ -118,6 +121,8 @@ private:
     std::unordered_map<RenderComponent::UpdateType, bool> m_needsSortEntities;
     std::vector<uint32_t> m_sortedModifiedEntities;
     std::vector<std::pair<size_t, size_t>> m_objectBufferModifiedRegions;
+
+    std::shared_ptr<GraphicsPipeline> m_graphicsPipeline;
 };
 
 

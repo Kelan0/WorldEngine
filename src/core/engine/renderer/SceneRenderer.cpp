@@ -76,6 +76,8 @@ SceneRenderer::~SceneRenderer() {
 }
 
 void SceneRenderer::init() {
+    m_graphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Application::instance()->graphics()->getDevice()));
+
     initMissingTexture();
 
     // Missing texture needs to be at index 0
@@ -128,6 +130,8 @@ void SceneRenderer::init() {
     m_needsSortEntities[RenderComponent::UpdateType_Static] = true;
     m_needsSortEntities[RenderComponent::UpdateType_Dynamic] = true;
     m_needsSortEntities[RenderComponent::UpdateType_Always] = true;
+
+    Application::instance()->eventDispacher()->connect(&SceneRenderer::recreateSwapchain, this);
 }
 
 void SceneRenderer::render(double dt) {
@@ -224,8 +228,6 @@ void SceneRenderer::recordRenderCommands(double dt, vk::CommandBuffer commandBuf
 
 
 
-    std::shared_ptr<GraphicsPipeline> pipeline = Application::instance()->graphics()->pipeline();
-
 
     std::vector<vk::DescriptorSet> descriptorSets = {
             m_resources->globalDescriptorSet->getDescriptorSet(),
@@ -235,8 +237,8 @@ void SceneRenderer::recordRenderCommands(double dt, vk::CommandBuffer commandBuf
 
     std::vector<uint32_t> dynamicOffsets = {};
 
-    graphics->pipeline()->bind(commandBuffer);
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphics->pipeline()->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
+    m_graphicsPipeline->bind(commandBuffer);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_graphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
 
 
     PROFILE_REGION("Draw meshes")
@@ -727,6 +729,21 @@ void SceneRenderer::notifyTextureChanged(const uint32_t &entityIndex) {
 void SceneRenderer::notifyEntityModified(const uint32_t& entityIndex) {
     for (int i = 0; i < CONCURRENT_FRAMES; ++i)
         m_resources.get(i)->modifiedEntities.insert(entityIndex);
+}
+
+void SceneRenderer::recreateSwapchain(const RecreateSwapchainEvent& event) {
+    printf("Recreating SceneRenderer pipeline\n");
+    GraphicsPipelineConfiguration pipelineConfig;
+    pipelineConfig.device = Application::instance()->graphics()->getDevice();
+    pipelineConfig.renderPass = Application::instance()->graphics()->renderPass();
+    pipelineConfig.setViewport(0, 0); // Default to full window resolution
+
+    pipelineConfig.vertexShader = "res/shaders/main.vert";
+    pipelineConfig.fragmentShader = "res/shaders/main.frag";
+    pipelineConfig.vertexInputBindings = Mesh::getVertexBindingDescriptions();
+    pipelineConfig.vertexInputAttributes = Mesh::getVertexAttributeDescriptions();
+    initPipelineDescriptorSetLayouts(pipelineConfig);
+    m_graphicsPipeline->recreate(pipelineConfig);
 }
 
 void SceneRenderer::onRenderComponentAdded(const ComponentAddedEvent<RenderComponent>& event) {

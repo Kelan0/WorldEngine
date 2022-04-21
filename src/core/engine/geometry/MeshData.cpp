@@ -140,28 +140,33 @@ glm::vec3 MeshData::Triangle::getNormal(const MeshData& meshData) const {
 
 
 
-MeshData::MeshData() :
-        m_currentTransform(1.0F),
-        m_currentState() {
+MeshData::MeshData():
+    MeshData(PrimitiveType_Line) {
+}
+
+MeshData::MeshData(const MeshPrimitiveType& primitiveType) :
+    m_currentTransform(1.0F),
+    m_currentState(),
+    m_primitiveType(primitiveType) {
 }
 
 MeshData::~MeshData() {
 }
 
 void MeshData::pushTransform() {
-    m_transfromStack.push(m_currentTransform);
+    m_transformStack.push(m_currentTransform);
 }
 
 void MeshData::popTransform() {
 #if _DEBUG
-    if (m_transfromStack.empty()) {
+    if (m_transformStack.empty()) {
 		printf("MeshData::popTransform(): Stack underflow\n");
 		assert(false);
 		return;
 	}
 #endif
-    m_currentTransform = m_transfromStack.top();
-    m_transfromStack.pop();
+    m_currentTransform = m_transformStack.top();
+    m_transformStack.pop();
 }
 
 void MeshData::translate(glm::vec3 v) {
@@ -214,7 +219,7 @@ void MeshData::applyTransform(bool currentStateOnly) {
 void MeshData::pushState() {
     m_stateStack.push(m_currentState);
     m_currentState.baseVertex = m_vertices.size();
-    m_currentState.baseTriangle = m_triangles.size();
+    m_currentState.baseIndex = m_indices.size();
 }
 
 void MeshData::popState() {
@@ -229,6 +234,11 @@ void MeshData::popState() {
     m_stateStack.pop();
 }
 
+void MeshData::reset(const MeshPrimitiveType &primitiveType) {
+    clear();
+    m_primitiveType = primitiveType;
+}
+
 void MeshData::clear() {
     m_currentTransform = glm::mat4(1.0F);
     m_currentState = State();
@@ -236,11 +246,11 @@ void MeshData::clear() {
     while (!m_stateStack.empty())
         m_stateStack.pop();
 
-    while (!m_transfromStack.empty())
-        m_transfromStack.pop();
+    while (!m_transformStack.empty())
+        m_transformStack.pop();
 
     m_vertices.clear();
-    m_triangles.clear();
+    m_indices.clear();
 }
 
 void MeshData::createTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2) {
@@ -264,13 +274,7 @@ void MeshData::createTriangle(const Vertex& v0, const Vertex& v1, const Vertex& 
 }
 
 void MeshData::createQuad(const Vertex& v0, const Vertex& v1, const Vertex& v2, const Vertex& v3) {
-    Index i0 = addVertex(v0);
-    Index i1 = addVertex(v1);
-    Index i2 = addVertex(v2);
-    Index i3 = addVertex(v3);
-
-    addTriangle(i0, i1, i2);
-    addTriangle(i0, i2, i3);
+    addQuad(v0, v1, v2, v3);
 }
 
 void MeshData::createQuad(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 n0, glm::vec3 n1, glm::vec3 n2, glm::vec3 n3, glm::vec2 t0, glm::vec2 t1, glm::vec2 t2, glm::vec2 t3) {
@@ -369,54 +373,74 @@ MeshData::Index MeshData::addVertex(float px, float py, float pz, float nx, floa
     return addVertex(Vertex(px, py, pz, nx, ny, nz, tx, ty));
 }
 
-MeshData::Index MeshData::addTriangle(Index i0, Index i1, Index i2) {
-    i0 += m_currentState.baseVertex;
-    i1 += m_currentState.baseVertex;
-    i2 += m_currentState.baseVertex;
-
-    VALIDATE_VERTEX_INDEX(i0);
-    VALIDATE_VERTEX_INDEX(i1);
-    VALIDATE_VERTEX_INDEX(i2);
-    size_t index = m_triangles.size() - m_currentState.baseTriangle;
-    m_triangles.emplace_back(i0, i1, i2);
-    return static_cast<Index>(index);
+void MeshData::addTriangle(Index i0, Index i1, Index i2) {
+    switch (m_primitiveType) {
+        case PrimitiveType_Triangle:
+            createTrianglePrimitive(i0, i1, i2);
+            break;
+        case PrimitiveType_Line:
+            createLinePrimitive(i0, i1);
+            createLinePrimitive(i1, i2);
+            createLinePrimitive(i2, i0);
+            break;
+        case PrimitiveType_Point:
+            createPointPrimitive(i0);
+            createPointPrimitive(i1);
+            createPointPrimitive(i2);
+            break;
+    }
 }
 
-MeshData::Index MeshData::addTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2) {
+void MeshData::addTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2) {
     Index i0 = addVertex(v0);
     Index i1 = addVertex(v1);
     Index i2 = addVertex(v2);
-    return addTriangle(i0, i1, i2);
+    addTriangle(i0, i1, i2);
 }
 
-MeshData::Index MeshData::addQuad(Index i0, Index i1, Index i2, Index i3) {
-    Index index = addTriangle(i0, i1, i2);
-    addTriangle(i0, i2, i3);
-    return index;
+void MeshData::addQuad(Index i0, Index i1, Index i2, Index i3) {
+    switch (m_primitiveType) {
+        case PrimitiveType_Triangle:
+            createTrianglePrimitive(i0, i1, i2);
+            createTrianglePrimitive(i0, i2, i3);
+            break;
+        case PrimitiveType_Line:
+            createLinePrimitive(i0, i1);
+            createLinePrimitive(i1, i2);
+            createLinePrimitive(i2, i3);
+            createLinePrimitive(i3, i0);
+            break;
+        case PrimitiveType_Point:
+            createPointPrimitive(i0);
+            createPointPrimitive(i1);
+            createPointPrimitive(i2);
+            createPointPrimitive(i3);
+            break;
+    }
 }
 
-MeshData::Index MeshData::addQuad(const Vertex& v0, const Vertex& v1, const Vertex& v2, const Vertex& v3) {
+void MeshData::addQuad(const Vertex& v0, const Vertex& v1, const Vertex& v2, const Vertex& v3) {
     Index i0 = addVertex(v0);
     Index i1 = addVertex(v1);
     Index i2 = addVertex(v2);
     Index i3 = addVertex(v3);
-    return addQuad(i0, i1, i2, i3);
+    addQuad(i0, i1, i2, i3);
 }
 
 const std::vector<MeshData::Vertex>& MeshData::getVertices() const {
     return m_vertices;
 }
 
-const std::vector<MeshData::Triangle>& MeshData::getTriangles() const {
-    return m_triangles;
+const std::vector<MeshData::Index>& MeshData::getIndices() const {
+    return m_indices;
 }
 
 std::vector<MeshData::Vertex> &MeshData::vertices() {
     return m_vertices;
 }
 
-std::vector<MeshData::Triangle> &MeshData::triangles() {
-    return m_triangles;
+std::vector<MeshData::Index> &MeshData::indices() {
+    return m_indices;
 }
 
 glm::vec3 MeshData::calculateCenterOffset(bool currentStateOnly) const {
@@ -424,24 +448,35 @@ glm::vec3 MeshData::calculateCenterOffset(bool currentStateOnly) const {
 
     uint32_t bucketCount = 0;
 
+    // We calculate the average position of all vertices in the mesh (or just the vertices in the current state)
+    // Positions are averaged in buckets to avoid floating point precision issues.
+
     const uint32_t maxBucketSize = 1000;
     uint32_t bucketSize = 0;
     glm::dvec3 bucketCenter = glm::dvec3(0.0F);
 
-    const size_t firstTriangle = currentStateOnly ? m_currentState.baseTriangle : 0;
+    const size_t firstIndex = currentStateOnly ? m_currentState.baseIndex : 0;
 
-    for (int i = firstTriangle; i < m_triangles.size(); ++i) {
-        bucketCenter += m_triangles[i].getVertex(m_vertices, 0).position;
-        bucketCenter += m_triangles[i].getVertex(m_vertices, 1).position;
-        bucketCenter += m_triangles[i].getVertex(m_vertices, 2).position;
+    for (int i = firstIndex; i < m_indices.size(); ++i) {
+        bucketCenter += m_vertices[m_indices[i]].position;
         ++bucketSize;
-
         if (bucketSize == maxBucketSize) {
-            center += bucketCenter / (bucketSize * 3.0);
+            center += bucketCenter / (double)bucketSize;
             ++bucketCount;
             bucketSize = 0;
             bucketCenter = glm::dvec3(0.0);
         }
+//        bucketCenter += m_triangles[i].getVertex(m_vertices, 0).position;
+//        bucketCenter += m_triangles[i].getVertex(m_vertices, 1).position;
+//        bucketCenter += m_triangles[i].getVertex(m_vertices, 2).position;
+//        ++bucketSize;
+//
+//        if (bucketSize == maxBucketSize) {
+//            center += bucketCenter / (bucketSize * 3.0);
+//            ++bucketCount;
+//            bucketSize = 0;
+//            bucketCenter = glm::dvec3(0.0);
+//        }
     }
 
     return center / (double)bucketCount;
@@ -451,11 +486,12 @@ glm::mat4 MeshData::calculateBoundingBox(bool currentStateOnly) const {
     glm::vec3 minExtent = glm::vec3(+INFINITY);
     glm::vec3 maxExtent = glm::vec3(-INFINITY);
 
-    const size_t firstTriangle = currentStateOnly ? m_currentState.baseTriangle : 0;
+    const size_t firstPrimitive = currentStateOnly ? m_currentState.baseIndex : 0;
 
-    for (int i = firstTriangle; i < m_triangles.size(); ++i) {
+    for (int i = firstPrimitive; i < m_indices.size(); ++i) {
         for (int j = 0; j < 3; ++j) {
-            const glm::vec3& pos = m_triangles[i].getVertex(m_vertices, 0).position;
+            const glm::vec3& pos = m_vertices[m_indices[i]].position;
+//            const glm::vec3& pos = m_triangles[i].getVertex(m_vertices, 0).position;
 
             minExtent = glm::min(minExtent, pos);
             maxExtent = glm::max(maxExtent, pos);
@@ -478,11 +514,50 @@ size_t MeshData::getVertexCount() const {
 }
 
 size_t MeshData::getIndexCount() const {
-    return m_triangles.size() * 3;
+    return m_indices.size();
 }
 
 size_t MeshData::getPolygonCount() const {
-    return m_triangles.size();
+    return MeshData::getPolygonCount(m_indices.size(), m_primitiveType);
+}
+
+size_t MeshData::getPolygonCount(const size_t& numIndices, const MeshPrimitiveType& primitiveType) {
+    switch (primitiveType) {
+        case PrimitiveType_Point: return numIndices;
+        case PrimitiveType_Line: return numIndices / 2;
+        case PrimitiveType_Triangle: return numIndices / 3;
+        default:
+            assert(false); // Invalid primitive type
+            return 0;
+    }
+}
+
+const MeshPrimitiveType& MeshData::getPrimitiveType() const {
+    return m_primitiveType;
+}
+
+MeshData::Index MeshData::createTrianglePrimitive(const Index& i0, const Index& i1, const Index& i2) {
+    assert(m_primitiveType == PrimitiveType_Triangle);
+    size_t index = m_indices.size() - m_currentState.baseIndex;
+    m_indices.emplace_back(i0 + m_currentState.baseVertex);
+    m_indices.emplace_back(i1 + m_currentState.baseVertex);
+    m_indices.emplace_back(i2 + m_currentState.baseVertex);
+    return static_cast<Index>(index);
+}
+
+MeshData::Index MeshData::createLinePrimitive(const Index& i0, const Index& i1) {
+    assert(m_primitiveType == PrimitiveType_Line);
+    size_t index = m_indices.size() - m_currentState.baseIndex;
+    m_indices.emplace_back(i0 + m_currentState.baseVertex);
+    m_indices.emplace_back(i1 + m_currentState.baseVertex);
+    return static_cast<Index>(index);
+}
+
+MeshData::Index MeshData::createPointPrimitive(const Index& i0) {
+    assert(m_primitiveType == PrimitiveType_Point);
+    size_t index = m_indices.size() - m_currentState.baseIndex;
+    m_indices.emplace_back(i0 + m_currentState.baseVertex);
+    return static_cast<Index>(index);
 }
 
 
@@ -828,6 +903,10 @@ bool MeshLoader::loadOBJFile(const std::string& filePath, MeshData& meshData) {
     return true;
 }
 
+// Version must be incremented whenever the read/write methods are changed,
+// otherwise garbage data will get read from older versions of the cache file.
+#define MESH_CACHE_FILE_VERSION 1
+
 bool readMeshCache(const std::filesystem::path& path, MeshData& meshData) {
 
     std::ifstream file(path, std::ios::binary);
@@ -836,15 +915,22 @@ bool readMeshCache(const std::filesystem::path& path, MeshData& meshData) {
         return false;
     }
 
-    meshData.clear();
+    uint64_t version;
+    file.read((char*)(&version), 8);
+    if (version != MESH_CACHE_FILE_VERSION)
+        return false; // Incompatible file version. Cache file should be re-generated
+
     uint64_t vertexCount = 0;
-    uint64_t triangleCount = 0;
+    uint64_t indexCount = 0;
+    uint32_t primType;
     file.read((char*)(&vertexCount), 8);
-    file.read((char*)(&triangleCount), 8);
+    file.read((char*)(&indexCount), 8);
+    file.read((char*)(&primType), 4);
+    meshData.reset((MeshPrimitiveType)primType);
     meshData.vertices().resize(vertexCount);
-    meshData.triangles().resize(triangleCount);
+    meshData.indices().resize(indexCount);
     file.read((char*)(meshData.vertices().data()), vertexCount * sizeof(MeshData::Vertex));
-    file.read((char*)(meshData.triangles().data()), triangleCount * sizeof(MeshData::Triangle));
+    file.read((char*)(meshData.indices().data()), indexCount * sizeof(MeshData::Index));
     return true;
 }
 
@@ -858,12 +944,17 @@ bool writeMeshCache(const std::filesystem::path& path, MeshData& meshData) {
     printf("Writing mesh cache file \"%s\"\n", path.c_str());
 
     uint64_t vertexCount = meshData.vertices().size();
-    uint64_t triangleCount = meshData.triangles().size();
+    uint64_t indexCount = meshData.indices().size();
+    uint32_t primType = meshData.getPrimitiveType();
+
+    uint64_t version = MESH_CACHE_FILE_VERSION;
+    file.write((char*)(&version), 8);
 
     file.write((char*)(&vertexCount), 8);
-    file.write((char*)(&triangleCount), 8);
+    file.write((char*)(&indexCount), 8);
+    file.write((char*)(&primType), 4);
     file.write((char*)(meshData.vertices().data()), vertexCount * sizeof(MeshData::Vertex));
-    file.write((char*)(meshData.triangles().data()), triangleCount * sizeof(MeshData::Triangle));
+    file.write((char*)(meshData.indices().data()), indexCount * sizeof(MeshData::Index));
     return true;
 }
 
@@ -889,10 +980,11 @@ bool MeshLoader::loadMeshData(const std::string& filePath, MeshData &meshData) {
                 writeMeshCache(cachedMeshFilePath, meshData);
                 return true;
             }
-
-            return readMeshCache(cachedMeshFilePath, meshData);
         }
 
+        if (readMeshCache(cachedMeshFilePath, meshData))
+            return true;
+        // If reading the cache file failed, it will get re-generated.
     }
 
     if (!loadOBJFile(sourceMeshFilePath.string(), meshData))

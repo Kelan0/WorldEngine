@@ -4,6 +4,15 @@
 
 #include "core/core.h"
 
+
+enum MeshPrimitiveType {
+    PrimitiveType_Point = 0,
+    PrimitiveType_Line = 1,
+//    PrimitiveType_LineStrip = 2,
+    PrimitiveType_Triangle = 3,
+//    PrimitiveType_TriangleStrip = 4,
+};
+
 class MeshData {
 public:
     typedef uint32_t Index;
@@ -76,11 +85,13 @@ public:
 
     struct State {
         Index baseVertex = 0;
-        Index baseTriangle = 0;
+        Index baseIndex = 0;
     };
 
 public:
     MeshData();
+
+    MeshData(const MeshPrimitiveType& primitiveType);
 
     ~MeshData();
 
@@ -114,6 +125,8 @@ public:
 
     void popState();
 
+    void reset(const MeshPrimitiveType& primitiveType);
+
     void clear();
 
     void createTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2);
@@ -138,21 +151,21 @@ public:
 
     Index addVertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty);
 
-    Index addTriangle(Index	i0, Index i1, Index i2);
+    void addTriangle(Index	i0, Index i1, Index i2);
 
-    Index addTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2);
+    void addTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2);
 
-    Index addQuad(Index	i0, Index i1, Index i2, Index i3);
+    void addQuad(Index	i0, Index i1, Index i2, Index i3);
 
-    Index addQuad(const Vertex& v0, const Vertex& v1, const Vertex& v2, const Vertex& v3);
+    void addQuad(const Vertex& v0, const Vertex& v1, const Vertex& v2, const Vertex& v3);
 
     const std::vector<Vertex>& getVertices() const;
 
-    const std::vector<Triangle>& getTriangles() const;
+    const std::vector<Index>& getIndices() const;
 
     std::vector<Vertex>& vertices();
 
-    std::vector<Triangle>& triangles();
+    std::vector<Index>& indices();
 
     glm::vec3 calculateCenterOffset(bool currentStateOnly = true) const;
 
@@ -166,13 +179,26 @@ public:
 
     size_t getPolygonCount() const;
 
+    static size_t getPolygonCount(const size_t& numIndices, const MeshPrimitiveType& primitiveType);
+
+    const MeshPrimitiveType& getPrimitiveType() const;
+
+private:
+    Index createTrianglePrimitive(const Index& i0, const Index& i1, const Index& i2);
+
+    Index createLinePrimitive(const Index& i0, const Index& i1);
+
+    Index createPointPrimitive(const Index& i0);
+
 private:
     std::vector<Vertex> m_vertices;
-    std::vector<Triangle> m_triangles;
-    std::stack<glm::mat4> m_transfromStack;
+    std::vector<Index> m_indices;
+    std::stack<glm::mat4> m_transformStack;
     glm::mat4 m_currentTransform;
     std::stack<State> m_stateStack;
     State m_currentState;
+
+    MeshPrimitiveType m_primitiveType;
 };
 
 

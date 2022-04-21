@@ -109,7 +109,7 @@ void Application::renderInternal(double dt) {
     clearValues[1].depthStencil.setDepth(1.0F).setStencil(0);
 
     vk::RenderPassBeginInfo renderPassBeginInfo;
-    renderPassBeginInfo.setRenderPass(graphics()->pipeline()->getRenderPass());
+    renderPassBeginInfo.setRenderPass(graphics()->renderPass()->getRenderPass());
     renderPassBeginInfo.setFramebuffer(framebuffer);
     renderPassBeginInfo.renderArea.setOffset({ 0, 0 });
     renderPassBeginInfo.renderArea.setExtent(graphics()->getImageExtent());
