@@ -6,8 +6,7 @@
 #include "core/engine/scene/event/EventDispacher.h"
 #include "core/engine/scene/event/Events.h"
 #include "core/graphics/GraphicsManager.h"
-#include "core/graphics/GraphicsPipeline.h"
-#include "core/graphics/Mesh.h"
+#include "core/graphics/RenderPass.h"
 #include "core/thread/ThreadUtils.h"
 #include <chrono>
 

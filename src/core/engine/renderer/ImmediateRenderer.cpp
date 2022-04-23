@@ -1,5 +1,6 @@
 
 #include "core/engine/renderer/ImmediateRenderer.h"
+#include "core/graphics/DescriptorSet.h"
 #include "core/util/Util.h"
 
 
@@ -102,6 +103,8 @@ void ImmediateRenderer::render(double dt) {
 
     GraphicsPipeline* currentPipeline = nullptr;
 
+    const RenderState* prevRenderState = nullptr;
+
     for (size_t index = 0; index < m_renderCommands.size(); ++index) {
         PROFILE_REGION("Execute render command");
 
@@ -114,10 +117,15 @@ void ImmediateRenderer::render(double dt) {
         if (currentPipeline != pipeline) {
             currentPipeline = pipeline;
             pipeline->bind(commandBuffer);
+            prevRenderState = nullptr;
         }
 
-        pipeline->setDepthTestEnabled(commandBuffer, command.state.depthTestEnabled);
-        pipeline->setCullMode(commandBuffer, command.state.cullMode);
+        if (prevRenderState == nullptr || prevRenderState->depthTestEnabled != command.state.depthTestEnabled)
+            pipeline->setDepthTestEnabled(commandBuffer, command.state.depthTestEnabled);
+        if (prevRenderState == nullptr || prevRenderState->cullMode != command.state.cullMode)
+            pipeline->setCullMode(commandBuffer, command.state.cullMode);
+        if (prevRenderState == nullptr || prevRenderState->lineWidth != command.state.lineWidth)
+            pipeline->setLineWidth(commandBuffer, command.state.lineWidth);
 
         vk::DeviceSize vertexBufferOffset = command.vertexOffset * sizeof(ColouredVertex);
         vk::DeviceSize indexBufferOffset = command.indexOffset * sizeof(uint32_t);
@@ -130,6 +138,7 @@ void ImmediateRenderer::render(double dt) {
 
 
         commandBuffer.drawIndexed(command.indexCount, 1, 0, 0, 0);
+        prevRenderState = &command.state;
     }
 
     m_renderCommands.clear();
@@ -387,6 +396,10 @@ void ImmediateRenderer::setAlphaBlendMode(const vk::BlendFactor& src, const vk::
     m_renderState.alphaBlendMode.op = op;
 }
 
+void ImmediateRenderer::setLineWidth(const float& lineWidth) {
+    m_renderState.lineWidth = lineWidth;
+}
+
 
 void ImmediateRenderer::addVertex(const ColouredVertex& vertex) {
     PROFILE_SCOPE("ImmediateRenderer::addVertex");
@@ -550,6 +563,7 @@ GraphicsPipeline* ImmediateRenderer::getGraphicsPipeline(const RenderCommand& re
 
         pipelineConfiguration.setDynamicState(vk::DynamicState::eDepthTestEnableEXT, true);
         pipelineConfiguration.setDynamicState(vk::DynamicState::eCullModeEXT, true);
+        pipelineConfiguration.setDynamicState(vk::DynamicState::eLineWidth, true);
 
         AttachmentBlendState attachmentBlendState;
         attachmentBlendState.blendEnable = renderCommand.state.blendEnabled;
@@ -590,6 +604,7 @@ GraphicsPipeline* ImmediateRenderer::getGraphicsPipeline(const RenderCommand& re
 
         GraphicsPipeline* pipeline = GraphicsPipeline::create(pipelineConfiguration);
         m_graphicsPipelines.insert(std::make_pair(key, pipeline));
+
         return pipeline;
     }
 

@@ -22,4 +22,30 @@ extern PFN_vkCmdSetStencilTestEnableEXT ptr_vkCmdSetStencilTestEnableEXT;
 extern PFN_vkCmdSetStencilOpEXT ptr_vkCmdSetStencilOpEXT;
 #endif /* defined(VK_EXT_extended_dynamic_state) */
 
+#if defined(VK_EXT_extended_dynamic_state2)
+extern PFN_vkCmdSetPatchControlPointsEXT ptr_vkCmdSetPatchControlPointsEXT;
+extern PFN_vkCmdSetRasterizerDiscardEnableEXT ptr_vkCmdSetRasterizerDiscardEnableEXT;
+extern PFN_vkCmdSetDepthBiasEnableEXT ptr_vkCmdSetDepthBiasEnableEXT;
+extern PFN_vkCmdSetLogicOpEXT ptr_vkCmdSetLogicOpEXT;
+extern PFN_vkCmdSetPrimitiveRestartEnableEXT ptr_vkCmdSetPrimitiveRestartEnableEXT;
+#endif /* defined(VK_EXT_extended_dynamic_state2) */
+
+
+#if defined(VK_EXT_line_rasterization)
+extern PFN_vkCmdSetLineStippleEXT ptr_vkCmdSetLineStippleEXT;
+#endif /* defined(VK_EXT_line_rasterization) */
+
+#if defined(VK_EXT_sample_locations)
+extern PFN_vkCmdSetSampleLocationsEXT ptr_vkCmdSetSampleLocationsEXT;
+extern PFN_vkGetPhysicalDeviceMultisamplePropertiesEXT ptr_vkGetPhysicalDeviceMultisamplePropertiesEXT;
+#endif /* defined(VK_EXT_sample_locations) */
+
+#if defined(VK_EXT_vertex_input_dynamic_state)
+extern PFN_vkCmdSetVertexInputEXT ptr_vkCmdSetVertexInputEXT;
+#endif /* defined(VK_EXT_vertex_input_dynamic_state) */
+
+#if defined(VK_EXT_color_write_enable)
+extern PFN_vkCmdSetColorWriteEnableEXT ptr_vkCmdSetColorWriteEnableEXT;
+#endif /* defined(VK_EXT_color_write_enable) */
+
 #endif //WORLDENGINE_VULKAN_H

@@ -261,12 +261,22 @@ class App : public Application {
 
         immediateRenderer()->setBlendEnabled(false);
         immediateRenderer()->setDepthTestEnabled(false);
+        immediateRenderer()->setLineWidth(3.0F);
         immediateRenderer()->begin(PrimitiveType_LineLoop);
         immediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
         immediateRenderer()->vertex(0.0F, 0.0F, 0.0F);
         immediateRenderer()->vertex(1.0F, 0.0F, 0.0F);
         immediateRenderer()->vertex(1.0F, 1.0F, 0.0F);
         immediateRenderer()->vertex(0.0F, 1.0F, 0.0F);
+        immediateRenderer()->end();
+
+        immediateRenderer()->setLineWidth(1.0F);
+        immediateRenderer()->begin(PrimitiveType_LineLoop);
+        immediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
+        immediateRenderer()->vertex(-0.1F, -0.1F, 0.0F);
+        immediateRenderer()->vertex(1.1F, -0.1F, 0.0F);
+        immediateRenderer()->vertex(1.1F, 1.1F, 0.0F);
+        immediateRenderer()->vertex(-0.1F, 1.1F, 0.0F);
         immediateRenderer()->end();
 
         immediateRenderer()->popMatrix(MatrixMode_ModelView);

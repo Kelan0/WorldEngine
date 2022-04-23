@@ -3,8 +3,6 @@
 #define WORLDENGINE_GRAPHICSMANAGER_H
 
 #include "core/core.h"
-#include "core/graphics/GraphicsPipeline.h"
-#include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Image.h"
 #include "core/graphics/FrameResource.h"
 #include "core/util/DebugUtils.h"
@@ -15,13 +13,11 @@
 #define QUEUE_COMPUTE_MAIN "compute_main"
 #define QUEUE_TRANSFER_MAIN "transfer_main"
 
-class GraphicsPipeline;
+class RenderPass;
 class CommandPool;
 class DescriptorPool;
 class DeviceMemoryManager;
 class DeviceMemoryBlock;
-class DescriptorAllocator;
-class DescriptorLayoutCache;
 
 struct QueueDetails {
     union {

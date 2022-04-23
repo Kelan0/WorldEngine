@@ -18,6 +18,36 @@ PFN_vkCmdSetStencilTestEnableEXT ptr_vkCmdSetStencilTestEnableEXT;
 PFN_vkCmdSetStencilOpEXT ptr_vkCmdSetStencilOpEXT;
 #endif /* defined(VK_EXT_extended_dynamic_state) */
 
+#if defined(VK_EXT_extended_dynamic_state2)
+PFN_vkCmdSetPatchControlPointsEXT ptr_vkCmdSetPatchControlPointsEXT;
+PFN_vkCmdSetRasterizerDiscardEnableEXT ptr_vkCmdSetRasterizerDiscardEnableEXT;
+PFN_vkCmdSetDepthBiasEnableEXT ptr_vkCmdSetDepthBiasEnableEXT;
+PFN_vkCmdSetLogicOpEXT ptr_vkCmdSetLogicOpEXT;
+PFN_vkCmdSetPrimitiveRestartEnableEXT ptr_vkCmdSetPrimitiveRestartEnableEXT;
+#endif /* defined(VK_EXT_extended_dynamic_state2) */
+
+
+#if defined(VK_EXT_line_rasterization)
+PFN_vkCmdSetLineStippleEXT ptr_vkCmdSetLineStippleEXT;
+#endif /* defined(VK_EXT_line_rasterization) */
+
+#if defined(VK_EXT_sample_locations)
+PFN_vkCmdSetSampleLocationsEXT ptr_vkCmdSetSampleLocationsEXT;
+PFN_vkGetPhysicalDeviceMultisamplePropertiesEXT ptr_vkGetPhysicalDeviceMultisamplePropertiesEXT;
+#endif /* defined(VK_EXT_sample_locations) */
+
+#if defined(VK_EXT_vertex_input_dynamic_state)
+PFN_vkCmdSetVertexInputEXT ptr_vkCmdSetVertexInputEXT;
+#endif /* defined(VK_EXT_vertex_input_dynamic_state) */
+
+#if defined(VK_EXT_color_write_enable)
+PFN_vkCmdSetColorWriteEnableEXT ptr_vkCmdSetColorWriteEnableEXT;
+#endif /* defined(VK_EXT_color_write_enable) */
+
+
+
+
+
 void loadVulkanInstanceExtensions(VkInstance device) {
 }
 
@@ -37,6 +67,31 @@ void loadVulkanDeviceExtensions(VkDevice device) {
     ptr_vkCmdSetStencilOpEXT = (PFN_vkCmdSetStencilOpEXT) vkGetDeviceProcAddr(device, "vkCmdSetStencilOpEXT");
 #endif /* defined(VK_EXT_extended_dynamic_state) */
 
+#if defined(VK_EXT_extended_dynamic_state2)
+    ptr_vkCmdSetPatchControlPointsEXT = (PFN_vkCmdSetPatchControlPointsEXT) vkGetDeviceProcAddr(device, "vkCmdSetPatchControlPointsEXT");
+    ptr_vkCmdSetRasterizerDiscardEnableEXT = (PFN_vkCmdSetRasterizerDiscardEnableEXT) vkGetDeviceProcAddr(device, "vkCmdSetRasterizerDiscardEnableEXT");
+    ptr_vkCmdSetDepthBiasEnableEXT = (PFN_vkCmdSetDepthBiasEnableEXT) vkGetDeviceProcAddr(device, "vkCmdSetDepthBiasEnableEXT");
+    ptr_vkCmdSetLogicOpEXT = (PFN_vkCmdSetLogicOpEXT) vkGetDeviceProcAddr(device, "vkCmdSetLogicOpEXT");
+    ptr_vkCmdSetPrimitiveRestartEnableEXT = (PFN_vkCmdSetPrimitiveRestartEnableEXT) vkGetDeviceProcAddr(device, "vkCmdSetPrimitiveRestartEnableEXT");
+#endif /* defined(VK_EXT_extended_dynamic_state2) */
+
+#if defined(VK_EXT_line_rasterization)
+    ptr_vkCmdSetLineStippleEXT = (PFN_vkCmdSetLineStippleEXT) vkGetDeviceProcAddr(device, "vkCmdSetLineStippleEXT");
+#endif /* defined(VK_EXT_line_rasterization) */
+
+#if defined(VK_EXT_sample_locations)
+    ptr_vkCmdSetSampleLocationsEXT = (PFN_vkCmdSetSampleLocationsEXT) vkGetDeviceProcAddr(device, "vkCmdSetSampleLocationsEXT");
+    ptr_vkGetPhysicalDeviceMultisamplePropertiesEXT = (PFN_vkGetPhysicalDeviceMultisamplePropertiesEXT) vkGetDeviceProcAddr(device, "vkGetPhysicalDeviceMultisamplePropertiesEXT");
+#endif /* defined(VK_EXT_sample_locations) */
+
+#if defined(VK_EXT_vertex_input_dynamic_state)
+    ptr_vkCmdSetVertexInputEXT = (PFN_vkCmdSetVertexInputEXT) vkGetDeviceProcAddr(device, "vkCmdSetVertexInputEXT");
+#endif /* defined(VK_EXT_vertex_input_dynamic_state) */
+
+#if defined(VK_EXT_color_write_enable)
+    ptr_vkCmdSetColorWriteEnableEXT = (PFN_vkCmdSetColorWriteEnableEXT) vkGetDeviceProcAddr(device, "vkCmdSetColorWriteEnableEXT");
+#endif /* defined(VK_EXT_color_write_enable) */
+
 }
 
 void vkCmdSetCullModeEXT(VkCommandBuffer commandBuffer, VkCullModeFlags cullMode) { ptr_vkCmdSetCullModeEXT(commandBuffer, cullMode); }
@@ -51,3 +106,18 @@ void vkCmdSetDepthCompareOpEXT(VkCommandBuffer commandBuffer, VkCompareOp depthC
 void vkCmdSetDepthBoundsTestEnableEXT(VkCommandBuffer commandBuffer, VkBool32 depthBoundsTestEnable) { ptr_vkCmdSetDepthBoundsTestEnableEXT(commandBuffer, depthBoundsTestEnable); }
 void vkCmdSetStencilTestEnableEXT(VkCommandBuffer commandBuffer, VkBool32 stencilTestEnable) { ptr_vkCmdSetStencilTestEnableEXT(commandBuffer, stencilTestEnable); }
 void vkCmdSetStencilOpEXT(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, VkStencilOp failOp, VkStencilOp passOp, VkStencilOp depthFailOp, VkCompareOp compareOp) { ptr_vkCmdSetStencilOpEXT(commandBuffer, faceMask, failOp, passOp, depthFailOp, compareOp); }
+
+void vkCmdSetLineStippleEXT(VkCommandBuffer commandBuffer, uint32_t lineStippleFactor, uint16_t lineStipplePattern) { ptr_vkCmdSetLineStippleEXT(commandBuffer, lineStippleFactor, lineStipplePattern); }
+
+void vkCmdSetSampleLocationsEXT(VkCommandBuffer commandBuffer, const VkSampleLocationsInfoEXT* pSampleLocationsInfo) { ptr_vkCmdSetSampleLocationsEXT(commandBuffer, pSampleLocationsInfo); }
+void vkGetPhysicalDeviceMultisamplePropertiesEXT(VkPhysicalDevice physicalDevice, VkSampleCountFlagBits samples, VkMultisamplePropertiesEXT* pMultisampleProperties) { ptr_vkGetPhysicalDeviceMultisamplePropertiesEXT(physicalDevice, samples, pMultisampleProperties); }
+
+void vkCmdSetVertexInputEXT(VkCommandBuffer commandBuffer, uint32_t vertexBindingDescriptionCount, const VkVertexInputBindingDescription2EXT* pVertexBindingDescriptions, uint32_t vertexAttributeDescriptionCount, const VkVertexInputAttributeDescription2EXT* pVertexAttributeDescriptions) { ptr_vkCmdSetVertexInputEXT(commandBuffer, vertexBindingDescriptionCount, pVertexBindingDescriptions, vertexAttributeDescriptionCount, pVertexAttributeDescriptions); }
+
+void vkCmdSetPatchControlPointsEXT(VkCommandBuffer commandBuffer, uint32_t patchControlPoints) { ptr_vkCmdSetPatchControlPointsEXT(commandBuffer, patchControlPoints); }
+void vkCmdSetRasterizerDiscardEnableEXT(VkCommandBuffer commandBuffer, VkBool32 rasterizerDiscardEnable) { ptr_vkCmdSetRasterizerDiscardEnableEXT(commandBuffer, rasterizerDiscardEnable); }
+void vkCmdSetDepthBiasEnableEXT(VkCommandBuffer commandBuffer, VkBool32 depthBiasEnable) { ptr_vkCmdSetDepthBiasEnableEXT(commandBuffer, depthBiasEnable); }
+void vkCmdSetLogicOpEXT(VkCommandBuffer commandBuffer, VkLogicOp logicOp) { ptr_vkCmdSetLogicOpEXT(commandBuffer, logicOp); }
+void vkCmdSetPrimitiveRestartEnableEXT(VkCommandBuffer commandBuffer, VkBool32 primitiveRestartEnable) { ptr_vkCmdSetPrimitiveRestartEnableEXT(commandBuffer, primitiveRestartEnable); }
+
+void vkCmdSetColorWriteEnableEXT(VkCommandBuffer commandBuffer, uint32_t attachmentCount, const VkBool32* pColorWriteEnables) { ptr_vkCmdSetColorWriteEnableEXT(commandBuffer, attachmentCount, pColorWriteEnables); }

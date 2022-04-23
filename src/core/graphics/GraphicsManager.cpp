@@ -1,5 +1,6 @@
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/GraphicsPipeline.h"
+#include "core/graphics/RenderPass.h"
 #include "core/graphics/CommandPool.h"
 #include "core/graphics/DeviceMemory.h"
 #include "core/graphics/Mesh.h"
@@ -91,7 +92,11 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
     }
 
     std::vector<const char*> deviceLayers;
-    std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME };
+    std::vector<const char*> deviceExtensions = {
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+            VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME,
+            VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME,
+    };
 
     std::unordered_map<std::string, uint32_t> queueLayout;
     queueLayout.insert(std::make_pair(QUEUE_GRAPHICS_MAIN, QUEUE_TYPE_GRAPHICS_BIT | QUEUE_TYPE_PRESENT_BIT));

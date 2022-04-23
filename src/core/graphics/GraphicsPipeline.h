@@ -3,7 +3,9 @@
 #define WORLDENGINE_GRAPHICSPIPELINE_H
 
 #include "core/core.h"
-#include "core/graphics/RenderPass.h"
+
+class RenderPass;
+class Buffer;
 
 struct BlendMode {
     vk::BlendFactor src = vk::BlendFactor::eOne;
@@ -84,13 +86,82 @@ public:
 
     bool isStateDynamic(const vk::DynamicState& dynamicState) const;
 
-    void setDepthTestEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled);
+    void setViewport(const vk::CommandBuffer& commandBuffer, const size_t& firstViewport, const size_t& viewportCount, const vk::Viewport* viewports);
+    void setViewport(const vk::CommandBuffer& commandBuffer, const size_t& firstViewport, const std::vector<vk::Viewport>& viewports);
+    void setViewport(const vk::CommandBuffer& commandBuffer, const size_t& firstViewport, const vk::Viewport& viewport);
+    void setViewport(const vk::CommandBuffer& commandBuffer, const size_t& firstViewport, const float& x, const float& y, const float& width, const float& height, const float& minDepth, const float& maxDepth);
+
+    void setScissor(const vk::CommandBuffer& commandBuffer, const size_t& firstScissor, const size_t& scissorCount, const vk::Rect2D* scissorRects);
+    void setScissor(const vk::CommandBuffer& commandBuffer, const size_t& firstScissor, const std::vector<vk::Rect2D>& scissorRects);
+    void setScissor(const vk::CommandBuffer& commandBuffer, const size_t& firstScissor, const vk::Rect2D& scissorRect);
+    void setScissor(const vk::CommandBuffer& commandBuffer, const size_t& firstScissor, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height);
+
+    void setLineWidth(const vk::CommandBuffer& commandBuffer, const float& lineWidth);
+
+    void setDepthBias(const vk::CommandBuffer& commandBuffer, const float& constantFactor, const float& clamp, const float& slopeFactor);
+
+    void setBlendConstants(const vk::CommandBuffer& commandBuffer, const glm::vec4& constants);
+    void setBlendConstants(const vk::CommandBuffer& commandBuffer, const float& r, const float& g, const float& b, const float& a);
+
+    void setDepthBounds(const vk::CommandBuffer& commandBuffer, const float& minDepthBound, const float& maxDepthBound);
+
+    void setStencilCompareMask(const vk::CommandBuffer& commandBuffer, const vk::StencilFaceFlags& faceMask, const uint32_t& compareMask);
+
+    void setStencilWriteMask(const vk::CommandBuffer& commandBuffer, const vk::StencilFaceFlags& faceMask, const uint32_t& writeMask);
+
+    void setStencilReference(const vk::CommandBuffer& commandBuffer, const vk::StencilFaceFlags& faceMask, const uint32_t& reference);
+
+    void setSampleLocations(const vk::CommandBuffer& commandBuffer, const vk::SampleLocationsInfoEXT& sampleLocations);
+    void setSampleLocations(const vk::CommandBuffer& commandBuffer, const vk::SampleCountFlagBits& samplesPerPixel, const vk::Extent2D& sampleGridSize, const uint32_t& sampleLocationsCount, const vk::SampleLocationEXT* sampleLocations);
+    void setSampleLocations(const vk::CommandBuffer& commandBuffer, const vk::SampleCountFlagBits& samplesPerPixel, const vk::Extent2D& sampleGridSize, const std::vector<vk::SampleLocationEXT>& sampleLocations);
+
+    void setLineStipple(const vk::CommandBuffer& commandBuffer, const uint32_t& lineStippleFactor, const uint16_t& lineStipplePattern);
 
     void setCullMode(const vk::CommandBuffer& commandBuffer, const vk::CullModeFlags& cullMode);
+
+    void setFrontFace(const vk::CommandBuffer& commandBuffer, const vk::FrontFace& frontFace);
+
+    void setPrimitiveTopology(const vk::CommandBuffer& commandBuffer, const vk::PrimitiveTopology& primitiveTopology);
+
+    void bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const uint32_t& bindingCount, const vk::Buffer* buffers, const vk::DeviceSize* offsets);
+    void bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const std::vector<vk::Buffer>& buffers, const std::vector<vk::DeviceSize>& offsets);
+    void bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const uint32_t& bindingCount, const vk::Buffer* buffers, const vk::DeviceSize* offsets, const vk::DeviceSize* sizes, const vk::DeviceSize* strides);
+    void bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const std::vector<vk::Buffer>& buffers, const std::vector<vk::DeviceSize>& offsets, const std::vector<vk::DeviceSize>& sizes, const std::vector<vk::DeviceSize>& strides);
+    void bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const uint32_t& bindingCount, Buffer* const* buffers, const vk::DeviceSize* offsets);
+    void bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const std::vector<Buffer*>& buffers, const std::vector<vk::DeviceSize>& offsets);
+    void bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const uint32_t& bindingCount, Buffer* const* buffers, const vk::DeviceSize* offsets, const vk::DeviceSize* sizes, const vk::DeviceSize* strides);
+    void bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const std::vector<Buffer*>& buffers, const std::vector<vk::DeviceSize>& offsets, const std::vector<vk::DeviceSize>& sizes, const std::vector<vk::DeviceSize>& strides);
+
+    void setDepthTestEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled);
+
+    void setDepthWriteEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled);
+
+    void setDepthCompareOp(const vk::CommandBuffer& commandBuffer, const vk::CompareOp& compareOp);
+
+    void setDepthBoundsTestEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled);
+
+    void setStencilTestEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled);
+
+    void setStencilOp(const vk::CommandBuffer& commandBuffer, const vk::StencilFaceFlags& faceMask, const vk::StencilOp& failOp, const vk::StencilOp& passOp, const vk::StencilOp& depthFailOp, const vk::CompareOp& compareOp);
+
+    void setVertexInput(const vk::CommandBuffer& commandBuffer, const size_t vertexBindingCount, const vk::VertexInputBindingDescription2EXT* vertexBindings, const size_t& vertexAttribCount, const vk::VertexInputAttributeDescription2EXT* vertexAttribs);
+
+    void setRasterizerDiscardEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled);
+
+    void setDepthBiasEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled);
+
+    void setLogicOp(const vk::CommandBuffer& commandBuffer, const vk::LogicOp& logicOp);
+
+    void setPrimitiveRestartEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled);
+
+    void setColourWriteEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled);
+
 private:
     static bool loadShaderStage(std::string filePath, std::vector<char>& bytecode);
 
     static bool runCommand(const std::string& command);
+
+    void validateDynamicState(const vk::DynamicState& dynamicState);
 
 private:
     std::shared_ptr<vkr::Device> m_device;

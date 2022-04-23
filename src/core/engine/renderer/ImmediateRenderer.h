@@ -3,11 +3,15 @@
 
 #include "core/core.h"
 #include "core/graphics/Mesh.h"
+#include "core/graphics/GraphicsPipeline.h"
 #include "core/engine/geometry/MeshData.h"
 #include "core/engine/scene/event/EventDispacher.h"
 #include "core/engine/scene/event/Events.h"
 
 #define IMMEDIATE_MODE_VALIDATION 1
+
+class DescriptorSet;
+class DescriptorSetLayout;
 
 enum MatrixMode {
     MatrixMode_ModelView = 0,
@@ -62,6 +66,7 @@ private:
         bool blendEnabled = false;
         BlendMode colourBlendMode;
         BlendMode alphaBlendMode;
+        float lineWidth = 1.0F;
     };
 
     struct RenderCommand {
@@ -133,6 +138,8 @@ public:
     void setBlendEnabled(const bool& enabled);
     void setColourBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op);
     void setAlphaBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op);
+
+    void setLineWidth(const float& lineWidth);
 
 private:
     void addVertex(const ColouredVertex& vertex);

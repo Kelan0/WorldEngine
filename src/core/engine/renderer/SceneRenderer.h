@@ -12,6 +12,7 @@
 
 class Buffer;
 class DescriptorSet;
+class DescriptorSetLayout;
 class Texture2D;
 class Image2D;
 
