@@ -8,8 +8,6 @@
 #include "core/graphics/Image.h"
 #include "core/graphics/FrameResource.h"
 #include "core/util/DebugUtils.h"
-#include <vulkan/vulkan.h>
-#include <vulkan/vulkan_raii.hpp>
 #include <SDL.h>
 #include <SDL_vulkan.h>
 
@@ -102,7 +100,7 @@ private:
 
     bool selectPhysicalDevice();
 
-    bool createLogicalDevice(std::vector<const char*> const& enabledLayers, std::vector<const char*> const& enabledExtensions, vk::PhysicalDeviceFeatures* deviceFeatures, vk::PhysicalDeviceDescriptorIndexingFeatures* descriptorIndexingFeatures, std::unordered_map<std::string, uint32_t> queueLayout);
+    bool createLogicalDevice(std::vector<const char*> const& enabledLayers, std::vector<const char*> const& enabledExtensions, vk::PhysicalDeviceFeatures* deviceFeatures, void* pNext, std::unordered_map<std::string, uint32_t> queueLayout);
 
     bool initSurfaceDetails();
 
@@ -118,6 +116,8 @@ public:
     bool beginFrame();
 
     void endFrame();
+
+    const vk::Instance& getInstance() const;
 
     std::shared_ptr<vkr::Device> getDevice() const;
 

@@ -33,7 +33,7 @@
     <ClCompile Include="src\core\engine\renderer\SceneRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\engine\scene\event\EventDispacher.cpp">
+    <ClCompile Include="src\core\engine\scene\event\EventDispatcher.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\engine\scene\Camera.cpp">
@@ -137,7 +137,7 @@
     <ClInclude Include="src\core\engine\renderer\SceneRenderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\engine\scene\event\EventDispacher.h">
+    <ClInclude Include="src\core\engine\scene\event\EventDispatcher.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\core\engine\scene\event\Events.h">

@@ -3,7 +3,7 @@
 #include "core/graphics/CommandPool.h"
 #include "core/application/Application.h"
 
-FrameResource<Buffer> Buffer::s_stagingBuffer = NULL;
+FrameResource<Buffer> Buffer::s_stagingBuffer = nullptr;
 vk::DeviceSize Buffer::s_maxStagingBufferSize = 128 * 1024 * 1024; // 128 MiB
 
 Buffer::Buffer(std::weak_ptr<vkr::Device> device, vk::Buffer buffer, DeviceMemoryBlock* memory, vk::DeviceSize size, vk::MemoryPropertyFlags memoryProperties, GraphicsResource resourceId):
@@ -28,7 +28,7 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
 
     vk::Result result;
 
-    if (bufferConfiguration.data != NULL && !(bufferConfiguration.memoryProperties & vk::MemoryPropertyFlagBits::eHostVisible)) {
+    if (bufferConfiguration.data != nullptr && !(bufferConfiguration.memoryProperties & vk::MemoryPropertyFlagBits::eHostVisible)) {
         // We have data to upload but the buffer is not visible to the host, so we need to allow this
         // buffer to be a transfer destination, so the data can be copied from a temporary buffer
         usage |= vk::BufferUsageFlagBits::eTransferDst;
@@ -39,31 +39,31 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
     bufferCreateInfo.setSize(bufferConfiguration.size);
     bufferCreateInfo.setSharingMode(vk::SharingMode::eExclusive);
     vk::Buffer buffer = VK_NULL_HANDLE;
-    result = device.createBuffer(&bufferCreateInfo, NULL, &buffer);
+    result = device.createBuffer(&bufferCreateInfo, nullptr, &buffer);
 
     if (result != vk::Result::eSuccess) {
         printf("Failed to create buffer: %s\n", vk::to_string(result).c_str());
-        return NULL;
+        return nullptr;
     }
 
     const vk::MemoryRequirements& memoryRequirements = device.getBufferMemoryRequirements(buffer);
     DeviceMemoryBlock* memory = vmalloc(memoryRequirements, bufferConfiguration.memoryProperties);
 
-    if (memory == NULL) {
+    if (memory == nullptr) {
         device.destroyBuffer(buffer);
         printf("Failed to allocate device memory for buffer: %s\n", vk::to_string(result).c_str());
-        return NULL;
+        return nullptr;
     }
 
     memory->bindBuffer(buffer);
 
     Buffer* returnBuffer = new Buffer(bufferConfiguration.device, buffer, memory, bufferConfiguration.size, bufferConfiguration.memoryProperties, GraphicsManager::nextResourceId());
 
-    if (bufferConfiguration.data != NULL) {
+    if (bufferConfiguration.data != nullptr) {
         if (!returnBuffer->upload(0, bufferConfiguration.size, bufferConfiguration.data)) {
             printf("Failed to upload buffer data\n");
             delete returnBuffer;
-            return NULL;
+            return nullptr;
         }
     }
 
@@ -72,7 +72,7 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
 
 bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset, vk::DeviceSize dstOffset) {
 #if _DEBUG
-    if (srcBuffer == NULL || dstBuffer == NULL) {
+    if (srcBuffer == nullptr || dstBuffer == nullptr) {
 		printf("Unable to copy NULL buffers\n");
 		return false;
 	}
@@ -122,13 +122,13 @@ bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk:
 
 bool Buffer::upload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data) {
 #if _DEBUG
-    if (dstBuffer == NULL) {
+    if (dstBuffer == nullptr) {
 		printf("Cannot upload to NULL buffer\n");
 		assert(false);
 		return false;
 	}
 
-	if (data == NULL) {
+	if (data == nullptr) {
 		printf("Cannot upload NULL data to buffer\n");
 		assert(false);
 		return false;
@@ -247,12 +247,13 @@ bool Buffer::stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSi
 
 bool Buffer::mappedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data) {
     const vk::Device& device = **dstBuffer->getDevice();
-    if (dstBuffer->m_memory->map() == NULL) {
+    if (dstBuffer->m_memory->map() == nullptr) {
         printf("Failed to map device memory for buffer\n");
         return false;
     }
 
-    memcpy(dstBuffer->m_memory->map(), data, size);
+    auto* dstBytes = static_cast<uint8_t*>(dstBuffer->m_memory->map());
+    memcpy(dstBytes + offset, data, size);
     dstBuffer->m_memory->unmap();
 
     return true;

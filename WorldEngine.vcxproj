@@ -181,7 +181,7 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClCompile Include="src\core\engine\scene\Camera.cpp" />
     <ClCompile Include="src\core\engine\scene\Entity.cpp" />
     <ClCompile Include="src\core\engine\scene\EntityHierarchy.cpp" />
-    <ClCompile Include="src\core\engine\scene\event\EventDispacher.cpp" />
+    <ClCompile Include="src\core\engine\scene\event\EventDispatcher.cpp" />
     <ClCompile Include="src\core\engine\scene\Scene.cpp" />
     <ClCompile Include="src\core\engine\scene\Transform.cpp" />
     <ClCompile Include="src\core\graphics\Buffer.cpp" />
@@ -218,7 +218,7 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClInclude Include="src\core\engine\scene\Camera.h" />
     <ClInclude Include="src\core\engine\scene\Entity.h" />
     <ClInclude Include="src\core\engine\scene\EntityHierarchy.h" />
-    <ClInclude Include="src\core\engine\scene\event\EventDispacher.h" />
+    <ClInclude Include="src\core\engine\scene\event\EventDispatcher.h" />
     <ClInclude Include="src\core\engine\scene\event\Events.h" />
     <ClInclude Include="src\core\engine\scene\Scene.h" />
     <ClInclude Include="src\core\engine\scene\Transform.h" />

@@ -9,7 +9,7 @@
 #include "core/graphics/GraphicsManager.h"
 
 Scene::Scene() {
-    m_eventDispacher = new EventDispacher();
+    m_eventDispacher = new EventDispatcher();
 }
 
 Scene::~Scene() {
@@ -62,7 +62,7 @@ void Scene::destroyEntity(const Entity& entity) {
     }
 }
 
-EventDispacher* Scene::getEventDispacher() const {
+EventDispatcher* Scene::getEventDispacher() const {
     return m_eventDispacher;
 }
 

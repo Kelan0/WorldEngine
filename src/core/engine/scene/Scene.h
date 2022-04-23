@@ -51,7 +51,7 @@ public:
     template<class Component>
     void disableEvents();
 
-    EventDispacher* getEventDispacher() const;
+    EventDispatcher* getEventDispacher() const;
 
     entt::registry* registry();
 
@@ -64,7 +64,7 @@ private:
 
 private:
     entt::registry m_registry;
-    EventDispacher* m_eventDispacher;
+    EventDispatcher* m_eventDispacher;
     //std::unordered_map<entt::entity, std::vector<Entity*>> m_entityRefTracker;
 
     Entity m_mainCameraEntity;

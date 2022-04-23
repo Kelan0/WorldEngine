@@ -33,8 +33,17 @@
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 
+//#define USE_VOLK
+
 #define VULKAN_HPP_NO_SPACESHIP_OPERATOR
-#include <vulkan/vulkan.h>
+
+#ifdef USE_VOLK
+#define VK_NO_PROTOTYPES
+#include "core/volk.h"
+#else
+#include "Vulkan.h"
+#endif
+
 #include <vulkan/vulkan_raii.hpp>
 
 #include <stb_image.h>

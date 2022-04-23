@@ -1,27 +1,27 @@
 #include "core/engine/scene/event/EventDispacher.h"
 
-EventDispacher::EventDispacher() {
+EventDispatcher::EventDispatcher() {
 }
 
-EventDispacher::~EventDispacher() {
+EventDispatcher::~EventDispatcher() {
     EventDispacherDestroyedEvent event;
     event.eventDispacher = this;
     trigger(event);
 
     for (auto it = m_repeatAllDispachers.begin(); it != m_repeatAllDispachers.end(); ++it) {
-        (*it)->disconnect<EventDispacherDestroyedEvent>(&EventDispacher::onEventDispacherDestroyed, this);
+        (*it)->disconnect<EventDispacherDestroyedEvent>(&EventDispatcher::onEventDispacherDestroyed, this);
     }
 
     for (auto it = m_repeatEventDispachers.begin(); it != m_repeatEventDispachers.end(); ++it) {
         auto& dispachers = it->second;
 
         for (auto it1 = dispachers.begin(); it1 != dispachers.end(); ++it1) {
-            (*it1)->disconnect<EventDispacherDestroyedEvent>(&EventDispacher::onEventDispacherDestroyed, this);
+            (*it1)->disconnect<EventDispacherDestroyedEvent>(&EventDispatcher::onEventDispacherDestroyed, this);
         }
     }
 }
 
-void EventDispacher::repeatAll(EventDispacher* eventDispacher) {
+void EventDispatcher::repeatAll(EventDispatcher* eventDispacher) {
     PROFILE_SCOPE("EntityHierarchy::repeatAll")
     // TODO: prevent circular references, where A repeats to B, then B repeats to A
     if (eventDispacher == NULL)
@@ -29,7 +29,7 @@ void EventDispacher::repeatAll(EventDispacher* eventDispacher) {
     if (isRepeatingAll(eventDispacher))
         return;
 
-    // We are repeating every event to eventDispacher, so remove any repeat instances bound to individual events.
+    // We are repeating every event to eventDispatcher, so remove any repeat instances bound to individual events.
     for (auto it = m_repeatEventDispachers.begin(); it != m_repeatEventDispachers.end(); ++it) {
         auto& dispachers = it->second;
 
@@ -43,10 +43,10 @@ void EventDispacher::repeatAll(EventDispacher* eventDispacher) {
     }
 
     m_repeatAllDispachers.emplace_back(eventDispacher);
-    eventDispacher->connect<EventDispacherDestroyedEvent>(&EventDispacher::onEventDispacherDestroyed, this);
+    eventDispacher->connect<EventDispacherDestroyedEvent>(&EventDispatcher::onEventDispacherDestroyed, this);
 }
 
-bool EventDispacher::isRepeatingAll(EventDispacher* eventDispacher) {
+bool EventDispatcher::isRepeatingAll(EventDispatcher* eventDispacher) {
     PROFILE_SCOPE("EntityHierarchy::isRepeatingAll")
     if (eventDispacher == NULL)
         return false;
@@ -59,7 +59,7 @@ bool EventDispacher::isRepeatingAll(EventDispacher* eventDispacher) {
     return false;
 }
 
-void EventDispacher::onEventDispacherDestroyed(const EventDispacherDestroyedEvent& event) {
+void EventDispatcher::onEventDispacherDestroyed(const EventDispacherDestroyedEvent& event) {
     PROFILE_SCOPE("EntityHierarchy::onEventDispacherDestroyed")
     for (auto it = m_repeatAllDispachers.begin(); it != m_repeatAllDispachers.end();) {
         if ((*it) == event.eventDispacher) {

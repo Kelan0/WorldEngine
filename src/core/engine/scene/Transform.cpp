@@ -507,7 +507,7 @@ Transform::operator glm::dmat4() const {
 }
 
 void Transform::change() {
-    Application::instance()->renderer()->notifyTransformChanged(m_entityIndex);
+    Application::instance()->sceneRenderer()->notifyTransformChanged(m_entityIndex);
 }
 
 void Transform::reindex(Transform& transform, const EntityChangeTracker::entity_index& newEntityIndex) {

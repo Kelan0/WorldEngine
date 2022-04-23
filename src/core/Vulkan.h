@@ -1,0 +1,25 @@
+#ifndef WORLDENGINE_VULKAN_H
+#define WORLDENGINE_VULKAN_H
+
+#include <vulkan/vulkan.h>
+
+void loadVulkanInstanceExtensions(VkInstance device);
+
+void loadVulkanDeviceExtensions(VkDevice device);
+
+#if defined(VK_EXT_extended_dynamic_state)
+extern PFN_vkCmdSetCullModeEXT ptr_vkCmdSetCullModeEXT;
+extern PFN_vkCmdSetFrontFaceEXT ptr_vkCmdSetFrontFaceEXT;
+extern PFN_vkCmdSetPrimitiveTopologyEXT ptr_vkCmdSetPrimitiveTopologyEXT;
+extern PFN_vkCmdSetViewportWithCountEXT ptr_vkCmdSetViewportWithCountEXT;
+extern PFN_vkCmdSetScissorWithCountEXT ptr_vkCmdSetScissorWithCountEXT;
+extern PFN_vkCmdBindVertexBuffers2EXT ptr_vkCmdBindVertexBuffers2EXT;
+extern PFN_vkCmdSetDepthTestEnableEXT ptr_vkCmdSetDepthTestEnableEXT;
+extern PFN_vkCmdSetDepthWriteEnableEXT ptr_vkCmdSetDepthWriteEnableEXT;
+extern PFN_vkCmdSetDepthCompareOpEXT ptr_vkCmdSetDepthCompareOpEXT;
+extern PFN_vkCmdSetDepthBoundsTestEnableEXT ptr_vkCmdSetDepthBoundsTestEnableEXT;
+extern PFN_vkCmdSetStencilTestEnableEXT ptr_vkCmdSetStencilTestEnableEXT;
+extern PFN_vkCmdSetStencilOpEXT ptr_vkCmdSetStencilOpEXT;
+#endif /* defined(VK_EXT_extended_dynamic_state) */
+
+#endif //WORLDENGINE_VULKAN_H

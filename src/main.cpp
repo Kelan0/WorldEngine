@@ -17,6 +17,7 @@
 #include "core/engine/renderer/RenderComponent.h"
 #include "core/engine/renderer/RenderCamera.h"
 #include "core/engine/renderer/SceneRenderer.h"
+#include "core/engine/renderer/ImmediateRenderer.h"
 #include "core/thread/ThreadUtils.h"
 #include "core/util/Profiler.h"
 #include "core/engine/scene/bound/Intersection.h"
@@ -40,7 +41,7 @@ class App : public Application {
     std::vector<Entity> dynamicEntities;
 
     void init() override {
-        //eventDispacher()->connect<ScreenResizeEvent>(&App::onScreenResize, this);
+        //eventDispatcher()->connect<ScreenResizeEvent>(&App::onScreenResize, this);
 
 
         Image2DConfiguration testTextureImageConfig;
@@ -61,7 +62,7 @@ class App : public Application {
         testTextureImageViewConfig.format = testImage->getFormat();
         std::shared_ptr<Texture2D> testTexture = std::shared_ptr<Texture2D>(Texture2D::create(testTextureImageViewConfig, testTextureSamplerConfig));
 
-        MeshData testMeshData;
+        MeshData<Vertex> testMeshData;
         testMeshData.createCuboid(glm::vec3(-0.5, 2, -0.5), glm::vec3(+0.5, 3, +0.5));
         testMeshData.scale(10.0);
         testMeshData.createQuad(glm::vec3(-1.0F, 0.0F, -1.0F), glm::vec3(-1.0F, 0.0F, +1.0F), glm::vec3(+1.0F, 0.0F, +1.0F), glm::vec3(+1.0F, 0.0F, -1.0F), glm::vec3(0, 1, 0));
@@ -77,9 +78,9 @@ class App : public Application {
 
 
 
-        testMeshData = MeshData();
+        testMeshData.clear();
         testMeshData.scale(0.5);
-        MeshLoader::loadMeshData("res/meshes/bunny.obj", testMeshData);
+        MeshUtils::loadMeshData("res/meshes/bunny.obj", testMeshData);
         glm::vec3 centerBottom = testMeshData.calculateBoundingBox() * glm::vec4(0, -1, 0, 1);
         testMeshData.translate(-1.0F * centerBottom);
         testMeshData.applyTransform();
@@ -100,7 +101,7 @@ class App : public Application {
         glm::u8vec4 pixel;
         pixel.a = 0xFF;
 
-        testMeshData = MeshData();
+        testMeshData.clear();
         testMeshData.createCuboid(glm::vec3(-0.5, -0.5F, -0.5), glm::vec3(+0.5, +0.5F, +0.5));
 
         MeshConfiguration cubeMeshConfig;
@@ -187,6 +188,7 @@ class App : public Application {
     }
 
     void cleanup() override {
+
         textures.clear();
         for (int i = 0; i < images.size(); ++i)
             delete images[i];
@@ -231,10 +233,42 @@ class App : public Application {
         PROFILE_SCOPE("custom render")
         handleUserInput(dt);
 
+        Entity mainCamera = Application::instance()->scene()->getMainCameraEntity();
+        Transform& cameraTransform = mainCamera.getComponent<Transform>();
+        Camera& cameraProjection = mainCamera.getComponent<Camera>();
 
-//        Entity mainCamera = Application::instance()->scene()->getMainCameraEntity();
-//        Transform& cameraTransform = mainCamera.getComponent<Transform>();
-//        Camera& cameraProjection = mainCamera.getComponent<Camera>();
+
+        immediateRenderer()->matrixMode(MatrixMode_Projection);
+        immediateRenderer()->pushMatrix();
+        immediateRenderer()->loadMatrix(cameraProjection.getProjectionMatrix());
+        immediateRenderer()->matrixMode(MatrixMode_ModelView);
+        immediateRenderer()->pushMatrix();
+        immediateRenderer()->translate(2.0F, 0.0F, 0.0F);
+        immediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
+
+        immediateRenderer()->begin(PrimitiveType_TriangleStrip);
+        immediateRenderer()->colour(1.0F, 0.0F, 0.0F, 1.0F);
+        immediateRenderer()->vertex(0.0F, 0.0F, 0.0F);
+        immediateRenderer()->vertex(1.0F, 0.0F, 0.0F);
+        immediateRenderer()->vertex(0.0F, 1.0F, 0.0F);
+        immediateRenderer()->vertex(1.0F, 1.0F, 0.0F);
+        immediateRenderer()->end();
+
+        immediateRenderer()->matrixMode(MatrixMode_ModelView);
+        immediateRenderer()->popMatrix();
+
+        immediateRenderer()->matrixMode(MatrixMode_Projection);
+        immediateRenderer()->popMatrix();
+
+        immediateRenderer()->begin(PrimitiveType_TriangleStrip);
+        immediateRenderer()->colour(1.0F, 0.0F, 1.0F);
+        immediateRenderer()->vertex(0.0F, 0.0F, 0.0F);
+        immediateRenderer()->vertex(0.5F, 0.0F, 0.0F);
+        immediateRenderer()->vertex(0.0F, 0.5F, 0.0F);
+        immediateRenderer()->vertex(0.5F, 0.5F, 0.0F);
+        immediateRenderer()->end();
+
+
 //        Frustum frustum(cameraTransform, cameraProjection);
 //
 //        Sphere sphere(0.0, 4.0, 0.0, 1.0);

@@ -83,6 +83,7 @@ void SceneRenderer::init() {
     // Missing texture needs to be at index 0
     m_materialBufferTextures.clear();
     m_materialBufferTextures.emplace_back(m_missingTexture.get());
+    m_materialBufferImageLayouts.emplace_back(vk::ImageLayout::eShaderReadOnlyOptimal);
 
     std::shared_ptr<DescriptorPool> descriptorPool = Application::instance()->graphics()->descriptorPool();
 
@@ -131,7 +132,7 @@ void SceneRenderer::init() {
     m_needsSortEntities[RenderComponent::UpdateType_Dynamic] = true;
     m_needsSortEntities[RenderComponent::UpdateType_Always] = true;
 
-    Application::instance()->eventDispacher()->connect(&SceneRenderer::recreateSwapchain, this);
+    Application::instance()->eventDispatcher()->connect(&SceneRenderer::recreateSwapchain, this);
 }
 
 void SceneRenderer::render(double dt) {
@@ -740,8 +741,8 @@ void SceneRenderer::recreateSwapchain(const RecreateSwapchainEvent& event) {
 
     pipelineConfig.vertexShader = "res/shaders/main.vert";
     pipelineConfig.fragmentShader = "res/shaders/main.frag";
-    pipelineConfig.vertexInputBindings = Mesh::getVertexBindingDescriptions();
-    pipelineConfig.vertexInputAttributes = Mesh::getVertexAttributeDescriptions();
+    pipelineConfig.vertexInputBindings = MeshUtils::getVertexBindingDescriptions<Vertex>();
+    pipelineConfig.vertexInputAttributes = MeshUtils::getVertexAttributeDescriptions<Vertex>();
     initPipelineDescriptorSetLayouts(pipelineConfig);
     m_graphicsPipeline->recreate(pipelineConfig);
 }

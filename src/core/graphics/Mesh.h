@@ -11,19 +11,25 @@
 
 struct MeshConfiguration {
     std::weak_ptr<vkr::Device> device;
-    const MeshData::Vertex* vertices = nullptr;
+    const void* vertices = nullptr;
     size_t vertexCount = 0;
-    const MeshData::Index* indices = nullptr;
+    size_t vertexSize = 0;
+    const void* indices = nullptr;
     size_t indexCount = 0;
+    size_t indexSize = 0;
     MeshPrimitiveType primitiveType = PrimitiveType_Triangle;
 
-    void setVertices(const std::vector<MeshData::Vertex>& verticesArray);
+    template<typename Vertex_t>
+    void setVertices(const std::vector<typename MeshData<Vertex_t>::Vertex>& verticesArray);
 
-    void setIndices(const std::vector<MeshData::Index>& indicesArray);
+    template<typename Vertex_t>
+    void setIndices(const std::vector<typename MeshData<Vertex_t>::Index>& indicesArray);
 
-    void setIndices(const std::vector<MeshData::Triangle>& triangleArray);
+    template<typename Vertex_t>
+    void setIndices(const std::vector<typename MeshData<Vertex_t>::Triangle>& triangleArray);
 
-    void setMeshData(MeshData* meshData);
+    template<typename Vertex_t>
+    void setMeshData(MeshData<Vertex_t>* meshData);
 
     void setPrimitiveType(const MeshPrimitiveType& primitiveType);
 };
@@ -38,13 +44,21 @@ public:
 
     static Mesh* create(const MeshConfiguration& meshConfiguration);
 
-    bool uploadVertices(const MeshData::Vertex* vertices, size_t vertexCount);
+    bool uploadVertices(const void* vertices, size_t vertexSize, size_t vertexCount);
 
-    bool uploadVertices(const std::vector<MeshData::Vertex>& vertices);
+    template<typename Vertex_t>
+    bool uploadVertices(const typename MeshData<Vertex_t>::Vertex* vertices, size_t vertexCount);
 
-    bool uploadIndices(const MeshData::Index* indices, size_t indexCount);
+    template<typename Vertex_t>
+    bool uploadVertices(const std::vector<typename MeshData<Vertex_t>::Vertex>& vertices);
 
-    bool uploadIndices(const std::vector<MeshData::Index>& indices);
+    bool uploadIndices(const void* indices, size_t indexSize, size_t indexCount);
+
+    template<typename Vertex_t>
+    bool uploadIndices(const typename MeshData<Vertex_t>::Index* indices, size_t indexCount);
+
+    template<typename Vertex_t>
+    bool uploadIndices(const std::vector<typename MeshData<Vertex_t>::Index>& indices);
 
     void setPrimitiveType(const MeshPrimitiveType& primitiveType);
 
@@ -58,50 +72,66 @@ public:
 
     const GraphicsResource& getResourceId() const;
 
-    template<class T = MeshData::Vertex>
-    static std::vector<vk::VertexInputBindingDescription> getVertexBindingDescriptions();
-
-    template<class T = MeshData::Vertex>
-    static std::vector<vk::VertexInputAttributeDescription> getVertexAttributeDescriptions();
-
 private:
     std::shared_ptr<vkr::Device> m_device;
     Buffer* m_vertexBuffer;
     Buffer* m_indexBuffer;
+    size_t m_vertexSize;
+    size_t m_indexSize;
     MeshPrimitiveType m_primitiveType;
     GraphicsResource m_resourceId;
 };
 
-template<>
-inline std::vector<vk::VertexInputBindingDescription> Mesh::getVertexBindingDescriptions<MeshData::Vertex>() {
-    std::vector<vk::VertexInputBindingDescription> inputBindingDescriptions;
-    inputBindingDescriptions.resize(1);
-    inputBindingDescriptions[0].setBinding(0);
-    inputBindingDescriptions[0].setStride(sizeof(MeshData::Vertex));
-    inputBindingDescriptions[0].setInputRate(vk::VertexInputRate::eVertex);
-    return inputBindingDescriptions;
+
+
+template<typename Vertex_t>
+void MeshConfiguration::setVertices(const std::vector<typename MeshData<Vertex_t>::Vertex>& verticesArray) {
+    vertices = verticesArray.data();
+    vertexCount = verticesArray.size();
+    vertexSize = sizeof(typename MeshData<Vertex_t>::Vertex);
 }
 
-template<>
-inline std::vector<vk::VertexInputAttributeDescription> Mesh::getVertexAttributeDescriptions<MeshData::Vertex>() {
-    std::vector<vk::VertexInputAttributeDescription> attribDescriptions;
-    attribDescriptions.resize(3);
+template<typename Vertex_t>
+void MeshConfiguration::setIndices(const std::vector<typename MeshData<Vertex_t>::Index>& indicesArray) {
+    indices = indicesArray.data();
+    indexCount = indicesArray.size();
+    indexSize = sizeof(typename MeshData<Vertex_t>::Index);
+}
 
-    attribDescriptions[0].setBinding(0);
-    attribDescriptions[0].setLocation(0);
-    attribDescriptions[0].setFormat(vk::Format::eR32G32B32Sfloat); // vec3
-    attribDescriptions[0].setOffset(offsetof(MeshData::Vertex, position));
+template<typename Vertex_t>
+void MeshConfiguration::setIndices(const std::vector<typename MeshData<Vertex_t>::Triangle>& triangleArray) {
+    indices = reinterpret_cast<const typename MeshData<Vertex_t>::Index*>(triangleArray.data());
+    indexCount = triangleArray.size() * 3;
+    indexSize = sizeof(typename MeshData<Vertex_t>::Index);
+}
 
-    attribDescriptions[1].setBinding(0);
-    attribDescriptions[1].setLocation(1);
-    attribDescriptions[1].setFormat(vk::Format::eR32G32B32Sfloat); // vec3
-    attribDescriptions[1].setOffset(offsetof(MeshData::Vertex, normal));
+template<typename Vertex_t>
+void MeshConfiguration::setMeshData(MeshData<Vertex_t>* meshData) {
+    setVertices<Vertex_t>(meshData->getVertices());
+    setIndices<Vertex_t>(meshData->getIndices());
+}
 
-    attribDescriptions[2].setBinding(0);
-    attribDescriptions[2].setLocation(2);
-    attribDescriptions[2].setFormat(vk::Format::eR32G32Sfloat); // vec2
-    attribDescriptions[2].setOffset(offsetof(MeshData::Vertex, texture));
-    return attribDescriptions;
+
+
+
+template<typename Vertex_t>
+bool Mesh::uploadVertices(const typename MeshData<Vertex_t>::Vertex* vertices, size_t vertexCount) {
+    return uploadVertices(vertices, sizeof(MeshData<Vertex_t>::Vertex), vertexCount);
+}
+
+template<typename Vertex_t>
+bool Mesh::uploadVertices(const std::vector<typename MeshData<Vertex_t>::Vertex>& vertices) {
+    return uploadVertices<Vertex_t>(vertices.data(), vertices.size());
+}
+
+template<typename Vertex_t>
+bool Mesh::uploadIndices(const typename MeshData<Vertex_t>::Index* indices, size_t indexCount) {
+    return uploadIndices(indices, sizeof(MeshData<Vertex_t>::Index), indexCount);
+}
+
+template<typename Vertex_t>
+bool Mesh::uploadIndices(const std::vector<typename MeshData<Vertex_t>::Index>& indices) {
+    return uploadIndices<Vertex_t>(indices.data(), indices.size());
 }
 
 #endif //WORLDENGINE_MESH_H

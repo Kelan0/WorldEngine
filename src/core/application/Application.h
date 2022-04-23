@@ -9,7 +9,8 @@ class GraphicsManager;
 class InputHandler;
 class Scene;
 class SceneRenderer;
-class EventDispacher;
+class ImmediateRenderer;
+class EventDispatcher;
 
 class Application {
     NO_COPY(Application);
@@ -40,9 +41,11 @@ public:
 
     Scene* scene();
 
-    SceneRenderer* renderer();
+    SceneRenderer* sceneRenderer();
 
-    EventDispacher* eventDispacher();
+    ImmediateRenderer* immediateRenderer();
+
+    EventDispatcher* eventDispatcher();
 
     glm::ivec2 getWindowSize() const;
 
@@ -69,7 +72,8 @@ private:
     InputHandler* m_inputHandler;
     Scene* m_scene;
     SceneRenderer* m_sceneRenderer;
-    EventDispacher* m_eventDispacher;
+    ImmediateRenderer* m_immediateRenderer;
+    EventDispatcher* m_eventDispatcher;
 
     bool m_running;
 };

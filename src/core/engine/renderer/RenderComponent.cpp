@@ -20,16 +20,16 @@ RenderComponent::RenderComponent(const UpdateType& transformUpdateType,
 
 RenderComponent& RenderComponent::setMesh(const std::shared_ptr<Mesh>& mesh) {
     if (mesh.get() != m_mesh.get()) {
-        Application::instance()->renderer()->notifyMeshChanged(m_meshUpdateType);
+        Application::instance()->sceneRenderer()->notifyMeshChanged(m_meshUpdateType);
         m_mesh = mesh;
     }
     return *this;
 }
 
 RenderComponent& RenderComponent::setTexture(const std::shared_ptr<Texture2D>& texture) {
-    uint32_t textureIndex = Application::instance()->renderer()->registerTexture(texture.get());
+    uint32_t textureIndex = Application::instance()->sceneRenderer()->registerTexture(texture.get());
     if (textureIndex != m_textureIndex) {
-        Application::instance()->renderer()->notifyTextureChanged(m_entityIndex);
+        Application::instance()->sceneRenderer()->notifyTextureChanged(m_entityIndex);
         m_textureIndex = textureIndex;
         m_texture = texture;
     }

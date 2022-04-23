@@ -314,6 +314,35 @@ bool GraphicsPipeline::isValid() const {
     return !!m_pipeline && !!m_pipelineLayout && !!m_renderPass;
 }
 
+bool GraphicsPipeline::isStateDynamic(const vk::DynamicState& dynamicState) const {
+    auto it = m_config.dynamicStates.find(dynamicState);
+    return it != m_config.dynamicStates.end() && it->second;
+}
+
+void GraphicsPipeline::setDepthTestEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled) {
+#if _DEBUG
+    if (!isStateDynamic(vk::DynamicState::eDepthTestEnableEXT)) {
+        printf("Cannot set immutable pipeline state: DepthTestEnable\n");
+        assert(false);
+        return;
+    }
+#endif
+
+    commandBuffer.setDepthTestEnableEXT(enabled);
+}
+
+void GraphicsPipeline::setCullMode(const vk::CommandBuffer& commandBuffer, const vk::CullModeFlags& cullMode) {
+#if _DEBUG
+    if (!isStateDynamic(vk::DynamicState::eCullModeEXT)) {
+        printf("Cannot set immutable pipeline state: CullMode\n");
+        assert(false);
+        return;
+    }
+#endif
+
+    commandBuffer.setCullModeEXT(cullMode);
+}
+
 bool GraphicsPipeline::loadShaderStage(std::string filePath, std::vector<char>& bytecode) {
 
     // TODO: determine if source file is GLSL or HLSL and call correct compiler

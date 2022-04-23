@@ -114,13 +114,13 @@ public:
 
     ~DescriptorSetLayoutBuilder();
 
-    DescriptorSetLayoutBuilder& addUniformBlock(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t sizeBytes);
+    DescriptorSetLayoutBuilder& addUniformBlock(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& sizeBytes, const bool& dynamic = false);
 
-    DescriptorSetLayoutBuilder& addStorageBlock(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t sizeBytes);
+    DescriptorSetLayoutBuilder& addStorageBlock(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& sizeBytes, const bool& dynamic = false);
 
-    DescriptorSetLayoutBuilder& addSampler(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t arraySize = 1);
+    DescriptorSetLayoutBuilder& addSampler(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& arraySize = 1);
 
-    DescriptorSetLayoutBuilder& addCombinedImageSampler(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t arraySize = 1);
+    DescriptorSetLayoutBuilder& addCombinedImageSampler(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& arraySize = 1);
 
     std::shared_ptr<DescriptorSetLayout> build();
 

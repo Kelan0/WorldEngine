@@ -2,6 +2,7 @@
 #include "core/application/InputHandler.h"
 #include "core/engine/scene/Scene.h"
 #include "core/engine/renderer/SceneRenderer.h"
+#include "core/engine/renderer/ImmediateRenderer.h"
 #include "core/engine/scene/event/EventDispacher.h"
 #include "core/engine/scene/event/Events.h"
 #include "core/graphics/GraphicsManager.h"
@@ -21,16 +22,18 @@ Application::Application():
         m_inputHandler(NULL),
         m_scene(NULL),
         m_sceneRenderer(NULL),
-        m_eventDispacher(NULL),
+        m_immediateRenderer(NULL),
+        m_eventDispatcher(NULL),
         m_running(false) {
 }
 
 Application::~Application() {
     delete m_sceneRenderer;
+    delete m_immediateRenderer;
     delete m_scene;
     delete m_inputHandler;
     delete m_graphics;
-    delete m_eventDispacher;
+    delete m_eventDispatcher;
 
     printf("Destroying window\n");
     SDL_DestroyWindow(m_windowHandle);
@@ -70,8 +73,8 @@ bool Application::initInternal() {
         return false;
     }
 
-    PROFILE_REGION("Init EventDispacher")
-    m_eventDispacher = new EventDispacher();
+    PROFILE_REGION("Init EventDispatcher")
+    m_eventDispatcher = new EventDispatcher();
 
     PROFILE_REGION("Init InputHandler")
     m_inputHandler = new InputHandler(m_windowHandle);
@@ -79,13 +82,17 @@ bool Application::initInternal() {
     PROFILE_REGION("Init Scene")
     m_scene = new Scene();
     m_scene->init();
-    m_eventDispacher->repeatAll(m_scene->getEventDispacher());
+    m_eventDispatcher->repeatAll(m_scene->getEventDispacher());
 
 
     PROFILE_REGION("Init SceneRenderer")
     m_sceneRenderer = new SceneRenderer();
     m_sceneRenderer->setScene(m_scene);
     m_sceneRenderer->init();
+
+    PROFILE_REGION("Init ImmediateRenderer")
+    m_immediateRenderer = new ImmediateRenderer();
+    m_immediateRenderer->init();
 
 
     PROFILE_REGION("Init Application")
@@ -121,6 +128,7 @@ void Application::renderInternal(double dt) {
     PROFILE_END_REGION()
 
     m_sceneRenderer->render(dt);
+    m_immediateRenderer->render(dt);
 
     commandBuffer.endRenderPass();
 }
@@ -141,10 +149,10 @@ void Application::processEventsInternal() {
             case SDL_WINDOWEVENT:
                 switch (event.window.event) {
                     case SDL_WINDOWEVENT_SHOWN:
-                        m_eventDispacher->trigger(ScreenShowEvent{ getWindowSize() });
+                        m_eventDispatcher->trigger(ScreenShowEvent{getWindowSize() });
                         break;
                     case SDL_WINDOWEVENT_SIZE_CHANGED:
-                        m_eventDispacher->trigger(ScreenResizeEvent{ windowSize, getWindowSize() });
+                        m_eventDispatcher->trigger(ScreenResizeEvent{windowSize, getWindowSize() });
                         break;
                 }
                 break;
@@ -168,7 +176,7 @@ void Application::start() {
     m_running = true;
 
     // Trigger a ScreenResizeEvent at the beginning of the render loop so that anything that needs it can be initialized easily
-    m_eventDispacher->trigger(ScreenResizeEvent{ getWindowSize(), getWindowSize() });
+    m_eventDispatcher->trigger(ScreenResizeEvent{getWindowSize(), getWindowSize() });
 
     std::vector<double> frameTimes;
     std::vector<double> cpuFrameTimes;
@@ -303,12 +311,16 @@ Scene* Application::scene() {
     return m_scene;
 }
 
-SceneRenderer* Application::renderer() {
+SceneRenderer* Application::sceneRenderer() {
     return m_sceneRenderer;
 }
 
-EventDispacher* Application::eventDispacher() {
-    return m_eventDispacher;
+ImmediateRenderer* Application::immediateRenderer() {
+    return m_immediateRenderer;
+}
+
+EventDispatcher* Application::eventDispatcher() {
+    return m_eventDispatcher;
 }
 
 glm::ivec2 Application::getWindowSize() const {

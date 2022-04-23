@@ -91,7 +91,8 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
     }
 
     std::vector<const char*> deviceLayers;
-    std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+    std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME };
+
     std::unordered_map<std::string, uint32_t> queueLayout;
     queueLayout.insert(std::make_pair(QUEUE_GRAPHICS_MAIN, QUEUE_TYPE_GRAPHICS_BIT | QUEUE_TYPE_PRESENT_BIT));
     queueLayout.insert(std::make_pair(QUEUE_COMPUTE_MAIN, QUEUE_TYPE_COMPUTE_BIT));
@@ -116,6 +117,10 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
     descriptorIndexingFeatures.shaderUniformTexelBufferArrayNonUniformIndexing = true;
     descriptorIndexingFeatures.shaderStorageTexelBufferArrayNonUniformIndexing = true;
     descriptorIndexingFeatures.runtimeDescriptorArray = true;
+
+    vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT extendedDynamicStateFeatures;
+    extendedDynamicStateFeatures.extendedDynamicState = true;
+    descriptorIndexingFeatures.setPNext(&extendedDynamicStateFeatures);
 
     if (!createLogicalDevice(deviceLayers, deviceExtensions, &deviceFeatures, &descriptorIndexingFeatures, queueLayout)) {
         return false;
@@ -167,6 +172,16 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
 bool GraphicsManager::createVulkanInstance(SDL_Window* windowHandle, const char* applicationName) {
     PROFILE_SCOPE("GraphicsManager::createVulkanInstance")
 
+#ifdef USE_VOLK
+    {
+        VkResult result = volkInitialize();
+        if (result != VK_SUCCESS) {
+            printf("Failed to initialize VOLK: %s\n", vk::to_string((vk::Result)result).c_str());
+            return false;
+        }
+    }
+#endif
+
     vk::ApplicationInfo appInfo;
     appInfo.setPApplicationName(applicationName);
     appInfo.setApplicationVersion(0);
@@ -211,6 +226,10 @@ bool GraphicsManager::createVulkanInstance(SDL_Window* windowHandle, const char*
 
     printf("Creating vulkan instance\n");
     m_instance = std::make_unique<vkr::Instance>(m_context, instanceInfo);
+
+#ifdef USE_VOLK
+    volkLoadInstance(**m_instance);
+#endif
 
     if (enableValidationLayers) {
         if (!createDebugUtilsMessenger()) {
@@ -496,7 +515,7 @@ bool GraphicsManager::selectPhysicalDevice() {
     return true;
 }
 
-bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enabledLayers, std::vector<const char*> const& enabledExtensions, vk::PhysicalDeviceFeatures* enabledFeatures, vk::PhysicalDeviceDescriptorIndexingFeatures* descriptorIndexingFeatures, std::unordered_map<std::string, uint32_t> queueLayout) {
+bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enabledLayers, std::vector<const char*> const& enabledExtensions, vk::PhysicalDeviceFeatures* enabledFeatures, void* pNext, std::unordered_map<std::string, uint32_t> queueLayout) {
     PROFILE_SCOPE("GraphicsManager::createLogicalDevice")
 
     printf("Creating logical device\n");
@@ -558,7 +577,7 @@ bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enable
     }
 
     vk::DeviceCreateInfo createInfo;
-    createInfo.setPNext(descriptorIndexingFeatures);
+    createInfo.setPNext(pNext);
     createInfo.setQueueCreateInfos(deviceQueueCreateInfos);
     createInfo.setPEnabledLayerNames(enabledLayers);
     createInfo.setPEnabledExtensionNames(enabledExtensions);
@@ -573,6 +592,8 @@ bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enable
             m_queues.queues.insert(std::make_pair(ids[queueIndex], std::make_shared<vkr::Queue>(*m_device.device, queueFamilyIndex, queueIndex)));
         }
     }
+
+    loadVulkanDeviceExtensions(**m_device.device);
 
     return true;
 }
@@ -718,7 +739,7 @@ bool GraphicsManager::recreateSwapchain() {
 
     m_swapchain.currentFrameIndex = 0;
 
-    Application::instance()->eventDispacher()->trigger(RecreateSwapchainEvent());
+    Application::instance()->eventDispatcher()->trigger(RecreateSwapchainEvent());
 
     return true;
 }
@@ -936,7 +957,7 @@ void GraphicsManager::endFrame() {
     submitInfo.setSignalSemaphoreCount(1);
     submitInfo.setPSignalSemaphores(&renderFinishedSemaphore);
 
-    const vk::Queue& queue = **m_queues.queues["graphics_main"];
+    const vk::Queue& queue = **m_queues.queues[QUEUE_GRAPHICS_MAIN];
 
     // Submit the queue, signal frameFence once the commands are executed
     queue.submit(submitInfos, frameFence);
@@ -957,6 +978,10 @@ void GraphicsManager::endFrame() {
     }
 
     m_swapchain.currentFrameIndex = (m_swapchain.currentFrameIndex + 1) % CONCURRENT_FRAMES;
+}
+
+const vk::Instance& GraphicsManager::getInstance() const {
+    return **m_instance;
 }
 
 std::shared_ptr<vkr::Device> GraphicsManager::getDevice() const {

@@ -530,7 +530,7 @@ DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(vk::DescriptorSetLayoutCr
 DescriptorSetLayoutBuilder::~DescriptorSetLayoutBuilder() {
 }
 
-DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBlock(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t sizeBytes) {
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBlock(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& sizeBytes, const bool& dynamic) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
 		printf("Unable to add DescriptorSetLayout UniformBlock binding %d - The binding is already added\n", binding);
@@ -543,7 +543,7 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBlock(uint32_t
 #endif
     vk::DescriptorSetLayoutBinding bindingInfo;
     bindingInfo.setBinding(binding);
-    bindingInfo.setDescriptorType(vk::DescriptorType::eUniformBuffer);
+    bindingInfo.setDescriptorType(dynamic ? vk::DescriptorType::eUniformBufferDynamic : vk::DescriptorType::eUniformBuffer);
     bindingInfo.setDescriptorCount(1);
     bindingInfo.setStageFlags(shaderStages);
     bindingInfo.setPImmutableSamplers(NULL);
@@ -551,7 +551,7 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBlock(uint32_t
     return *this;
 }
 
-DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageBlock(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t sizeBytes) {
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageBlock(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& sizeBytes, const bool& dynamic) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
 		printf("Unable to add DescriptorSetLayout StorageBlock binding %d - The binding is already added\n", binding);
@@ -564,7 +564,7 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageBlock(uint32_t
 #endif
     vk::DescriptorSetLayoutBinding bindingInfo;
     bindingInfo.setBinding(binding);
-    bindingInfo.setDescriptorType(vk::DescriptorType::eStorageBuffer);
+    bindingInfo.setDescriptorType(dynamic ? vk::DescriptorType::eStorageBufferDynamic : vk::DescriptorType::eStorageBuffer);
     bindingInfo.setDescriptorCount(1);
     bindingInfo.setStageFlags(shaderStages);
     bindingInfo.setPImmutableSamplers(NULL);
@@ -572,7 +572,7 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageBlock(uint32_t
     return *this;
 }
 
-DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampler(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t arraySize) {
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampler(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& arraySize) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
 		printf("Unable to add DescriptorSetLayout Sampler binding %d - The binding is already added\n", binding);
@@ -593,7 +593,7 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampler(uint32_t bind
     return *this;
 }
 
-DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addCombinedImageSampler(uint32_t binding, vk::ShaderStageFlags shaderStages, size_t arraySize) {
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addCombinedImageSampler(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& arraySize) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
 		printf("Unable to add DescriptorSetLayout CombinedImageSampler binding %d - The binding is already added\n", binding);

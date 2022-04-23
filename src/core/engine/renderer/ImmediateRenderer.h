@@ -1,0 +1,177 @@
+#ifndef WORLDENGINE_IMMEDIATERENDERER_H
+#define WORLDENGINE_IMMEDIATERENDERER_H
+
+#include "core/core.h"
+#include "core/graphics/Mesh.h"
+#include "core/engine/geometry/MeshData.h"
+#include "core/engine/scene/event/EventDispacher.h"
+#include "core/engine/scene/event/Events.h"
+
+#define IMMEDIATE_MODE_VALIDATION 1
+
+enum MatrixMode {
+    MatrixMode_ModelView = 0,
+    MatrixMode_Projection = 1,
+};
+
+class ImmediateRenderer {
+public:
+    struct ColouredVertex {
+        union {
+            glm::vec3 position;
+            struct { float px, py, pz; };
+        };
+        union {
+            glm::vec3 normal;
+            struct { float nx, ny, nz; };
+        };
+        union {
+            glm::vec2 texture;
+            struct { float tx, ty; };
+        };
+        union {
+            glm::u8vec4 colour;
+            struct { uint8_t r, g, b, a; };
+            uint32_t rgba;
+        };
+
+        ColouredVertex();
+
+        ColouredVertex(const ColouredVertex& copy);
+
+        ColouredVertex(const glm::vec3& position, const glm::vec3& normal, const glm::vec2& texture, const glm::u8vec4& colour = glm::u8vec4(255));
+
+        ColouredVertex(const glm::vec3& position, const glm::vec3& normal, const glm::vec2& texture, const glm::vec4& colour = glm::vec4(1.0F));
+
+        ColouredVertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty, const uint8_t& r = 255, const uint8_t& g = 255, const uint8_t& b = 255, const uint8_t& a = 255);
+
+        ColouredVertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty, const float& r = 1.0F, const float& g = 1.0F, const float& b = 1.0F, const float& a = 1.0F);
+
+        bool equalsEpsilon(const ColouredVertex& vertex, const float& epsilon) const;
+    };
+
+private:
+    struct UniformBufferData {
+        glm::mat4 modelViewMatrix;
+        glm::mat4 projectionMatrix;
+    };
+
+    struct RenderState {
+        bool depthTestEnabled = false;
+        vk::CullModeFlags cullMode = vk::CullModeFlagBits::eBack;
+    };
+
+    struct RenderCommand {
+        MeshPrimitiveType primitiveType;
+        RenderState state;
+        size_t vertexOffset;
+        size_t indexOffset;
+        size_t vertexCount;
+        size_t indexCount;
+    };
+
+public:
+    ImmediateRenderer();
+
+    ~ImmediateRenderer();
+
+    void init();
+
+    void render(double dt);
+
+    void begin(const MeshPrimitiveType& primitiveType);
+
+    void end();
+
+    void vertex(const glm::vec3& position);
+    void vertex(const float& x, const float& y, const float& z);
+
+    void normal(const glm::vec3& normal);
+    void normal(const float& x, const float& y, const float& z);
+
+    void texture(const glm::vec2& texture);
+    void texture(const float& x, const float& y);
+
+    void colour(const glm::u8vec4& colour);
+    void colour(const glm::u8vec3& colour);
+    void colour(const glm::uvec4& colour);
+    void colour(const glm::uvec3& colour);
+    void colour(const glm::vec4& colour);
+    void colour(const glm::vec3& colour);
+    void colour(const float& r, const float& g, const float& b, const float& a);
+    void colour(const float& r, const float& g, const float& b);
+
+    void pushMatrix();
+
+    void popMatrix();
+
+    void translate(const glm::vec3& translation);
+    void translate(const float& x, const float& y, const float& z);
+
+    void rotate(const glm::vec3& axis, const float& angle);
+    void rotate(const float& x, const float& y, const float& z, const float& angle);
+
+    void scale(const glm::vec3& scale);
+    void scale(const float& x, const float& y, const float& z);
+    void scale(const float& scale);
+
+    void loadIdentity();
+    void loadMatrix(const glm::mat4& matrix);
+    void multMatrix(const glm::mat4& matrix);
+
+    void matrixMode(const MatrixMode& matrixMode);
+
+    void setDepthTestEnabled(const bool& enabled);
+
+    void setCullMode(const vk::CullModeFlags& cullMode);
+
+private:
+    glm::mat4& currentMatrix(const MatrixMode& matrixMode);
+    std::stack<glm::mat4>& matrixStack(const MatrixMode& matrixMode);
+
+    glm::mat4& currentMatrix();
+    std::stack<glm::mat4>& matrixStack();
+
+    void uploadBuffers();
+
+    GraphicsPipeline* getGraphicsPipeline(const RenderCommand& renderCommand);
+
+    void recreateSwapchain(const RecreateSwapchainEvent& event);
+
+    void validateCompleteCommand() const;
+
+    void onMatrixChange();
+
+private:
+    std::vector<ColouredVertex> m_vertices;
+    std::vector<uint32_t> m_indices;
+    size_t m_vertexCount;
+    size_t m_indexCount;
+    size_t m_firstChangedVertex;
+    size_t m_firstChangedIndex;
+
+    std::vector<RenderCommand> m_renderCommands;
+    std::vector<UniformBufferData> m_uniformBufferData;
+    RenderCommand* m_currentCommand;
+    RenderState m_renderState;
+
+    std::stack<glm::mat4> m_modelMatrixStack;
+
+    std::stack<glm::mat4> m_projectionMatrixStack;
+
+    MatrixMode m_matrixMode;
+
+    glm::vec3 m_normal;
+    glm::vec2 m_texture;
+    glm::u8vec4 m_colour;
+
+    Buffer* m_vertexBuffer;
+    Buffer* m_indexBuffer;
+    FrameResource<Buffer> m_uniformBuffer;
+    FrameResource<DescriptorSet> m_descriptorSet;
+    std::shared_ptr<DescriptorSetLayout> m_descriptorSetLayout;
+
+    std::unordered_map<size_t, GraphicsPipeline*> m_graphicsPipelines;
+};
+
+#endif //WORLDENGINE_IMMEDIATERENDERER_H

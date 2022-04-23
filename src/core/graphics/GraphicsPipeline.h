@@ -16,7 +16,7 @@ struct GraphicsPipelineConfiguration {
     vk::PolygonMode polygonMode = vk::PolygonMode::eFill;
     vk::CullModeFlags cullMode = vk::CullModeFlagBits::eBack;
     vk::FrontFace frontFace = vk::FrontFace::eClockwise;
-    vk::PrimitiveTopology primitiveTopology = vk::PrimitiveTopology::eLineList;
+    vk::PrimitiveTopology primitiveTopology = vk::PrimitiveTopology::eTriangleList;
     std::weak_ptr<RenderPass> renderPass;
     std::unordered_map<vk::DynamicState, bool> dynamicStates;
 
@@ -60,6 +60,11 @@ public:
 
     bool isValid() const;
 
+    bool isStateDynamic(const vk::DynamicState& dynamicState) const;
+
+    void setDepthTestEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled);
+
+    void setCullMode(const vk::CommandBuffer& commandBuffer, const vk::CullModeFlags& cullMode);
 private:
     static bool loadShaderStage(std::string filePath, std::vector<char>& bytecode);
 
