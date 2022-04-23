@@ -178,43 +178,21 @@ void ImmediateRenderer::begin(const MeshPrimitiveType& primitiveType) {
 
 void ImmediateRenderer::end() {
     PROFILE_SCOPE("ImmediateRenderer::end");
+
+    if (m_currentCommand->primitiveType == PrimitiveType_LineLoop) {
+        addIndex(0); // Loop back to the first vertex
+    }
+
     m_currentCommand = nullptr;
 }
 
 void ImmediateRenderer::vertex(const glm::vec3& position) {
-    PROFILE_SCOPE("ImmediateRenderer::vertex");
-
-    const glm::mat4& modelViewMatrix = m_modelMatrixStack.top();
-    const glm::mat4& projectionMatrix = m_projectionMatrixStack.top();
-
-    constexpr float eps = std::numeric_limits<float>::epsilon();
-
     ColouredVertex v(position, m_normal, m_texture, m_colour);
 
     size_t index = m_vertexCount - m_currentCommand->vertexOffset;
 
-    if (m_firstChangedVertex == SIZE_MAX)
-        if (m_vertexCount >= m_vertices.size() || !v.equalsEpsilon(m_vertices[m_vertexCount], eps))
-            m_firstChangedVertex = m_vertexCount;
-
-    if (m_vertexCount >= m_vertices.size())
-        m_vertices.emplace_back(v);
-    else
-        m_vertices[m_vertexCount] = v;
-
-    if (m_firstChangedIndex == SIZE_MAX)
-        if (m_indexCount >= m_indices.size() || index != m_indices[m_indexCount])
-            m_firstChangedIndex = m_indexCount;
-
-    if (m_indexCount >= m_indices.size())
-        m_indices.emplace_back(index);
-    else
-        m_indices[m_indexCount] = index;
-
-    ++m_currentCommand->vertexCount;
-    ++m_currentCommand->indexCount;
-    ++m_vertexCount;
-    ++m_indexCount;
+    addVertex(v);
+    addIndex(index);
 }
 
 void ImmediateRenderer::vertex(const float& x, const float& y, const float& z) {
@@ -287,10 +265,12 @@ void ImmediateRenderer::colour(const float& r, const float& g, const float& b) {
     m_colour.a = 255;
 }
 
-void ImmediateRenderer::pushMatrix() {
-    PROFILE_SCOPE("ImmediateRenderer::pushMatrix")
+void ImmediateRenderer::pushMatrix(const MatrixMode& matrixMode) {
+    PROFILE_SCOPE("ImmediateRenderer::pushMatrix");
+    auto& stack = matrixStack(matrixMode);
+
 #if _DEBUG || IMMEDIATE_MODE_VALIDATION
-    if (matrixStack().size() > 1024) {
+    if (stack.size() > 256) {
         printf("ImmediateRenderer::pushMatrix - stack overflow\n");
         assert(false);
         return;
@@ -300,13 +280,19 @@ void ImmediateRenderer::pushMatrix() {
     validateCompleteCommand();
 
     // Duplicate top of stack
-    matrixStack().push(matrixStack().top());
+    stack.push(stack.top());
 }
 
-void ImmediateRenderer::popMatrix() {
+void ImmediateRenderer::pushMatrix() {
+    pushMatrix(m_matrixMode);
+}
+
+void ImmediateRenderer::popMatrix(const MatrixMode& matrixMode) {
     PROFILE_SCOPE("ImmediateRenderer::popMatrix");
+    auto& stack = matrixStack(matrixMode);
+
 #if _DEBUG || IMMEDIATE_MODE_VALIDATION
-    if (matrixStack().size() == 1) {
+    if (stack.size() == 1) {
         printf("ImmediateRenderer::popMatrix - stack underflow\n");
         assert(false);
         return;
@@ -314,12 +300,17 @@ void ImmediateRenderer::popMatrix() {
 #endif
 
     validateCompleteCommand();
-    matrixStack().pop();
+    stack.pop();
+}
+
+void ImmediateRenderer::popMatrix() {
+    popMatrix(m_matrixMode);
 }
 
 void ImmediateRenderer::translate(const glm::vec3& translation) {
     validateCompleteCommand();
-    currentMatrix() = glm::translate(currentMatrix(), translation);
+    glm::mat4& currMat = currentMatrix();
+    currMat = glm::translate(currMat, translation);
 }
 void ImmediateRenderer::translate(const float& x, const float& y, const float& z) {
     this->translate(glm::vec3(x, y, z));
@@ -396,6 +387,40 @@ void ImmediateRenderer::setAlphaBlendMode(const vk::BlendFactor& src, const vk::
     m_renderState.alphaBlendMode.op = op;
 }
 
+
+void ImmediateRenderer::addVertex(const ColouredVertex& vertex) {
+    PROFILE_SCOPE("ImmediateRenderer::addVertex");
+
+    constexpr float eps = std::numeric_limits<float>::epsilon();
+
+    if (m_firstChangedVertex == SIZE_MAX)
+        if (m_vertexCount >= m_vertices.size() || !vertex.equalsEpsilon(m_vertices[m_vertexCount], eps))
+            m_firstChangedVertex = m_vertexCount;
+
+    if (m_vertexCount >= m_vertices.size())
+        m_vertices.emplace_back(vertex);
+    else
+        m_vertices[m_vertexCount] = vertex;
+
+    ++m_currentCommand->vertexCount;
+    ++m_vertexCount;
+}
+
+void ImmediateRenderer::addIndex(const uint32_t& index) {
+    PROFILE_SCOPE("ImmediateRenderer::addIndex");
+
+    if (m_firstChangedIndex == SIZE_MAX)
+        if (m_indexCount >= m_indices.size() || index != m_indices[m_indexCount])
+            m_firstChangedIndex = m_indexCount;
+
+    if (m_indexCount >= m_indices.size())
+        m_indices.emplace_back(index);
+    else
+        m_indices[m_indexCount] = index;
+
+    ++m_currentCommand->indexCount;
+    ++m_indexCount;
+}
 
 glm::mat4& ImmediateRenderer::currentMatrix(const MatrixMode& matrixMode) {
     return matrixStack(matrixMode).top();
@@ -499,7 +524,8 @@ GraphicsPipeline* ImmediateRenderer::getGraphicsPipeline(const RenderCommand& re
         case PrimitiveType_Triangle: primitiveTopology = vk::PrimitiveTopology::eTriangleList; break;
         case PrimitiveType_TriangleStrip: primitiveTopology = vk::PrimitiveTopology::eTriangleStrip; break;
         case PrimitiveType_Line: primitiveTopology = vk::PrimitiveTopology::eLineList; break;
-        case PrimitiveType_LineStrip: primitiveTopology = vk::PrimitiveTopology::eLineStrip; break;
+        case PrimitiveType_LineStrip:
+        case PrimitiveType_LineLoop: primitiveTopology = vk::PrimitiveTopology::eLineStrip; break;
         case PrimitiveType_Point: primitiveTopology = vk::PrimitiveTopology::ePointList; break;
         default: return nullptr;
     }

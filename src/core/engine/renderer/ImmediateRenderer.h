@@ -104,8 +104,10 @@ public:
     void colour(const float& r, const float& g, const float& b, const float& a);
     void colour(const float& r, const float& g, const float& b);
 
+    void pushMatrix(const MatrixMode& matrixMode);
     void pushMatrix();
 
+    void popMatrix(const MatrixMode& matrixMode);
     void popMatrix();
 
     void translate(const glm::vec3& translation);
@@ -133,6 +135,10 @@ public:
     void setAlphaBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op);
 
 private:
+    void addVertex(const ColouredVertex& vertex);
+
+    void addIndex(const uint32_t& index);
+
     glm::mat4& currentMatrix(const MatrixMode& matrixMode);
     std::stack<glm::mat4>& matrixStack(const MatrixMode& matrixMode);
 

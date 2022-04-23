@@ -407,7 +407,7 @@ bool MeshUtils::loadOBJFile(const std::string& filePath, MeshUtils::OBJMeshData&
 
 // Version must be incremented whenever the read/write methods are changed,
 // otherwise garbage data will get read from older versions of the cache file.
-#define MESH_CACHE_FILE_VERSION 2
+#define MESH_CACHE_FILE_VERSION 3
 
 bool readMeshCache(const std::filesystem::path& path, MeshUtils::OBJMeshData& meshData) {
 

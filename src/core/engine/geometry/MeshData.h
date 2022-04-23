@@ -9,8 +9,9 @@ enum MeshPrimitiveType {
     PrimitiveType_Point = 0,
     PrimitiveType_Line = 1,
     PrimitiveType_LineStrip = 2, // TODO: support in MeshData building functions
-    PrimitiveType_Triangle = 3,
-    PrimitiveType_TriangleStrip = 4, // TODO: support in MeshData building functions
+    PrimitiveType_LineLoop = 3, // TODO: support in MeshData building functions
+    PrimitiveType_Triangle = 4,
+    PrimitiveType_TriangleStrip = 5, // TODO: support in MeshData building functions
 };
 
 typedef struct Vertex {

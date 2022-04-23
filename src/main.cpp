@@ -238,9 +238,6 @@ class App : public Application {
         Camera& cameraProjection = mainCamera.getComponent<Camera>();
 
 
-        immediateRenderer()->setBlendEnabled(false);
-        immediateRenderer()->setDepthTestEnabled(false);
-        immediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
         immediateRenderer()->matrixMode(MatrixMode_Projection);
         immediateRenderer()->pushMatrix();
         immediateRenderer()->loadMatrix(cameraProjection.getProjectionMatrix());
@@ -249,30 +246,31 @@ class App : public Application {
         immediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
         immediateRenderer()->translate(2.0F, 2.0F, 0.0F);
 
+        immediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
+        immediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
+        immediateRenderer()->setBlendEnabled(true);
+        immediateRenderer()->setDepthTestEnabled(true);
+
         immediateRenderer()->begin(PrimitiveType_TriangleStrip);
-        immediateRenderer()->colour(1.0F, 0.0F, 0.0F, 1.0F);
+        immediateRenderer()->colour(1.0F, 0.0F, 0.0F, 0.5F);
         immediateRenderer()->vertex(0.0F, 0.0F, 0.0F);
         immediateRenderer()->vertex(1.0F, 0.0F, 0.0F);
         immediateRenderer()->vertex(0.0F, 1.0F, 0.0F);
         immediateRenderer()->vertex(1.0F, 1.0F, 0.0F);
         immediateRenderer()->end();
 
-        immediateRenderer()->matrixMode(MatrixMode_ModelView);
-        immediateRenderer()->popMatrix();
-
-        immediateRenderer()->matrixMode(MatrixMode_Projection);
-        immediateRenderer()->popMatrix();
-
-        immediateRenderer()->setBlendEnabled(true);
-        immediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
-        immediateRenderer()->setAlphaBlendMode(vk::BlendFactor::eOne, vk::BlendFactor::eZero, vk::BlendOp::eAdd);
-        immediateRenderer()->begin(PrimitiveType_TriangleStrip);
-        immediateRenderer()->colour(1.0F, 0.0F, 1.0F, 0.3F);
+        immediateRenderer()->setBlendEnabled(false);
+        immediateRenderer()->setDepthTestEnabled(false);
+        immediateRenderer()->begin(PrimitiveType_LineLoop);
+        immediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
         immediateRenderer()->vertex(0.0F, 0.0F, 0.0F);
-        immediateRenderer()->vertex(0.5F, 0.0F, 0.0F);
-        immediateRenderer()->vertex(0.0F, 0.5F, 0.0F);
-        immediateRenderer()->vertex(0.5F, 0.5F, 0.0F);
+        immediateRenderer()->vertex(1.0F, 0.0F, 0.0F);
+        immediateRenderer()->vertex(1.0F, 1.0F, 0.0F);
+        immediateRenderer()->vertex(0.0F, 1.0F, 0.0F);
         immediateRenderer()->end();
+
+        immediateRenderer()->popMatrix(MatrixMode_ModelView);
+        immediateRenderer()->popMatrix(MatrixMode_Projection);
 
 
 //        Frustum frustum(cameraTransform, cameraProjection);
