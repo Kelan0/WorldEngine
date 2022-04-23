@@ -27,9 +27,10 @@ void RenderPassConfiguration::addSubpassDependency(const vk::SubpassDependency& 
 
 
 
-RenderPass::RenderPass(std::weak_ptr<vkr::Device> device, vk::RenderPass renderPass):
+RenderPass::RenderPass(std::weak_ptr<vkr::Device> device, vk::RenderPass renderPass, const RenderPassConfiguration& config):
     m_device(device),
-    m_renderPass(renderPass) {
+    m_renderPass(renderPass),
+    m_config(config) {
 }
 
 RenderPass::~RenderPass() {
@@ -82,9 +83,17 @@ RenderPass* RenderPass::create(const RenderPassConfiguration& renderPassConfigur
         return NULL;
     }
 
-    return new RenderPass(renderPassConfiguration.device, renderPass);
+    return new RenderPass(renderPassConfiguration.device, renderPass, renderPassConfiguration);
 }
 
 const vk::RenderPass& RenderPass::getRenderPass() const {
     return m_renderPass;
+}
+
+const RenderPassConfiguration& RenderPass::getConfiguration() const {
+    return m_config;
+}
+
+size_t RenderPass::getAttachmentCount() const {
+    return m_config.renderPassAttachments.size();
 }

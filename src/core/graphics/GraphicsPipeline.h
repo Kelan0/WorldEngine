@@ -5,6 +5,25 @@
 #include "core/core.h"
 #include "core/graphics/RenderPass.h"
 
+struct BlendMode {
+    vk::BlendFactor src = vk::BlendFactor::eOne;
+    vk::BlendFactor dst = vk::BlendFactor::eZero;
+    vk::BlendOp op = vk::BlendOp::eAdd;
+};
+
+struct AttachmentBlendState {
+    bool blendEnable = false;
+    BlendMode colourBlendMode;
+    BlendMode alphaBlendMode;
+    vk::ColorComponentFlags colourWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+
+    void setColourBlendMode(const BlendMode& blendMode);
+    void setColourBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op);
+
+    void setAlphaBlendMode(const BlendMode& blendMode);
+    void setAlphaBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op);
+};
+
 struct GraphicsPipelineConfiguration {
     std::weak_ptr<vkr::Device> device;
     vk::Viewport viewport;
@@ -12,11 +31,12 @@ struct GraphicsPipelineConfiguration {
     std::optional<std::string> fragmentShader;
     std::vector<vk::VertexInputBindingDescription> vertexInputBindings;
     std::vector<vk::VertexInputAttributeDescription> vertexInputAttributes;
-    std::vector<vk::DescriptorSetLayout> descriptorSetLayous;
+    std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
     vk::PolygonMode polygonMode = vk::PolygonMode::eFill;
     vk::CullModeFlags cullMode = vk::CullModeFlagBits::eBack;
     vk::FrontFace frontFace = vk::FrontFace::eClockwise;
     vk::PrimitiveTopology primitiveTopology = vk::PrimitiveTopology::eTriangleList;
+    std::vector<AttachmentBlendState> attachmentBlendStates;
     std::weak_ptr<RenderPass> renderPass;
     std::unordered_map<vk::DynamicState, bool> dynamicStates;
 
@@ -25,6 +45,8 @@ struct GraphicsPipelineConfiguration {
     void setDynamicState(const vk::DynamicState& dynamicState, const bool& isDynamic);
 
     void setDynamicStates(const std::vector<vk::DynamicState>& dynamicState, const bool& isDynamic);
+
+    void setAttachmentBlendState(const size_t& attachmentIndex, const AttachmentBlendState& attachmentBlendState);
 };
 
 class GraphicsPipeline {
@@ -46,7 +68,7 @@ public:
 
     static GraphicsPipeline* create(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration);
 
-    bool recreate(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration);
+    bool recreate(GraphicsPipelineConfiguration graphicsPipelineConfiguration);
 
     void bind(const vk::CommandBuffer& commandBuffer);
 
@@ -78,6 +100,40 @@ private:
     GraphicsPipelineConfiguration m_config;
 };
 
+
+
+
+namespace std {
+    template<>
+    struct hash<BlendMode> {
+        size_t operator()(const BlendMode& blendMode) const {
+            size_t hash = 0;
+            std::hash_combine(hash, (uint32_t)blendMode.src);
+            std::hash_combine(hash, (uint32_t)blendMode.dst);
+            std::hash_combine(hash, (uint32_t)blendMode.op);
+            return hash;
+        }
+    };
+    template<>
+    struct hash<AttachmentBlendState> {
+        size_t operator()(const AttachmentBlendState& attachmentBlendState) const {
+            size_t hash = 0;
+            std::hash_combine(hash, attachmentBlendState.blendEnable);
+            std::hash_combine(hash, attachmentBlendState.colourBlendMode);
+            std::hash_combine(hash, attachmentBlendState.alphaBlendMode);
+            std::hash_combine(hash, (uint32_t)attachmentBlendState.colourWriteMask);
+            return hash;
+        }
+    };
+//    template<>
+//    struct hash<GraphicsPipelineConfiguration> {
+//        size_t operator()(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration) const {
+//            size_t hash = 0;
+//            // TODO
+//            return hash;
+//        }
+//    };
+}
 
 
 #endif //WORLDENGINE_GRAPHICSPIPELINE_H

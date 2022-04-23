@@ -178,9 +178,9 @@ Scene* SceneRenderer::getScene() const {
 }
 
 void SceneRenderer::initPipelineDescriptorSetLayouts(GraphicsPipelineConfiguration& graphicsPipelineConfiguration) const {
-    graphicsPipelineConfiguration.descriptorSetLayous.emplace_back(m_globalDescriptorSetLayout->getDescriptorSetLayout());
-    graphicsPipelineConfiguration.descriptorSetLayous.emplace_back(m_objectDescriptorSetLayout->getDescriptorSetLayout());
-    graphicsPipelineConfiguration.descriptorSetLayous.emplace_back(m_materialDescriptorSetLayout->getDescriptorSetLayout());
+    graphicsPipelineConfiguration.descriptorSetLayouts.emplace_back(m_globalDescriptorSetLayout->getDescriptorSetLayout());
+    graphicsPipelineConfiguration.descriptorSetLayouts.emplace_back(m_objectDescriptorSetLayout->getDescriptorSetLayout());
+    graphicsPipelineConfiguration.descriptorSetLayouts.emplace_back(m_materialDescriptorSetLayout->getDescriptorSetLayout());
 }
 
 void SceneRenderer::recordRenderCommands(double dt, vk::CommandBuffer commandBuffer) {

@@ -7,6 +7,28 @@
 #define GLSL_COMPILER_EXECUTABLE "D:/Code/VulkanSDK/1.2.198.1/Bin/glslc.exe"
 
 
+void AttachmentBlendState::setColourBlendMode(const BlendMode& blendMode) {
+    colourBlendMode = blendMode;
+}
+
+void AttachmentBlendState::setColourBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op) {
+    colourBlendMode.src = src;
+    colourBlendMode.dst = dst;
+    colourBlendMode.op = op;
+}
+
+
+void AttachmentBlendState::setAlphaBlendMode(const BlendMode& blendMode) {
+    alphaBlendMode = blendMode;
+}
+
+void AttachmentBlendState::setAlphaBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op) {
+    alphaBlendMode.src = src;
+    alphaBlendMode.dst = dst;
+    alphaBlendMode.op = op;
+}
+
+
 void GraphicsPipelineConfiguration::setViewport(float width, float height, float x, float y, float minDepth, float maxDepth) {
     viewport.x = x;
     viewport.y = y;
@@ -23,6 +45,12 @@ void GraphicsPipelineConfiguration::setDynamicState(const vk::DynamicState& dyna
 void GraphicsPipelineConfiguration::setDynamicStates(const std::vector<vk::DynamicState>& dynamicStates, const bool& isDynamic) {
     for (const auto& state : dynamicStates)
         setDynamicState(state, isDynamic);
+}
+
+void GraphicsPipelineConfiguration::setAttachmentBlendState(const size_t& attachmentIndex, const AttachmentBlendState& attachmentBlendState) {
+    while (attachmentBlendStates.size() <= attachmentIndex)
+        attachmentBlendStates.emplace_back();
+    attachmentBlendStates[attachmentIndex] = attachmentBlendState;
 }
 
 GraphicsPipeline::GraphicsPipeline(std::weak_ptr<vkr::Device> device):
@@ -60,7 +88,7 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
     return graphicsPipeline;
 }
 
-bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration) {
+bool GraphicsPipeline::recreate(GraphicsPipelineConfiguration graphicsPipelineConfiguration) {
     assert(!graphicsPipelineConfiguration.device.expired() && graphicsPipelineConfiguration.device.lock() == m_device);
 
     VkResult result;
@@ -118,6 +146,11 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
         return false;
     }
 
+    if (graphicsPipelineConfiguration.renderPass.expired() || graphicsPipelineConfiguration.renderPass.lock() == nullptr) {
+        printf("Unable to create graphics pipeline with NULL RenderPass\n");
+        return false;
+    }
+
     std::vector<char> shaderBytecode;
     vk::ShaderModuleCreateInfo shaderModuleCreateInfo;
 
@@ -143,6 +176,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     shaderModuleCreateInfo.setPCode(reinterpret_cast<const uint32_t*>(shaderBytecode.data()));
     vkr::ShaderModule fragmentShaderModule = m_device->createShaderModule(shaderModuleCreateInfo);
 
+    m_renderPass = std::shared_ptr<RenderPass>(graphicsPipelineConfiguration.renderPass);
 
     std::vector<vk::PipelineShaderStageCreateInfo> pipelineShaderStages;
 
@@ -203,28 +237,33 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     //depthStencilStateCreateInfo.front;
     //depthStencilStateCreateInfo.back;
 
-    std::vector<vk::PipelineColorBlendAttachmentState> attachments;
-    vk::PipelineColorBlendAttachmentState& colourBlendAttachmentState = attachments.emplace_back();
-    colourBlendAttachmentState.setBlendEnable(false);
-    colourBlendAttachmentState.setSrcColorBlendFactor(vk::BlendFactor::eOne);
-    colourBlendAttachmentState.setDstColorBlendFactor(vk::BlendFactor::eZero);
-    colourBlendAttachmentState.setColorBlendOp(vk::BlendOp::eAdd);
-    colourBlendAttachmentState.setSrcAlphaBlendFactor(vk::BlendFactor::eOne);
-    colourBlendAttachmentState.setDstAlphaBlendFactor(vk::BlendFactor::eZero);
-    colourBlendAttachmentState.setAlphaBlendOp(vk::BlendOp::eAdd);
-    colourBlendAttachmentState.setColorWriteMask(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA);
+    while (graphicsPipelineConfiguration.attachmentBlendStates.size() < m_renderPass->getAttachmentCount())
+        graphicsPipelineConfiguration.attachmentBlendStates.emplace_back(); // Expand attachmentBlendStates array until it matches the size of the render pass attachments
+
+    std::vector<vk::PipelineColorBlendAttachmentState> attachmentBlendStates;
+    for (const auto& blendState : graphicsPipelineConfiguration.attachmentBlendStates) {
+        vk::PipelineColorBlendAttachmentState& colourBlendAttachmentState = attachmentBlendStates.emplace_back();
+        colourBlendAttachmentState.setBlendEnable(blendState.blendEnable);
+        colourBlendAttachmentState.setSrcColorBlendFactor(blendState.colourBlendMode.src);
+        colourBlendAttachmentState.setDstColorBlendFactor(blendState.colourBlendMode.dst);
+        colourBlendAttachmentState.setColorBlendOp(blendState.colourBlendMode.op);
+        colourBlendAttachmentState.setSrcAlphaBlendFactor(blendState.alphaBlendMode.src);
+        colourBlendAttachmentState.setDstAlphaBlendFactor(blendState.alphaBlendMode.dst);
+        colourBlendAttachmentState.setAlphaBlendOp(blendState.alphaBlendMode.op);
+        colourBlendAttachmentState.setColorWriteMask(blendState.colourWriteMask);
+    }
 
     vk::PipelineColorBlendStateCreateInfo colourBlendStateCreateInfo;
     colourBlendStateCreateInfo.setLogicOpEnable(false);
     colourBlendStateCreateInfo.setLogicOp(vk::LogicOp::eCopy);
-    colourBlendStateCreateInfo.setAttachments(attachments);
+    colourBlendStateCreateInfo.setAttachments(attachmentBlendStates);
     colourBlendStateCreateInfo.setBlendConstants({ 0.0F, 0.0F, 0.0F, 0.0F });
 
     vk::PipelineDynamicStateCreateInfo dynamicStateCreateInfo;
     dynamicStateCreateInfo.setDynamicStates(dynamicStates);
 
     vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
-    pipelineLayoutCreateInfo.setSetLayouts(graphicsPipelineConfiguration.descriptorSetLayous);
+    pipelineLayoutCreateInfo.setSetLayouts(graphicsPipelineConfiguration.descriptorSetLayouts);
     pipelineLayoutCreateInfo.setPushConstantRangeCount(0);
 
     m_pipelineLayout = std::make_unique<vkr::PipelineLayout>(*m_device, pipelineLayoutCreateInfo);
@@ -266,7 +305,6 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
 //
 //    m_renderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig));
 
-    m_renderPass = std::shared_ptr<RenderPass>(graphicsPipelineConfiguration.renderPass);
 
     vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo;
     graphicsPipelineCreateInfo.setStages(pipelineShaderStages);

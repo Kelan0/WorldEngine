@@ -30,7 +30,7 @@ struct RenderPassConfiguration {
 class RenderPass {
     NO_COPY(RenderPass)
 private:
-    RenderPass(std::weak_ptr<vkr::Device> device, vk::RenderPass renderPass);
+    RenderPass(std::weak_ptr<vkr::Device> device, vk::RenderPass renderPass, const RenderPassConfiguration& config);
 
 public:
     ~RenderPass();
@@ -39,9 +39,13 @@ public:
 
     const vk::RenderPass& getRenderPass() const;
 
+    const RenderPassConfiguration& getConfiguration() const;
+
+    size_t getAttachmentCount() const;
 private:
     std::shared_ptr<vkr::Device> m_device;
     vk::RenderPass m_renderPass;
+    RenderPassConfiguration m_config;
 };
 
 

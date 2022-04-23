@@ -238,13 +238,16 @@ class App : public Application {
         Camera& cameraProjection = mainCamera.getComponent<Camera>();
 
 
+        immediateRenderer()->setBlendEnabled(false);
+        immediateRenderer()->setDepthTestEnabled(false);
+        immediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
         immediateRenderer()->matrixMode(MatrixMode_Projection);
         immediateRenderer()->pushMatrix();
         immediateRenderer()->loadMatrix(cameraProjection.getProjectionMatrix());
         immediateRenderer()->matrixMode(MatrixMode_ModelView);
         immediateRenderer()->pushMatrix();
-        immediateRenderer()->translate(2.0F, 0.0F, 0.0F);
         immediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
+        immediateRenderer()->translate(2.0F, 2.0F, 0.0F);
 
         immediateRenderer()->begin(PrimitiveType_TriangleStrip);
         immediateRenderer()->colour(1.0F, 0.0F, 0.0F, 1.0F);
@@ -260,8 +263,11 @@ class App : public Application {
         immediateRenderer()->matrixMode(MatrixMode_Projection);
         immediateRenderer()->popMatrix();
 
+        immediateRenderer()->setBlendEnabled(true);
+        immediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
+        immediateRenderer()->setAlphaBlendMode(vk::BlendFactor::eOne, vk::BlendFactor::eZero, vk::BlendOp::eAdd);
         immediateRenderer()->begin(PrimitiveType_TriangleStrip);
-        immediateRenderer()->colour(1.0F, 0.0F, 1.0F);
+        immediateRenderer()->colour(1.0F, 0.0F, 1.0F, 0.3F);
         immediateRenderer()->vertex(0.0F, 0.0F, 0.0F);
         immediateRenderer()->vertex(0.5F, 0.0F, 0.0F);
         immediateRenderer()->vertex(0.0F, 0.5F, 0.0F);

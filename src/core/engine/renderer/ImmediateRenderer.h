@@ -59,6 +59,9 @@ private:
     struct RenderState {
         bool depthTestEnabled = false;
         vk::CullModeFlags cullMode = vk::CullModeFlagBits::eBack;
+        bool blendEnabled = false;
+        BlendMode colourBlendMode;
+        BlendMode alphaBlendMode;
     };
 
     struct RenderCommand {
@@ -125,6 +128,10 @@ public:
 
     void setCullMode(const vk::CullModeFlags& cullMode);
 
+    void setBlendEnabled(const bool& enabled);
+    void setColourBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op);
+    void setAlphaBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op);
+
 private:
     glm::mat4& currentMatrix(const MatrixMode& matrixMode);
     std::stack<glm::mat4>& matrixStack(const MatrixMode& matrixMode);
@@ -139,8 +146,6 @@ private:
     void recreateSwapchain(const RecreateSwapchainEvent& event);
 
     void validateCompleteCommand() const;
-
-    void onMatrixChange();
 
 private:
     std::vector<ColouredVertex> m_vertices;

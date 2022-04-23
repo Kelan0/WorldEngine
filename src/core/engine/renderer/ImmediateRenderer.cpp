@@ -297,7 +297,7 @@ void ImmediateRenderer::pushMatrix() {
     }
 #endif
 
-    onMatrixChange();
+    validateCompleteCommand();
 
     // Duplicate top of stack
     matrixStack().push(matrixStack().top());
@@ -313,12 +313,12 @@ void ImmediateRenderer::popMatrix() {
     }
 #endif
 
-    onMatrixChange();
+    validateCompleteCommand();
     matrixStack().pop();
 }
 
 void ImmediateRenderer::translate(const glm::vec3& translation) {
-    onMatrixChange();
+    validateCompleteCommand();
     currentMatrix() = glm::translate(currentMatrix(), translation);
 }
 void ImmediateRenderer::translate(const float& x, const float& y, const float& z) {
@@ -326,7 +326,7 @@ void ImmediateRenderer::translate(const float& x, const float& y, const float& z
 }
 
 void ImmediateRenderer::rotate(const glm::vec3& axis, const float& angle) {
-    onMatrixChange();
+    validateCompleteCommand();
     glm::mat4& currMat = currentMatrix();
     currMat = glm::rotate(currMat, angle, axis);
 }
@@ -335,7 +335,7 @@ void ImmediateRenderer::rotate(const float& x, const float& y, const float& z, c
 }
 
 void ImmediateRenderer::scale(const glm::vec3& scale) {
-    onMatrixChange();
+    validateCompleteCommand();
     glm::mat4& currMat = currentMatrix();
     currMat = glm::scale(currMat, scale);
 }
@@ -349,16 +349,16 @@ void ImmediateRenderer::scale(const float& scale) {
 }
 
 void ImmediateRenderer::loadIdentity() {
-    onMatrixChange();
+    validateCompleteCommand();
     currentMatrix() = glm::mat4(1.0F); // Identity matrix
 }
 
 void ImmediateRenderer::loadMatrix(const glm::mat4& matrix) {
-    onMatrixChange();
+    validateCompleteCommand();
     currentMatrix() = matrix;
 }
 void ImmediateRenderer::multMatrix(const glm::mat4& matrix) {
-    onMatrixChange();
+    validateCompleteCommand();
     glm::mat4& currMat = currentMatrix();
     currMat = currMat * matrix;
 }
@@ -371,12 +371,31 @@ void ImmediateRenderer::matrixMode(const MatrixMode& matrixMode) {
 }
 
 void ImmediateRenderer::setDepthTestEnabled(const bool& enabled) {
+    validateCompleteCommand();
     m_renderState.depthTestEnabled = enabled;
 }
 
 void ImmediateRenderer::setCullMode(const vk::CullModeFlags& cullMode) {
+    validateCompleteCommand();
     m_renderState.cullMode = cullMode;
 }
+
+void ImmediateRenderer::setBlendEnabled(const bool& enabled) {
+    m_renderState.blendEnabled = enabled;
+}
+
+void ImmediateRenderer::setColourBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op) {
+    m_renderState.colourBlendMode.src = src;
+    m_renderState.colourBlendMode.dst = dst;
+    m_renderState.colourBlendMode.op = op;
+}
+
+void ImmediateRenderer::setAlphaBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op) {
+    m_renderState.alphaBlendMode.src = src;
+    m_renderState.alphaBlendMode.dst = dst;
+    m_renderState.alphaBlendMode.op = op;
+}
+
 
 glm::mat4& ImmediateRenderer::currentMatrix(const MatrixMode& matrixMode) {
     return matrixStack(matrixMode).top();
@@ -487,7 +506,9 @@ GraphicsPipeline* ImmediateRenderer::getGraphicsPipeline(const RenderCommand& re
 
     size_t key = 0;
     std::hash_combine(key, (uint32_t)primitiveTopology);
-//    std::hash_combine(key, renderCommand.depthTestEnabled);
+    std::hash_combine(key, renderCommand.state.blendEnabled);
+    std::hash_combine(key, renderCommand.state.blendEnabled ? renderCommand.state.colourBlendMode : BlendMode{});
+    std::hash_combine(key, renderCommand.state.blendEnabled ? renderCommand.state.alphaBlendMode : BlendMode{});
 
     auto it = m_graphicsPipelines.find(key);
 
@@ -503,6 +524,15 @@ GraphicsPipeline* ImmediateRenderer::getGraphicsPipeline(const RenderCommand& re
 
         pipelineConfiguration.setDynamicState(vk::DynamicState::eDepthTestEnableEXT, true);
         pipelineConfiguration.setDynamicState(vk::DynamicState::eCullModeEXT, true);
+
+        AttachmentBlendState attachmentBlendState;
+        attachmentBlendState.blendEnable = renderCommand.state.blendEnabled;
+        if (renderCommand.state.blendEnabled) {
+            attachmentBlendState.setColourBlendMode(renderCommand.state.colourBlendMode);
+            attachmentBlendState.setAlphaBlendMode(renderCommand.state.alphaBlendMode);
+        }
+
+        pipelineConfiguration.setAttachmentBlendState(0, attachmentBlendState);
 
         pipelineConfiguration.vertexShader = "res/shaders/debug/debug_lines.vert";
         pipelineConfiguration.fragmentShader = "res/shaders/debug/debug_lines.frag";
@@ -530,7 +560,7 @@ GraphicsPipeline* ImmediateRenderer::getGraphicsPipeline(const RenderCommand& re
         pipelineConfiguration.vertexInputAttributes[3].setFormat(vk::Format::eR8G8B8A8Unorm); // u8vec4
         pipelineConfiguration.vertexInputAttributes[3].setOffset(offsetof(ColouredVertex, colour));
 
-        pipelineConfiguration.descriptorSetLayous.emplace_back(m_descriptorSetLayout->getDescriptorSetLayout());
+        pipelineConfiguration.descriptorSetLayouts.emplace_back(m_descriptorSetLayout->getDescriptorSetLayout());
 
         GraphicsPipeline* pipeline = GraphicsPipeline::create(pipelineConfiguration);
         m_graphicsPipelines.insert(std::make_pair(key, pipeline));
@@ -548,14 +578,11 @@ void ImmediateRenderer::recreateSwapchain(const RecreateSwapchainEvent& event) {
 }
 
 void ImmediateRenderer::validateCompleteCommand() const {
+#if _DEBUG || IMMEDIATE_MODE_VALIDATION
     if (m_currentCommand != nullptr) {
         printf("ImmediateRenderer error: Incomplete command\n");
         assert(false);
     }
-}
-
-void ImmediateRenderer::onMatrixChange() {
-#if _DEBUG || IMMEDIATE_MODE_VALIDATION
-    validateCompleteCommand();
 #endif
 }
+
