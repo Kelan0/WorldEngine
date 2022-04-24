@@ -33,39 +33,47 @@ class App : public Application {
 
     std::vector<Image2D*> images;
     std::vector<std::shared_ptr<Texture2D>> textures;
-    RenderCamera camera;
     double cameraPitch = 0.0F;
     double cameraYaw = 0.0F;
-
-    std::vector<Entity> testEntities;
-    std::vector<Entity> dynamicEntities;
 
     void init() override {
         //eventDispatcher()->connect<ScreenResizeEvent>(&App::onScreenResize, this);
 
 
-        Image2DConfiguration testTextureImageConfig;
-        testTextureImageConfig.device = graphics()->getDevice();
-        testTextureImageConfig.filePath = "res/textures/Brick_Wall_017_SD/Brick_Wall_017_basecolor.jpg";
-        testTextureImageConfig.usage = vk::ImageUsageFlagBits::eSampled;
-        testTextureImageConfig.format = vk::Format::eR8G8B8A8Srgb;
-        Image2D* testImage = Image2D::create(testTextureImageConfig);
-        images.emplace_back(testImage);
+        Image2DConfiguration brickImageConfig;
+        brickImageConfig.device = graphics()->getDevice();
+        brickImageConfig.filePath = "res/textures/Brick_Wall_017_SD/Brick_Wall_017_basecolor.jpg";
+        brickImageConfig.usage = vk::ImageUsageFlagBits::eSampled;
+        brickImageConfig.format = vk::Format::eR8G8B8A8Srgb;
+        Image2D* brickImage = Image2D::create(brickImageConfig);
+        images.emplace_back(brickImage);
 
-        SamplerConfiguration testTextureSamplerConfig;
-        testTextureSamplerConfig.device = graphics()->getDevice();
-        testTextureSamplerConfig.minFilter = vk::Filter::eLinear;
-        testTextureSamplerConfig.magFilter = vk::Filter::eLinear;
-        ImageView2DConfiguration testTextureImageViewConfig;
-        testTextureImageViewConfig.device = graphics()->getDevice();
-        testTextureImageViewConfig.image = testImage->getImage();
-        testTextureImageViewConfig.format = testImage->getFormat();
-        std::shared_ptr<Texture2D> testTexture = std::shared_ptr<Texture2D>(Texture2D::create(testTextureImageViewConfig, testTextureSamplerConfig));
+        SamplerConfiguration brickTextureSamplerConfig;
+        brickTextureSamplerConfig.device = graphics()->getDevice();
+        brickTextureSamplerConfig.minFilter = vk::Filter::eLinear;
+        brickTextureSamplerConfig.magFilter = vk::Filter::eLinear;
+        ImageView2DConfiguration brickTextureImageViewConfig;
+        brickTextureImageViewConfig.device = graphics()->getDevice();
+        brickTextureImageViewConfig.image = brickImage->getImage();
+        brickTextureImageViewConfig.format = brickImage->getFormat();
+        std::shared_ptr<Texture2D> brickTexture = std::shared_ptr<Texture2D>(Texture2D::create(brickTextureImageViewConfig, brickTextureSamplerConfig));
 
         MeshData<Vertex> testMeshData;
-        testMeshData.createCuboid(glm::vec3(-0.5, 2, -0.5), glm::vec3(+0.5, 3, +0.5));
-        testMeshData.scale(10.0);
-        testMeshData.createQuad(glm::vec3(-1.0F, 0.0F, -1.0F), glm::vec3(-1.0F, 0.0F, +1.0F), glm::vec3(+1.0F, 0.0F, +1.0F), glm::vec3(+1.0F, 0.0F, -1.0F), glm::vec3(0, 1, 0));
+        testMeshData.createCuboid(glm::vec3(-0.5, -0.5F, -0.5), glm::vec3(+0.5, +0.5F, +0.5));
+        MeshConfiguration cubeMeshConfig;
+        cubeMeshConfig.device = graphics()->getDevice();
+        cubeMeshConfig.setMeshData(&testMeshData);
+        std::shared_ptr<Mesh> cubeMesh = std::shared_ptr<Mesh>(Mesh::create(cubeMeshConfig));
+        Entity cubeEntity = EntityHierarchy::create(scene(), "cubeEntity");
+        cubeEntity.addComponent<Transform>().translate(1.6F, 0.5F, 0);
+        cubeEntity.addComponent<RenderComponent>().setMesh(cubeMesh).setTexture(brickTexture);
+
+        testMeshData.clear();
+        auto i0 = testMeshData.addVertex(-10.0F, 0.0F, -10.0F, 0.0F, 1.0F, 0.0F, 0.0F, 0.0F);
+        auto i1 = testMeshData.addVertex(-10.0F, 0.0F, +10.0F, 0.0F, 1.0F, 0.0F, 10.0F, 0.0F);
+        auto i2 = testMeshData.addVertex(+10.0F, 0.0F, +10.0F, 0.0F, 1.0F, 0.0F, 10.0F, 10.0F);
+        auto i3 = testMeshData.addVertex(+10.0F, 0.0F, -10.0F, 0.0F, 1.0F, 0.0F, 0.0F, 10.0F);
+        testMeshData.addQuad(i0, i1, i2, i3);
         MeshConfiguration floorMeshConfig;
         floorMeshConfig.device = graphics()->getDevice();
         floorMeshConfig.setMeshData(&testMeshData);
@@ -73,9 +81,7 @@ class App : public Application {
 
         Entity floorEntity = EntityHierarchy::create(scene(), "floorEntity");
         floorEntity.addComponent<Transform>().translate(0.0, 0.0, 0.0);
-        floorEntity.addComponent<RenderComponent>().setMesh(floorMesh).setTexture(testTexture);
-
-
+        floorEntity.addComponent<RenderComponent>().setMesh(floorMesh);
 
 
         testMeshData.clear();
@@ -84,107 +90,19 @@ class App : public Application {
         glm::vec3 centerBottom = testMeshData.calculateBoundingBox() * glm::vec4(0, -1, 0, 1);
         testMeshData.translate(-1.0F * centerBottom);
         testMeshData.applyTransform();
-
+//
         printf("Loaded bunny.obj :- %llu polygons\n", testMeshData.getPolygonCount());
+        MeshConfiguration bunnyMeshConfig;
+        bunnyMeshConfig.device = graphics()->getDevice();
+        bunnyMeshConfig.setMeshData(&testMeshData);
+        std::shared_ptr<Mesh> bunnyMesh = std::shared_ptr<Mesh>(Mesh::create(bunnyMeshConfig));
+//
+        Entity bunnyEntity = EntityHierarchy::create(scene(), "bunnyEntity");
+        bunnyEntity.addComponent<Transform>().translate(0.0, 0.0, 0.0);
+        bunnyEntity.addComponent<RenderComponent>().setMesh(bunnyMesh).setTexture(brickTexture);
 
 
-
-        MeshConfiguration testMeshConfig;
-        testMeshConfig.device = graphics()->getDevice();
-        testMeshConfig.setMeshData(&testMeshData);
-        std::shared_ptr<Mesh> testMesh = std::shared_ptr<Mesh>(Mesh::create(testMeshConfig));
-
-        const int xCount = 1000;
-        const int zCount = 1000;
-        const double spacing = 1.1F;
-
-        glm::u8vec4 pixel;
-        pixel.a = 0xFF;
-
-        testMeshData.clear();
-        testMeshData.createCuboid(glm::vec3(-0.5, -0.5F, -0.5), glm::vec3(+0.5, +0.5F, +0.5));
-
-        MeshConfiguration cubeMeshConfig;
-        cubeMeshConfig.device = graphics()->getDevice();
-        cubeMeshConfig.setMeshData(&testMeshData);
-        std::shared_ptr<Mesh> cubeMesh = std::shared_ptr<Mesh>(Mesh::create(cubeMeshConfig));
-
-        for (int i = 0; i < 10000; ++i) {
-            pixel.r = rand() % 0xFF; //(uint8_t)((double)i / (double)xCount * 0xFF);
-            pixel.g = rand() % 0xFF; //(uint8_t)((double)j / (double)zCount * 0xFF);
-            pixel.b = rand() % 0xFF;
-
-            ImageData imageData(&pixel[0], 1, 1, ImagePixelLayout::RGBA, ImagePixelFormat::UInt8);
-
-            Image2DConfiguration bunnyTextureImageConfig;
-            bunnyTextureImageConfig.device = graphics()->getDevice();
-            bunnyTextureImageConfig.imageData = &imageData;
-            bunnyTextureImageConfig.usage = vk::ImageUsageFlagBits::eSampled;
-            bunnyTextureImageConfig.format = vk::Format::eR8G8B8A8Srgb;
-            Image2D* bunnyImage = Image2D::create(bunnyTextureImageConfig);
-            images.emplace_back(bunnyImage);
-
-            SamplerConfiguration bunnyTextureSamplerConfig;
-            bunnyTextureSamplerConfig.device = graphics()->getDevice();
-            bunnyTextureSamplerConfig.minFilter = vk::Filter::eNearest;
-            bunnyTextureSamplerConfig.magFilter = vk::Filter::eNearest;
-            ImageView2DConfiguration bunnyTextureImageViewConfig;
-            bunnyTextureImageViewConfig.device = graphics()->getDevice();
-            bunnyTextureImageViewConfig.image = bunnyImage->getImage();
-            bunnyTextureImageViewConfig.format = bunnyImage->getFormat();
-            std::shared_ptr<Texture2D> texture = std::shared_ptr<Texture2D>(Texture2D::create(bunnyTextureImageViewConfig, bunnyTextureSamplerConfig));
-
-            textures.emplace_back(texture);
-
-        }
-
-
-        for (int i = 0; i < xCount; ++i) {
-            for (int j = 0; j < zCount; ++j) {
-
-                Entity entity = EntityHierarchy::create(scene(), "testEntity[" + std::to_string(i) + ", " + std::to_string(j) + "]");
-
-                Transform& t = entity.addComponent<Transform>()
-                    .translate(-0.5 * spacing * xCount + i * spacing, 0.0, -0.5 * spacing * zCount + j * spacing)
-                    .scale(0.75);
-
-                entity.addComponent<RenderComponent>()
-                    .setMesh(cubeMesh)
-                    .setTexture(textures[rand() % textures.size()]);
-
-                testEntities.push_back(entity);
-                double distSq = glm::dot(t.getTranslation(), t.getTranslation());
-                if (distSq < 10 * 10) {
-                  t.translate(0, 1, 0);
-                  dynamicEntities.push_back(entity);
-                }
-            }
-        }
-
-        testMeshData.clear();
-        testMeshData.createUVSphere(glm::dvec3(0.0, 0.0, 0.0), 1.0, 32, 32);
-
-        MeshConfiguration testBoundMeshConfig;
-        testBoundMeshConfig.device = graphics()->getDevice();
-        testBoundMeshConfig.setMeshData(&testMeshData);
-        std::shared_ptr<Mesh> testBoundMesh = std::shared_ptr<Mesh>(Mesh::create(testBoundMeshConfig));
-
-
-        Entity testBound = scene()->createEntity("testBound");
-        testBound.addComponent<Transform>().setTranslation(0.0, 4.0, 0.0);
-        testBound.addComponent<RenderComponent>().setMesh(testBoundMesh);
-
-
-        //Entity testEntity = EntityHierarchy::create(scene(), "testEntity");
-        //testEntity.addComponent<Transform>().translate(1.0, 0.0, -2.0);
-        //testEntity.addComponent<RenderComponent>().setMesh(testMesh).setTexture(testTexture);
-        //
-        //Entity testEntity2 = EntityHierarchy::create(scene(), "testEntity2");
-        //testEntity2.addComponent<Transform>().translate(0.0, 0.4, -2.0);
-        //testEntity2.addComponent<RenderComponent>().setMesh(testMesh).setTexture(testTexture);
-
-
-        scene()->getMainCameraEntity().getComponent<Transform>().setTranslation(0.0F, 2.0F, 2.0F);
+        scene()->getMainCameraEntity().getComponent<Transform>().setTranslation(0.0F, 1.0F, 1.0F);
     }
 
     void cleanup() override {
@@ -247,33 +165,36 @@ class App : public Application {
         immediateRenderer()->matrixMode(MatrixMode_ModelView);
         immediateRenderer()->pushMatrix();
         immediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
-        immediateRenderer()->pushMatrix();
-        immediateRenderer()->translate(2.0F, 2.0F, 0.0F);
 
         immediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
         immediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
-        immediateRenderer()->setBlendEnabled(true);
-        immediateRenderer()->setDepthTestEnabled(true);
-
-        immediateRenderer()->begin(PrimitiveType_TriangleStrip);
-        immediateRenderer()->colour(1.0F, 0.0F, 0.0F, 0.5F);
-        immediateRenderer()->vertex(0.0F, 0.0F, 0.0F);
-        immediateRenderer()->vertex(1.0F, 0.0F, 0.0F);
-        immediateRenderer()->vertex(0.0F, 1.0F, 0.0F);
-        immediateRenderer()->vertex(1.0F, 1.0F, 0.0F);
-        immediateRenderer()->end();
-
-        immediateRenderer()->setBlendEnabled(false);
-        immediateRenderer()->setDepthTestEnabled(false);
-        immediateRenderer()->setLineWidth(3.0F);
-        immediateRenderer()->begin(PrimitiveType_LineLoop);
-        immediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
-        immediateRenderer()->vertex(0.0F, 0.0F, 0.0F);
-        immediateRenderer()->vertex(1.0F, 0.0F, 0.0F);
-        immediateRenderer()->vertex(1.0F, 1.0F, 0.0F);
-        immediateRenderer()->vertex(0.0F, 1.0F, 0.0F);
-        immediateRenderer()->end();
-        immediateRenderer()->popMatrix(MatrixMode_ModelView);
+//
+//        immediateRenderer()->setBlendEnabled(true);
+//        immediateRenderer()->setDepthTestEnabled(true);
+//        immediateRenderer()->matrixMode(MatrixMode_ModelView);
+//        immediateRenderer()->pushMatrix();
+//        immediateRenderer()->translate(2.0F, 2.0F, 0.0F);
+//
+//        immediateRenderer()->begin(PrimitiveType_TriangleStrip);
+//        immediateRenderer()->colour(1.0F, 0.0F, 0.0F, 0.5F);
+//        immediateRenderer()->vertex(0.0F, 0.0F, 0.0F);
+//        immediateRenderer()->vertex(1.0F, 0.0F, 0.0F);
+//        immediateRenderer()->vertex(0.0F, 1.0F, 0.0F);
+//        immediateRenderer()->vertex(1.0F, 1.0F, 0.0F);
+//        immediateRenderer()->end();
+//
+//        immediateRenderer()->setBlendEnabled(false);
+//        immediateRenderer()->setDepthTestEnabled(false);
+//        immediateRenderer()->setLineWidth(3.0F);
+//        immediateRenderer()->begin(PrimitiveType_LineLoop);
+//        immediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
+//        immediateRenderer()->vertex(0.0F, 0.0F, 0.0F);
+//        immediateRenderer()->vertex(1.0F, 0.0F, 0.0F);
+//        immediateRenderer()->vertex(1.0F, 1.0F, 0.0F);
+//        immediateRenderer()->vertex(0.0F, 1.0F, 0.0F);
+//        immediateRenderer()->end();
+//
+//        immediateRenderer()->popMatrix();
 
         if (input()->keyPressed(SDL_SCANCODE_F)) {
             if (!pauseFrustum) {
@@ -299,38 +220,6 @@ class App : public Application {
 
         immediateRenderer()->popMatrix(MatrixMode_ModelView);
         immediateRenderer()->popMatrix(MatrixMode_Projection);
-
-//        Frustum frustum(cameraTransform, cameraProjection);
-//
-//        Sphere sphere(0.0, 4.0, 0.0, 1.0);
-//
-//        if (Intersection::contains(frustum, sphere))
-//            printf("in view\n");
-
-
-
-
-        PROFILE_REGION("Change transform test")
-        for (Entity& ent : dynamicEntities) {
-            ent.getComponent<Transform>().rotate(0, 1, 0, glm::radians(dt * 90.0));
-        }
-
-//        PROFILE_REGION("Random texture test")
-//
-//        size_t f = 100;
-//        for (size_t i = 0; i < testEntities.size() / f; ++i) {
-//        	size_t idx = std::min((i * f) + (rand() % f), testEntities.size());
-//
-//        	Entity& entity = testEntities[idx];
-//        	entity.getComponent<RenderComponent>().setTexture(textures[rand() % textures.size()]);
-//        }
-
-
-
-        //for (int i = 0; i < testEntities.size(); ++i) {
-        //	Transform& t = testEntities[i].getComponent<Transform>();
-        //	t.rotate(0.0, 1.0, 0.0, dt * glm::radians(360.0F));
-        //}
     }
 };
 

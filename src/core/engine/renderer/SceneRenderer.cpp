@@ -219,7 +219,7 @@ void SceneRenderer::recordRenderCommands(double dt, vk::CommandBuffer commandBuf
 
 //    std::vector<DrawCommand> drawCommands = thread_exec(0, m_numRenderEntities);
 
-    auto futures = ThreadUtils::parallel_range(m_numRenderEntities, (size_t)1, ThreadUtils::getThreadCount(), thread_exec);
+    auto futures = ThreadUtils::parallel_range(m_numRenderEntities, (size_t)1, (size_t)ThreadUtils::getThreadCount(), thread_exec);
     auto drawCommands = ThreadUtils::getResults(futures);
 
     PROFILE_REGION("Bind resources")

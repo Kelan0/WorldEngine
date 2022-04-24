@@ -26,6 +26,14 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
 
     const vk::Device& device = **bufferConfiguration.device.lock();
 
+#if _DEBUG
+    if (bufferConfiguration.size <= 0) {
+        printf("Cannot create zero-size buffer\n");
+        assert(false);
+        return nullptr;
+    }
+#endif
+
     vk::Result result;
 
     if (bufferConfiguration.data != nullptr && !(bufferConfiguration.memoryProperties & vk::MemoryPropertyFlagBits::eHostVisible)) {

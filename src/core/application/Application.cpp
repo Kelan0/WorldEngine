@@ -3,6 +3,7 @@
 #include "core/engine/scene/Scene.h"
 #include "core/engine/renderer/SceneRenderer.h"
 #include "core/engine/renderer/ImmediateRenderer.h"
+#include "core/engine/renderer/DeferredRenderer.h"
 #include "core/engine/scene/event/EventDispacher.h"
 #include "core/engine/scene/event/Events.h"
 #include "core/graphics/GraphicsManager.h"
@@ -12,23 +13,25 @@
 
 
 
-Application* Application::s_instance = NULL;
+Application* Application::s_instance = nullptr;
 
 
 Application::Application():
-        m_windowHandle(NULL),
-        m_graphics(NULL),
-        m_inputHandler(NULL),
-        m_scene(NULL),
-        m_sceneRenderer(NULL),
-        m_immediateRenderer(NULL),
-        m_eventDispatcher(NULL),
+        m_windowHandle(nullptr),
+        m_graphics(nullptr),
+        m_inputHandler(nullptr),
+        m_scene(nullptr),
+        m_sceneRenderer(nullptr),
+        m_immediateRenderer(nullptr),
+        m_deferredRenderer(nullptr),
+        m_eventDispatcher(nullptr),
         m_running(false) {
 }
 
 Application::~Application() {
     delete m_sceneRenderer;
     delete m_immediateRenderer;
+    delete m_deferredRenderer;
     delete m_scene;
     delete m_inputHandler;
     delete m_graphics;
@@ -40,7 +43,7 @@ Application::~Application() {
     printf("Quitting SDL\n");
     SDL_Quit();
 
-    s_instance = NULL;
+    s_instance = nullptr;
     printf("Uninitialized application\n");
 }
 
@@ -59,7 +62,7 @@ bool Application::initInternal() {
     printf("Creating window\n");
     uint32_t flags = SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE;
     m_windowHandle = SDL_CreateWindow("Window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480, flags);
-    if (m_windowHandle == NULL) {
+    if (m_windowHandle == nullptr) {
         printf("Failed to create SDL window: %s\n", SDL_GetError());
         return false;
     }
@@ -93,6 +96,9 @@ bool Application::initInternal() {
     m_immediateRenderer = new ImmediateRenderer();
     m_immediateRenderer->init();
 
+    PROFILE_REGION("Init DeferredRenderer")
+    m_deferredRenderer = new DeferredRenderer();
+    m_deferredRenderer->init();
 
     PROFILE_REGION("Init Application")
     init();
@@ -128,6 +134,7 @@ void Application::renderInternal(double dt) {
 
     m_sceneRenderer->render(dt);
     m_immediateRenderer->render(dt);
+    m_deferredRenderer->render(dt);
 
     commandBuffer.endRenderPass();
 }
@@ -166,7 +173,7 @@ void Application::processEventsInternal() {
 }
 
 void Application::destroy() {
-    assert(s_instance != NULL);
+    assert(s_instance != nullptr);
     delete s_instance;
 }
 
@@ -316,6 +323,10 @@ SceneRenderer* Application::sceneRenderer() {
 
 ImmediateRenderer* Application::immediateRenderer() {
     return m_immediateRenderer;
+}
+
+DeferredRenderer* Application::deferredRenderer() {
+    return m_deferredRenderer;
 }
 
 EventDispatcher* Application::eventDispatcher() {

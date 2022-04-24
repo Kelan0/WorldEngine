@@ -42,10 +42,17 @@ public:
     const RenderPassConfiguration& getConfiguration() const;
 
     size_t getAttachmentCount() const;
+
+    size_t getColourAttachmentCount() const;
+
+    static bool isDepthAttachment(const vk::Format& format);
+
+    static bool isStencilAttachment(const vk::Format& format);
 private:
     std::shared_ptr<vkr::Device> m_device;
     vk::RenderPass m_renderPass;
     RenderPassConfiguration m_config;
+    size_t m_colourAttachmentCount;
 };
 
 

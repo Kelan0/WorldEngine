@@ -10,6 +10,7 @@ class InputHandler;
 class Scene;
 class SceneRenderer;
 class ImmediateRenderer;
+class DeferredRenderer;
 class EventDispatcher;
 
 class Application {
@@ -45,6 +46,8 @@ public:
 
     ImmediateRenderer* immediateRenderer();
 
+    DeferredRenderer* deferredRenderer();
+
     EventDispatcher* eventDispatcher();
 
     glm::ivec2 getWindowSize() const;
@@ -73,6 +76,7 @@ private:
     Scene* m_scene;
     SceneRenderer* m_sceneRenderer;
     ImmediateRenderer* m_immediateRenderer;
+    DeferredRenderer* m_deferredRenderer;
     EventDispatcher* m_eventDispatcher;
 
     bool m_running;

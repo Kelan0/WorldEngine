@@ -466,7 +466,7 @@ void ImmediateRenderer::uploadBuffers() {
 
         BufferConfiguration vertexBufferConfig;
         vertexBufferConfig.device = Application::instance()->graphics()->getDevice();
-        vertexBufferConfig.size = vertexBufferCapacity;
+        vertexBufferConfig.size = glm::max(vertexBufferCapacity, sizeof(ColouredVertex) * 32);
         vertexBufferConfig.usage = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
 //        vertexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;// | vk::MemoryPropertyFlagBits::eHostVisible;
         vertexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
@@ -480,7 +480,7 @@ void ImmediateRenderer::uploadBuffers() {
 
         BufferConfiguration indexBufferConfig;
         indexBufferConfig.device = Application::instance()->graphics()->getDevice();
-        indexBufferConfig.size = indexBufferCapacity;
+        indexBufferConfig.size = glm::max(indexBufferCapacity, sizeof(uint32_t) * 32);
         indexBufferConfig.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
 //        indexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;// | vk::MemoryPropertyFlagBits::eHostVisible;
         indexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
@@ -494,7 +494,7 @@ void ImmediateRenderer::uploadBuffers() {
 
         BufferConfiguration uniformBufferConfig;
         uniformBufferConfig.device = Application::instance()->graphics()->getDevice();
-        uniformBufferConfig.size = uniformBufferCapacity;
+        uniformBufferConfig.size = glm::max(uniformBufferCapacity, sizeof(UniformBufferData) * 4);
         uniformBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         uniformBufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer;
 

@@ -31,6 +31,13 @@ RenderPass::RenderPass(std::weak_ptr<vkr::Device> device, vk::RenderPass renderP
     m_device(device),
     m_renderPass(renderPass),
     m_config(config) {
+
+    m_colourAttachmentCount = 0;
+    for (const auto& attachment : config.renderPassAttachments) {
+        if (!isDepthAttachment(attachment.format) && !isStencilAttachment(attachment.format))
+            ++m_colourAttachmentCount; // We are assuming anything that is not depth/stencil is colour. Is this assumption correct?
+    }
+
 }
 
 RenderPass::~RenderPass() {
@@ -96,4 +103,34 @@ const RenderPassConfiguration& RenderPass::getConfiguration() const {
 
 size_t RenderPass::getAttachmentCount() const {
     return m_config.renderPassAttachments.size();
+}
+
+size_t RenderPass::getColourAttachmentCount() const {
+    return m_colourAttachmentCount;
+}
+
+bool RenderPass::isDepthAttachment(const vk::Format& format) {
+    switch (format) {
+        case vk::Format::eD16Unorm:
+        case vk::Format::eX8D24UnormPack32:
+        case vk::Format::eD32Sfloat:
+        case vk::Format::eD16UnormS8Uint:
+        case vk::Format::eD24UnormS8Uint:
+        case vk::Format::eD32SfloatS8Uint:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool RenderPass::isStencilAttachment(const vk::Format& format) {
+    switch (format) {
+        case vk::Format::eS8Uint:
+        case vk::Format::eD16UnormS8Uint:
+        case vk::Format::eD24UnormS8Uint:
+        case vk::Format::eD32SfloatS8Uint:
+            return true;
+        default:
+            return false;
+    }
 }
