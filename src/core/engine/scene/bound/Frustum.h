@@ -54,6 +54,13 @@ public:
 
     const glm::dvec3& getCorner(const uint32_t& cornerIndex) const;
 
+    void drawLines();
+
+    void drawFill();
+
+private:
+    void getRenderCorners(glm::dvec3* corners) const;
+
 private:
     Plane m_planes[NumPlanes];
     mutable glm::dvec3 m_corners[NumCorners];

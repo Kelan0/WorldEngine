@@ -229,6 +229,9 @@ class App : public Application {
         }
     }
 
+    Frustum frustum;
+    bool pauseFrustum = false;
+
     void render(double dt) override {
         PROFILE_SCOPE("custom render")
         handleUserInput(dt);
@@ -244,6 +247,7 @@ class App : public Application {
         immediateRenderer()->matrixMode(MatrixMode_ModelView);
         immediateRenderer()->pushMatrix();
         immediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
+        immediateRenderer()->pushMatrix();
         immediateRenderer()->translate(2.0F, 2.0F, 0.0F);
 
         immediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
@@ -269,19 +273,32 @@ class App : public Application {
         immediateRenderer()->vertex(1.0F, 1.0F, 0.0F);
         immediateRenderer()->vertex(0.0F, 1.0F, 0.0F);
         immediateRenderer()->end();
+        immediateRenderer()->popMatrix(MatrixMode_ModelView);
 
-        immediateRenderer()->setLineWidth(1.0F);
-        immediateRenderer()->begin(PrimitiveType_LineLoop);
-        immediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
-        immediateRenderer()->vertex(-0.1F, -0.1F, 0.0F);
-        immediateRenderer()->vertex(1.1F, -0.1F, 0.0F);
-        immediateRenderer()->vertex(1.1F, 1.1F, 0.0F);
-        immediateRenderer()->vertex(-0.1F, 1.1F, 0.0F);
-        immediateRenderer()->end();
+        if (input()->keyPressed(SDL_SCANCODE_F)) {
+            if (!pauseFrustum) {
+                pauseFrustum = true;
+                frustum.set(cameraTransform, cameraProjection);
+            } else {
+                pauseFrustum = false;
+            }
+        }
+
+        if (pauseFrustum) {
+            immediateRenderer()->setBlendEnabled(true);
+            immediateRenderer()->setDepthTestEnabled(true);
+            immediateRenderer()->colour(1.0F, 0.0F, 0.0F, 0.25F);
+            frustum.drawFill();
+
+            immediateRenderer()->setLineWidth(1.0F);
+            immediateRenderer()->setBlendEnabled(false);
+            immediateRenderer()->setDepthTestEnabled(false);
+            immediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
+            frustum.drawLines();
+        }
 
         immediateRenderer()->popMatrix(MatrixMode_ModelView);
         immediateRenderer()->popMatrix(MatrixMode_Projection);
-
 
 //        Frustum frustum(cameraTransform, cameraProjection);
 //

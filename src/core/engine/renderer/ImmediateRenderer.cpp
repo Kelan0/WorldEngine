@@ -66,12 +66,13 @@ ImmediateRenderer::ImmediateRenderer():
         m_vertexCount(0),
         m_indexCount(0),
         m_firstChangedVertex(0),
-        m_firstChangedIndex(0),
-        m_normal(0.0, 0.0, 0.0),
-        m_texture(0.0, 0.0),
-        m_colour(255, 255, 255, 255) {
+        m_firstChangedIndex(0) {
     m_modelMatrixStack.push(glm::mat4(1.0F));
     m_projectionMatrixStack.push(glm::mat4(1.0F));
+
+    colour(glm::u8vec4(255, 255, 255, 255));
+    normal(glm::vec3(0.0F, 0.0F, 0.0F));
+    texture(glm::vec2(0.0F, 0.0F));
 }
 
 ImmediateRenderer::~ImmediateRenderer() {
@@ -147,6 +148,10 @@ void ImmediateRenderer::render(double dt) {
     m_indexCount = 0;
     m_firstChangedVertex = SIZE_MAX;
     m_firstChangedIndex = SIZE_MAX;
+
+    colour(glm::u8vec4(255, 255, 255, 255));
+    normal(glm::vec3(0.0F, 0.0F, 0.0F));
+    texture(glm::vec2(0.0F, 0.0F));
 }
 
 void ImmediateRenderer::begin(const MeshPrimitiveType& primitiveType) {
@@ -179,10 +184,6 @@ void ImmediateRenderer::begin(const MeshPrimitiveType& primitiveType) {
 //           m_currentCommand->projectionMatrix[0][1], m_currentCommand->projectionMatrix[1][1], m_currentCommand->projectionMatrix[2][1], m_currentCommand->projectionMatrix[3][1],
 //           m_currentCommand->projectionMatrix[0][2], m_currentCommand->projectionMatrix[1][2], m_currentCommand->projectionMatrix[2][2], m_currentCommand->projectionMatrix[3][2],
 //           m_currentCommand->projectionMatrix[0][3], m_currentCommand->projectionMatrix[1][3], m_currentCommand->projectionMatrix[2][3], m_currentCommand->projectionMatrix[3][3]);
-
-    colour(glm::u8vec4(255, 255, 255, 255));
-    normal(glm::vec3(0.0F, 0.0F, 0.0F));
-    texture(glm::vec2(0.0F, 0.0F));
 }
 
 void ImmediateRenderer::end() {

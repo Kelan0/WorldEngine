@@ -1,8 +1,6 @@
-//
-// Created by Kelan on 19/04/2022.
-//
-
-#include "Frustum.h"
+#include "core/engine/scene/bound/Frustum.h"
+#include "core/engine/renderer/ImmediateRenderer.h"
+#include "core/application/Application.h"
 
 Frustum::Frustum():
     Frustum(glm::dmat4(1.0)) {
@@ -109,5 +107,82 @@ const glm::dvec3& Frustum::getCorner(const uint32_t& cornerIndex) const {
         }
     }
     return m_corners[cornerIndex];
+}
+
+
+void Frustum::drawLines() {
+    auto* renderer = Application::instance()->immediateRenderer();
+    auto createLine = [&renderer](const glm::dvec3& a, const glm::dvec3& b) {
+        renderer->vertex(a); // 0
+        renderer->vertex(b); // 1
+    };
+
+    glm::dvec3 corners[8];
+    getRenderCorners(corners);
+
+    renderer->begin(PrimitiveType_Line);
+
+    createLine(corners[Corner_Left_Top_Near], corners[Corner_Left_Top_Far]);
+    createLine(corners[Corner_Right_Top_Near], corners[Corner_Right_Top_Far]);
+    createLine(corners[Corner_Right_Bottom_Near], corners[Corner_Right_Bottom_Far]);
+    createLine(corners[Corner_Left_Bottom_Near], corners[Corner_Left_Bottom_Far]);
+
+    createLine(corners[Corner_Left_Top_Near], corners[Corner_Right_Top_Near]);
+    createLine(corners[Corner_Right_Top_Near], corners[Corner_Right_Bottom_Near]);
+    createLine(corners[Corner_Right_Bottom_Near], corners[Corner_Left_Bottom_Near]);
+    createLine(corners[Corner_Left_Bottom_Near], corners[Corner_Left_Top_Near]);
+
+    createLine(corners[Corner_Left_Top_Far], corners[Corner_Right_Top_Far]);
+    createLine(corners[Corner_Right_Top_Far], corners[Corner_Right_Bottom_Far]);
+    createLine(corners[Corner_Right_Bottom_Far], corners[Corner_Left_Bottom_Far]);
+    createLine(corners[Corner_Left_Bottom_Far], corners[Corner_Left_Top_Far]);
+
+    renderer->end();
+}
+
+void Frustum::drawFill() {
+    auto* renderer = Application::instance()->immediateRenderer();
+    auto createQuad = [&renderer](const glm::dvec3 normal, const glm::dvec3& a, const glm::dvec3& b, const glm::dvec3& c, const glm::dvec3& d) {
+        renderer->normal(normal);
+        renderer->vertex(a); // 0
+        renderer->vertex(b); // 1
+        renderer->vertex(c); // 2
+        renderer->vertex(a); // 0
+        renderer->vertex(c); // 2
+        renderer->vertex(d); // 3
+    };
+
+    glm::dvec3 corners[8];
+    getRenderCorners(corners);
+
+    renderer->begin(PrimitiveType_Triangle);
+    createQuad(getPlane(Plane_Left).getNormal(), corners[Corner_Left_Top_Near], corners[Corner_Left_Top_Far], corners[Corner_Left_Bottom_Far], corners[Corner_Left_Bottom_Near]);
+    createQuad(getPlane(Plane_Right).getNormal(), corners[Corner_Right_Top_Far], corners[Corner_Right_Top_Near], corners[Corner_Right_Bottom_Near], corners[Corner_Right_Bottom_Far]);
+    createQuad(getPlane(Plane_Bottom).getNormal(), corners[Corner_Left_Top_Near], corners[Corner_Right_Top_Near], corners[Corner_Right_Top_Far], corners[Corner_Left_Top_Far]);
+    createQuad(getPlane(Plane_Top).getNormal(), corners[Corner_Right_Bottom_Near], corners[Corner_Left_Bottom_Near], corners[Corner_Left_Bottom_Far], corners[Corner_Right_Bottom_Far]);
+//    createQuad(getPlane(Plane_Near).getNormal(), corners[Corner_Right_Top_Near], corners[Corner_Left_Top_Near], corners[Corner_Left_Bottom_Near], corners[Corner_Right_Bottom_Near]);
+//    createQuad(getPlane(Plane_Far).getNormal(), corners[Corner_Left_Top_Far], corners[Corner_Right_Top_Far], corners[Corner_Right_Bottom_Far], corners[Corner_Left_Bottom_Far]);
+    renderer->end();
+}
+
+void Frustum::getRenderCorners(glm::dvec3* corners) const {
+    corners[Corner_Left_Top_Near] = getCorner(Corner_Left_Top_Near);
+    corners[Corner_Right_Top_Near] = getCorner(Corner_Right_Top_Near);
+    corners[Corner_Right_Bottom_Near] = getCorner(Corner_Right_Bottom_Near);
+    corners[Corner_Left_Bottom_Near] = getCorner(Corner_Left_Bottom_Near);
+    corners[Corner_Left_Top_Far] = getCorner(Corner_Left_Top_Far);
+    corners[Corner_Right_Top_Far] = getCorner(Corner_Right_Top_Far);
+    corners[Corner_Right_Bottom_Far] = getCorner(Corner_Right_Bottom_Far);
+    corners[Corner_Left_Bottom_Far] = getCorner(Corner_Left_Bottom_Far);
+
+    glm::dvec3 vTL = corners[Corner_Left_Top_Far] - corners[Corner_Left_Top_Near];
+    glm::dvec3 vTR = corners[Corner_Right_Top_Far] - corners[Corner_Right_Top_Near];
+    glm::dvec3 vBR = corners[Corner_Right_Bottom_Far] - corners[Corner_Right_Bottom_Near];
+    glm::dvec3 vBL = corners[Corner_Left_Bottom_Far] - corners[Corner_Left_Bottom_Near];
+
+    corners[Corner_Left_Top_Far] = corners[Corner_Left_Top_Near] + vTL * 0.75;
+    corners[Corner_Right_Top_Far] = corners[Corner_Right_Top_Near] + vTR * 0.75;
+    corners[Corner_Right_Bottom_Far] = corners[Corner_Right_Bottom_Near] + vBR * 0.75;
+    corners[Corner_Left_Bottom_Far] = corners[Corner_Left_Bottom_Near] + vBL * 0.75;
 }
 
