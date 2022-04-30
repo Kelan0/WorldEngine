@@ -47,6 +47,7 @@ double Sphere::getRadius() const {
 
 Sphere& Sphere::setRadius(const double& radius) {
     this->radius = radius;
+    return *this;
 }
 
 bool Sphere::containsPoint(const glm::dvec3& point) const {

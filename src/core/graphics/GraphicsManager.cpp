@@ -6,8 +6,9 @@
 #include "core/graphics/Mesh.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Buffer.h"
+#include "core/graphics/Framebuffer.h"
 #include "core/application/Application.h"
-#include "core/engine/scene/event/EventDispacher.h"
+#include "core/engine/scene/event/EventDispatcher.h"
 #include "core/engine/scene/event/Events.h"
 
 uint64_t GraphicsManager::s_nextResourceID = 0;
@@ -52,8 +53,8 @@ GraphicsManager::~GraphicsManager() {
     //DescriptorSetLayout::clearCache();
     Buffer::resetStagingBuffer();
 
-    m_swapchain.depthImageView.reset();
-    m_swapchain.depthImage.reset();
+//    m_swapchain.depthImageView.reset();
+//    m_swapchain.depthImage.reset();
     m_swapchain.commandBuffers.clear();
     m_swapchain.framebuffers.clear();
     m_swapchain.imageViews.clear();
@@ -761,36 +762,36 @@ bool GraphicsManager::createSwapchainImages() {
         m_swapchain.imageViews[i] = std::shared_ptr<ImageView2D>(ImageView2D::create(imageViewConfig));
     }
 
-    m_swapchain.depthImageView.reset();
-    m_swapchain.depthImage.reset();
+//    m_swapchain.depthImageView.reset();
+//    m_swapchain.depthImage.reset();
 
-    if (m_surface.depthFormat == vk::Format::eUndefined) {
-        printf("Unable to create depth buffer: Undefined depth format\n");
-    } else {
-
-        Image2DConfiguration depthImageConfig;
-        depthImageConfig.device = m_device.device;
-        depthImageConfig.width = m_swapchain.imageExtent.width;
-        depthImageConfig.height = m_swapchain.imageExtent.height;
-        depthImageConfig.format = m_surface.depthFormat;
-        depthImageConfig.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
-        m_swapchain.depthImage = std::shared_ptr<Image2D>(Image2D::create(depthImageConfig));
-
-        if (!m_swapchain.depthImage) {
-            printf("Failed to create depth image\n");
-        } else {
-            ImageView2DConfiguration depthImageViewConfig;
-            depthImageViewConfig.device = m_device.device;
-            depthImageViewConfig.image = m_swapchain.depthImage->getImage();
-            depthImageViewConfig.format = m_swapchain.depthImage->getFormat();
-            depthImageViewConfig.aspectMask = vk::ImageAspectFlagBits::eDepth;
-            m_swapchain.depthImageView = std::shared_ptr<ImageView2D>(ImageView2D::create(depthImageViewConfig));
-
-            if (!m_swapchain.depthImageView) {
-                printf("Failed to create depth image view\n");
-            }
-        }
-    }
+//    if (m_surface.depthFormat == vk::Format::eUndefined) {
+//        printf("Unable to create depth buffer: Undefined depth format\n");
+//    } else {
+//
+//        Image2DConfiguration depthImageConfig;
+//        depthImageConfig.device = m_device.device;
+//        depthImageConfig.width = m_swapchain.imageExtent.width;
+//        depthImageConfig.height = m_swapchain.imageExtent.height;
+//        depthImageConfig.format = m_surface.depthFormat;
+//        depthImageConfig.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
+//        m_swapchain.depthImage = std::shared_ptr<Image2D>(Image2D::create(depthImageConfig));
+//
+//        if (!m_swapchain.depthImage) {
+//            printf("Failed to create depth image\n");
+//        } else {
+//            ImageView2DConfiguration depthImageViewConfig;
+//            depthImageViewConfig.device = m_device.device;
+//            depthImageViewConfig.image = m_swapchain.depthImage->getImage();
+//            depthImageViewConfig.format = m_swapchain.depthImage->getFormat();
+//            depthImageViewConfig.aspectMask = vk::ImageAspectFlagBits::eDepth;
+//            m_swapchain.depthImageView = std::shared_ptr<ImageView2D>(ImageView2D::create(depthImageViewConfig));
+//
+//            if (!m_swapchain.depthImageView) {
+//                printf("Failed to create depth image view\n");
+//            }
+//        }
+//    }
 
     m_swapchain.imagesInFlight.clear();
     m_swapchain.imagesInFlight.resize(images.size(), VK_NULL_HANDLE);
@@ -799,52 +800,36 @@ bool GraphicsManager::createSwapchainImages() {
 }
 
 bool GraphicsManager::createSwapchainFramebuffers() {
-    m_swapchain.framebuffers.resize(m_swapchain.imageViews.size());
+    m_swapchain.framebuffers.resize(m_swapchain.imageViews.size(), nullptr);
+
+    FramebufferConfiguration framebufferConfig;
+    framebufferConfig.device = m_device.device;
+    framebufferConfig.setRenderPass(m_renderPass.get());
+    framebufferConfig.setSize(m_swapchain.imageExtent);
 
     for (int i = 0; i < m_swapchain.imageViews.size(); ++i) {
-        std::vector<vk::ImageView> attachments = {
+        framebufferConfig.attachments = {
                 m_swapchain.imageViews[i]->getImageView(),
-                m_swapchain.depthImageView->getImageView()
         };
-        vk::FramebufferCreateInfo framebufferCreateInfo;
-        framebufferCreateInfo.setRenderPass(m_renderPass->getRenderPass());
-        framebufferCreateInfo.setAttachments(attachments);
-        framebufferCreateInfo.setWidth(m_swapchain.imageExtent.width);
-        framebufferCreateInfo.setHeight(m_swapchain.imageExtent.height);
-        framebufferCreateInfo.setLayers(1);
 
-        m_swapchain.framebuffers[i] = std::make_shared<vkr::Framebuffer>(*m_device.device, framebufferCreateInfo);
+        m_swapchain.framebuffers[i] = std::shared_ptr<Framebuffer>(Framebuffer::create(framebufferConfig));
     }
     return true;
 }
 
 bool GraphicsManager::createRenderPass() {
-    RenderPassConfiguration renderPassConfig;
-    renderPassConfig.device = m_device.device;
     vk::AttachmentDescription colourAttachment;
     colourAttachment.setFormat(getColourFormat());
     colourAttachment.setSamples(vk::SampleCountFlagBits::e1);
-    colourAttachment.setLoadOp(vk::AttachmentLoadOp::eClear);
+    colourAttachment.setLoadOp(vk::AttachmentLoadOp::eDontCare);
     colourAttachment.setStoreOp(vk::AttachmentStoreOp::eStore);
     colourAttachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
     colourAttachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
     colourAttachment.setInitialLayout(vk::ImageLayout::eUndefined);
     colourAttachment.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
-    renderPassConfig.addAttachment(colourAttachment);
-    vk::AttachmentDescription depthAttachment;
-    depthAttachment.setFormat(getDepthFormat());
-    depthAttachment.setSamples(vk::SampleCountFlagBits::e1);
-    depthAttachment.setLoadOp(vk::AttachmentLoadOp::eClear);
-    depthAttachment.setStoreOp(vk::AttachmentStoreOp::eDontCare);
-    depthAttachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-    depthAttachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    depthAttachment.setInitialLayout(vk::ImageLayout::eUndefined);
-    depthAttachment.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-    renderPassConfig.addAttachment(depthAttachment);
+
     SubpassConfiguration subpassConfiguration;
     subpassConfiguration.addColourAttachment(vk::AttachmentReference(0, vk::ImageLayout::eColorAttachmentOptimal));
-    subpassConfiguration.setDepthStencilAttachment(vk::AttachmentReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal));
-    renderPassConfig.addSubpass(subpassConfiguration);
     vk::SubpassDependency subpassDependency;
     subpassDependency.setSrcSubpass(VK_SUBPASS_EXTERNAL);
     subpassDependency.setDstSubpass(0);
@@ -852,6 +837,11 @@ bool GraphicsManager::createRenderPass() {
     subpassDependency.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests);
     subpassDependency.setSrcAccessMask({});
     subpassDependency.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+
+    RenderPassConfiguration renderPassConfig;
+    renderPassConfig.device = m_device.device;
+    renderPassConfig.addAttachment(colourAttachment);
+    renderPassConfig.addSubpass(subpassConfiguration);
     renderPassConfig.addSubpassDependency(subpassDependency);
 
     m_renderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig));
@@ -913,7 +903,7 @@ bool GraphicsManager::beginFrame() {
     m_swapchain.currentImageIndex = acquireNextImageResult.value;
 
     const vk::CommandBuffer& commandBuffer = getCurrentCommandBuffer();
-    const vk::Framebuffer& framebuffer = getCurrentFramebuffer();
+    const Framebuffer* framebuffer = getCurrentFramebuffer();
 
     if (!commandBuffer || !framebuffer) {
         return false;
@@ -1009,8 +999,8 @@ const vk::CommandBuffer& GraphicsManager::getCurrentCommandBuffer() const {
     return **m_swapchain.commandBuffers[m_swapchain.currentFrameIndex];
 }
 
-const vk::Framebuffer& GraphicsManager::getCurrentFramebuffer() const {
-    return **m_swapchain.framebuffers[m_swapchain.currentImageIndex];
+const Framebuffer* GraphicsManager::getCurrentFramebuffer() const {
+    return m_swapchain.framebuffers[m_swapchain.currentImageIndex].get();
 }
 
 std::shared_ptr<vkr::Queue> GraphicsManager::getQueue(const std::string& name) const {

@@ -82,7 +82,7 @@ ImmediateRenderer::~ImmediateRenderer() {
         delete it->second;
 }
 
-void ImmediateRenderer::init() {
+bool ImmediateRenderer::init() {
 
     std::shared_ptr<DescriptorPool> descriptorPool = Application::instance()->graphics()->descriptorPool();
 
@@ -91,6 +91,8 @@ void ImmediateRenderer::init() {
     m_descriptorSetLayout = builder.addUniformBlock(0, vk::ShaderStageFlagBits::eVertex, sizeof(UniformBufferData), true).build();
 
     Application::instance()->eventDispatcher()->connect(&ImmediateRenderer::recreateSwapchain, this);
+
+    return true;
 }
 
 void ImmediateRenderer::render(double dt) {

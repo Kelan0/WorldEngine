@@ -3,8 +3,8 @@
 #include "core/engine/scene/Scene.h"
 #include "core/engine/renderer/SceneRenderer.h"
 #include "core/engine/renderer/ImmediateRenderer.h"
-#include "core/engine/renderer/DeferredRenderer.h"
-#include "core/engine/scene/event/EventDispacher.h"
+#include "core/engine/renderer/renderPasses/DeferredRenderer.h"
+#include "core/engine/scene/event/EventDispatcher.h"
 #include "core/engine/scene/event/Events.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/RenderPass.h"
@@ -23,16 +23,18 @@ Application::Application():
         m_scene(nullptr),
         m_sceneRenderer(nullptr),
         m_immediateRenderer(nullptr),
-        m_deferredRenderer(nullptr),
+        m_deferredGeometryPass(nullptr),
+        m_deferredLightingPass(nullptr),
         m_eventDispatcher(nullptr),
         m_running(false) {
 }
 
 Application::~Application() {
+    delete m_scene; // Scene is destroyed before SceneRenderer since destruction of components may interact with SceneRenderer. This might need to change.
     delete m_sceneRenderer;
     delete m_immediateRenderer;
-    delete m_deferredRenderer;
-    delete m_scene;
+    delete m_deferredGeometryPass;
+    delete m_deferredLightingPass;
     delete m_inputHandler;
     delete m_graphics;
     delete m_eventDispatcher;
@@ -84,21 +86,29 @@ bool Application::initInternal() {
     PROFILE_REGION("Init Scene")
     m_scene = new Scene();
     m_scene->init();
-    m_eventDispatcher->repeatAll(m_scene->getEventDispacher());
+    m_eventDispatcher->repeatAll(m_scene->getEventDispatcher());
 
 
     PROFILE_REGION("Init SceneRenderer")
     m_sceneRenderer = new SceneRenderer();
     m_sceneRenderer->setScene(m_scene);
-    m_sceneRenderer->init();
+    if (!m_sceneRenderer->init())
+        return false;
 
     PROFILE_REGION("Init ImmediateRenderer")
     m_immediateRenderer = new ImmediateRenderer();
-    m_immediateRenderer->init();
+    if (!m_immediateRenderer->init())
+        return false;
 
-    PROFILE_REGION("Init DeferredRenderer")
-    m_deferredRenderer = new DeferredRenderer();
-    m_deferredRenderer->init();
+    PROFILE_REGION("Init DeferredRenderer geometry pass")
+    m_deferredGeometryPass = new DeferredGeometryRenderPass();
+    if (!m_deferredGeometryPass->init())
+        return false;
+
+    PROFILE_REGION("Init DeferredRenderer lighting pass")
+    m_deferredLightingPass = new DeferredLightingRenderPass(m_deferredGeometryPass);
+    if (!m_deferredLightingPass->init())
+        return false;
 
     PROFILE_REGION("Init Application")
     init();
@@ -114,29 +124,20 @@ void Application::renderInternal(double dt) {
     PROFILE_SCOPE("Application::renderInternal")
 
     auto& commandBuffer = graphics()->getCurrentCommandBuffer();
-    auto& framebuffer = graphics()->getCurrentFramebuffer();
+    const Framebuffer* framebuffer = graphics()->getCurrentFramebuffer();
 
-    std::array<vk::ClearValue, 2> clearValues;
-    clearValues[0].color.setFloat32({ 0.0F, 0.0F, 0.25F, 1.0F });
-    clearValues[1].depthStencil.setDepth(1.0F).setStencil(0);
+    m_deferredGeometryPass->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
 
-    vk::RenderPassBeginInfo renderPassBeginInfo;
-    renderPassBeginInfo.setRenderPass(graphics()->renderPass()->getRenderPass());
-    renderPassBeginInfo.setFramebuffer(framebuffer);
-    renderPassBeginInfo.renderArea.setOffset({ 0, 0 });
-    renderPassBeginInfo.renderArea.setExtent(graphics()->getImageExtent());
-    renderPassBeginInfo.setClearValues(clearValues);
-
-    commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
     PROFILE_REGION("Application::render - Implementation")
     render(dt);
     PROFILE_END_REGION()
 
     m_sceneRenderer->render(dt);
     m_immediateRenderer->render(dt);
-    m_deferredRenderer->render(dt);
 
     commandBuffer.endRenderPass();
+
+    m_deferredLightingPass->renderScreen(dt);
 }
 
 void Application::processEventsInternal() {
@@ -325,8 +326,12 @@ ImmediateRenderer* Application::immediateRenderer() {
     return m_immediateRenderer;
 }
 
-DeferredRenderer* Application::deferredRenderer() {
-    return m_deferredRenderer;
+DeferredGeometryRenderPass* Application::deferredGeometryPass() {
+    return m_deferredGeometryPass;
+}
+
+DeferredLightingRenderPass* Application::deferredLightingPass() {
+    return m_deferredLightingPass;
 }
 
 EventDispatcher* Application::eventDispatcher() {

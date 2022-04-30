@@ -1,7 +1,7 @@
 #include "core/engine/renderer/SceneRenderer.h"
 #include "core/engine/renderer/RenderCamera.h"
 #include "core/engine/renderer/RenderComponent.h"
-#include "core/engine/scene/event/EventDispacher.h"
+#include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/scene/Scene.h"
 #include "core/engine/scene/Transform.h"
 #include "core/application/Application.h"
@@ -75,8 +75,8 @@ SceneRenderer::~SceneRenderer() {
     }
 }
 
-void SceneRenderer::init() {
-    m_graphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Application::instance()->graphics()->getDevice()));
+bool SceneRenderer::init() {
+//    m_graphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Application::instance()->graphics()->getDevice()));
 
     initMissingTexture();
 
@@ -125,14 +125,16 @@ void SceneRenderer::init() {
     }
 
     m_scene->enableEvents<RenderComponent>();
-    m_scene->getEventDispacher()->connect<ComponentAddedEvent<RenderComponent>>(&SceneRenderer::onRenderComponentAdded, this);
-    m_scene->getEventDispacher()->connect<ComponentRemovedEvent<RenderComponent>>(&SceneRenderer::onRenderComponentRemoved, this);
+    m_scene->getEventDispatcher()->connect<ComponentAddedEvent<RenderComponent>>(&SceneRenderer::onRenderComponentAdded, this);
+    m_scene->getEventDispatcher()->connect<ComponentRemovedEvent<RenderComponent>>(&SceneRenderer::onRenderComponentRemoved, this);
 
     m_needsSortEntities[RenderComponent::UpdateType_Static] = true;
     m_needsSortEntities[RenderComponent::UpdateType_Dynamic] = true;
     m_needsSortEntities[RenderComponent::UpdateType_Always] = true;
 
     Application::instance()->eventDispatcher()->connect(&SceneRenderer::recreateSwapchain, this);
+
+    return true;
 }
 
 void SceneRenderer::render(double dt) {
@@ -238,8 +240,10 @@ void SceneRenderer::recordRenderCommands(double dt, vk::CommandBuffer commandBuf
 
     std::vector<uint32_t> dynamicOffsets = {};
 
-    m_graphicsPipeline->bind(commandBuffer);
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_graphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
+    const auto graphicsPipeline = Application::instance()->deferredGeometryPass()->getGraphicsPipeline();
+//    const auto graphicsPipeline = m_graphicsPipeline;
+    graphicsPipeline->bind(commandBuffer);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
 
 
     PROFILE_REGION("Draw meshes")
@@ -733,18 +737,18 @@ void SceneRenderer::notifyEntityModified(const uint32_t& entityIndex) {
 }
 
 void SceneRenderer::recreateSwapchain(const RecreateSwapchainEvent& event) {
-    printf("Recreating SceneRenderer pipeline\n");
-    GraphicsPipelineConfiguration pipelineConfig;
-    pipelineConfig.device = Application::instance()->graphics()->getDevice();
-    pipelineConfig.renderPass = Application::instance()->graphics()->renderPass();
-    pipelineConfig.setViewport(0, 0); // Default to full window resolution
-
-    pipelineConfig.vertexShader = "res/shaders/main.vert";
-    pipelineConfig.fragmentShader = "res/shaders/main.frag";
-    pipelineConfig.vertexInputBindings = MeshUtils::getVertexBindingDescriptions<Vertex>();
-    pipelineConfig.vertexInputAttributes = MeshUtils::getVertexAttributeDescriptions<Vertex>();
-    initPipelineDescriptorSetLayouts(pipelineConfig);
-    m_graphicsPipeline->recreate(pipelineConfig);
+//    printf("Recreating SceneRenderer pipeline\n");
+//    GraphicsPipelineConfiguration pipelineConfig;
+//    pipelineConfig.device = Application::instance()->graphics()->getDevice();
+//    pipelineConfig.renderPass = Application::instance()->graphics()->renderPass();
+//    pipelineConfig.setViewport(0, 0); // Default to full window resolution
+//
+//    pipelineConfig.vertexShader = "res/shaders/main.vert";
+//    pipelineConfig.fragmentShader = "res/shaders/main.frag";
+//    pipelineConfig.vertexInputBindings = MeshUtils::getVertexBindingDescriptions<Vertex>();
+//    pipelineConfig.vertexInputAttributes = MeshUtils::getVertexAttributeDescriptions<Vertex>();
+//    initPipelineDescriptorSetLayouts(pipelineConfig);
+//    m_graphicsPipeline->recreate(pipelineConfig);
 }
 
 void SceneRenderer::onRenderComponentAdded(const ComponentAddedEvent<RenderComponent>& event) {

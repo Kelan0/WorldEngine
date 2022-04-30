@@ -35,7 +35,7 @@ public:
 
     ~SceneRenderer();
 
-    void init();
+    bool init();
 
     void render(double dt);
 
@@ -123,7 +123,7 @@ private:
     std::vector<uint32_t> m_sortedModifiedEntities;
     std::vector<std::pair<size_t, size_t>> m_objectBufferModifiedRegions;
 
-    std::shared_ptr<GraphicsPipeline> m_graphicsPipeline;
+//    std::shared_ptr<GraphicsPipeline> m_graphicsPipeline;
 };
 
 

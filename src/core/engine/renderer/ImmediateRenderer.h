@@ -5,7 +5,7 @@
 #include "core/graphics/Mesh.h"
 #include "core/graphics/GraphicsPipeline.h"
 #include "core/engine/geometry/MeshData.h"
-#include "core/engine/scene/event/EventDispacher.h"
+#include "core/engine/scene/event/EventDispatcher.h"
 #include "core/engine/scene/event/Events.h"
 
 #define IMMEDIATE_MODE_VALIDATION 1
@@ -83,7 +83,7 @@ public:
 
     ~ImmediateRenderer();
 
-    void init();
+    bool init();
 
     void render(double dt);
 

@@ -29,13 +29,13 @@ public:
 
     T* operator->() const;
 
-    T* operator[](int index) const;
+    T* operator[](const size_t& index) const;
 
-    T* get(int index) const;
+    T* get(const size_t& index) const;
 
     T* get() const;
 
-    void set(int index, T*&& resource);
+    void set(const size_t& index, T*&& resource);
 
     void set(T*&& resource);
 
@@ -71,7 +71,7 @@ inline FrameResource<T>::FrameResource(FrameResource&& move) {
 
 template<typename T>
 inline FrameResource<T>::FrameResource(std::nullptr_t) {
-    for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+    for (size_t i = 0; i < CONCURRENT_FRAMES; ++i)
         ArrayType::at(i) = nullptr;
 }
 
@@ -96,12 +96,12 @@ inline T* FrameResource<T>::operator->() const {
 }
 
 template<typename T>
-inline T* FrameResource<T>::operator[](int index) const {
+inline T* FrameResource<T>::operator[](const size_t& index) const {
     return ArrayType::at(index);
 }
 
 template<typename T>
-inline T* FrameResource<T>::get(int index) const {
+inline T* FrameResource<T>::get(const size_t& index) const {
     return ArrayType::at(index);
 }
 
@@ -111,7 +111,7 @@ inline T* FrameResource<T>::get() const {
 }
 
 template<typename T>
-inline void FrameResource<T>::set(int index, T*&& resource) {
+inline void FrameResource<T>::set(const size_t& index, T*&& resource) {
     if (get(index) == resource)
         return;
     delete ArrayType::at(index);
@@ -125,13 +125,13 @@ inline void FrameResource<T>::set(T*&& resource) {
 
 template<typename T>
 inline void FrameResource<T>::set(ArrayType& resource) {
-    for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+    for (size_t i = 0; i < CONCURRENT_FRAMES; ++i)
         set(i, std::move(resource[i]));
 }
 
 template<typename T>
 inline void FrameResource<T>::reset() {
-    for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+    for (size_t i = 0; i < CONCURRENT_FRAMES; ++i)
         set(i, nullptr);
 }
 
@@ -174,7 +174,7 @@ template<typename ...Args>
 inline bool FrameResource<T>::create(FrameResource<T>& outResource, Args && ...args) {
     ArrayType resource;
 
-    for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
+    for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         resource[i] = T::create(std::forward<Args>(args)...);
         if (resource[i] == NULL) {
             for (; i >= 0; --i) delete resource[i];

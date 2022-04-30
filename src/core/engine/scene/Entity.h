@@ -10,9 +10,9 @@ struct EntityNameComponent {
     std::string name;
 };
 
-class EntityEventDispacher {
+class EntityEventDispatcher {
 public:
-    entt::dispatcher dispacher;
+    entt::dispatcher dispatcher;
 };
 
 class Scene;

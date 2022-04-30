@@ -12,7 +12,7 @@
 #include "core/engine/scene/EntityHierarchy.h"
 #include "core/engine/scene/Transform.h"
 #include "core/engine/scene/Camera.h"
-#include "core/engine/scene/event/EventDispacher.h"
+#include "core/engine/scene/event/EventDispatcher.h"
 #include "core/engine/scene/event/Events.h"
 #include "core/engine/renderer/RenderComponent.h"
 #include "core/engine/renderer/RenderCamera.h"

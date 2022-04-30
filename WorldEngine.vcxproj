@@ -174,13 +174,20 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClCompile Include="src\core\application\Application.cpp" />
     <ClCompile Include="src\core\application\InputHandler.cpp" />
     <ClCompile Include="src\core\engine\geometry\MeshData.cpp" />
+    <ClCompile Include="src\core\engine\renderer\ImmediateRenderer.cpp" />
     <ClCompile Include="src\core\engine\renderer\RenderCamera.cpp" />
     <ClCompile Include="src\core\engine\renderer\RenderComponent.cpp" />
+    <ClCompile Include="src\core\engine\renderer\renderPasses\DeferredRenderer.cpp" />
     <ClCompile Include="src\core\engine\renderer\RenderProperties.cpp" />
     <ClCompile Include="src\core\engine\renderer\SceneRenderer.cpp" />
+    <ClCompile Include="src\core\engine\scene\bound\Frustum.cpp" />
+    <ClCompile Include="src\core\engine\scene\bound\Intersection.cpp" />
+    <ClCompile Include="src\core\engine\scene\bound\Plane.cpp" />
+    <ClCompile Include="src\core\engine\scene\bound\Sphere.cpp" />
     <ClCompile Include="src\core\engine\scene\Camera.cpp" />
     <ClCompile Include="src\core\engine\scene\Entity.cpp" />
     <ClCompile Include="src\core\engine\scene\EntityHierarchy.cpp" />
+    <ClCompile Include="src\core\engine\scene\event\EventDispatcher.cpp" />
     <ClCompile Include="src\core\engine\scene\event\EventDispatcher.cpp" />
     <ClCompile Include="src\core\engine\scene\Scene.cpp" />
     <ClCompile Include="src\core\engine\scene\Transform.cpp" />
@@ -188,11 +195,13 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClCompile Include="src\core\graphics\CommandPool.cpp" />
     <ClCompile Include="src\core\graphics\DescriptorSet.cpp" />
     <ClCompile Include="src\core\graphics\DeviceMemory.cpp" />
+    <ClCompile Include="src\core\graphics\Framebuffer.cpp" />
     <ClCompile Include="src\core\graphics\FrameResource.cpp" />
     <ClCompile Include="src\core\graphics\GraphicsManager.cpp" />
     <ClCompile Include="src\core\graphics\GraphicsPipeline.cpp" />
     <ClCompile Include="src\core\graphics\Image.cpp" />
     <ClCompile Include="src\core\graphics\Mesh.cpp" />
+    <ClCompile Include="src\core\graphics\RenderPass.cpp" />
     <ClCompile Include="src\core\graphics\Texture.cpp" />
     <ClCompile Include="src\core\stb_image_impl.cpp" />
     <ClCompile Include="src\core\thread\Scheduler.cpp" />
@@ -201,9 +210,11 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClCompile Include="src\core\thread\ThreadUtils.cpp" />
     <ClCompile Include="src\core\util\DebugUtils.cpp" />
     <ClCompile Include="src\core\util\DenseFlagArray.cpp" />
+    <ClCompile Include="src\core\util\EntityChangeTracker.cpp" />
     <ClCompile Include="src\core\util\Exception.cpp" />
     <ClCompile Include="src\core\util\Profiler.cpp" />
     <ClCompile Include="src\core\util\Util.cpp" />
+    <ClCompile Include="src\core\Vulkan.cpp" />
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -211,13 +222,20 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClInclude Include="src\core\application\InputHandler.h" />
     <ClInclude Include="src\core\core.h" />
     <ClInclude Include="src\core\engine\geometry\MeshData.h" />
+    <ClInclude Include="src\core\engine\renderer\ImmediateRenderer.h" />
     <ClInclude Include="src\core\engine\renderer\RenderCamera.h" />
     <ClInclude Include="src\core\engine\renderer\RenderComponent.h" />
+    <ClInclude Include="src\core\engine\renderer\renderPasses\DeferredRenderer.h" />
     <ClInclude Include="src\core\engine\renderer\RenderProperties.h" />
     <ClInclude Include="src\core\engine\renderer\SceneRenderer.h" />
+    <ClInclude Include="src\core\engine\scene\bound\Frustum.h" />
+    <ClInclude Include="src\core\engine\scene\bound\Intersection.h" />
+    <ClInclude Include="src\core\engine\scene\bound\Plane.h" />
+    <ClInclude Include="src\core\engine\scene\bound\Sphere.h" />
     <ClInclude Include="src\core\engine\scene\Camera.h" />
     <ClInclude Include="src\core\engine\scene\Entity.h" />
     <ClInclude Include="src\core\engine\scene\EntityHierarchy.h" />
+    <ClInclude Include="src\core\engine\scene\event\EventDispatcher.h" />
     <ClInclude Include="src\core\engine\scene\event\EventDispatcher.h" />
     <ClInclude Include="src\core\engine\scene\event\Events.h" />
     <ClInclude Include="src\core\engine\scene\Scene.h" />
@@ -226,11 +244,13 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClInclude Include="src\core\graphics\CommandPool.h" />
     <ClInclude Include="src\core\graphics\DescriptorSet.h" />
     <ClInclude Include="src\core\graphics\DeviceMemory.h" />
+    <ClInclude Include="src\core\graphics\Framebuffer.h" />
     <ClInclude Include="src\core\graphics\FrameResource.h" />
     <ClInclude Include="src\core\graphics\GraphicsManager.h" />
     <ClInclude Include="src\core\graphics\GraphicsPipeline.h" />
     <ClInclude Include="src\core\graphics\Image.h" />
     <ClInclude Include="src\core\graphics\Mesh.h" />
+    <ClInclude Include="src\core\graphics\RenderPass.h" />
     <ClInclude Include="src\core\graphics\Texture.h" />
     <ClInclude Include="src\core\hash.h" />
     <ClInclude Include="src\core\thread\Scheduler.h" />
@@ -239,9 +259,11 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClInclude Include="src\core\thread\ThreadUtils.h" />
     <ClInclude Include="src\core\util\DebugUtils.h" />
     <ClInclude Include="src\core\util\DenseFlagArray.h" />
+    <ClInclude Include="src\core\util\EntityChangeTracker.h" />
     <ClInclude Include="src\core\util\Exception.h" />
     <ClInclude Include="src\core\util\Profiler.h" />
     <ClInclude Include="src\core\util\Util.h" />
+    <ClInclude Include="src\core\Vulkan.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

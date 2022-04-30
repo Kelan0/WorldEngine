@@ -112,9 +112,16 @@ struct ImageRegion {
 };
 
 
+namespace ImageUtil {
+    bool isDepthAttachment(const vk::Format& format);
+
+    bool isStencilAttachment(const vk::Format& format);
+}
+
+
 struct Image2DConfiguration {
     std::weak_ptr<vkr::Device> device;
-    ImageData* imageData = NULL;
+    const ImageData* imageData = NULL;
     std::string filePath = "";
     uint32_t width = 0;
     uint32_t height = 0;
@@ -125,6 +132,16 @@ struct Image2DConfiguration {
     bool enabledTexelAccess = false;
     bool preInitialized = false;
     vk::MemoryPropertyFlags memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+
+    void setSize(const uint32_t& width, const uint32_t& height);
+
+    void setSize(const glm::uvec2& size);
+
+    void setSize(const vk::Extent2D& size);
+
+    void setSource(const ImageData* imageData);
+
+    void setSource(const std::string& filePath);
 };
 
 class Image2D {
@@ -186,6 +203,10 @@ struct ImageView2DConfiguration {
     vk::ComponentSwizzle greenSwizzle = vk::ComponentSwizzle::eIdentity;
     vk::ComponentSwizzle blueSwizzle = vk::ComponentSwizzle::eIdentity;
     vk::ComponentSwizzle alphaSwizzle = vk::ComponentSwizzle::eIdentity;
+
+    void setImage(const vk::Image& image);
+
+    void setImage(const Image2D* image);
 };
 
 class ImageView2D {

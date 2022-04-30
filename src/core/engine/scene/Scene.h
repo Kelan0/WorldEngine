@@ -4,7 +4,7 @@
 
 #include "core/core.h"
 #include "core/engine/scene/Entity.h"
-#include "core/engine/scene/event/EventDispacher.h"
+#include "core/engine/scene/event/EventDispatcher.h"
 #include "core/engine/scene/event/Events.h"
 #include <entt/entt.hpp>
 
@@ -51,7 +51,7 @@ public:
     template<class Component>
     void disableEvents();
 
-    EventDispatcher* getEventDispacher() const;
+    EventDispatcher* getEventDispatcher() const;
 
     entt::registry* registry();
 
@@ -64,7 +64,7 @@ private:
 
 private:
     entt::registry m_registry;
-    EventDispatcher* m_eventDispacher;
+    EventDispatcher* m_eventDispatcher;
     //std::unordered_map<entt::entity, std::vector<Entity*>> m_entityRefTracker;
 
     Entity m_mainCameraEntity;
@@ -88,7 +88,7 @@ inline void Scene::ComponentEvents<Component>::onConstruct(Scene* scene, entt::r
     ComponentAddedEvent<Component> event;
     event.entity = Entity(scene, entity);
     event.component = &event.entity.template getComponent<Component>();
-    scene->getEventDispacher()->trigger(event);
+    scene->getEventDispatcher()->trigger(event);
 }
 
 template<class Component>
@@ -96,7 +96,7 @@ inline void Scene::ComponentEvents<Component>::onDestroy(Scene* scene, entt::reg
     ComponentRemovedEvent<Component> event;
     event.entity = Entity(scene, entity);
     event.component = &event.entity.template getComponent<Component>();
-    scene->getEventDispacher()->trigger(event);
+    scene->getEventDispatcher()->trigger(event);
 }
 
 #endif //WORLDENGINE_SCENE_H

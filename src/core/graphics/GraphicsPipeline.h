@@ -4,8 +4,11 @@
 
 #include "core/core.h"
 
+#define ALWAYS_RELOAD_SHADERS
+
 class RenderPass;
 class Buffer;
+class DescriptorSetLayout;
 
 struct BlendMode {
     vk::BlendFactor src = vk::BlendFactor::eOne;
@@ -18,6 +21,10 @@ struct AttachmentBlendState {
     BlendMode colourBlendMode;
     BlendMode alphaBlendMode;
     vk::ColorComponentFlags colourWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+
+    AttachmentBlendState(const bool& blendEnable, const vk::ColorComponentFlags& colourWriteMask);
+    AttachmentBlendState(const bool& blendEnable, const uint32_t& colourWriteMask);
+    AttachmentBlendState() = default;
 
     void setColourBlendMode(const BlendMode& blendMode);
     void setColourBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op);
@@ -42,11 +49,35 @@ struct GraphicsPipelineConfiguration {
     std::weak_ptr<RenderPass> renderPass;
     std::unordered_map<vk::DynamicState, bool> dynamicStates;
 
-    void setViewport(float width, float height, float x = 0.0F, float y = 0.0F, float minDepth = 0.0F, float maxDepth = 1.0F);
+    ~GraphicsPipelineConfiguration();
+
+    void setViewport(const vk::Viewport& viewport);
+    void setViewport(const glm::vec2& size, const glm::vec2& offset = glm::vec2(0.0F, 0.0F), const float& minDepth = 0.0F, const float& maxDepth = 1.0F);
+    void setViewport(const float& width, const float& height, const float& x = 0.0F, const float& y = 0.0F, const float& minDepth = 0.0F, const float& maxDepth = 1.0F);
+
+    void addVertexInputBinding(const vk::VertexInputBindingDescription& vertexInputBinding);
+
+    void addVertexInputBinding(const uint32_t& binding, const uint32_t& stride, const vk::VertexInputRate& vertexInputRate);
+
+    void setVertexInputBindings(const vk::ArrayProxy<const vk::VertexInputBindingDescription>& vertexInputBindings);
+
+    void addVertexInputAttribute(const vk::VertexInputAttributeDescription& vertexInputAttribute);
+
+    void addVertexInputAttribute(const uint32_t& location, const uint32_t& binding, const vk::Format& format, const uint32_t& offset);
+
+    void setVertexInputAttribute(const vk::ArrayProxy<const vk::VertexInputAttributeDescription>& vertexInputAttributes);
+
+    void addDescriptorSetLayout(const vk::DescriptorSetLayout& descriptorSetLayout);
+
+    void addDescriptorSetLayout(const DescriptorSetLayout* descriptorSetLayout);
+
+    void setDescriptorSetLayouts(const vk::ArrayProxy<const vk::DescriptorSetLayout>& descriptorSetLayouts);
+
+    void setDescriptorSetLayouts(const vk::ArrayProxy<const DescriptorSetLayout*>& descriptorSetLayouts);
 
     void setDynamicState(const vk::DynamicState& dynamicState, const bool& isDynamic);
 
-    void setDynamicStates(const std::vector<vk::DynamicState>& dynamicState, const bool& isDynamic);
+    void setDynamicStates(const vk::ArrayProxy<const vk::DynamicState>& dynamicState, const bool& isDynamic);
 
     void setAttachmentBlendState(const size_t& attachmentIndex, const AttachmentBlendState& attachmentBlendState);
 };
@@ -70,7 +101,7 @@ public:
 
     static GraphicsPipeline* create(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration);
 
-    bool recreate(GraphicsPipelineConfiguration graphicsPipelineConfiguration);
+    bool recreate(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration);
 
     void bind(const vk::CommandBuffer& commandBuffer);
 

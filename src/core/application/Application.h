@@ -10,7 +10,8 @@ class InputHandler;
 class Scene;
 class SceneRenderer;
 class ImmediateRenderer;
-class DeferredRenderer;
+class DeferredGeometryRenderPass;
+class DeferredLightingRenderPass;
 class EventDispatcher;
 
 class Application {
@@ -46,7 +47,9 @@ public:
 
     ImmediateRenderer* immediateRenderer();
 
-    DeferredRenderer* deferredRenderer();
+    DeferredGeometryRenderPass* deferredGeometryPass();
+
+    DeferredLightingRenderPass* deferredLightingPass();
 
     EventDispatcher* eventDispatcher();
 
@@ -76,7 +79,8 @@ private:
     Scene* m_scene;
     SceneRenderer* m_sceneRenderer;
     ImmediateRenderer* m_immediateRenderer;
-    DeferredRenderer* m_deferredRenderer;
+    DeferredGeometryRenderPass* m_deferredGeometryPass;
+    DeferredLightingRenderPass* m_deferredLightingPass;
     EventDispatcher* m_eventDispatcher;
 
     bool m_running;

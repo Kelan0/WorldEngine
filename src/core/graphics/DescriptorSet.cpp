@@ -331,13 +331,15 @@ DescriptorSetWriter& DescriptorSetWriter::writeBuffer(uint32_t binding, const vk
 
     assert(bindingInfo.descriptorCount == 1);
 
+    size_t firstIndex = m_tempBufferInfo.size();
     m_tempBufferInfo.emplace_back(bufferInfo);
 
     vk::WriteDescriptorSet& write = m_writes.emplace_back();
     write.setDstSet(m_descriptorSet->getDescriptorSet());
     write.setDescriptorType(bindingInfo.descriptorType);
     write.setDstBinding(binding);
-    write.setPBufferInfo(&m_tempBufferInfo.back());
+    write.setPBufferInfo((vk::DescriptorBufferInfo*)(firstIndex + 1));
+    //write.setPBufferInfo(&m_tempBufferInfo.back());
     write.setDescriptorCount(1);
 
     return *this;
@@ -368,8 +370,8 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, const vk:
     assert(arrayCount > 0);
     assert((arrayIndex + arrayCount) <= bindingInfo.descriptorCount);
 
-    uint32_t firstIndex = m_tempImageInfo.size();
-    for (uint32_t i = 0; i < arrayCount; ++i) {
+    size_t firstIndex = m_tempImageInfo.size();
+    for (size_t i = 0; i < arrayCount; ++i) {
         m_tempImageInfo.emplace_back(imageInfos[i]);
     }
 
@@ -377,7 +379,10 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, const vk:
     write.setDstSet(m_descriptorSet->getDescriptorSet());
     write.setDescriptorType(bindingInfo.descriptorType);
     write.setDstBinding(binding);
-    write.setPImageInfo(&m_tempImageInfo[firstIndex]);
+    // This is a horrible hack. The pointer directly has the value of firstIndex, which is later resolved to the correct pointer.
+    // This is done because reallocation of m_tempImageInfo invalidates previous pointers.
+    write.setPImageInfo((vk::DescriptorImageInfo*)(firstIndex + 1));
+//    write.setPImageInfo(&m_tempImageInfo[firstIndex]);
     write.setDescriptorCount(arrayCount);
     write.setDstArrayElement(arrayIndex);
 
@@ -442,7 +447,10 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Texture2D
 
 bool DescriptorSetWriter::write() {
     const auto& device = m_descriptorSet->getDevice();
-    //vkDeviceWaitIdle(**device);
+    for (auto& write : m_writes) {
+        if (write.pImageInfo != nullptr) write.pImageInfo = &m_tempImageInfo[(size_t)write.pImageInfo - 1];
+        if (write.pBufferInfo != nullptr) write.pBufferInfo = &m_tempBufferInfo[(size_t)write.pBufferInfo - 1];
+    }
     device->updateDescriptorSets(m_writes, {});
     return true;
 }
@@ -586,6 +594,27 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampler(const uint32_
     vk::DescriptorSetLayoutBinding bindingInfo;
     bindingInfo.setBinding(binding);
     bindingInfo.setDescriptorType(vk::DescriptorType::eSampler);
+    bindingInfo.setDescriptorCount(arraySize);
+    bindingInfo.setStageFlags(shaderStages);
+    bindingInfo.setPImmutableSamplers(NULL);
+    m_bindings.insert(std::make_pair(binding, bindingInfo));
+    return *this;
+}
+
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampledImage(const uint32_t &binding, const vk::ShaderStageFlags &shaderStages, const size_t &arraySize) {
+#if _DEBUG
+    if (m_bindings.count(binding) != 0) {
+		printf("Unable to add DescriptorSetLayout SampledImage binding %d - The binding is already added\n", binding);
+		assert(false);
+	}
+	if (arraySize == 0) {
+		printf("Unable to add DescriptorSetLayout SampledImage binding %d - Array size must not be zero\n", binding);
+		assert(false);
+	}
+#endif
+    vk::DescriptorSetLayoutBinding bindingInfo;
+    bindingInfo.setBinding(binding);
+    bindingInfo.setDescriptorType(vk::DescriptorType::eSampledImage);
     bindingInfo.setDescriptorCount(arraySize);
     bindingInfo.setStageFlags(shaderStages);
     bindingInfo.setPImmutableSamplers(NULL);

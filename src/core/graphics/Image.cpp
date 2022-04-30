@@ -68,12 +68,12 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
         data = reinterpret_cast<uint8_t*>(stbi_loadf(filePath.c_str(), &width, &height, &channels, desiredChannelCount));
     } else {
         printf("Unable to load image \"%s\": Invalid image data format\n", filePath.c_str());
-        return NULL;
+        return nullptr;
     }
 
-    if (data == NULL) {
+    if (data == nullptr) {
         printf("Failed to load image \"%s\"\n", filePath.c_str());
-        return NULL;
+        return nullptr;
     }
 
     if (desiredChannelCount != 0) {
@@ -90,7 +90,7 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
     if (layout == ImagePixelLayout::Invalid) {
         printf("Failed to load image \"%s\": Invalid pixel layout for %d channels\n", filePath.c_str(), channels);
         stbi_image_free(data);
-        return NULL;
+        return nullptr;
     }
 
     ImagePixelFormat format =
@@ -102,7 +102,7 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
     if (format == ImagePixelFormat::Invalid) {
         printf("Failed to load image \"%s\": Invalid pixel format for %d bytes per channel\n", filePath.c_str(), channelSize);
         stbi_image_free(data);
-        return NULL;
+        return nullptr;
     }
 
     printf("Loaded load image \"%s\"\n", filePath.c_str());
@@ -132,12 +132,12 @@ ImageData* ImageData::mutate(uint8_t* data, uint32_t width, uint32_t height, Ima
 
     if (srcLayout == ImagePixelLayout::Invalid || dstLayout == ImagePixelLayout::Invalid) {
         printf("Unable to mutate image pixels: Invalid pixel layout\n");
-        return NULL;
+        return nullptr;
     }
 
     if (srcFormat == ImagePixelFormat::Invalid || dstFormat == ImagePixelFormat::Invalid) {
         printf("Unable to mutate image pixels: Invalid pixel format\n");
-        return NULL;
+        return nullptr;
     }
 
     if (srcLayout == dstLayout && srcFormat == dstFormat) {
@@ -510,7 +510,58 @@ bool ImageData::getPixelLayoutAndFormat(vk::Format format, ImagePixelLayout& out
 
 
 
+bool ImageUtil::isDepthAttachment(const vk::Format& format) {
+    switch (format) {
+        case vk::Format::eD16Unorm:
+        case vk::Format::eX8D24UnormPack32:
+        case vk::Format::eD32Sfloat:
+        case vk::Format::eD16UnormS8Uint:
+        case vk::Format::eD24UnormS8Uint:
+        case vk::Format::eD32SfloatS8Uint:
+            return true;
+        default:
+            return false;
+    }
+}
 
+bool ImageUtil::isStencilAttachment(const vk::Format& format) {
+    switch (format) {
+        case vk::Format::eS8Uint:
+        case vk::Format::eD16UnormS8Uint:
+        case vk::Format::eD24UnormS8Uint:
+        case vk::Format::eD32SfloatS8Uint:
+            return true;
+        default:
+            return false;
+    }
+}
+
+
+
+
+
+void Image2DConfiguration::setSize(const uint32_t& width, const uint32_t& height) {
+    this->width = width;
+    this->height = height;
+}
+
+void Image2DConfiguration::setSize(const glm::uvec2& size) {
+    setSize(size.x, size.y);
+}
+
+void Image2DConfiguration::setSize(const vk::Extent2D& size) {
+    setSize(size.width, size.height);
+}
+
+void Image2DConfiguration::setSource(const ImageData* imageData) {
+    this->imageData = imageData;
+    this->filePath = "";
+}
+
+void Image2DConfiguration::setSource(const std::string& filePath) {
+    this->imageData = nullptr;
+    this->filePath = filePath;
+}
 
 Image2D::Image2D(std::weak_ptr<vkr::Device> device, vk::Image image, DeviceMemoryBlock* memory, uint32_t width, uint32_t height, vk::Format format):
         m_device(device),
@@ -537,24 +588,24 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration) {
     uint32_t width = 0;
     uint32_t height = 0;
 
-    ImageData* imageData = image2DConfiguration.imageData;
-    if (imageData == NULL) {
+    const ImageData* imageData = image2DConfiguration.imageData;
+    if (imageData == nullptr) {
         if (!image2DConfiguration.filePath.empty()) {
             // This image data will stay loaded
             ImagePixelLayout pixelLayout;
             ImagePixelFormat pixelFormat;
             if (!ImageData::getPixelLayoutAndFormat(image2DConfiguration.format, pixelLayout, pixelFormat)) {
                 printf("Unable to create image: supplied image format %s has no corresponding loadable pixel format or layout\n", vk::to_string(image2DConfiguration.format).c_str());
-                return NULL;
+                return nullptr;
             }
             imageData = ImageData::load(image2DConfiguration.filePath, pixelLayout, pixelFormat);
-            if (imageData == NULL) {
-                return NULL;
+            if (imageData == nullptr) {
+                return nullptr;
             }
         }
     }
 
-    if (imageData != NULL) {
+    if (imageData != nullptr) {
         width = imageData->getWidth();
         height = imageData->getHeight();
     } else {
@@ -563,7 +614,7 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration) {
     }
 
     vk::ImageUsageFlags usage = image2DConfiguration.usage;
-    if (imageData != NULL) {
+    if (imageData != nullptr) {
         usage |= vk::ImageUsageFlagBits::eTransferDst;
     }
 
@@ -592,7 +643,7 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration) {
             printf("Unable to create image: requested image format %s is not supported by the physical device\n", vk::to_string(imageCreateInfo.format).c_str());
         else
             printf("Unable to create image: \n", vk::to_string(result).c_str());
-        return NULL;
+        return nullptr;
     }
 
     if (imageCreateInfo.extent.width > imageFormatProperties.maxExtent.width ||
@@ -601,44 +652,44 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration) {
         printf("Unable to create image: requested image extent [%d x %d x %d] is greater than the maximum supported extent for this format [%d x %d x %d]\n",
                imageCreateInfo.extent.width, imageCreateInfo.extent.height, imageCreateInfo.extent.depth,
                imageFormatProperties.maxExtent.width, imageFormatProperties.maxExtent.height, imageFormatProperties.maxExtent.depth);
-        return NULL;
+        return nullptr;
     }
 
     if (imageCreateInfo.mipLevels > imageFormatProperties.maxMipLevels) {
         printf("Unable to create image: %d requested mip levels is greated than the maximum %d mip levels supported for this format\n",
                imageCreateInfo.mipLevels, imageFormatProperties.maxMipLevels);
-        return NULL;
+        return nullptr;
     }
 
     if (imageCreateInfo.arrayLayers > imageFormatProperties.maxArrayLayers) {
         printf("Unable to create image: %d requested array layers is greated than the maximum %d array layers supported for this format\n",
                imageCreateInfo.arrayLayers, imageFormatProperties.maxArrayLayers);
-        return NULL;
+        return nullptr;
     }
 
     // TODO: validate sampleCount
     // TODO: validate maxResourceSize
 
     vk::Image image = VK_NULL_HANDLE;
-    result = device.createImage(&imageCreateInfo, NULL, &image);
+    result = device.createImage(&imageCreateInfo, nullptr, &image);
     if (result != vk::Result::eSuccess) {
         printf("Failed to create image: %s\n", vk::to_string(result).c_str());
-        return NULL;
+        return nullptr;
     }
 
     const vk::MemoryRequirements& memoryRequirements = device.getImageMemoryRequirements(image);
     DeviceMemoryBlock* memory = vmalloc(memoryRequirements, image2DConfiguration.memoryProperties);
-    if (memory == NULL) {
+    if (memory == nullptr) {
         device.destroyImage(image);
         printf("Image memory allocation failed\n");
-        return NULL;
+        return nullptr;
     }
 
     memory->bindImage(image);
 
     Image2D* returnImage = new Image2D(image2DConfiguration.device, image, memory, width, height, imageCreateInfo.format);
 
-    if (imageData != NULL) {
+    if (imageData != nullptr) {
         ImageRegion uploadRegion;
         uploadRegion.width = imageData->getWidth();
         uploadRegion.height = imageData->getHeight();
@@ -646,7 +697,7 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration) {
         if (!returnImage->upload(imageData->getData(), imageData->getPixelLayout(), imageData->getPixelFormat(), vk::ImageAspectFlagBits::eColor, uploadRegion, dstState)) {
             printf("Failed to upload buffer data\n");
             delete returnImage;
-            return NULL;
+            return nullptr;
         }
     }
 
@@ -655,8 +706,8 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration) {
 
 bool Image2D::upload(Image2D* dstImage, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
 
-    assert(dstImage != NULL);
-    assert(data != NULL);
+    assert(dstImage != nullptr);
+    assert(data != nullptr);
 
     if (pixelLayout == ImagePixelLayout::Invalid) {
         printf("Unable to upload image data: Invalid image pixel layout\n");
@@ -680,7 +731,7 @@ bool Image2D::upload(Image2D* dstImage, void* data, ImagePixelLayout pixelLayout
     }
 
     void* uploadData = data;
-    ImageData* tempImageData = NULL;
+    ImageData* tempImageData = nullptr;
 
     if (dstPixelFormat != pixelFormat || dstPixelLayout != pixelLayout) {
         tempImageData = ImageData::mutate(static_cast<uint8_t*>(data), imageRegion.width, imageRegion.height, pixelLayout, pixelFormat, dstPixelLayout, dstPixelFormat);
@@ -717,7 +768,7 @@ bool Image2D::upload(Image2D* dstImage, void* data, ImagePixelLayout pixelLayout
     bufferConfig.usage = vk::BufferUsageFlagBits::eTransferSrc;
     Buffer* srcBuffer = Buffer::create(bufferConfig);
 
-    if (tempImageData != NULL)
+    if (tempImageData != nullptr)
         delete tempImageData;
 
     const vk::Queue& transferQueue = **Application::instance()->graphics()->getQueue(QUEUE_TRANSFER_MAIN);
@@ -762,7 +813,7 @@ bool Image2D::transitionLayout(Image2D* image, vk::CommandBuffer commandBuffer, 
     vk::PipelineStageFlags srcStageFlags = srcState.pipelineStage;
     vk::PipelineStageFlags dstStageFlags = dstState.pipelineStage;
 
-    commandBuffer.pipelineBarrier(srcStageFlags, dstStageFlags, {}, 0, NULL, 0, NULL, 1, &barrier);
+    commandBuffer.pipelineBarrier(srcStageFlags, dstStageFlags, {}, 0, nullptr, 0, nullptr, 1, &barrier);
 
     return true;
 }
@@ -811,7 +862,7 @@ vk::Format Image2D::selectSupportedFormat(const vk::PhysicalDevice& physicalDevi
 }
 
 bool Image2D::validateImageRegion(Image2D* image, ImageRegion& imageRegion) {
-    if (image == NULL) {
+    if (image == nullptr) {
         return false;
     }
 
@@ -820,8 +871,8 @@ bool Image2D::validateImageRegion(Image2D* image, ImageRegion& imageRegion) {
         return false;
     }
 
-    if (imageRegion.width == VK_WHOLE_SIZE) imageRegion.width = image->getWidth() - imageRegion.x;
-    if (imageRegion.height == VK_WHOLE_SIZE) imageRegion.height = image->getHeight() - imageRegion.y;
+    if (imageRegion.width == (uint32_t)VK_WHOLE_SIZE) imageRegion.width = image->getWidth() - imageRegion.x;
+    if (imageRegion.height == (uint32_t)VK_WHOLE_SIZE) imageRegion.height = image->getHeight() - imageRegion.y;
 
     if (imageRegion.x + imageRegion.width > image->getWidth() || imageRegion.y + imageRegion.height > image->getHeight()) {
         printf("Image region out of range\n");
@@ -831,6 +882,17 @@ bool Image2D::validateImageRegion(Image2D* image, ImageRegion& imageRegion) {
     return true;
 }
 
+
+
+void ImageView2DConfiguration::setImage(const vk::Image& image) {
+    assert(image);
+    this->image = image;
+}
+
+void ImageView2DConfiguration::setImage(const Image2D* image) {
+    assert(image != nullptr);
+    setImage(image->getImage());
+}
 
 ImageView2D::ImageView2D(std::weak_ptr<vkr::Device> device, vk::ImageView imageView):
         m_device(device),
@@ -849,7 +911,7 @@ ImageView2D* ImageView2D::create(const ImageView2DConfiguration& imageView2DConf
 
     if (!imageView2DConfiguration.image) {
         printf("Unable to create 2D image view: Image is NULL\n");
-        return NULL;
+        return nullptr;
     }
 
     vk::ImageViewCreateInfo imageViewCreateInfo;
@@ -869,11 +931,11 @@ ImageView2D* ImageView2D::create(const ImageView2DConfiguration& imageView2DConf
     vk::ImageView imageView = VK_NULL_HANDLE;
 
     vk::Result result;
-    result = device.createImageView(&imageViewCreateInfo, NULL, &imageView);
+    result = device.createImageView(&imageViewCreateInfo, nullptr, &imageView);
 
     if (result != vk::Result::eSuccess) {
         printf("Failed to create image view: %s\n", vk::to_string(result).c_str());
-        return NULL;
+        return nullptr;
     }
 
     return new ImageView2D(imageView2DConfiguration.device, imageView);

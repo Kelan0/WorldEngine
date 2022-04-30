@@ -9,7 +9,7 @@
 #include "core/graphics/GraphicsManager.h"
 
 Scene::Scene() {
-    m_eventDispacher = new EventDispatcher();
+    m_eventDispatcher = new EventDispatcher();
 }
 
 Scene::~Scene() {
@@ -20,13 +20,13 @@ void Scene::init() {
     PROFILE_SCOPE("Scene::init")
     enableEvents<EntityHierarchy>();
 
-    m_eventDispacher->connect<ComponentRemovedEvent<EntityHierarchy>>([](const ComponentRemovedEvent<EntityHierarchy>& event) {
+    m_eventDispatcher->connect<ComponentRemovedEvent<EntityHierarchy>>([](const ComponentRemovedEvent<EntityHierarchy>& event) {
         for (auto it = EntityHierarchy::begin(event.entity); it != EntityHierarchy::end(event.entity); ++it)
             EntityHierarchy::detach(*it);
         EntityHierarchy::detach(event.entity);
     });
 
-    m_eventDispacher->connect<ScreenResizeEvent>(&Scene::onScreenResize, this);
+    m_eventDispatcher->connect<ScreenResizeEvent>(&Scene::onScreenResize, this);
 
     m_defaultCamera = createEntity("Default Camera");
     m_defaultCamera.addComponent<Camera>().setFovDegrees(90.0).setClippingPlanes(0.05, 500.0);
@@ -41,7 +41,7 @@ Entity Scene::createEntity(const std::string& name) {
     Entity entity(this, id);
 
     entity.addComponent<EntityNameComponent>(name);
-    EntityEventDispacher& eventDispacher = entity.addComponent<EntityEventDispacher>();
+    EntityEventDispatcher& eventDispatcher = entity.addComponent<EntityEventDispatcher>();
 
     return entity;
 }
@@ -49,7 +49,7 @@ Entity Scene::createEntity(const std::string& name) {
 void Scene::destroyEntity(const Entity& entity) {
     PROFILE_SCOPE("Scene::destroyEntity")
     if (entity) {
-        entity.getComponent<EntityEventDispacher>().dispacher.trigger<EntityDestroyEvent>(entity);
+        entity.getComponent<EntityEventDispatcher>().dispatcher.trigger<EntityDestroyEvent>(entity);
 
         entt::entity id = entity.m_entity;
         m_registry.destroy(id);
@@ -62,8 +62,8 @@ void Scene::destroyEntity(const Entity& entity) {
     }
 }
 
-EventDispatcher* Scene::getEventDispacher() const {
-    return m_eventDispacher;
+EventDispatcher* Scene::getEventDispatcher() const {
+    return m_eventDispatcher;
 }
 
 entt::registry* Scene::registry() {

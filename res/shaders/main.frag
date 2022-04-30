@@ -8,22 +8,13 @@ layout(location = 1) in vec2 fs_texture;
 layout(location = 2) in flat uint fs_textureIndex;
 
 layout(location = 0) out vec4 outColor;
-
-//layout(set = 2, binding = 0) uniform sampler2D testTexture;
+layout(location = 1) out vec4 outNormal;
 
 layout(set = 2, binding = 0) uniform sampler2D textures[];
 
 void main() {
-    //outColor = vec4(1.0, 0.0, 0.0, 1.0);
-    vec3 L = normalize(vec3(1, 1, 1));
-    vec3 N = normalize(fs_normal);
-    float NdotL = dot(N, L);
-
     vec3 albedo = texture(textures[(fs_textureIndex)], fs_texture).rgb;
-    //vec3 albedo = vec3(1.0);
 
-    vec3 surfaceColour = NdotL * albedo;
-    outColor = vec4(surfaceColour, 1.0);
-
-    //outColor = vec4(fs_texture, 0.0, 1.0);
+    outColor = vec4(albedo, 1.0);
+    outNormal = vec4(normalize(fs_normal), 0.0);
 }
