@@ -3,6 +3,7 @@
 
 #include "core/core.h"
 #include "core/engine/scene/event/Events.h"
+#include "core/engine/renderer/RenderCamera.h"
 #include "core/graphics/FrameResource.h"
 
 class GraphicsPipeline;
@@ -77,7 +78,12 @@ private:
 class DeferredLightingRenderPass {
 private:
     struct LightingPassUniformData {
-        glm::vec4 _temp;
+        glm::mat4 viewMatrix;
+        glm::mat4 projectionMatrix;
+        glm::mat4 viewProjectionMatrix;
+        glm::mat4 invViewMatrix;
+        glm::mat4 invProjectionMatrix;
+        glm::mat4 invViewProjectionMatrix;
     };
 
     struct RenderResources {
@@ -105,6 +111,7 @@ private:
     FrameResource<RenderResources> m_resources;
     std::shared_ptr<DescriptorSetLayout> m_uniformDescriptorSetLayout;
     std::array<Sampler*, NumAttachments> m_attachmentSamplers;
+    RenderCamera m_renderCamera;
 };
 
 

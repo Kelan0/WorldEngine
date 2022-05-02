@@ -160,7 +160,9 @@ void SceneRenderer::render(double dt, RenderCamera* renderCamera) {
     PROFILE_SCOPE("SceneRenderer::render")
     const uint32_t currentFrameIndex = Application::instance()->graphics()->getCurrentFrameIndex();
 
-    CameraInfoUBO cameraInfo;
+    CameraInfoUBO cameraInfo{};
+    cameraInfo.viewMatrix = renderCamera->getViewMatrix();
+    cameraInfo.projectionMatrix = renderCamera->getProjectionMatrix();
     cameraInfo.viewProjectionMatrix = renderCamera->getViewProjectionMatrix();
     m_resources->cameraInfoBuffer->upload(0, sizeof(CameraInfoUBO), &cameraInfo);
 

@@ -20,6 +20,8 @@ class Image2D;
 struct GraphicsPipelineConfiguration;
 
 struct CameraInfoUBO {
+    glm::mat4 viewMatrix;
+    glm::mat4 projectionMatrix;
     glm::mat4 viewProjectionMatrix;
 };
 

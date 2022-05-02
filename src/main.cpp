@@ -64,16 +64,21 @@ class App : public Application {
         samplerConfig.magFilter = vk::Filter::eLinear;
         std::shared_ptr<Sampler> sampler = std::shared_ptr<Sampler>(Sampler::create(samplerConfig));
 
+        MaterialConfiguration floorMaterialConfig;
+        floorMaterialConfig.setAlbedoMap(loadTexture("res/textures/blacktiles04/albedo.png", vk::Format::eR8G8B8A8Srgb, sampler));
+        floorMaterialConfig.setRoughnessMap(loadTexture("res/textures/blacktiles04/roughness.png", vk::Format::eR8G8B8A8Srgb, sampler));
+//        floorMaterialConfig.setMetallicMap(loadTexture("res/textures/blacktiles04/metallic.png", vk::Format::eR8G8B8A8Srgb, sampler));
+        floorMaterialConfig.setNormalMap(loadTexture("res/textures/blacktiles04/normal.png", vk::Format::eR8G8B8A8Srgb, sampler));
+        std::shared_ptr<Material> floorMaterial = std::shared_ptr<Material>(Material::create(floorMaterialConfig));
 
-        std::shared_ptr<Texture2D> brickAlbedoTexture = loadTexture("res/textures/Brick_Wall_017_SD/Brick_Wall_017_basecolor.jpg", vk::Format::eR8G8B8A8Srgb, sampler);
-        std::shared_ptr<Texture2D> brickRoughnessTexture = loadTexture("res/textures/Brick_Wall_017_SD/Brick_Wall_017_roughness.jpg", vk::Format::eR8G8B8A8Srgb, sampler);
-        std::shared_ptr<Texture2D> brickNormalTexture = loadTexture("res/textures/Brick_Wall_017_SD/Brick_Wall_017_normal.jpg", vk::Format::eR8G8B8A8Srgb, sampler);
+        MaterialConfiguration cubeMaterialConfig;
+        cubeMaterialConfig.setAlbedoMap(loadTexture("res/textures/mossybark02/albedo.png", vk::Format::eR8G8B8A8Srgb, sampler));
+        cubeMaterialConfig.setRoughnessMap(loadTexture("res/textures/mossybark02/roughness.png", vk::Format::eR8G8B8A8Srgb, sampler));
+//        cubeMaterialConfig.setMetallicMap(loadTexture("res/textures/mossybark02/metallic.png", vk::Format::eR8G8B8A8Srgb, sampler));
+        cubeMaterialConfig.setNormalMap(loadTexture("res/textures/mossybark02/normal.png", vk::Format::eR8G8B8A8Srgb, sampler));
+        std::shared_ptr<Material> cubeMaterial = std::shared_ptr<Material>(Material::create(cubeMaterialConfig));
 
-        MaterialConfiguration brickMaterialConfig;
-        brickMaterialConfig.setAlbedoMap(brickAlbedoTexture);
-        brickMaterialConfig.setRoughnessMap(brickRoughnessTexture);
-        brickMaterialConfig.setNormalMap(brickNormalTexture);
-        std::shared_ptr<Material> brickMaterial = std::shared_ptr<Material>(Material::create(brickMaterialConfig));
+
 
         MeshData<Vertex> testMeshData;
         testMeshData.createCuboid(glm::vec3(-0.5, -0.5F, -0.5), glm::vec3(+0.5, +0.5F, +0.5));
@@ -84,13 +89,13 @@ class App : public Application {
         std::shared_ptr<Mesh> cubeMesh = std::shared_ptr<Mesh>(Mesh::create(cubeMeshConfig));
         Entity cubeEntity = EntityHierarchy::create(scene(), "cubeEntity");
         cubeEntity.addComponent<Transform>().translate(1.6F, 0.5F, 0);
-        cubeEntity.addComponent<RenderComponent>().setMesh(cubeMesh).setMaterial(brickMaterial);
+        cubeEntity.addComponent<RenderComponent>().setMesh(cubeMesh).setMaterial(cubeMaterial);
 
         testMeshData.clear();
         auto i0 = testMeshData.addVertex(-10.0F, 0.0F, -10.0F, 0.0F, 1.0F, 0.0F, 0.0F, 0.0F);
-        auto i1 = testMeshData.addVertex(-10.0F, 0.0F, +10.0F, 0.0F, 1.0F, 0.0F, 0.0F, 10.0F);
-        auto i2 = testMeshData.addVertex(+10.0F, 0.0F, +10.0F, 0.0F, 1.0F, 0.0F, 10.0F, 10.0F);
-        auto i3 = testMeshData.addVertex(+10.0F, 0.0F, -10.0F, 0.0F, 1.0F, 0.0F, 10.0F, 0.0F);
+        auto i1 = testMeshData.addVertex(-10.0F, 0.0F, +10.0F, 0.0F, 1.0F, 0.0F, 0.0F, 4.0F);
+        auto i2 = testMeshData.addVertex(+10.0F, 0.0F, +10.0F, 0.0F, 1.0F, 0.0F, 4.0F, 4.0F);
+        auto i3 = testMeshData.addVertex(+10.0F, 0.0F, -10.0F, 0.0F, 1.0F, 0.0F, 4.0F, 0.0F);
         testMeshData.addQuad(i0, i1, i2, i3);
         testMeshData.computeTangents();
         MeshConfiguration floorMeshConfig;
@@ -100,7 +105,7 @@ class App : public Application {
 
         Entity floorEntity = EntityHierarchy::create(scene(), "floorEntity");
         floorEntity.addComponent<Transform>().translate(0.0, 0.0, 0.0);
-        floorEntity.addComponent<RenderComponent>().setMesh(floorMesh).setMaterial(brickMaterial);
+        floorEntity.addComponent<RenderComponent>().setMesh(floorMesh).setMaterial(floorMaterial);
 
 
         testMeshData.clear();
@@ -119,11 +124,29 @@ class App : public Application {
 //
         MaterialConfiguration bunnyMaterialConfig;
         bunnyMaterialConfig.setAlbedo(glm::vec3(0.8F, 0.7F, 0.6F));
+        bunnyMaterialConfig.setRoughness(0.23F);
         std::shared_ptr<Material> bunnyMaterial = std::shared_ptr<Material>(Material::create(bunnyMaterialConfig));
 
         Entity bunnyEntity = EntityHierarchy::create(scene(), "bunnyEntity");
         bunnyEntity.addComponent<Transform>().translate(0.0, 0.0, 0.0);
         bunnyEntity.addComponent<RenderComponent>().setMesh(bunnyMesh).setMaterial(bunnyMaterial);
+
+        testMeshData.clear();
+        testMeshData.createUVSphere(glm::vec3(0.0F), 0.25F, 45, 45);
+        MeshConfiguration sphereMeshConfig;
+        sphereMeshConfig.device = graphics()->getDevice();
+        sphereMeshConfig.setMeshData(&testMeshData);
+        std::shared_ptr<Mesh> sphereMesh = std::shared_ptr<Mesh>(Mesh::create(sphereMeshConfig));
+
+        MaterialConfiguration sphereMaterial0Config;
+        sphereMaterial0Config.setAlbedo(glm::vec3(0.2F));
+        sphereMaterial0Config.setMetallic(0.9F);
+        sphereMaterial0Config.setRoughness(0.4F);
+        std::shared_ptr<Material> sphereMaterial0 = std::shared_ptr<Material>(Material::create(sphereMaterial0Config));
+
+        Entity sphereEntity0 = EntityHierarchy::create(scene(), "sphereEntity0");
+        sphereEntity0.addComponent<Transform>().translate(-0.9, 0.333, 0.3);
+        sphereEntity0.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(sphereMaterial0);
 
 
         scene()->getMainCameraEntity().getComponent<Transform>().setTranslation(0.0F, 1.0F, 1.0F);

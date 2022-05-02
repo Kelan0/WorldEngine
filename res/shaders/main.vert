@@ -18,6 +18,8 @@ layout(location = 3) out vec2 fs_texture;
 layout(location = 4) out flat uint fs_objectIndex;
 
 layout(set = 0, binding = 0) uniform UBO2 {
+    mat4 viewMatrix;
+    mat4 projectionMatrix;
     mat4 viewProjectionMatrix;
 };
 
@@ -27,7 +29,8 @@ layout(set = 1, binding = 0) readonly buffer ObjectDataBuffer {
 
 void main() {
     mat4 modelMatrix = objects[gl_InstanceIndex].modelMatrix;
-    mat4 normalMatrix = mat4(1.0);//transpose(inverse(modelMatrix)); 
+    mat4 modelViewMatrix = viewMatrix * modelMatrix;
+    mat4 normalMatrix = transpose(inverse(modelViewMatrix)); 
 
     vec4 worldPos = modelMatrix * vec4(position, 1.0);
     vec3 worldNormal = normalize(vec3(normalMatrix * vec4(normal, 0.0)));

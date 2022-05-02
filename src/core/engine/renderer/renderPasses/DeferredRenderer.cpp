@@ -319,6 +319,12 @@ bool DeferredLightingRenderPass::init() {
 }
 
 void DeferredLightingRenderPass::renderScreen(double dt) {
+
+    const Entity& cameraEntity = Application::instance()->scene()->getMainCameraEntity();
+    m_renderCamera.setProjection(cameraEntity.getComponent<Camera>());
+    m_renderCamera.setTransform(cameraEntity.getComponent<Transform>());
+    m_renderCamera.update();
+
     const vk::CommandBuffer& commandBuffer = Application::instance()->graphics()->getCurrentCommandBuffer();
     const Framebuffer* framebuffer = Application::instance()->graphics()->getCurrentFramebuffer();
     const auto& renderPass = Application::instance()->graphics()->renderPass();
@@ -335,6 +341,15 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
     std::vector<vk::DescriptorSet> descriptorSets = {
             m_resources->uniformDescriptorSet->getDescriptorSet()
     };
+
+    LightingPassUniformData uniformData{};
+    uniformData.viewMatrix = m_renderCamera.getViewMatrix();
+    uniformData.projectionMatrix = m_renderCamera.getProjectionMatrix();
+    uniformData.viewProjectionMatrix = m_renderCamera.getViewProjectionMatrix();
+    uniformData.invViewMatrix = m_renderCamera.getInverseViewMatrix();
+    uniformData.invProjectionMatrix = m_renderCamera.getInverseProjectionMatrix();
+    uniformData.invViewProjectionMatrix = m_renderCamera.getInverseViewProjectionMatrix();
+    m_resources->uniformBuffer->upload(0, sizeof(LightingPassUniformData), &uniformData);
 
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_graphicsPipeline->getPipelineLayout(), 0, descriptorSets, nullptr);
 
