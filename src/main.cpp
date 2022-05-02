@@ -18,6 +18,7 @@
 #include "core/engine/renderer/RenderCamera.h"
 #include "core/engine/renderer/SceneRenderer.h"
 #include "core/engine/renderer/ImmediateRenderer.h"
+#include "core/engine/renderer/Material.h"
 #include "core/thread/ThreadUtils.h"
 #include "core/util/Profiler.h"
 #include "core/engine/scene/bound/Intersection.h"
@@ -32,48 +33,66 @@ struct UniformData {
 class App : public Application {
 
     std::vector<Image2D*> images;
+    std::vector<Sampler*> samplers;
     std::vector<std::shared_ptr<Texture2D>> textures;
     double cameraPitch = 0.0F;
     double cameraYaw = 0.0F;
 
+    std::shared_ptr<Texture2D> loadTexture(const std::string& filePath, vk::Format format, std::weak_ptr<Sampler> sampler) {
+        Image2DConfiguration imageConfig;
+        imageConfig.device = graphics()->getDevice();
+        imageConfig.filePath = filePath;
+        imageConfig.usage = vk::ImageUsageFlagBits::eSampled;
+        imageConfig.format = format;
+        Image2D* image = Image2D::create(imageConfig);
+        images.emplace_back(image);
+
+        ImageView2DConfiguration imageViewConfig;
+        imageViewConfig.device = graphics()->getDevice();
+        imageViewConfig.image = image->getImage();
+        imageViewConfig.format = format;
+
+        return std::shared_ptr<Texture2D>(Texture2D::create(imageViewConfig, sampler));
+    }
+
     void init() override {
         //eventDispatcher()->connect<ScreenResizeEvent>(&App::onScreenResize, this);
 
+        SamplerConfiguration samplerConfig;
+        samplerConfig.device = graphics()->getDevice();
+        samplerConfig.minFilter = vk::Filter::eLinear;
+        samplerConfig.magFilter = vk::Filter::eLinear;
+        std::shared_ptr<Sampler> sampler = std::shared_ptr<Sampler>(Sampler::create(samplerConfig));
 
-        Image2DConfiguration brickImageConfig;
-        brickImageConfig.device = graphics()->getDevice();
-        brickImageConfig.filePath = "res/textures/Brick_Wall_017_SD/Brick_Wall_017_basecolor.jpg";
-        brickImageConfig.usage = vk::ImageUsageFlagBits::eSampled;
-        brickImageConfig.format = vk::Format::eR8G8B8A8Srgb;
-        Image2D* brickImage = Image2D::create(brickImageConfig);
-        images.emplace_back(brickImage);
 
-        SamplerConfiguration brickTextureSamplerConfig;
-        brickTextureSamplerConfig.device = graphics()->getDevice();
-        brickTextureSamplerConfig.minFilter = vk::Filter::eLinear;
-        brickTextureSamplerConfig.magFilter = vk::Filter::eLinear;
-        ImageView2DConfiguration brickTextureImageViewConfig;
-        brickTextureImageViewConfig.device = graphics()->getDevice();
-        brickTextureImageViewConfig.image = brickImage->getImage();
-        brickTextureImageViewConfig.format = brickImage->getFormat();
-        std::shared_ptr<Texture2D> brickTexture = std::shared_ptr<Texture2D>(Texture2D::create(brickTextureImageViewConfig, brickTextureSamplerConfig));
+        std::shared_ptr<Texture2D> brickAlbedoTexture = loadTexture("res/textures/Brick_Wall_017_SD/Brick_Wall_017_basecolor.jpg", vk::Format::eR8G8B8A8Srgb, sampler);
+        std::shared_ptr<Texture2D> brickRoughnessTexture = loadTexture("res/textures/Brick_Wall_017_SD/Brick_Wall_017_roughness.jpg", vk::Format::eR8G8B8A8Srgb, sampler);
+        std::shared_ptr<Texture2D> brickNormalTexture = loadTexture("res/textures/Brick_Wall_017_SD/Brick_Wall_017_normal.jpg", vk::Format::eR8G8B8A8Srgb, sampler);
+
+        MaterialConfiguration brickMaterialConfig;
+        brickMaterialConfig.setAlbedoMap(brickAlbedoTexture);
+        brickMaterialConfig.setRoughnessMap(brickRoughnessTexture);
+        brickMaterialConfig.setNormalMap(brickNormalTexture);
+        std::shared_ptr<Material> brickMaterial = std::shared_ptr<Material>(Material::create(brickMaterialConfig));
 
         MeshData<Vertex> testMeshData;
         testMeshData.createCuboid(glm::vec3(-0.5, -0.5F, -0.5), glm::vec3(+0.5, +0.5F, +0.5));
+        testMeshData.computeTangents();
         MeshConfiguration cubeMeshConfig;
         cubeMeshConfig.device = graphics()->getDevice();
         cubeMeshConfig.setMeshData(&testMeshData);
         std::shared_ptr<Mesh> cubeMesh = std::shared_ptr<Mesh>(Mesh::create(cubeMeshConfig));
         Entity cubeEntity = EntityHierarchy::create(scene(), "cubeEntity");
         cubeEntity.addComponent<Transform>().translate(1.6F, 0.5F, 0);
-        cubeEntity.addComponent<RenderComponent>().setMesh(cubeMesh).setTexture(brickTexture);
+        cubeEntity.addComponent<RenderComponent>().setMesh(cubeMesh).setMaterial(brickMaterial);
 
         testMeshData.clear();
         auto i0 = testMeshData.addVertex(-10.0F, 0.0F, -10.0F, 0.0F, 1.0F, 0.0F, 0.0F, 0.0F);
-        auto i1 = testMeshData.addVertex(-10.0F, 0.0F, +10.0F, 0.0F, 1.0F, 0.0F, 10.0F, 0.0F);
+        auto i1 = testMeshData.addVertex(-10.0F, 0.0F, +10.0F, 0.0F, 1.0F, 0.0F, 0.0F, 10.0F);
         auto i2 = testMeshData.addVertex(+10.0F, 0.0F, +10.0F, 0.0F, 1.0F, 0.0F, 10.0F, 10.0F);
-        auto i3 = testMeshData.addVertex(+10.0F, 0.0F, -10.0F, 0.0F, 1.0F, 0.0F, 0.0F, 10.0F);
+        auto i3 = testMeshData.addVertex(+10.0F, 0.0F, -10.0F, 0.0F, 1.0F, 0.0F, 10.0F, 0.0F);
         testMeshData.addQuad(i0, i1, i2, i3);
+        testMeshData.computeTangents();
         MeshConfiguration floorMeshConfig;
         floorMeshConfig.device = graphics()->getDevice();
         floorMeshConfig.setMeshData(&testMeshData);
@@ -81,7 +100,7 @@ class App : public Application {
 
         Entity floorEntity = EntityHierarchy::create(scene(), "floorEntity");
         floorEntity.addComponent<Transform>().translate(0.0, 0.0, 0.0);
-        floorEntity.addComponent<RenderComponent>().setMesh(floorMesh);
+        floorEntity.addComponent<RenderComponent>().setMesh(floorMesh).setMaterial(brickMaterial);
 
 
         testMeshData.clear();
@@ -90,6 +109,7 @@ class App : public Application {
         glm::vec3 centerBottom = testMeshData.calculateBoundingBox() * glm::vec4(0, -1, 0, 1);
         testMeshData.translate(-1.0F * centerBottom);
         testMeshData.applyTransform();
+        testMeshData.computeTangents();
 //
         printf("Loaded bunny.obj :- %llu polygons\n", testMeshData.getPolygonCount());
         MeshConfiguration bunnyMeshConfig;
@@ -97,9 +117,13 @@ class App : public Application {
         bunnyMeshConfig.setMeshData(&testMeshData);
         std::shared_ptr<Mesh> bunnyMesh = std::shared_ptr<Mesh>(Mesh::create(bunnyMeshConfig));
 //
+        MaterialConfiguration bunnyMaterialConfig;
+        bunnyMaterialConfig.setAlbedo(glm::vec3(0.8F, 0.7F, 0.6F));
+        std::shared_ptr<Material> bunnyMaterial = std::shared_ptr<Material>(Material::create(bunnyMaterialConfig));
+
         Entity bunnyEntity = EntityHierarchy::create(scene(), "bunnyEntity");
         bunnyEntity.addComponent<Transform>().translate(0.0, 0.0, 0.0);
-        bunnyEntity.addComponent<RenderComponent>().setMesh(bunnyMesh).setTexture(brickTexture);
+        bunnyEntity.addComponent<RenderComponent>().setMesh(bunnyMesh).setMaterial(bunnyMaterial);
 
 
         scene()->getMainCameraEntity().getComponent<Transform>().setTranslation(0.0F, 1.0F, 1.0F);

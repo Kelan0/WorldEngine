@@ -1,20 +1,21 @@
 #include "core/engine/renderer/RenderComponent.h"
 #include "core/application/Application.h"
 #include "core/engine/renderer/SceneRenderer.h"
+#include "core/engine/renderer/Material.h"
 
 RenderComponent::RenderComponent():
     RenderComponent(UpdateType_Dynamic, UpdateType_Static, UpdateType_Static) {
 }
 
 RenderComponent::RenderComponent(const UpdateType& transformUpdateType,
-                const UpdateType& textureUpdateType,
+                const UpdateType& materialUpdateType,
                 const UpdateType& meshUpdateType):
         m_mesh(nullptr),
-        m_texture(nullptr),
-        m_textureIndex(0), // missing texture
+        m_material(nullptr),
+        m_materialIndex(0), // missing material
         m_entityIndex(EntityChangeTracker::INVALID_INDEX),
         m_transformUpdateType(transformUpdateType),
-        m_textureUpdateType(textureUpdateType),
+        m_materialUpdateType(materialUpdateType),
         m_meshUpdateType(meshUpdateType) {
 }
 
@@ -26,47 +27,31 @@ RenderComponent& RenderComponent::setMesh(const std::shared_ptr<Mesh>& mesh) {
     return *this;
 }
 
-RenderComponent& RenderComponent::setTexture(const std::shared_ptr<Texture2D>& texture) {
-    uint32_t textureIndex = Application::instance()->sceneRenderer()->registerTexture(texture.get());
-    if (textureIndex != m_textureIndex) {
-        Application::instance()->sceneRenderer()->notifyTextureChanged(m_entityIndex);
-        m_textureIndex = textureIndex;
-        m_texture = texture;
+RenderComponent& RenderComponent::setMaterial(const std::shared_ptr<Material>& material) {
+    uint32_t materialIndex = Application::instance()->sceneRenderer()->registerMaterial(material.get());
+    if (materialIndex != m_materialIndex) {
+        Application::instance()->sceneRenderer()->notifyMaterialChanged(m_entityIndex);
+        m_materialIndex = materialIndex;
+        m_material = material;
     }
 
     return *this;
 }
 
-//RenderComponent &RenderComponent::setTransformUpdateType(const UpdateType& updateType) {
-//    if (updateType != m_transformUpdateType) {
-//        transformUpdateTypeChangeTracker().setChanged(m_entityIndex, true);
-//        m_transformUpdateType = updateType;
-//    }
-//    return *this;
-//}
-//
-//RenderComponent &RenderComponent::setTextureUpdateType(const UpdateType& updateType) {
-//    if (updateType != m_textureUpdateType) {
-//        textureUpdateTypeChangeTracker().setChanged(m_entityIndex, true);
-//        m_textureUpdateType = updateType;
-//    }
-//    return *this;
-//}
-
 const std::shared_ptr<Mesh>& RenderComponent::mesh() const {
     return m_mesh;
 }
 
-const std::shared_ptr<Texture2D>& RenderComponent::texture() const {
-    return m_texture;
+const std::shared_ptr<Material>& RenderComponent::material() const {
+    return m_material;
 }
 
 RenderComponent::UpdateType RenderComponent::transformUpdateType() const {
     return m_transformUpdateType;
 }
 
-RenderComponent::UpdateType RenderComponent::textureUpdateType() const {
-    return m_textureUpdateType;
+RenderComponent::UpdateType RenderComponent::materialUpdateType() const {
+    return m_materialUpdateType;
 }
 
 RenderComponent::UpdateType RenderComponent::meshUpdateType() const {
@@ -79,6 +64,6 @@ void RenderComponent::reindex(RenderComponent& renderComponent, const size_t& ne
     renderComponent.m_entityIndex = newEntityIndex;
 }
 
-const uint32_t& RenderComponent::getTextureIndex() const {
-    return m_textureIndex;
+const uint32_t& RenderComponent::getMaterialIndex() const {
+    return m_materialIndex;
 }

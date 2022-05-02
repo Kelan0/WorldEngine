@@ -67,11 +67,11 @@ GraphicsPipeline* DeferredGeometryRenderPass::getGraphicsPipeline() const {
 }
 
 ImageView2D* DeferredGeometryRenderPass::getAlbedoImageView() const {
-    return m_resources->imageViews[Attachment_Albedo];
+    return m_resources->imageViews[Attachment_AlbedoRGB_Roughness];
 }
 
 ImageView2D* DeferredGeometryRenderPass::getNormalImageView() const {
-    return m_resources->imageViews[Attachment_Normal];
+    return m_resources->imageViews[Attachment_NormalXYZ_Metallic];
 }
 
 ImageView2D* DeferredGeometryRenderPass::getDepthImageView() const {
@@ -80,8 +80,8 @@ ImageView2D* DeferredGeometryRenderPass::getDepthImageView() const {
 
 vk::Format DeferredGeometryRenderPass::getAttachmentFormat(const uint32_t& attachment) const {
     switch (attachment) {
-        case Attachment_Albedo: return vk::Format::eR8G8B8A8Unorm;
-        case Attachment_Normal: return vk::Format::eR16G16B16A16Sfloat;
+        case Attachment_AlbedoRGB_Roughness: return vk::Format::eR8G8B8A8Unorm;
+        case Attachment_NormalXYZ_Metallic: return vk::Format::eR16G16B16A16Sfloat;
         case Attachment_Depth: return Application::instance()->graphics()->getDepthFormat();
         default:
             assert(false);
@@ -127,22 +127,22 @@ bool DeferredGeometryRenderPass::createFramebuffer(RenderResources* resources) {
     imageViewConfig.device = Application::instance()->graphics()->getDevice();
 
     // Albedo image
-    imageConfig.format = getAttachmentFormat(Attachment_Albedo);
+    imageConfig.format = getAttachmentFormat(Attachment_AlbedoRGB_Roughness);
     imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;
-    resources->images[Attachment_Albedo] = Image2D::create(imageConfig);
-    imageViewConfig.format = getAttachmentFormat(Attachment_Albedo);
+    resources->images[Attachment_AlbedoRGB_Roughness] = Image2D::create(imageConfig);
+    imageViewConfig.format = getAttachmentFormat(Attachment_AlbedoRGB_Roughness);
     imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
-    imageViewConfig.setImage(resources->images[Attachment_Albedo]);
-    resources->imageViews[Attachment_Albedo] = ImageView2D::create(imageViewConfig);
+    imageViewConfig.setImage(resources->images[Attachment_AlbedoRGB_Roughness]);
+    resources->imageViews[Attachment_AlbedoRGB_Roughness] = ImageView2D::create(imageViewConfig);
 
     // Normal image
-    imageConfig.format = getAttachmentFormat(Attachment_Normal);
+    imageConfig.format = getAttachmentFormat(Attachment_NormalXYZ_Metallic);
     imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;
-    resources->images[Attachment_Normal] = Image2D::create(imageConfig);
-    imageViewConfig.format = getAttachmentFormat(Attachment_Normal);
+    resources->images[Attachment_NormalXYZ_Metallic] = Image2D::create(imageConfig);
+    imageViewConfig.format = getAttachmentFormat(Attachment_NormalXYZ_Metallic);
     imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
-    imageViewConfig.setImage(resources->images[Attachment_Normal]);
-    resources->imageViews[Attachment_Normal] = ImageView2D::create(imageViewConfig);
+    imageViewConfig.setImage(resources->images[Attachment_NormalXYZ_Metallic]);
+    resources->imageViews[Attachment_NormalXYZ_Metallic] = ImageView2D::create(imageViewConfig);
 
     // Depth image
     imageConfig.format = getAttachmentFormat(Attachment_Depth);
@@ -188,23 +188,23 @@ bool DeferredGeometryRenderPass::createRenderPass() {
 
     std::array<vk::AttachmentDescription, NumAttachments> attachments;
 
-    attachments[Attachment_Albedo].setFormat(getAttachmentFormat(Attachment_Albedo));
-    attachments[Attachment_Albedo].setSamples(samples);
-    attachments[Attachment_Albedo].setLoadOp(vk::AttachmentLoadOp::eClear); // could be eDontCare ?
-    attachments[Attachment_Albedo].setStoreOp(vk::AttachmentStoreOp::eStore);
-    attachments[Attachment_Albedo].setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-    attachments[Attachment_Albedo].setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    attachments[Attachment_Albedo].setInitialLayout(vk::ImageLayout::eUndefined);
-    attachments[Attachment_Albedo].setFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+    attachments[Attachment_AlbedoRGB_Roughness].setFormat(getAttachmentFormat(Attachment_AlbedoRGB_Roughness));
+    attachments[Attachment_AlbedoRGB_Roughness].setSamples(samples);
+    attachments[Attachment_AlbedoRGB_Roughness].setLoadOp(vk::AttachmentLoadOp::eClear); // could be eDontCare ?
+    attachments[Attachment_AlbedoRGB_Roughness].setStoreOp(vk::AttachmentStoreOp::eStore);
+    attachments[Attachment_AlbedoRGB_Roughness].setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+    attachments[Attachment_AlbedoRGB_Roughness].setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+    attachments[Attachment_AlbedoRGB_Roughness].setInitialLayout(vk::ImageLayout::eUndefined);
+    attachments[Attachment_AlbedoRGB_Roughness].setFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 
-    attachments[Attachment_Normal].setFormat(getAttachmentFormat(Attachment_Normal));
-    attachments[Attachment_Normal].setSamples(samples);
-    attachments[Attachment_Normal].setLoadOp(vk::AttachmentLoadOp::eClear); // could be eDontCare ?
-    attachments[Attachment_Normal].setStoreOp(vk::AttachmentStoreOp::eStore);
-    attachments[Attachment_Normal].setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-    attachments[Attachment_Normal].setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    attachments[Attachment_Normal].setInitialLayout(vk::ImageLayout::eUndefined);
-    attachments[Attachment_Normal].setFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+    attachments[Attachment_NormalXYZ_Metallic].setFormat(getAttachmentFormat(Attachment_NormalXYZ_Metallic));
+    attachments[Attachment_NormalXYZ_Metallic].setSamples(samples);
+    attachments[Attachment_NormalXYZ_Metallic].setLoadOp(vk::AttachmentLoadOp::eClear); // could be eDontCare ?
+    attachments[Attachment_NormalXYZ_Metallic].setStoreOp(vk::AttachmentStoreOp::eStore);
+    attachments[Attachment_NormalXYZ_Metallic].setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+    attachments[Attachment_NormalXYZ_Metallic].setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+    attachments[Attachment_NormalXYZ_Metallic].setInitialLayout(vk::ImageLayout::eUndefined);
+    attachments[Attachment_NormalXYZ_Metallic].setFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 
     attachments[Attachment_Depth].setFormat(getAttachmentFormat(Attachment_Depth));
     attachments[Attachment_Depth].setSamples(samples);
@@ -216,8 +216,8 @@ bool DeferredGeometryRenderPass::createRenderPass() {
     attachments[Attachment_Depth].setFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal); // eDepthStencilAttachmentOptimal if we don't need to sample the depth buffer
 
     SubpassConfiguration subpassConfiguration;
-    subpassConfiguration.addColourAttachment(Attachment_Albedo, vk::ImageLayout::eColorAttachmentOptimal);
-    subpassConfiguration.addColourAttachment(Attachment_Normal, vk::ImageLayout::eColorAttachmentOptimal);
+    subpassConfiguration.addColourAttachment(Attachment_AlbedoRGB_Roughness, vk::ImageLayout::eColorAttachmentOptimal);
+    subpassConfiguration.addColourAttachment(Attachment_NormalXYZ_Metallic, vk::ImageLayout::eColorAttachmentOptimal);
     subpassConfiguration.setDepthStencilAttachment(Attachment_Depth, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
     std::array<vk::SubpassDependency, 2> dependencies;
@@ -242,8 +242,8 @@ bool DeferredGeometryRenderPass::createRenderPass() {
     renderPassConfig.setAttachments(attachments);
     renderPassConfig.addSubpass(subpassConfiguration);
     renderPassConfig.setSubpassDependencies(dependencies);
-    renderPassConfig.setClearColour(Attachment_Albedo, glm::vec4(0.0F, 0.25F, 0.5F, 1.0F));
-    renderPassConfig.setClearColour(Attachment_Normal, glm::vec4(0.0F, 0.0F, 0.0F, 0.0F));
+    renderPassConfig.setClearColour(Attachment_AlbedoRGB_Roughness, glm::vec4(0.0F, 0.25F, 0.5F, 1.0F));
+    renderPassConfig.setClearColour(Attachment_NormalXYZ_Metallic, glm::vec4(0.0F, 0.0F, 0.0F, 0.0F));
     renderPassConfig.setClearDepth(Attachment_Depth, 1.0F);
     renderPassConfig.setClearStencil(Attachment_Depth, 0);
 
@@ -310,8 +310,8 @@ bool DeferredLightingRenderPass::init() {
     samplerConfig.wrapU = vk::SamplerAddressMode::eMirroredRepeat;
     samplerConfig.wrapV = vk::SamplerAddressMode::eMirroredRepeat;
 
-    m_attachmentSamplers[Attachment_Albedo] = Sampler::create(samplerConfig);
-    m_attachmentSamplers[Attachment_Normal] = Sampler::create(samplerConfig);
+    m_attachmentSamplers[Attachment_AlbedoRGB_Roughness] = Sampler::create(samplerConfig);
+    m_attachmentSamplers[Attachment_NormalXYZ_Metallic] = Sampler::create(samplerConfig);
     m_attachmentSamplers[Attachment_Depth] = Sampler::create(samplerConfig);
 
     Application::instance()->eventDispatcher()->connect(&DeferredLightingRenderPass::recreateSwapchain, this);
@@ -327,8 +327,8 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
     m_graphicsPipeline->bind(commandBuffer);
 
     DescriptorSetWriter(m_resources->uniformDescriptorSet)
-            .writeImage(ALBEDO_TEXTURE_BINDING, m_attachmentSamplers[Attachment_Albedo], m_geometryPass->getAlbedoImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
-            .writeImage(NORMAL_TEXTURE_BINDING, m_attachmentSamplers[Attachment_Normal], m_geometryPass->getNormalImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
+            .writeImage(ALBEDO_TEXTURE_BINDING, m_attachmentSamplers[Attachment_AlbedoRGB_Roughness], m_geometryPass->getAlbedoImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
+            .writeImage(NORMAL_TEXTURE_BINDING, m_attachmentSamplers[Attachment_NormalXYZ_Metallic], m_geometryPass->getNormalImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
             .writeImage(DEPTH_TEXTURE_BINDING, m_attachmentSamplers[Attachment_Depth], m_geometryPass->getDepthImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
             .write();
 

@@ -25,17 +25,25 @@ typedef struct Vertex {
         struct { float nx, ny, nz; };
     };
     union {
+        glm::vec3 tangent;
+        struct { float tx, ty, tz; };
+    };
+    union {
         glm::vec2 texture;
-        struct { float tx, ty; };
+        struct { float tu, tv; };
     };
 
     Vertex();
 
     Vertex(const Vertex& copy);
 
-    Vertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texture);
+    Vertex(const glm::vec3& position, const glm::vec3& normal, const glm::vec2& texture);
 
-    Vertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty);
+    Vertex(const glm::vec3& position, const glm::vec3& normal, const glm::vec3& tangent, const glm::vec2& texture);
+
+    Vertex(const float& px, const float& py, const float& pz, const float& nx, const float& ny, const float& nz, const float& tu, const float& tv);
+
+    Vertex(const float& px, const float& py, const float& pz, const float& nx, const float& ny, const float& nz, const float& tx, const float& ty, const float& tz, const float& tu, const float& tv);
 
     Vertex operator*(const glm::mat4& m) const;
 
@@ -102,21 +110,21 @@ public:
 
     void popTransform();
 
-    void translate(glm::vec3 v);
+    void translate(const glm::vec3& v);
 
-    void translate(float x, float y, float z);
+    void translate(const float& x, const float& y, const float& z);
 
     void rotate(glm::quat q);
 
-    void rotate(float angle, glm::vec3 axis);
+    void rotate(const float& angle, const glm::vec3& axis);
 
-    void rotateDegrees(float angle, glm::vec3 axis);
+    void rotateDegrees(const float& angle, const glm::vec3& axis);
 
-    void rotate(float angle, float x, float y, float z);
+    void rotate(const float& angle, const float& x, const float& y, const float& z);
 
-    void rotateDegrees(float angle, float x, float y, float z);
+    void rotateDegrees(const float& angle, const float& x, const float& y, const float& z);
 
-    void scale(glm::vec3 s);
+    void scale(const glm::vec3& s);
 
     void scale(float x, float y, float z);
 
@@ -134,31 +142,33 @@ public:
 
     void createTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2);
 
-    void createTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, glm::vec3 normal);
+    void createTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, const glm::vec3& normal);
 
-    void createQuad(const Vertex& v0, const Vertex& v1, const Vertex& v2, const Vertex& v3);
+    void createQuad(const Vertex& v00, const Vertex& v01, const Vertex& v11, const Vertex& v10);
 
-    void createQuad(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 n0, glm::vec3 n1, glm::vec3 n2, glm::vec3 n3, glm::vec2 t0, glm::vec2 t1, glm::vec2 t2, glm::vec2 t3);
+    void createQuad(const glm::vec3& p00, const glm::vec3& p01, const glm::vec3& p11, const glm::vec3& p10, const glm::vec3& n00, const glm::vec3& n01, const glm::vec3& n11, const glm::vec3& n10, const glm::vec2& t00, const glm::vec2& t01, const glm::vec2& t11, const glm::vec2& t10);
 
-    void createQuad(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 normal, glm::vec2 t0, glm::vec2 t1, glm::vec2 t2, glm::vec2 t3);
+    void createQuad(const glm::vec3& p00, const glm::vec3& p01, const glm::vec3& p11, const glm::vec3& p10, const glm::vec3& normal, const glm::vec2& t00, const glm::vec2& t01, const glm::vec2& t11, const glm::vec2& t10);
 
-    void createQuad(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 normal);
+    void createQuad(const glm::vec3& p00, const glm::vec3& p01, const glm::vec3& p11, const glm::vec3& p10, const glm::vec3& normal);
 
-    void createCuboid(glm::vec3 pos0, glm::vec3 pos1);
+    void createCuboid(const glm::vec3& pos0, const glm::vec3& pos1, const glm::vec3& tex0, const glm::vec3& tex1);
 
-    void createUVSphere(glm::vec3 center, float radius, uint32_t slices, uint32_t stacks);
+    void createCuboid(const glm::vec3& pos0, const glm::vec3& pos1);
+
+    void createUVSphere(const glm::vec3& center, const float& radius, const uint32_t& slices, const uint32_t& stacks);
 
     Index addVertex(const Vertex& vertex);
 
     Index addVertex(const glm::vec3& position, const glm::vec3& normal, const glm::vec2& texture);
 
-    Index addVertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty);
+    Index addVertex(const float& px, const float& py, const float& pz, const float& nx, const float& ny, const float& nz, const float& tu, const float& tv);
 
-    void addTriangle(Index	i0, Index i1, Index i2);
+    void addTriangle(const Index& i0, const Index& i1, const Index& i2);
 
     void addTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2);
 
-    void addQuad(Index	i0, Index i1, Index i2, Index i3);
+    void addQuad(const Index& i0, const Index& i1, const Index& i2, const Index& i3);
 
     void addQuad(const Vertex& v0, const Vertex& v1, const Vertex& v2, const Vertex& v3);
 
@@ -185,6 +195,10 @@ public:
     static size_t getPolygonCount(const size_t& numIndices, const MeshPrimitiveType& primitiveType);
 
     const MeshPrimitiveType& getPrimitiveType() const;
+
+    void computeTangents();
+
+    static void computeTangents(std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, const MeshPrimitiveType& primitiveType);
 
 private:
     Index createTrianglePrimitive(const Index& i0, const Index& i1, const Index& i2);
@@ -224,6 +238,7 @@ namespace MeshUtils {
 
 
 
+// Default overload - provide template specialization when needed.
 template<typename Vertex_t>
 std::vector<vk::VertexInputBindingDescription> MeshUtils::getVertexBindingDescriptions() {
     std::vector<vk::VertexInputBindingDescription> inputBindingDescriptions;
@@ -234,25 +249,34 @@ std::vector<vk::VertexInputBindingDescription> MeshUtils::getVertexBindingDescri
     return inputBindingDescriptions;
 }
 
-template<typename Vertex_t>
-std::vector<vk::VertexInputAttributeDescription> MeshUtils::getVertexAttributeDescriptions() {
+template<>
+std::vector<vk::VertexInputAttributeDescription> MeshUtils::getVertexAttributeDescriptions<Vertex>() {
     std::vector<vk::VertexInputAttributeDescription> attribDescriptions;
-    attribDescriptions.resize(3);
+    attribDescriptions.resize(4);
 
+    // Position
     attribDescriptions[0].setBinding(0);
     attribDescriptions[0].setLocation(0);
     attribDescriptions[0].setFormat(vk::Format::eR32G32B32Sfloat); // vec3
-    attribDescriptions[0].setOffset(offsetof(typename MeshData<Vertex_t>::Vertex, position));
+    attribDescriptions[0].setOffset(offsetof(Vertex, position));
 
+    // Normal
     attribDescriptions[1].setBinding(0);
     attribDescriptions[1].setLocation(1);
     attribDescriptions[1].setFormat(vk::Format::eR32G32B32Sfloat); // vec3
-    attribDescriptions[1].setOffset(offsetof(typename MeshData<Vertex_t>::Vertex, normal));
+    attribDescriptions[1].setOffset(offsetof(Vertex, normal));
 
+    // Tangent
     attribDescriptions[2].setBinding(0);
     attribDescriptions[2].setLocation(2);
-    attribDescriptions[2].setFormat(vk::Format::eR32G32Sfloat); // vec2
-    attribDescriptions[2].setOffset(offsetof(typename MeshData<Vertex_t>::Vertex, texture));
+    attribDescriptions[2].setFormat(vk::Format::eR32G32B32Sfloat); // vec3
+    attribDescriptions[2].setOffset(offsetof(Vertex, tangent));
+
+    // Texture
+    attribDescriptions[3].setBinding(0);
+    attribDescriptions[3].setLocation(3);
+    attribDescriptions[3].setFormat(vk::Format::eR32G32Sfloat); // vec2
+    attribDescriptions[3].setOffset(offsetof(Vertex, texture));
     return attribDescriptions;
 }
 
@@ -382,12 +406,12 @@ void MeshData<Vertex_t>::popTransform() {
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::translate(glm::vec3 v) {
+void MeshData<Vertex_t>::translate(const glm::vec3& v) {
     m_currentTransform = glm::translate(m_currentTransform, v);
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::translate(float x, float y, float z) {
+void MeshData<Vertex_t>::translate(const float& x, const float& y, const float& z) {
     translate(glm::vec3(x, y, z));
 }
 
@@ -397,27 +421,27 @@ void MeshData<Vertex_t>::rotate(glm::quat q) {
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::rotate(float angle, glm::vec3 axis) {
+void MeshData<Vertex_t>::rotate(const float& angle, const glm::vec3& axis) {
     m_currentTransform = glm::rotate(m_currentTransform, angle, axis);
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::rotateDegrees(float angle, glm::vec3 axis) {
+void MeshData<Vertex_t>::rotateDegrees(const float& angle, const glm::vec3& axis) {
     rotate(glm::radians(angle), axis);
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::rotate(float angle, float x, float y, float z) {
+void MeshData<Vertex_t>::rotate(const float& angle, const float& x, const float& y, const float& z) {
     rotate(angle, glm::vec3(x, y, z));
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::rotateDegrees(float angle, float x, float y, float z) {
+void MeshData<Vertex_t>::rotateDegrees(const float& angle, const float& x, const float& y, const float& z) {
     rotate(glm::radians(angle), glm::vec3(x, y, z));
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::scale(glm::vec3 s) {
+void MeshData<Vertex_t>::scale(const glm::vec3& s) {
     m_currentTransform = glm::scale(m_currentTransform, s);
 }
 
@@ -489,7 +513,7 @@ void MeshData<Vertex_t>::createTriangle(const Vertex& v0, const Vertex& v1, cons
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::createTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, glm::vec3 normal) {
+void MeshData<Vertex_t>::createTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, const glm::vec3& normal) {
     Index i0 = addVertex(v0);
     Index i1 = addVertex(v1);
     Index i2 = addVertex(v2);
@@ -503,37 +527,102 @@ void MeshData<Vertex_t>::createTriangle(const Vertex& v0, const Vertex& v1, cons
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::createQuad(const Vertex& v0, const Vertex& v1, const Vertex& v2, const Vertex& v3) {
-    addQuad(v0, v1, v2, v3);
+void MeshData<Vertex_t>::createQuad(const Vertex& v00, const Vertex& v01, const Vertex& v11, const Vertex& v10) {
+    addQuad(v00, v01, v11, v10);
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::createQuad(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 n0, glm::vec3 n1, glm::vec3 n2, glm::vec3 n3, glm::vec2 t0, glm::vec2 t1, glm::vec2 t2, glm::vec2 t3) {
-    createQuad(Vertex(p0, n0, t0), Vertex(p1, n1, t1), Vertex(p2, n2, t2), Vertex(p3, n3, t3));
+void MeshData<Vertex_t>::createQuad(const glm::vec3& p00, const glm::vec3& p01, const glm::vec3& p11, const glm::vec3& p10, const glm::vec3& n00, const glm::vec3& n01, const glm::vec3& n11, const glm::vec3& n10, const glm::vec2& t00, const glm::vec2& t01, const glm::vec2& t11, const glm::vec2& t10) {
+    createQuad(Vertex(p00, n00, t00), Vertex(p01, n01, t01), Vertex(p11, n11, t11), Vertex(p10, n10, t10));
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::createQuad(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 normal, glm::vec2 t0, glm::vec2 t1, glm::vec2 t2, glm::vec2 t3) {
-    createQuad(p0, p1, p2, p3, normal, normal, normal, normal, t0, t1, t2, t3);
+void MeshData<Vertex_t>::createQuad(const glm::vec3& p00, const glm::vec3& p01, const glm::vec3& p11, const glm::vec3& p10, const glm::vec3& normal, const glm::vec2& t00, const glm::vec2& t01, const glm::vec2& t11, const glm::vec2& t10) {
+    createQuad(p00, p01, p11, p10, normal, normal, normal, normal, t00, t01, t11, t10);
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::createQuad(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 normal) {
-    createQuad(p0, p1, p2, p3, normal, normal, normal, normal, glm::vec2(0.0F, 0.0F), glm::vec2(1.0F, 0.0F), glm::vec2(1.0F, 1.0F), glm::vec2(0.0F, 1.0F));
+void MeshData<Vertex_t>::createQuad(const glm::vec3& p00, const glm::vec3& p01, const glm::vec3& p11, const glm::vec3& p10, const glm::vec3& normal) {
+    createQuad(p00, p01, p11, p10, normal, normal, normal, normal, glm::vec2(0.0F, 0.0F), glm::vec2(0.0F, 1.0F), glm::vec2(1.0F, 1.0F), glm::vec2(1.0F, 0.0F));
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::createCuboid(glm::vec3 pos0, glm::vec3 pos1) {
-    createQuad(glm::vec3(pos0.x, pos0.y, pos0.z), glm::vec3(pos0.x, pos0.y, pos1.z), glm::vec3(pos0.x, pos1.y, pos1.z), glm::vec3(pos0.x, pos1.y, pos0.z), glm::vec3(-1.0F, 0.0F, 0.0F));
-    createQuad(glm::vec3(pos1.x, pos0.y, pos1.z), glm::vec3(pos1.x, pos0.y, pos0.z), glm::vec3(pos1.x, pos1.y, pos0.z), glm::vec3(pos1.x, pos1.y, pos1.z), glm::vec3(+1.0F, 0.0F, 0.0F));
-    createQuad(glm::vec3(pos0.x, pos0.y, pos0.z), glm::vec3(pos1.x, pos0.y, pos0.z), glm::vec3(pos1.x, pos0.y, pos1.z), glm::vec3(pos0.x, pos0.y, pos1.z), glm::vec3(0.0F, -1.0F, 0.0F));
-    createQuad(glm::vec3(pos1.x, pos1.y, pos0.z), glm::vec3(pos0.x, pos1.y, pos0.z), glm::vec3(pos0.x, pos1.y, pos1.z), glm::vec3(pos1.x, pos1.y, pos1.z), glm::vec3(0.0F, +1.0F, 0.0F));
-    createQuad(glm::vec3(pos1.x, pos0.y, pos0.z), glm::vec3(pos0.x, pos0.y, pos0.z), glm::vec3(pos0.x, pos1.y, pos0.z), glm::vec3(pos1.x, pos1.y, pos0.z), glm::vec3(0.0F, 0.0F, -1.0F));
-    createQuad(glm::vec3(pos0.x, pos0.y, pos1.z), glm::vec3(pos1.x, pos0.y, pos1.z), glm::vec3(pos1.x, pos1.y, pos1.z), glm::vec3(pos0.x, pos1.y, pos1.z), glm::vec3(0.0F, 0.0F, +1.0F));
+void MeshData<Vertex_t>::createCuboid(const glm::vec3& pos0, const glm::vec3& pos1, const glm::vec3& tex0, const glm::vec3& tex1) {
+    createQuad(
+            glm::vec3(pos0.x, pos0.y, pos0.z),
+            glm::vec3(pos0.x, pos0.y, pos1.z),
+            glm::vec3(pos0.x, pos1.y, pos1.z),
+            glm::vec3(pos0.x, pos1.y, pos0.z),
+            glm::vec3(-1.0F, 0.0F, 0.0F),
+            glm::vec2(tex0.x, tex1.y),  // 01
+            glm::vec2(tex1.x, tex1.y),  // 11
+            glm::vec2(tex1.x, tex0.y),  // 10
+            glm::vec2(tex0.x, tex0.y)   // 00
+    );
+    createQuad(
+            glm::vec3(pos1.x, pos0.y, pos1.z),
+            glm::vec3(pos1.x, pos0.y, pos0.z),
+            glm::vec3(pos1.x, pos1.y, pos0.z),
+            glm::vec3(pos1.x, pos1.y, pos1.z),
+            glm::vec3(+1.0F, 0.0F, 0.0F),
+            glm::vec2(tex0.x, tex1.y), // 01
+            glm::vec2(tex1.x, tex1.y), // 11
+            glm::vec2(tex1.x, tex0.y), // 10
+            glm::vec2(tex0.x, tex0.y)  // 00
+    );
+    createQuad(
+            glm::vec3(pos1.x, pos0.y, pos0.z),
+            glm::vec3(pos1.x, pos0.y, pos1.z),
+            glm::vec3(pos0.x, pos0.y, pos1.z),
+            glm::vec3(pos0.x, pos0.y, pos0.z),
+            glm::vec3(0.0F, -1.0F, 0.0F),
+            glm::vec2(tex1.x, tex1.y), // 11
+            glm::vec2(tex1.x, tex0.y), // 10
+            glm::vec2(tex0.x, tex0.y), // 00
+            glm::vec2(tex0.x, tex1.y)  // 01
+    );
+    createQuad(
+            glm::vec3(pos0.x, pos1.y, pos0.z),
+            glm::vec3(pos0.x, pos1.y, pos1.z),
+            glm::vec3(pos1.x, pos1.y, pos1.z),
+            glm::vec3(pos1.x, pos1.y, pos0.z),
+            glm::vec3(0.0F, +1.0F, 0.0F),
+            glm::vec2(tex0.x, tex0.y), // 00
+            glm::vec2(tex0.x, tex1.y), // 01
+            glm::vec2(tex1.x, tex1.y), // 11
+            glm::vec2(tex1.x, tex0.y)  // 10
+    );
+    createQuad(
+            glm::vec3(pos0.x, pos1.y, pos0.z),
+            glm::vec3(pos1.x, pos1.y, pos0.z),
+            glm::vec3(pos1.x, pos0.y, pos0.z),
+            glm::vec3(pos0.x, pos0.y, pos0.z),
+            glm::vec3(0.0F, 0.0F, -1.0F),
+            glm::vec2(tex1.x, tex0.y), // 10
+            glm::vec2(tex0.x, tex0.y), // 00
+            glm::vec2(tex0.x, tex1.y), // 01
+            glm::vec2(tex1.x, tex1.y)  // 11
+    );
+    createQuad(
+            glm::vec3(pos1.x, pos1.y, pos1.z),
+            glm::vec3(pos0.x, pos1.y, pos1.z),
+            glm::vec3(pos0.x, pos0.y, pos1.z),
+            glm::vec3(pos1.x, pos0.y, pos1.z),
+            glm::vec3(0.0F, 0.0F, +1.0F),
+            glm::vec2(tex1.x, tex0.y), // 10
+            glm::vec2(tex0.x, tex0.y), // 00
+            glm::vec2(tex0.x, tex1.y), // 01
+            glm::vec2(tex1.x, tex1.y)  // 11
+    );
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::createUVSphere(glm::vec3 center, float radius, uint32_t slices, uint32_t stacks) {
+void MeshData<Vertex_t>::createCuboid(const glm::vec3& pos0, const glm::vec3& pos1) {
+    createCuboid(pos0, pos1, glm::vec3(0.0F), glm::vec3(1.0F));
+}
+
+template<typename Vertex_t>
+void MeshData<Vertex_t>::createUVSphere(const glm::vec3& center, const float& radius, const uint32_t& slices, const uint32_t& stacks) {
     pushState();
 
     glm::vec3 pos;
@@ -606,12 +695,12 @@ typename MeshData<Vertex_t>::Index MeshData<Vertex_t>::addVertex(const glm::vec3
 }
 
 template<typename Vertex_t>
-typename MeshData<Vertex_t>::Index MeshData<Vertex_t>::addVertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty) {
-    return addVertex(Vertex(px, py, pz, nx, ny, nz, tx, ty));
+typename MeshData<Vertex_t>::Index MeshData<Vertex_t>::addVertex(const float& px, const float& py, const float& pz, const float& nx, const float& ny, const float& nz, const float& tu, const float& tv) {
+    return addVertex(Vertex(px, py, pz, nx, ny, nz, tu, tv));
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::addTriangle(Index i0, Index i1, Index i2) {
+void MeshData<Vertex_t>::addTriangle(const Index& i0, const Index& i1, const Index& i2) {
     switch (m_primitiveType) {
         case PrimitiveType_Triangle:
             createTrianglePrimitive(i0, i1, i2);
@@ -638,7 +727,7 @@ void MeshData<Vertex_t>::addTriangle(const Vertex& v0, const Vertex& v1, const V
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::addQuad(Index i0, Index i1, Index i2, Index i3) {
+void MeshData<Vertex_t>::addQuad(const Index& i0, const Index& i1, const Index& i2, const Index& i3) {
     switch (m_primitiveType) {
         case PrimitiveType_Triangle:
             createTrianglePrimitive(i0, i1, i2);
@@ -774,6 +863,62 @@ size_t MeshData<Vertex_t>::getPolygonCount() const {
 template<typename Vertex_t>
 const MeshPrimitiveType& MeshData<Vertex_t>::getPrimitiveType() const {
     return m_primitiveType;
+}
+
+template<typename Vertex_t>
+void MeshData<Vertex_t>::computeTangents() {
+    MeshData<Vertex_t>::computeTangents(m_vertices, m_indices, m_primitiveType);
+}
+
+template<typename Vertex_t>
+void MeshData<Vertex_t>::computeTangents(std::vector<Vertex_t>& vertices, const std::vector<uint32_t>& indices, const MeshPrimitiveType& primitiveType) {
+    using Vertex = MeshData<Vertex_t>::Vertex;
+    using Index = MeshData<Vertex_t>::Index;
+
+    if (primitiveType != MeshPrimitiveType::PrimitiveType_Triangle) {
+        printf("Unable to compute mesh tangents. Mesh primitive type must be triangles\n");
+        return;
+    }
+
+    if (indices.size() % 3 != 0) {
+        printf("Unable to compute mesh tangents. Triangle mesh indices must have a size of a multiple of 3\n");
+        return;
+    }
+
+    std::vector<glm::vec3> tangents;
+    tangents.resize(indices.size());
+
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        uint32_t i0 = indices[i + 0];
+        uint32_t i1 = indices[i + 1];
+        uint32_t i2 = indices[i + 2];
+
+        Vertex& v0 = vertices[i0];
+        Vertex& v1 = vertices[i1];
+        Vertex& v2 = vertices[i2];
+
+        glm::vec3 e0 = v1.position - v0.position;
+        glm::vec3 e1 = v2.position - v0.position;
+
+        glm::vec2 dUV0 = v1.texture - v0.texture;
+        glm::vec2 dUV1 = v2.texture - v0.texture;
+        float r = (dUV0.x * dUV1.y) - (dUV0.y * dUV1.x);
+
+        if (abs(r) > 1e-9) {
+            r = 1.0 / r;
+            glm::vec3 tangent = (e0 * dUV1.y - e1 * dUV0.y) * r;
+//            tangent = normalize(tangent);
+            tangents[i + 0] = tangent;
+            tangents[i + 1] = tangent;
+            tangents[i + 2] = tangent;
+        }
+    }
+
+    for (size_t i = 0; i < indices.size(); ++i)
+        vertices[indices[i]].tangent += tangents[i];
+
+    for (size_t i = 0; i < indices.size(); ++i)
+        vertices[indices[i]].tangent = glm::normalize(vertices[indices[i]].tangent);
 }
 
 template<typename Vertex_t>

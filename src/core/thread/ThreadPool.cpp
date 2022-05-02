@@ -14,8 +14,13 @@ ThreadPool::ThreadPool(size_t concurrency) {
 
     m_isBatchingTasks = false;
 
-    for (size_t i = 0; i < concurrency; ++i) {
+    // BUG FIX: allocate all threads before the ThreadPool::executor method can run for any of them, avoid
+    // nullptr exception that happens rarely when some threads start executing before all are allocated.
+    for (size_t i = 0; i < concurrency; ++i)
         m_threads[i] = new Thread();
+
+
+    for (size_t i = 0; i < concurrency; ++i) {
         m_threads[i]->running = true;
         m_threads[i]->thread = std::thread(&ThreadPool::executor, this);
     }

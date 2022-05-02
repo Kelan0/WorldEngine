@@ -1,6 +1,7 @@
 #include "core/engine/renderer/SceneRenderer.h"
 #include "core/engine/renderer/RenderCamera.h"
 #include "core/engine/renderer/RenderComponent.h"
+#include "core/engine/renderer/Material.h"
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/scene/Scene.h"
 #include "core/engine/scene/Transform.h"
@@ -64,11 +65,12 @@ SceneRenderer::SceneRenderer():
 }
 
 SceneRenderer::~SceneRenderer() {
-    m_missingTexture.reset();
+    m_missingTextureMaterial.reset();
     m_missingTextureImage.reset();
     for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
         delete m_resources[i]->cameraInfoBuffer;
         delete m_resources[i]->worldTransformBuffer;
+        delete m_resources[i]->materialDataBuffer;
         delete m_resources[i]->globalDescriptorSet;
         delete m_resources[i]->objectDescriptorSet;
         delete m_resources[i]->materialDescriptorSet;
@@ -78,12 +80,7 @@ SceneRenderer::~SceneRenderer() {
 bool SceneRenderer::init() {
 //    m_graphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Application::instance()->graphics()->getDevice()));
 
-    initMissingTexture();
-
-    // Missing texture needs to be at index 0
-    m_materialBufferTextures.clear();
-    m_materialBufferTextures.emplace_back(m_missingTexture.get());
-    m_materialBufferImageLayouts.emplace_back(vk::ImageLayout::eShaderReadOnlyOptimal);
+    initMissingTextureMaterial();
 
     std::shared_ptr<DescriptorPool> descriptorPool = Application::instance()->graphics()->descriptorPool();
 
@@ -92,14 +89,23 @@ bool SceneRenderer::init() {
     constexpr size_t maxTextures = 0xFFFF;
 
     std::vector<Texture2D*> initialTextures;
-    initialTextures.resize(maxTextures, m_missingTexture.get());
+    initialTextures.resize(maxTextures, m_missingTextureMaterial->getAlbedoMap().get());
 
     std::vector<vk::ImageLayout> initialImageLayouts;
     initialImageLayouts.resize(maxTextures, vk::ImageLayout::eShaderReadOnlyOptimal);
 
-    m_globalDescriptorSetLayout = builder.addUniformBlock(0, vk::ShaderStageFlagBits::eVertex, sizeof(CameraInfoUBO)).build();
-    m_objectDescriptorSetLayout = builder.addStorageBlock(0, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, sizeof(ObjectDataUBO)).build();
-    m_materialDescriptorSetLayout = builder.addCombinedImageSampler(0, vk::ShaderStageFlagBits::eFragment, maxTextures).build();
+    m_globalDescriptorSetLayout = builder
+            .addUniformBlock(0, vk::ShaderStageFlagBits::eVertex, sizeof(CameraInfoUBO))
+            .build();
+
+    m_objectDescriptorSetLayout = builder
+            .addStorageBlock(0, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, sizeof(ObjectDataUBO))
+            .build();
+
+    m_materialDescriptorSetLayout = builder
+            .addCombinedImageSampler(0, vk::ShaderStageFlagBits::eFragment, maxTextures)
+            .addStorageBlock(1, vk::ShaderStageFlagBits::eFragment, sizeof(GPUMaterial))
+            .build();
 
     for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_resources.set(i, new RenderResources());
@@ -108,6 +114,7 @@ bool SceneRenderer::init() {
         m_resources[i]->materialDescriptorSet = DescriptorSet::create(m_materialDescriptorSetLayout, descriptorPool);
 
         m_resources[i]->worldTransformBuffer = nullptr;
+        m_resources[i]->materialDataBuffer = nullptr;
         m_resources[i]->uploadedMaterialBufferTextures = 0;
 
         BufferConfiguration cameraInfoBufferConfig;
@@ -118,10 +125,12 @@ bool SceneRenderer::init() {
         m_resources[i]->cameraInfoBuffer = Buffer::create(cameraInfoBufferConfig);
 
         DescriptorSetWriter(m_resources[i]->globalDescriptorSet)
-                .writeBuffer(0, m_resources[i]->cameraInfoBuffer, 0, m_resources[i]->cameraInfoBuffer->getSize()).write();
+                .writeBuffer(0, m_resources[i]->cameraInfoBuffer, 0, m_resources[i]->cameraInfoBuffer->getSize())
+                .write();
 
         DescriptorSetWriter(m_resources[i]->materialDescriptorSet)
-                .writeImage(0, initialTextures.data(), initialImageLayouts.data(), maxTextures, 0).write();
+                .writeImage(0, initialTextures.data(), initialImageLayouts.data(), maxTextures, 0)
+                .write();
     }
 
     m_scene->enableEvents<RenderComponent>();
@@ -159,6 +168,7 @@ void SceneRenderer::render(double dt, RenderCamera* renderCamera) {
     m_numRenderEntities = renderEntities.size();
 
     mappedWorldTransformsBuffer(m_numRenderEntities);
+    mappedMaterialDataBuffer(m_numRenderEntities);
 
     sortRenderableEntities();
     findModifiedEntities();
@@ -255,7 +265,7 @@ void SceneRenderer::recordRenderCommands(double dt, vk::CommandBuffer commandBuf
 //        drawCommands[i].mesh->draw(commandBuffer, drawCommands[i].instanceCount, drawCommands[i].firstInstance);
 }
 
-void SceneRenderer::initMissingTexture() {
+void SceneRenderer::initMissingTextureMaterial() {
     union {
         glm::u8vec4 pixels[2][2];
         uint8_t pixelBytes[sizeof(glm::u8vec4) * 4];
@@ -283,7 +293,15 @@ void SceneRenderer::initMissingTexture() {
     missingTextureSamplerConfig.device = missingTextureImageConfig.device;
     missingTextureSamplerConfig.minFilter = vk::Filter::eNearest;
     missingTextureSamplerConfig.magFilter = vk::Filter::eNearest;
-    m_missingTexture = std::shared_ptr<Texture2D>(Texture2D::create(missingTextureImageViewConfig, missingTextureSamplerConfig));
+
+    MaterialConfiguration materialConfig;
+    materialConfig.setAlbedoMap(missingTextureImageViewConfig, missingTextureSamplerConfig);
+
+    m_missingTextureMaterial = std::shared_ptr<Material>(Material::create(materialConfig));
+
+    // Missing texture needs to be at index 0
+    m_materialBufferTextures.clear();
+    registerMaterial(m_missingTextureMaterial.get());
 }
 
 void SceneRenderer::sortRenderableEntities() {
@@ -355,7 +373,7 @@ void SceneRenderer::sortRenderableEntities() {
         for (auto id : renderEntities) {
             RenderComponent &renderComponent = renderEntities.get<RenderComponent>(id);
             RenderComponent::reindex(renderComponent, index);
-            notifyTextureChanged(index);
+            notifyMaterialChanged(index);
             ++index;
         }
     }
@@ -387,27 +405,27 @@ void SceneRenderer::markChangedObjectTransforms(const size_t& rangeStart, const 
 //    }
 }
 
-void SceneRenderer::markChangedTextureIndices(const size_t& rangeStart, const size_t& rangeEnd) {
+void SceneRenderer::markChangedMaterialIndices(const size_t& rangeStart, const size_t& rangeEnd) {
 //    size_t changeTrackStartIndex = SIZE_MAX;
 //
 //    for (size_t index = rangeStart; index != rangeEnd; ++index) {
 //
-//        if (RenderComponent::textureChangeTracker().hasChanged(index)) {
+//        if (RenderComponent::materialChangeTracker().hasChanged(index)) {
 //            if (changeTrackStartIndex == SIZE_MAX)
 //                changeTrackStartIndex = index;
 //
 //        } else if (changeTrackStartIndex != SIZE_MAX) {
-//            RenderComponent::textureChangeTracker().setChanged(changeTrackStartIndex, index - changeTrackStartIndex, false);
+//            RenderComponent::materialChangeTracker().setChanged(changeTrackStartIndex, index - changeTrackStartIndex, false);
 //            for (int i = 0; i < CONCURRENT_FRAMES; ++i)
-//                m_resources.get(i)->changedObjectTextures.set(changeTrackStartIndex, index - changeTrackStartIndex, true);
+//                m_resources.get(i)->changedObjectMaterials.set(changeTrackStartIndex, index - changeTrackStartIndex, true);
 //            changeTrackStartIndex = SIZE_MAX;
 //        }
 //    }
 //
 //    if (changeTrackStartIndex != SIZE_MAX) {
-//        RenderComponent::textureChangeTracker().setChanged(changeTrackStartIndex, rangeEnd - changeTrackStartIndex, false);
+//        RenderComponent::materialChangeTracker().setChanged(changeTrackStartIndex, rangeEnd - changeTrackStartIndex, false);
 //        for (int i = 0; i < CONCURRENT_FRAMES; ++i)
-//            m_resources.get(i)->changedObjectTextures.set(changeTrackStartIndex, rangeEnd - changeTrackStartIndex, true);
+//            m_resources.get(i)->changedObjectMaterials.set(changeTrackStartIndex, rangeEnd - changeTrackStartIndex, true);
 //    }
 }
 //
@@ -422,8 +440,8 @@ void SceneRenderer::markChangedTextureIndices(const size_t& rangeStart, const si
 ////        PROFILE_REGION("Mark changed object transforms");
 ////        markChangedObjectTransforms(rangeStart, rangeEnd);
 //
-////        PROFILE_REGION("Mark changed texture indices");
-////        markChangedTextureIndices(rangeStart, rangeEnd);
+////        PROFILE_REGION("Mark changed material indices");
+////        markChangedMaterialIndices(rangeStart, rangeEnd);
 //
 //        PROFILE_REGION("Find modified regions")
 //
@@ -433,7 +451,7 @@ void SceneRenderer::markChangedTextureIndices(const size_t& rangeStart, const si
 //        size_t lastModifiedIndex = SIZE_MAX;
 //
 //        for (size_t index = rangeStart; index != rangeEnd; ++index) {
-//            if (m_resources->changedObjectTransforms[index] || m_resources->changedObjectTextures[index]) {
+//            if (m_resources->changedObjectTransforms[index] || m_resources->changedObjectMaterials[index]) {
 //                if (firstModifiedIndex == SIZE_MAX) {
 //                    firstModifiedIndex = index;
 //
@@ -590,9 +608,9 @@ void SceneRenderer::updateMaterialsBuffer() {
 
         const auto& renderEntities = m_scene->registry()->group<RenderComponent, Transform>();
 
-        PROFILE_REGION("Update changed object textures");
+        PROFILE_REGION("Update changed object materials");
 
-        bool anyTextureChanged = false;
+        bool anyMaterialChanged = false;
 
         size_t itOffset = rangeStart;
         auto it = renderEntities.begin() + itOffset;
@@ -620,18 +638,22 @@ void SceneRenderer::updateMaterialsBuffer() {
             itOffset = regionEnd;
 
             for (size_t index = regionStart; index != regionEnd; ++index, ++it) {
-                if (m_resources->changedObjectTextures[index]) {
+                if (m_resources->changedObjectMaterials[index]) {
                     const RenderComponent& renderComponent = renderEntities.get<RenderComponent>(*it);
-                    m_resources->objectBuffer[index].textureIndex = renderComponent.getTextureIndex();
-                    anyTextureChanged = true;
+                    uint32_t materialIndex = renderComponent.getMaterialIndex();
+                    if (materialIndex > m_materials.size())
+                        materialIndex = 0;
+
+                    m_resources->materialBuffer[index] = m_materials[materialIndex];
+                    anyMaterialChanged = true;
                 }
             }
         }
 
         PROFILE_REGION("Reset modified texture flags")
 
-        if (anyTextureChanged)
-            m_resources->changedObjectTextures.set(rangeStart, rangeEnd - rangeStart, false);
+        if (anyMaterialChanged)
+            m_resources->changedObjectMaterials.set(rangeStart, rangeEnd - rangeStart, false);
     };
 
 //    auto futures = ThreadUtils::run(thread_exec, 0, m_numRenderEntities);
@@ -658,10 +680,12 @@ void SceneRenderer::updateMaterialsBuffer() {
 void SceneRenderer::streamObjectData() {
     PROFILE_SCOPE("SceneRenderer::streamObjectData")
 
-    constexpr bool multithread = true;
+    constexpr bool multithread = false;
 
     auto thread_exec = [this](size_t rangeStart, size_t rangeEnd) {
         PROFILE_SCOPE("Copy modified region");
+
+        PROFILE_REGION("Copy object data");
 
         ObjectDataUBO* objectBufferMap = mappedWorldTransformsBuffer(m_numRenderEntities);
 
@@ -670,6 +694,17 @@ void SceneRenderer::streamObjectData() {
             const size_t& start = region.first;
             const size_t& end = region.second;
             memcpy(&objectBufferMap[start], &m_resources->objectBuffer[start], (end - start) * sizeof(ObjectDataUBO));
+        }
+
+        PROFILE_REGION("Copy material data");
+
+        GPUMaterial* materialBufferMap = mappedMaterialDataBuffer(m_numRenderEntities);
+
+        for (size_t i = rangeStart; i != rangeEnd; ++i) {
+            const std::pair<size_t, size_t>& region = m_objectBufferModifiedRegions[i];
+            const size_t& start = region.first;
+            const size_t& end = region.second;
+            memcpy(&materialBufferMap[start], &m_resources->materialBuffer[start], (end - start) * sizeof(GPUMaterial));
         }
     };
 
@@ -689,11 +724,6 @@ void SceneRenderer::streamObjectData() {
 uint32_t SceneRenderer::registerTexture(Texture2D* texture) {
     uint32_t textureIndex;
 
-    if (texture == nullptr) {
-        texture = m_missingTexture.get();
-        return 0; // Missing texture is expected to be at index 0
-    }
-
     auto it = m_textureDescriptorIndices.find(texture);
     if (it == m_textureDescriptorIndices.end()) {
         textureIndex = m_materialBufferTextures.size();
@@ -704,7 +734,46 @@ uint32_t SceneRenderer::registerTexture(Texture2D* texture) {
     } else {
         textureIndex = it->second;
     }
+
     return textureIndex;
+}
+
+uint32_t SceneRenderer::registerMaterial(Material* material) {
+    uint32_t materialIndex;
+
+//    m_materialBufferTextures.emplace_back(m_missingTexture.get());
+//    m_materialBufferImageLayouts.emplace_back(vk::ImageLayout::eShaderReadOnlyOptimal);
+
+    if (material == nullptr) {
+        material = m_missingTextureMaterial.get();
+        return 0; // Missing texture is expected to be at index 0
+    }
+
+    auto it = m_materialIndices.find(material);
+    if (it == m_materialIndices.end()) {
+        materialIndex = m_materials.size();
+
+        GPUMaterial gpuMaterial{};
+        gpuMaterial.hasAlbedoTexture = material->hasAlbedoMap();
+        gpuMaterial.hasRoughnessTexture = material->hasRoughnessMap();
+        gpuMaterial.hasMetallicTexture = material->hasMetallicMap();
+        gpuMaterial.hasNormalTexture = material->hasNormalMap();
+        if (gpuMaterial.hasAlbedoTexture) gpuMaterial.albedoTextureIndex = registerTexture(material->getAlbedoMap().get());
+        if (gpuMaterial.hasRoughnessTexture) gpuMaterial.roughnessTextureIndex = registerTexture(material->getRoughnessMap().get());
+        if (gpuMaterial.hasMetallicTexture) gpuMaterial.metallicTextureIndex = registerTexture(material->getMetallicMap().get());
+        if (gpuMaterial.hasNormalTexture) gpuMaterial.normalTextureIndex = registerTexture(material->getNormalMap().get());
+        gpuMaterial.albedoColour_r = material->getAlbedo().r;
+        gpuMaterial.albedoColour_g = material->getAlbedo().g;
+        gpuMaterial.albedoColour_b = material->getAlbedo().b;
+        gpuMaterial.roughness = material->getRoughness();
+        gpuMaterial.metallic = material->getMetallic();
+        m_materials.emplace_back(gpuMaterial);
+
+        m_materialIndices.insert(std::make_pair(material, materialIndex));
+    } else {
+        materialIndex = it->second;
+    }
+    return materialIndex;
 }
 
 void SceneRenderer::notifyMeshChanged(const RenderComponent::UpdateType& updateType) {
@@ -721,12 +790,12 @@ void SceneRenderer::notifyTransformChanged(const uint32_t& entityIndex) {
     notifyEntityModified(entityIndex);
 }
 
-void SceneRenderer::notifyTextureChanged(const uint32_t &entityIndex) {
+void SceneRenderer::notifyMaterialChanged(const uint32_t &entityIndex) {
     if (entityIndex == EntityChangeTracker::INVALID_INDEX)
         return;
 
     for (int i = 0; i < CONCURRENT_FRAMES; ++i)
-        m_resources.get(i)->changedObjectTextures.set(entityIndex, true);
+        m_resources.get(i)->changedObjectMaterials.set(entityIndex, true);
 
     notifyEntityModified(entityIndex);
 }
@@ -755,7 +824,7 @@ void SceneRenderer::onRenderComponentAdded(const ComponentAddedEvent<RenderCompo
     notifyMeshChanged(event.component->meshUpdateType());
 
     UpdateTypeHandler<Transform>::setEntityUpdateType(event.entity, event.component->transformUpdateType());
-    UpdateTypeHandler<Texture2D>::setEntityUpdateType(event.entity, event.component->textureUpdateType());
+    UpdateTypeHandler<Texture2D>::setEntityUpdateType(event.entity, event.component->materialUpdateType());
     UpdateTypeHandler<Mesh>::setEntityUpdateType(event.entity, event.component->meshUpdateType());
 }
 
@@ -763,7 +832,7 @@ void SceneRenderer::onRenderComponentRemoved(const ComponentRemovedEvent<RenderC
     notifyMeshChanged(event.component->meshUpdateType());
 
     UpdateTypeHandler<Transform>::removeEntityUpdateType(event.entity, event.component->transformUpdateType());
-    UpdateTypeHandler<Texture2D>::removeEntityUpdateType(event.entity, event.component->textureUpdateType());
+    UpdateTypeHandler<Texture2D>::removeEntityUpdateType(event.entity, event.component->materialUpdateType());
     UpdateTypeHandler<Mesh>::removeEntityUpdateType(event.entity, event.component->meshUpdateType());
 }
 
@@ -785,11 +854,14 @@ ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
 
         for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
             m_resources.get(i)->changedObjectTransforms.ensureSize(maxObjects, true);
-            m_resources.get(i)->changedObjectTextures.ensureSize(maxObjects, true);
+            m_resources.get(i)->changedObjectMaterials.ensureSize(maxObjects, true);
         }
 
+        ObjectDataUBO defaultObjectData;
+        defaultObjectData.modelMatrix = glm::mat4(0.0);
+
         m_resources->objectBuffer.clear();
-        m_resources->objectBuffer.resize(maxObjects, ObjectDataUBO{ .modelMatrix = glm::mat4(0.0), .textureIndex = 0 });
+        m_resources->objectBuffer.resize(maxObjects, defaultObjectData);
 
 
         BufferConfiguration worldTransformBufferConfig;
@@ -802,12 +874,62 @@ ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
         m_resources->worldTransformBuffer = Buffer::create(worldTransformBufferConfig);
 
 
-        DescriptorSetWriter(m_resources->objectDescriptorSet).writeBuffer(0, m_resources->worldTransformBuffer, 0, newBufferSize).write();
+        DescriptorSetWriter(m_resources->objectDescriptorSet)
+            .writeBuffer(0, m_resources->worldTransformBuffer, 0, newBufferSize)
+            .write();
     }
 
     PROFILE_REGION("Map buffer");
     void* mappedBuffer = m_resources->worldTransformBuffer->map();
     return static_cast<ObjectDataUBO*>(mappedBuffer);
+}
+
+GPUMaterial* SceneRenderer::mappedMaterialDataBuffer(size_t maxObjects) {
+    PROFILE_SCOPE("SceneRenderer::mappedMaterialDataBuffer");
+
+    vk::DeviceSize newBufferSize = sizeof(GPUMaterial) * maxObjects;
+
+    if (m_resources->materialDataBuffer == nullptr || newBufferSize > m_resources->materialDataBuffer->getSize()) {
+        PROFILE_SCOPE("Allocate materialDataBuffer");
+
+        printf("Allocating materialDataBuffer - %llu objects\n", maxObjects);
+
+        m_materialIndices.clear();
+
+        m_resources->changedObjectMaterials.clear();
+        m_resources->changedObjectMaterials.resize(maxObjects, true);
+
+
+        for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
+            m_resources.get(i)->changedObjectTransforms.ensureSize(maxObjects, true);
+            m_resources.get(i)->changedObjectMaterials.ensureSize(maxObjects, true);
+        }
+
+        GPUMaterial defaultMaterial;
+        defaultMaterial.hasAlbedoTexture = false;
+        defaultMaterial.packedAlbedoColour = 0;
+        m_resources->materialBuffer.clear();
+        m_resources->materialBuffer.resize(maxObjects, defaultMaterial);
+
+
+        BufferConfiguration materialDataBufferConfig;
+        materialDataBufferConfig.device = Application::instance()->graphics()->getDevice();
+        materialDataBufferConfig.size = newBufferSize;
+        materialDataBufferConfig.memoryProperties =
+                vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+        //vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+        materialDataBufferConfig.usage = vk::BufferUsageFlagBits::eStorageBuffer;// | vk::BufferUsageFlagBits::eTransferDst;
+        m_resources->materialDataBuffer = Buffer::create(materialDataBufferConfig);
+
+
+        DescriptorSetWriter(m_resources->materialDescriptorSet)
+            .writeBuffer(1, m_resources->materialDataBuffer, 0, newBufferSize)
+            .write();
+    }
+
+    PROFILE_REGION("Map buffer");
+    void* mappedBuffer = m_resources->materialDataBuffer->map();
+    return static_cast<GPUMaterial*>(mappedBuffer);
 }
 
 

@@ -14,6 +14,7 @@ class Buffer;
 class DescriptorSet;
 class DescriptorSetLayout;
 class Texture2D;
+class Material;
 class Image2D;
 
 struct GraphicsPipelineConfiguration;
@@ -24,10 +25,43 @@ struct CameraInfoUBO {
 
 struct ObjectDataUBO {
     glm::mat4 modelMatrix;
-    uint32_t textureIndex;
-    uint32_t _pad0[3];
 };
 
+struct GPUMaterial {
+    uint32_t albedoTextureIndex;
+    uint32_t roughnessTextureIndex;
+    uint32_t metallicTextureIndex;
+    uint32_t normalTextureIndex;
+    union {
+        uint32_t packedAlbedoColour; // XRGB
+        struct {
+            uint8_t albedoColour_b;
+            uint8_t albedoColour_g;
+            uint8_t albedoColour_r;
+            uint8_t _unused0;
+        };
+    };
+    union {
+        uint32_t packedRoughnessMetallic; // XXRM
+        struct {
+            uint8_t metallic;
+            uint8_t roughness;
+            uint8_t _unused1;
+            uint8_t _unused2;
+        };
+    };
+
+    union {
+        uint32_t packedFlags;
+        struct {
+            bool hasAlbedoTexture : 1;
+            bool hasRoughnessTexture : 1;
+            bool hasMetallicTexture : 1;
+            bool hasNormalTexture : 1;
+        };
+    };
+    uint32_t _pad0;
+};
 
 class SceneRenderer {
 public:
@@ -49,11 +83,13 @@ public:
 
     uint32_t registerTexture(Texture2D* texture);
 
+    uint32_t registerMaterial(Material* material);
+
     void notifyMeshChanged(const RenderComponent::UpdateType& updateType);
 
     void notifyTransformChanged(const uint32_t& entityIndex);
 
-    void notifyTextureChanged(const uint32_t& entityIndex);
+    void notifyMaterialChanged(const uint32_t& entityIndex);
 
 //    template<typename T>
 //    void setEntityUpdateType(const Entity& entity, const RenderComponent::UpdateType& updateType);
@@ -61,13 +97,13 @@ public:
 private:
     void recordRenderCommands(double dt, vk::CommandBuffer commandBuffer);
 
-    void initMissingTexture();
+    void initMissingTextureMaterial();
 
     void sortRenderableEntities();
 
     void markChangedObjectTransforms(const size_t& rangeStart, const size_t& rangeEnd);
 
-    void markChangedTextureIndices(const size_t& rangeStart, const size_t& rangeEnd);
+    void markChangedMaterialIndices(const size_t& rangeStart, const size_t& rangeEnd);
 
     void findModifiedEntities();
 
@@ -83,6 +119,8 @@ private:
 
     ObjectDataUBO* mappedWorldTransformsBuffer(size_t maxObjects);
 
+    GPUMaterial* mappedMaterialDataBuffer(size_t maxObjects);
+
     void notifyEntityModified(const uint32_t& entityIndex);
 
     void recreateSwapchain(const RecreateSwapchainEvent& event);
@@ -94,12 +132,14 @@ private:
     struct RenderResources {
         Buffer* cameraInfoBuffer;
         Buffer* worldTransformBuffer;
+        Buffer* materialDataBuffer;
         DescriptorSet* globalDescriptorSet;
         DescriptorSet* objectDescriptorSet;
         DescriptorSet* materialDescriptorSet;
         DenseFlagArray changedObjectTransforms;
-        DenseFlagArray changedObjectTextures;
+        DenseFlagArray changedObjectMaterials;
         std::vector<ObjectDataUBO> objectBuffer;
+        std::vector<GPUMaterial> materialBuffer;
         size_t uploadedMaterialBufferTextures;
         std::set<uint32_t> modifiedEntities;
     };
@@ -111,9 +151,11 @@ private:
     std::shared_ptr<DescriptorSetLayout> m_materialDescriptorSetLayout;
 
     std::shared_ptr<Image2D> m_missingTextureImage;
-    std::shared_ptr<Texture2D> m_missingTexture;
+    std::shared_ptr<Material> m_missingTextureMaterial;
 
+    std::unordered_map<Material*, uint32_t> m_materialIndices;
     std::unordered_map<Texture2D*, uint32_t> m_textureDescriptorIndices;
+    std::vector<GPUMaterial> m_materials;
     std::vector<Texture2D*> m_materialBufferTextures;
     std::vector<vk::ImageLayout> m_materialBufferImageLayouts;
     size_t m_numRenderEntities;

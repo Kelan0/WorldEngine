@@ -24,27 +24,45 @@ if (i < 0 || i >= m_vertices.size()) { \
 #endif
 
 Vertex::Vertex() :
-        position(0.0F),
-        normal(0.0F),
-        texture(0.0F) {
+    position(0.0F),
+    normal(0.0F),
+    tangent(0.0F),
+    texture(0.0F) {
 }
 
 Vertex::Vertex(const Vertex& copy) :
-        position(copy.position),
-        normal(copy.normal),
-        texture(copy.texture) {
+    position(copy.position),
+    normal(copy.normal),
+    tangent(copy.tangent),
+    texture(copy.texture) {
 }
 
-Vertex::Vertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texture) :
-        position(position),
-        normal(normal),
-        texture(texture) {
+Vertex::Vertex(const glm::vec3& position, const glm::vec3& normal, const glm::vec2& texture):
+    position(position),
+    normal(normal),
+    tangent(0.0F),
+    texture(texture) {
 }
 
-Vertex::Vertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty) :
-        position(px, py, pz),
-        normal(nx, ny, nz),
-        texture(tx, ty) {
+Vertex::Vertex(const glm::vec3& position, const glm::vec3& normal, const glm::vec3& tangent, const glm::vec2& texture):
+    position(position),
+    normal(normal),
+    tangent(tangent),
+    texture(texture) {
+}
+
+Vertex::Vertex(const float& px, const float& py, const float& pz, const float& nx, const float& ny, const float& nz, const float& tu, const float& tv) :
+    position(px, py, pz),
+    normal(nx, ny, nz),
+    tangent(0.0F, 0.0F, 0.0F),
+    texture(tu, tv) {
+}
+
+Vertex::Vertex(const float& px, const float& py, const float& pz, const float& nx, const float& ny, const float& nz, const float& tx, const float& ty, const float& tz, const float& tu, const float& tv) :
+    position(px, py, pz),
+    normal(nx, ny, nz),
+    tangent(tx, ty, tz),
+    texture(tu, tv) {
 }
 
 Vertex Vertex::operator*(const glm::mat4& m) const {
@@ -57,6 +75,7 @@ Vertex& Vertex::operator*=(const glm::mat4& m) {
     glm::mat4 nm = glm::transpose(glm::inverse(m));
     position = glm::vec3(m * glm::vec4(position, 1.0F));
     normal = glm::vec3(nm * glm::vec4(normal, 0.0F));
+    tangent = glm::vec3(nm * glm::vec4(tangent, 0.0F));
     return *this;
 }
 
@@ -140,6 +159,9 @@ void compileOBJObject(
     constexpr uint32_t npos = uint32_t(-1);
 
     currentObject.triangleBeginIndex = triangles.size();
+
+    size_t numPositions = positions.size();
+    size_t numTriangles = triangles.size();
 
     for (int i = 0; i < faces.size(); ++i) {
         const face& face = faces[i];
@@ -402,12 +424,14 @@ bool MeshUtils::loadOBJFile(const std::string& filePath, MeshUtils::OBJMeshData&
         meshData.addTriangle(triangles[i].i0, triangles[i].i1, triangles[i].i2);
     }
 
+    meshData.computeTangents();
+
     return true;
 }
 
-// Version must be incremented whenever the read/write methods are changed,
+// Version must be incremented whenever the read/write methods or Vertex structure is changed,
 // otherwise garbage data will get read from older versions of the cache file.
-#define MESH_CACHE_FILE_VERSION 3
+#define MESH_CACHE_FILE_VERSION 5
 
 bool readMeshCache(const std::filesystem::path& path, MeshUtils::OBJMeshData& meshData) {
 

@@ -4,6 +4,8 @@
 
 #include "core/core.h"
 
+// TODO: maybe we could use AVX/SIMD to operate on wider sections of the dense array at once?
+
 class DenseFlagArray {
 public:
     using pack_t = uint8_t;

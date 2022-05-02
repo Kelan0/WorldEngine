@@ -98,8 +98,8 @@ bool Entity::operator!=(std::nullptr_t) const {
 //void Entity::removeRef() {
 //	if (m_entity != entt::null) {
 //		//printf("removeRef 0x%p for %llu\n", this, (uint64_t)m_entity);
-//		auto& v = m_scene->m_entityRefTracker[m_entity];
-//		v.erase(std::remove(v.begin(), v.end(), this), v.end());
+//		auto& tv = m_scene->m_entityRefTracker[m_entity];
+//		tv.erase(std::remove(tv.begin(), tv.end(), this), tv.end());
 //	}
 //}
 

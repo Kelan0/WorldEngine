@@ -5,7 +5,7 @@
 #include "core/core.h"
 #include "core/util/EntityChangeTracker.h"
 
-class Texture2D;
+class Material;
 class Mesh;
 
 
@@ -28,22 +28,22 @@ public:
     RenderComponent();
 
     RenderComponent(const UpdateType& transformUpdateType,
-                    const UpdateType& textureUpdateType,
+                    const UpdateType& materialUpdateType,
                     const UpdateType& meshUpdateType);
 
     RenderComponent& setMesh(const std::shared_ptr<Mesh>& mesh);
 
-    RenderComponent& setTexture(const std::shared_ptr<Texture2D>& texture);
+    RenderComponent& setMaterial(const std::shared_ptr<Material>& material);
 
-    const uint32_t& getTextureIndex() const;
+    const uint32_t& getMaterialIndex() const;
 
     const std::shared_ptr<Mesh>& mesh() const;
 
-    const std::shared_ptr<Texture2D>& texture() const;
+    const std::shared_ptr<Material>& material() const;
 
     UpdateType transformUpdateType() const;
 
-    UpdateType textureUpdateType() const;
+    UpdateType materialUpdateType() const;
 
     UpdateType meshUpdateType() const;
 
@@ -51,14 +51,14 @@ public:
 
 private:
     std::shared_ptr<Mesh> m_mesh;
-    std::shared_ptr<Texture2D> m_texture;
+    std::shared_ptr<Material> m_material;
 
     EntityChangeTracker::entity_index m_entityIndex;
-    uint32_t m_textureIndex;
+    uint32_t m_materialIndex;
 
     struct {
         UpdateType m_transformUpdateType : 2;
-        UpdateType m_textureUpdateType : 2;
+        UpdateType m_materialUpdateType : 2;
         UpdateType m_meshUpdateType : 2;
     };
 };

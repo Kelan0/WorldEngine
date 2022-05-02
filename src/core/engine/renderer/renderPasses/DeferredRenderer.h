@@ -16,8 +16,8 @@ class DescriptorSet;
 class Buffer;
 
 enum DeferredAttachmentType {
-    Attachment_Albedo = 0,
-    Attachment_Normal = 1,
+    Attachment_AlbedoRGB_Roughness = 0,
+    Attachment_NormalXYZ_Metallic = 1,
     Attachment_Depth = 2,
     NumAttachments = 3
 };

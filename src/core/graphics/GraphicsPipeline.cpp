@@ -42,7 +42,7 @@ void AttachmentBlendState::setAlphaBlendMode(const vk::BlendFactor& src, const v
 
 
 GraphicsPipelineConfiguration::~GraphicsPipelineConfiguration() {
-    printf("FUCK YOU\n");
+
 }
 
 void GraphicsPipelineConfiguration::setViewport(const vk::Viewport& viewport) {
@@ -668,7 +668,6 @@ bool GraphicsPipeline::loadShaderStage(std::string filePath, std::vector<char>& 
                     return false;
                 }
 
-                printf("Compiling shader file \"%s\"\n", filePath.c_str());
                 shouldCompile = true;
 
             } else if (std::filesystem::exists(filePath)) {
@@ -679,13 +678,13 @@ bool GraphicsPipeline::loadShaderStage(std::string filePath, std::vector<char>& 
 
                 if (lastModifiedSource > lastCompiled) {
                     // Source file was modified after the shader was last compiled
-                    printf("Recompiling shader file \"%s\"\n", filePath.c_str());
                     shouldCompile = true;
                 }
             }
         }
 
         if (shouldCompile) {
+            printf("Compiling shader file \"%s\"\n", filePath.c_str());
             if (!runCommand(std::string(GLSL_COMPILER_EXECUTABLE) + " \"" + filePath + "\" -o \"" + outputFilePath + "\"")) {
                 printf("Could not execute SPIR-V compile command. Provide a pre-compiled .spv file instead\n");
                 return false;
