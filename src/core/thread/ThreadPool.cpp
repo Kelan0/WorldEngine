@@ -14,15 +14,11 @@ ThreadPool::ThreadPool(size_t concurrency) {
 
     m_isBatchingTasks = false;
 
-    // BUG FIX: allocate all threads before the ThreadPool::executor method can run for any of them, avoid
-    // nullptr exception that happens rarely when some threads start executing before all are allocated.
-    for (size_t i = 0; i < concurrency; ++i)
-        m_threads[i] = new Thread();
-
-
     for (size_t i = 0; i < concurrency; ++i) {
+        m_threads[i] = new Thread();
         m_threads[i]->running = true;
         m_threads[i]->thread = std::thread(&ThreadPool::executor, this);
+        m_threads[i]->initialized = true;
     }
 }
 
@@ -125,7 +121,15 @@ BaseTask* ThreadPool::nextTask(Thread* currentThread) {
 }
 
 void ThreadPool::executor() {
-    PROFILE_SCOPE("ThreadPool::executor")
+    PROFILE_SCOPE("ThreadPool::executor");
+
+    while (true) {
+        for (const auto& thread : m_threads)
+            if (thread == nullptr || !thread->initialized)
+                continue; // One or more threads are uninitialized
+        break; // All threads are initialized
+    }
+
     Thread* thread = getCurrentThread();
     assert(thread != nullptr);
 
