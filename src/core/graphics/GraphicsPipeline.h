@@ -49,8 +49,6 @@ struct GraphicsPipelineConfiguration {
     std::weak_ptr<RenderPass> renderPass;
     std::unordered_map<vk::DynamicState, bool> dynamicStates;
 
-    ~GraphicsPipelineConfiguration();
-
     void setViewport(const vk::Viewport& viewport);
     void setViewport(const glm::vec2& size, const glm::vec2& offset = glm::vec2(0.0F, 0.0F), const float& minDepth = 0.0F, const float& maxDepth = 1.0F);
     void setViewport(const float& width, const float& height, const float& x = 0.0F, const float& y = 0.0F, const float& minDepth = 0.0F, const float& maxDepth = 1.0F);
@@ -89,9 +87,9 @@ private:
     GraphicsPipeline(std::weak_ptr<vkr::Device> device);
 
     GraphicsPipeline(std::weak_ptr<vkr::Device> device,
-                     std::unique_ptr<vkr::Pipeline>& pipeline,
+                     vk::Pipeline& pipeline,
+                     vk::PipelineLayout& pipelineLayout,
                      std::shared_ptr<RenderPass>& renderPass,
-                     std::unique_ptr<vkr::PipelineLayout>& pipelineLayout,
                      const GraphicsPipelineConfiguration& config);
 
 public:
@@ -103,7 +101,7 @@ public:
 
     bool recreate(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration);
 
-    void bind(const vk::CommandBuffer& commandBuffer);
+    void bind(const vk::CommandBuffer& commandBuffer) const;
 
     const vk::Pipeline& getPipeline() const;
 
@@ -188,17 +186,15 @@ public:
     void setColourWriteEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled);
 
 private:
-    static bool loadShaderStage(std::string filePath, std::vector<char>& bytecode);
-
-    static bool runCommand(const std::string& command);
+    void cleanup();
 
     void validateDynamicState(const vk::DynamicState& dynamicState);
 
 private:
     std::shared_ptr<vkr::Device> m_device;
-    std::unique_ptr<vkr::Pipeline> m_pipeline;
+    vk::Pipeline m_pipeline;
+    vk::PipelineLayout m_pipelineLayout;
     std::shared_ptr<RenderPass> m_renderPass;
-    std::unique_ptr<vkr::PipelineLayout> m_pipelineLayout;
     GraphicsPipelineConfiguration m_config;
 };
 

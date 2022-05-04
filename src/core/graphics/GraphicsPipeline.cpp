@@ -3,10 +3,7 @@
 #include "core/graphics/RenderPass.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Buffer.h"
-#include <fstream>
-#include <filesystem>
-
-#define GLSL_COMPILER_EXECUTABLE "D:/Code/VulkanSDK/1.2.198.1/Bin/glslc.exe"
+#include "core/graphics/ShaderUtils.h"
 
 
 AttachmentBlendState::AttachmentBlendState(const bool& blendEnable, const vk::ColorComponentFlags& colourWriteMask):
@@ -40,10 +37,6 @@ void AttachmentBlendState::setAlphaBlendMode(const vk::BlendFactor& src, const v
 }
 
 
-
-GraphicsPipelineConfiguration::~GraphicsPipelineConfiguration() {
-
-}
 
 void GraphicsPipelineConfiguration::setViewport(const vk::Viewport& viewport) {
     this->viewport = viewport;
@@ -127,9 +120,9 @@ GraphicsPipeline::GraphicsPipeline(std::weak_ptr<vkr::Device> device):
 }
 
 GraphicsPipeline::GraphicsPipeline(std::weak_ptr<vkr::Device> device,
-                                   std::unique_ptr<vkr::Pipeline>& pipeline,
+                                   vk::Pipeline& pipeline,
+                                   vk::PipelineLayout& pipelineLayout,
                                    std::shared_ptr<RenderPass>& renderPass,
-                                   std::unique_ptr<vkr::PipelineLayout>& pipelineLayout,
                                    const GraphicsPipelineConfiguration& config):
         m_device(std::move(device)),
         m_pipeline(std::move(pipeline)),
@@ -139,7 +132,7 @@ GraphicsPipeline::GraphicsPipeline(std::weak_ptr<vkr::Device> device,
 }
 
 GraphicsPipeline::~GraphicsPipeline() {
-
+    cleanup();
 }
 
 GraphicsPipeline* GraphicsPipeline::create(std::weak_ptr<vkr::Device> device) {
@@ -160,9 +153,13 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
 bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration) {
     assert(!graphicsPipelineConfiguration.device.expired() && graphicsPipelineConfiguration.device.lock() == m_device);
 
+    const vk::Device& device = **m_device;
+
+    cleanup();
+
     GraphicsPipelineConfiguration pipelineConfig(graphicsPipelineConfiguration);
 
-    VkResult result;
+    vk::Result result;
 
     std::vector<vk::DynamicState> dynamicStates = {};
 
@@ -203,17 +200,11 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
 
     if (!pipelineConfig.vertexShader.has_value()) {
         printf("Vertex shader is required by a graphics pipeline, but was not supplied\n");
-        m_pipelineLayout.reset();
-        m_renderPass.reset();
-        m_pipeline.reset();
         return false;
     }
 
     if (!pipelineConfig.fragmentShader.has_value()) {
         printf("Fragment shader is required by a graphics pipeline, but was not supplied\n");
-        m_pipelineLayout.reset();
-        m_renderPass.reset();
-        m_pipeline.reset();
         return false;
     }
 
@@ -222,30 +213,24 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
         return false;
     }
 
-    std::vector<char> shaderBytecode;
-    vk::ShaderModuleCreateInfo shaderModuleCreateInfo;
+    std::vector<vk::ShaderModule> allShaderModules;
+    allShaderModules.reserve(10); // Reallocation will break the references kept
 
-    if (!loadShaderStage(pipelineConfig.vertexShader.value(), shaderBytecode)) {
-        printf("Failed to create vertex shader module for shader file \"%s\"\n", pipelineConfig.vertexShader.value().c_str());
-        m_pipelineLayout.reset();
-        m_renderPass.reset();
-        m_pipeline.reset();
+    auto cleanupShaderModules = [&allShaderModules, &device]() {
+        for (const auto& shaderModule : allShaderModules)
+            device.destroyShaderModule(shaderModule);
+    };
+
+    vk::ShaderModule& vertexShaderModule = allShaderModules.emplace_back(VK_NULL_HANDLE);
+    if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_VertexShader, device, pipelineConfig.vertexShader.value(), &vertexShaderModule)) {
+        cleanupShaderModules();
         return false;
     }
-    shaderModuleCreateInfo.setCodeSize(shaderBytecode.size());
-    shaderModuleCreateInfo.setPCode(reinterpret_cast<const uint32_t*>(shaderBytecode.data()));
-    vkr::ShaderModule vertexShaderModule = m_device->createShaderModule(shaderModuleCreateInfo);
-
-    if (!loadShaderStage(pipelineConfig.fragmentShader.value(), shaderBytecode)) {
-        printf("Failed to create fragment shader module for shader file \"%s\"\n", pipelineConfig.fragmentShader.value().c_str());
-        m_pipelineLayout.reset();
-        m_renderPass.reset();
-        m_pipeline.reset();
+    vk::ShaderModule& fragmentShaderModule = allShaderModules.emplace_back(VK_NULL_HANDLE);
+    if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_FragmentShader, device, pipelineConfig.fragmentShader.value(), &fragmentShaderModule)) {
+        cleanupShaderModules();
         return false;
     }
-    shaderModuleCreateInfo.setCodeSize(shaderBytecode.size());
-    shaderModuleCreateInfo.setPCode(reinterpret_cast<const uint32_t*>(shaderBytecode.data()));
-    vkr::ShaderModule fragmentShaderModule = m_device->createShaderModule(shaderModuleCreateInfo);
 
     m_renderPass = std::shared_ptr<RenderPass>(pipelineConfig.renderPass);
 
@@ -253,13 +238,13 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
 
     vk::PipelineShaderStageCreateInfo& vertexShaderStageCreateInfo = pipelineShaderStages.emplace_back();
     vertexShaderStageCreateInfo.setStage(vk::ShaderStageFlagBits::eVertex);
-    vertexShaderStageCreateInfo.setModule(*vertexShaderModule);
+    vertexShaderStageCreateInfo.setModule(vertexShaderModule);
     vertexShaderStageCreateInfo.setPName("main");
     vertexShaderStageCreateInfo.setPSpecializationInfo(NULL); // TODO
 
     vk::PipelineShaderStageCreateInfo& fragmentShaderStageCreateInfo = pipelineShaderStages.emplace_back();
     fragmentShaderStageCreateInfo.setStage(vk::ShaderStageFlagBits::eFragment);
-    fragmentShaderStageCreateInfo.setModule(*fragmentShaderModule);
+    fragmentShaderStageCreateInfo.setModule(fragmentShaderModule);
     fragmentShaderStageCreateInfo.setPName("main");
     fragmentShaderStageCreateInfo.setPSpecializationInfo(NULL); // TODO
 
@@ -341,45 +326,13 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     pipelineLayoutCreateInfo.setSetLayouts(pipelineConfig.descriptorSetLayouts);
     pipelineLayoutCreateInfo.setPushConstantRangeCount(0);
 
-    m_pipelineLayout = std::make_unique<vkr::PipelineLayout>(*m_device, pipelineLayoutCreateInfo);
-
-//    RenderPassConfiguration renderPassConfig;
-//    renderPassConfig.device = pipelineConfig.device;
-//    vk::AttachmentDescription colourAttachment;
-//    colourAttachment.setFormat(pipelineConfig.colourFormat);
-//    colourAttachment.setSamples(vk::SampleCountFlagBits::e1);
-//    colourAttachment.setLoadOp(vk::AttachmentLoadOp::eClear);
-//    colourAttachment.setStoreOp(vk::AttachmentStoreOp::eStore);
-//    colourAttachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-//    colourAttachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-//    colourAttachment.setInitialLayout(vk::ImageLayout::eUndefined);
-//    colourAttachment.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
-//    renderPassConfig.addAttachment(colourAttachment);
-//    vk::AttachmentDescription depthAttachment;
-//    depthAttachment.setFormat(pipelineConfig.depthFormat);
-//    depthAttachment.setSamples(vk::SampleCountFlagBits::e1);
-//    depthAttachment.setLoadOp(vk::AttachmentLoadOp::eClear);
-//    depthAttachment.setStoreOp(vk::AttachmentStoreOp::eDontCare);
-//    depthAttachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-//    depthAttachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-//    depthAttachment.setInitialLayout(vk::ImageLayout::eUndefined);
-//    depthAttachment.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-//    renderPassConfig.addAttachment(depthAttachment);
-//    SubpassConfiguration subpassConfiguration;
-//    subpassConfiguration.addColourAttachment(vk::AttachmentReference(0, vk::ImageLayout::eColorAttachmentOptimal));
-//    subpassConfiguration.setDepthStencilAttachment(vk::AttachmentReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal));
-//    renderPassConfig.addSubpass(subpassConfiguration);
-//    vk::SubpassDependency subpassDependency;
-//    subpassDependency.setSrcSubpass(VK_SUBPASS_EXTERNAL);
-//    subpassDependency.setDstSubpass(0);
-//    subpassDependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests);
-//    subpassDependency.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests);
-//    subpassDependency.setSrcAccessMask({});
-//    subpassDependency.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite);
-//    renderPassConfig.addSubpassDependency(subpassDependency);
-//
-//    m_geometryRenderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig));
-
+    result = device.createPipelineLayout(&pipelineLayoutCreateInfo, nullptr, &m_pipelineLayout);
+    if (result != vk::Result::eSuccess) {
+        printf("Unable to create GraphicsPipeline: Failed to create PipelineLayout: %s\n", vk::to_string(result).c_str());
+        cleanupShaderModules();
+        cleanup();
+        return false;
+    }
 
     vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo;
     graphicsPipelineCreateInfo.setStages(pipelineShaderStages);
@@ -392,23 +345,33 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     graphicsPipelineCreateInfo.setPDepthStencilState(&depthStencilStateCreateInfo); // TODO
     graphicsPipelineCreateInfo.setPColorBlendState(&colourBlendStateCreateInfo);
     graphicsPipelineCreateInfo.setPDynamicState(&dynamicStateCreateInfo);
-    graphicsPipelineCreateInfo.setLayout(**m_pipelineLayout);
+    graphicsPipelineCreateInfo.setLayout(m_pipelineLayout);
     graphicsPipelineCreateInfo.setRenderPass(m_renderPass->getRenderPass());
     graphicsPipelineCreateInfo.setSubpass(0);
     graphicsPipelineCreateInfo.setBasePipelineHandle(VK_NULL_HANDLE);
     graphicsPipelineCreateInfo.setBasePipelineIndex(-1);
 
-    m_pipeline = std::make_unique<vkr::Pipeline>(*m_device, VK_NULL_HANDLE, graphicsPipelineCreateInfo);
+    auto createGraphicsPipelineResult = device.createGraphicsPipeline(VK_NULL_HANDLE, graphicsPipelineCreateInfo);
+    if (createGraphicsPipelineResult.result != vk::Result::eSuccess) {
+        printf("Failed to create GraphicsPipeline: %s\n", vk::to_string(createGraphicsPipelineResult.result).c_str());
+        cleanupShaderModules();
+        cleanup();
+        return false;
+    }
+
+    cleanupShaderModules();
+
+    m_pipeline = createGraphicsPipelineResult.value;
     m_config = std::move(pipelineConfig);
     return true;
 }
 
-void GraphicsPipeline::bind(const vk::CommandBuffer& commandBuffer) {
-    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, **m_pipeline);
+void GraphicsPipeline::bind(const vk::CommandBuffer& commandBuffer) const {
+    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline);
 }
 
 const vk::Pipeline& GraphicsPipeline::getPipeline() const {
-    return **m_pipeline;
+    return m_pipeline;
 }
 
 std::shared_ptr<RenderPass> GraphicsPipeline::getRenderPass() const {
@@ -416,7 +379,7 @@ std::shared_ptr<RenderPass> GraphicsPipeline::getRenderPass() const {
 }
 
 const vk::PipelineLayout& GraphicsPipeline::getPipelineLayout() const {
-    return **m_pipelineLayout;
+    return m_pipelineLayout;
 }
 
 const GraphicsPipelineConfiguration& GraphicsPipeline::getConfig() const {
@@ -640,88 +603,12 @@ void GraphicsPipeline::setColourWriteEnabled(const vk::CommandBuffer& commandBuf
     commandBuffer.setColorWriteEnableEXT(enabled);
 }
 
-bool GraphicsPipeline::loadShaderStage(std::string filePath, std::vector<char>& bytecode) {
-
-#if defined(ALWAYS_RELOAD_SHADERS)
-    constexpr bool alwaysReloadShaders = true;
-#else
-    constexpr bool alwaysReloadShaders = true;
-#endif
-
-    // TODO: determine if source file is GLSL or HLSL and call correct compiler
-
-    if (!filePath.ends_with(".spv")) {
-
-        std::string outputFilePath = filePath + ".spv";
-
-        bool shouldCompile = false;
-
-        if (alwaysReloadShaders) {
-            shouldCompile = true;
-        } else {
-            if (!std::filesystem::exists(outputFilePath)) {
-                // Compiled file does not exist.
-
-                if (!std::filesystem::exists(filePath)) {
-                    // Source file does not exist
-                    printf("Shader source file \"%s\" was not found\n", filePath.c_str());
-                    return false;
-                }
-
-                shouldCompile = true;
-
-            } else if (std::filesystem::exists(filePath)) {
-                // Compiled file and source file both exist
-
-                auto lastModifiedSource = std::filesystem::last_write_time(filePath);
-                auto lastCompiled = std::filesystem::last_write_time(outputFilePath);
-
-                if (lastModifiedSource > lastCompiled) {
-                    // Source file was modified after the shader was last compiled
-                    shouldCompile = true;
-                }
-            }
-        }
-
-        if (shouldCompile) {
-            printf("Compiling shader file \"%s\"\n", filePath.c_str());
-            if (!runCommand(std::string(GLSL_COMPILER_EXECUTABLE) + " \"" + filePath + "\" -o \"" + outputFilePath + "\"")) {
-                printf("Could not execute SPIR-V compile command. Provide a pre-compiled .spv file instead\n");
-                return false;
-            }
-        }
-
-        filePath = outputFilePath;
-    }
-
-    std::ifstream file(filePath, std::ios::ate | std::ios::binary);
-
-    if (!file.is_open()) {
-        printf("Shader file \"%s\" was not found\n", filePath.c_str());
-        return false;
-    }
-
-    bytecode.resize(file.tellg());
-    file.seekg(0);
-    file.read(bytecode.data(), bytecode.size());
-    file.close();
-
-    return true;
-}
-
-bool GraphicsPipeline::runCommand(const std::string& command) {
-#if defined(__WIN32__) || defined(_WIN32) || defined(_WIN64)
-    int error = system(command.c_str());
-    if (error != 0) {
-        return false;
-    }
-
-    return true;
-#else
-    printf("Unable to execute commands on unsupported platform\n");
-#endif
-
-    return false;
+void GraphicsPipeline::cleanup() {
+    (**m_device).destroyPipelineLayout(m_pipelineLayout);
+    (**m_device).destroyPipeline(m_pipeline);
+    m_pipelineLayout = VK_NULL_HANDLE;
+    m_pipeline = VK_NULL_HANDLE;
+    m_renderPass.reset();
 }
 
 void GraphicsPipeline::validateDynamicState(const vk::DynamicState& dynamicState) {

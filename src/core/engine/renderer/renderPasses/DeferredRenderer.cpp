@@ -7,6 +7,7 @@
 #include "core/graphics/Framebuffer.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/GraphicsPipeline.h"
+#include "core/graphics/ComputePipeline.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Image2D.h"
 #include "core/graphics/ImageCube.h"
@@ -21,6 +22,8 @@
 
 ImageCube* imageCube = nullptr;
 ImageViewCube* imageViewCube = nullptr;
+
+ComputePipeline* computePipeline = nullptr;
 
 
 DeferredGeometryRenderPass::DeferredGeometryRenderPass() {
@@ -279,6 +282,7 @@ DeferredLightingRenderPass::~DeferredLightingRenderPass() {
 
     delete imageCube;
     delete imageViewCube;
+    delete computePipeline;
 
     Application::instance()->eventDispatcher()->disconnect(&DeferredLightingRenderPass::recreateSwapchain, this);
 }
@@ -344,6 +348,12 @@ bool DeferredLightingRenderPass::init() {
     m_attachmentSamplers[Attachment_AlbedoRGB_Roughness] = Sampler::create(samplerConfig);
     m_attachmentSamplers[Attachment_NormalXYZ_Metallic] = Sampler::create(samplerConfig);
     m_attachmentSamplers[Attachment_Depth] = Sampler::create(samplerConfig);
+
+
+    ComputePipelineConfiguration computePipelineConfig;
+    computePipelineConfig.device = Application::instance()->graphics()->getDevice();
+    computePipelineConfig.computeShader = "res/shaders/util/compute_equirectangular.glsl";
+    computePipeline = ComputePipeline::create(computePipelineConfig);
 
     Application::instance()->eventDispatcher()->connect(&DeferredLightingRenderPass::recreateSwapchain, this);
     return true;
