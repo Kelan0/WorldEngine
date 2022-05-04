@@ -1,6 +1,6 @@
 #include "core/graphics/Framebuffer.h"
 #include "core/graphics/RenderPass.h"
-#include "core/graphics/Image.h"
+#include "core/graphics/Image2D.h"
 
 
 void FramebufferConfiguration::setRenderPass(const vk::RenderPass& renderPass) {

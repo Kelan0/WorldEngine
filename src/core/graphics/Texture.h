@@ -4,7 +4,7 @@
 
 
 #include "core/core.h"
-#include "core/graphics/Image.h"
+#include "core/graphics/Image2D.h"
 
 struct SamplerConfiguration {
     std::weak_ptr<vkr::Device> device;

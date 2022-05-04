@@ -649,7 +649,7 @@ bool GraphicsManager::initSurfaceDetails() {
     }
 
     std::vector<vk::Format> depthFormats = { vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint, vk::Format::eD32Sfloat };
-    m_surface.depthFormat = Image2D::selectSupportedFormat(getPhysicalDevice(), depthFormats, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
+    m_surface.depthFormat = ImageUtil::selectSupportedFormat(getPhysicalDevice(), depthFormats, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
     if (m_surface.depthFormat == vk::Format::eUndefined) {
         std::string formatsStr = "";
         for (int i = 0; i < depthFormats.size(); ++i)

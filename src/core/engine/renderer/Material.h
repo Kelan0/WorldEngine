@@ -3,7 +3,7 @@
 #define WORLDENGINE_MATERIAL_H
 
 #include "core/core.h"
-#include "core/graphics/Image.h"
+#include "core/graphics/Image2D.h"
 #include "core/graphics/Texture.h"
 
 struct MaterialConfiguration {

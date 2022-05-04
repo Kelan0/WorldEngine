@@ -84,6 +84,7 @@ private:
         glm::mat4 invViewMatrix;
         glm::mat4 invProjectionMatrix;
         glm::mat4 invViewProjectionMatrix;
+        glm::mat4 cameraRays;
     };
 
     struct RenderResources {

@@ -1,6 +1,6 @@
 
 #include "core/graphics/RenderPass.h"
-#include "core/graphics/Image.h"
+#include "core/graphics/Image2D.h"
 #include "core/application/Application.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/Framebuffer.h"

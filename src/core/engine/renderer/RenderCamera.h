@@ -56,9 +56,11 @@ private:
     Camera m_prevProjection;
 
     glm::mat4 m_viewMatrix;
+    glm::mat4 m_viewRotationMatrix;
     glm::mat4 m_projectionMatrix;
     glm::mat4 m_viewProjectionMatrix;
     glm::mat4 m_inverseViewMatrix;
+    glm::mat4 m_inverseViewRotationMatrix;
     glm::mat4 m_inverseProjectionMatrix;
     glm::mat4 m_inverseViewProjectionMatrix;
 

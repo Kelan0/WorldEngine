@@ -4,7 +4,8 @@
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Buffer.h"
-#include "core/graphics/Image.h"
+#include "core/graphics/Image2D.h"
+#include "core/graphics/ImageCube.h"
 #include "core/graphics/Mesh.h"
 #include "core/graphics/Texture.h"
 #include "core/graphics/DeviceMemory.h"
@@ -77,6 +78,9 @@ class App : public Application {
 //        cubeMaterialConfig.setMetallicMap(loadTexture("res/textures/mossybark02/metallic.png", vk::Format::eR8G8B8A8Srgb, sampler));
         cubeMaterialConfig.setNormalMap(loadTexture("res/textures/mossybark02/normal.png", vk::Format::eR8G8B8A8Srgb, sampler));
         std::shared_ptr<Material> cubeMaterial = std::shared_ptr<Material>(Material::create(cubeMaterialConfig));
+
+
+
 
 
 

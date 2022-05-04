@@ -8,7 +8,8 @@
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/GraphicsPipeline.h"
 #include "core/graphics/DescriptorSet.h"
-#include "core/graphics/Image.h"
+#include "core/graphics/Image2D.h"
+#include "core/graphics/ImageCube.h"
 #include "core/graphics/Texture.h"
 #include "core/graphics/Buffer.h"
 
@@ -16,6 +17,11 @@
 #define ALBEDO_TEXTURE_BINDING 1
 #define NORMAL_TEXTURE_BINDING 2
 #define DEPTH_TEXTURE_BINDING 3
+
+
+ImageCube* imageCube = nullptr;
+ImageViewCube* imageViewCube = nullptr;
+
 
 DeferredGeometryRenderPass::DeferredGeometryRenderPass() {
 
@@ -271,6 +277,9 @@ DeferredLightingRenderPass::~DeferredLightingRenderPass() {
     for (size_t i = 0; i < NumAttachments; ++i)
         delete m_attachmentSamplers[i];
 
+    delete imageCube;
+    delete imageViewCube;
+
     Application::instance()->eventDispatcher()->disconnect(&DeferredLightingRenderPass::recreateSwapchain, this);
 }
 
@@ -284,6 +293,7 @@ bool DeferredLightingRenderPass::init() {
             .addCombinedImageSampler(ALBEDO_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(NORMAL_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(DEPTH_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
+            .addCombinedImageSampler(4, vk::ShaderStageFlagBits::eFragment)
             .build();
 
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
@@ -302,6 +312,27 @@ bool DeferredLightingRenderPass::init() {
                 .writeBuffer(UNIFORM_BUFFER_BINDING, m_resources[i]->uniformBuffer, 0, m_resources[i]->uniformBuffer->getSize())
                 .write();
     }
+
+    ImageData::ImageTransform* flipX = new ImageData::Flip(true, false);
+    ImageData::ImageTransform* flipY = new ImageData::Flip(false, true);
+    ImageCubeConfiguration imageCubeConfig;
+    imageCubeConfig.device = Application::instance()->graphics()->getDevice();
+    imageCubeConfig.format = vk::Format::eR8G8B8A8Srgb;
+    imageCubeConfig.usage = vk::ImageUsageFlagBits::eSampled;
+    imageCubeConfig.setSource(ImageCubeFace_NegX, "res/textures/test_cubemap2/neg_x.png", flipX);
+    imageCubeConfig.setSource(ImageCubeFace_PosX, "res/textures/test_cubemap2/pos_x.png", flipX);
+    imageCubeConfig.setSource(ImageCubeFace_NegY, "res/textures/test_cubemap2/neg_y.png", flipY);
+    imageCubeConfig.setSource(ImageCubeFace_PosY, "res/textures/test_cubemap2/pos_y.png", flipY);
+    imageCubeConfig.setSource(ImageCubeFace_NegZ, "res/textures/test_cubemap2/neg_z.png", flipX);
+    imageCubeConfig.setSource(ImageCubeFace_PosZ, "res/textures/test_cubemap2/pos_z.png", flipX);
+    imageCube = ImageCube::create(imageCubeConfig);
+    delete flipX;
+    delete flipY;
+    ImageViewCubeConfiguration imageViewCubeConfig;
+    imageViewCubeConfig.device = Application::instance()->graphics()->getDevice();
+    imageViewCubeConfig.format = imageCube->getFormat();
+    imageViewCubeConfig.setImage(imageCube);
+    imageViewCube = ImageViewCube::create(imageViewCubeConfig);
 
     SamplerConfiguration samplerConfig;
     samplerConfig.device = Application::instance()->graphics()->getDevice();
@@ -336,11 +367,22 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
             .writeImage(ALBEDO_TEXTURE_BINDING, m_attachmentSamplers[Attachment_AlbedoRGB_Roughness], m_geometryPass->getAlbedoImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
             .writeImage(NORMAL_TEXTURE_BINDING, m_attachmentSamplers[Attachment_NormalXYZ_Metallic], m_geometryPass->getNormalImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
             .writeImage(DEPTH_TEXTURE_BINDING, m_attachmentSamplers[Attachment_Depth], m_geometryPass->getDepthImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
+            .writeImage(4, m_attachmentSamplers[0]->getSampler(), imageViewCube->getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
             .write();
 
     std::vector<vk::DescriptorSet> descriptorSets = {
             m_resources->uniformDescriptorSet->getDescriptorSet()
     };
+
+    glm::mat4x4 projectedRays = m_renderCamera.getInverseProjectionMatrix() * glm::mat4(
+            -1, +1, 0, 1,
+            +1, +1, 0, 1,
+            +1, -1, 0, 1,
+            -1, -1, 0, 1);
+    glm::mat4 viewCameraRays = projectedRays / projectedRays[3][3];
+
+    // Ignore translation component of view matrix
+    glm::mat4 worldCameraRays = glm::mat4(glm::mat3(m_renderCamera.getInverseViewMatrix())) * viewCameraRays;
 
     LightingPassUniformData uniformData{};
     uniformData.viewMatrix = m_renderCamera.getViewMatrix();
@@ -349,6 +391,7 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
     uniformData.invViewMatrix = m_renderCamera.getInverseViewMatrix();
     uniformData.invProjectionMatrix = m_renderCamera.getInverseProjectionMatrix();
     uniformData.invViewProjectionMatrix = m_renderCamera.getInverseViewProjectionMatrix();
+    uniformData.cameraRays = worldCameraRays;
     m_resources->uniformBuffer->upload(0, sizeof(LightingPassUniformData), &uniformData);
 
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_graphicsPipeline->getPipelineLayout(), 0, descriptorSets, nullptr);

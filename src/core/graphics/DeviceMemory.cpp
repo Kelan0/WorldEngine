@@ -1,7 +1,7 @@
 #include "core/graphics/DeviceMemory.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/Buffer.h"
-#include "core/graphics/Image.h"
+#include "core/graphics/Image2D.h"
 #include "core/application/Application.h"
 #include "core/util/Util.h"
 

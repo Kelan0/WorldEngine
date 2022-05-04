@@ -25,7 +25,6 @@ private:
         //wsque<BaseTask*> taskQueue;
         std::deque<BaseTask*> taskQueue;
         std::vector<BaseTask*> completeTasks;
-        bool initialized;
         bool running;
         bool forceWake;
     };

@@ -13,11 +13,13 @@ layout(set = 0, binding = 0) uniform UBO1 {
     mat4 invViewMatrix;
     mat4 invProjectionMatrix;
     mat4 invViewProjectionMatrix;
+    mat4 cameraRays;
 };
 
 layout(set = 0, binding = 1) uniform sampler2D texture_AlbedoRGB_Roughness;
 layout(set = 0, binding = 2) uniform sampler2D texture_NormalXYZ_Metallic;
 layout(set = 0, binding = 3) uniform sampler2D texture_Depth;
+layout(set = 0, binding = 4) uniform samplerCube environmentCubeMap;
 
 const float PI = 3.14159265359;
 
@@ -112,6 +114,17 @@ float geometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
     return ggx1 * ggx2;
 }
 
+vec3 createRay(vec2 screenPos) {
+    vec3 v00 = vec3(cameraRays[0]);
+    vec3 v10 = vec3(cameraRays[1]);
+    vec3 v11 = vec3(cameraRays[2]);
+    vec3 v01 = vec3(cameraRays[3]);
+    vec3 vy0 = mix(v00, v10, screenPos.x);
+    vec3 vy1 = mix(v01, v11, screenPos.x);
+    vec3 vxy = mix(vy0, vy1, screenPos.y);
+    return normalize(vxy);
+}
+
 vec3 calculateOutgoingRadiance(in SurfacePoint surface, in vec3 incomingRadiance, in vec3 dirToLight) {
     vec3 N = surface.normal;
     vec3 V = surface.dirToCamera;
@@ -149,38 +162,62 @@ vec3 calculatePointLight(in SurfacePoint surface, in PointLight light) {
 }
 
 void main() {
-    SurfacePoint surface;
-    loadSurface(fs_texture, surface);
+    // SurfacePoint surface;
+    // loadSurface(fs_texture, surface);
 
-    if (!surface.exists) {
-        outColor = vec4(0.0, 0.0, 0.0, 1.0);
-        return;
-    }
+    // if (!surface.exists) {
+    //     // outColor = vec4(0.0, 0.0, 0.0, 1.0);
+    //     outColor = vec4(texture(environmentCubeMap, createRay(fs_texture)).rgb, 1.0);
+    //     return;
+    // }
 
-    vec3 cameraPos = vec3(0.0); // camera at origin
+    // vec3 cameraPos = vec3(0.0); // camera at origin
 
-    const uint numPointLights = 4;
-    PointLight[4] pointLights;
-    pointLights[0].position = vec3(viewMatrix * vec4(vec3(3.0, 0.8, -1.0), 1.0));
-    pointLights[0].intensity = vec3(32.0, 8.0, 0.0);
-    pointLights[1].position = vec3(viewMatrix * vec4(vec3(0.4, 1.3, 2.0), 1.0));
-    pointLights[1].intensity = vec3(32.0, 32.0, 32.0);
-    pointLights[2].position = vec3(viewMatrix * vec4(vec3(-2.0, 1.1, -1.2), 1.0));
-    pointLights[2].intensity = vec3(0.8, 6.4, 32.0);
-    pointLights[3].position = vec3(viewMatrix * vec4(vec3(-2.1, 1.1, 2.3), 1.0));
-    pointLights[3].intensity = vec3(0.8, 32.0, 6.4);
+    // const uint numPointLights = 4;
+    // PointLight[4] pointLights;
+    // pointLights[0].position = vec3(viewMatrix * vec4(vec3(3.0, 0.8, -1.0), 1.0));
+    // pointLights[0].intensity = vec3(32.0, 8.0, 0.0);
+    // pointLights[1].position = vec3(viewMatrix * vec4(vec3(0.4, 1.3, 2.0), 1.0));
+    // pointLights[1].intensity = vec3(32.0, 32.0, 32.0);
+    // pointLights[2].position = vec3(viewMatrix * vec4(vec3(-2.0, 1.1, -1.2), 1.0));
+    // pointLights[2].intensity = vec3(0.8, 6.4, 32.0);
+    // pointLights[3].position = vec3(viewMatrix * vec4(vec3(-2.1, 1.1, 2.3), 1.0));
+    // pointLights[3].intensity = vec3(0.8, 32.0, 6.4);
 
-    vec3 Lo = vec3(0.0);
+    // vec3 Lo = vec3(0.0);
 
-    for (uint i = 0; i < numPointLights; ++i) {
-        Lo += surface.albedo * calculatePointLight(surface, pointLights[i]);
-    }
+    // for (uint i = 0; i < numPointLights; ++i) {
+    //     Lo += surface.albedo * calculatePointLight(surface, pointLights[i]);
+    // }
 
-    vec3 ambient = vec3(0.03) * surface.albedo * surface.ambientOcclusion;
-    vec3 finalColour = ambient + Lo;
+    // vec3 ambient = vec3(0.03) * surface.albedo * surface.ambientOcclusion;
+    // vec3 finalColour = ambient + Lo;
 
-    finalColour = finalColour / (finalColour + vec3(1.0));
-    finalColour = pow(finalColour, vec3(1.0 / 2.2));  
+    // finalColour = finalColour / (finalColour + vec3(1.0));
+    // finalColour = pow(finalColour, vec3(1.0 / 2.2));  
 
-    outColor = vec4(finalColour, 1.0);
+    // outColor = vec4(finalColour, 1.0);
+
+
+
+
+    outColor = vec4(texture(environmentCubeMap, createRay(fs_texture)).rgb, 1.0);
+
+
+
+
+    // vec3 ray = createRay(fs_texture);
+    // if (abs(ray.x) > abs(ray.y)) {
+    //     if (abs(ray.x) > abs(ray.z))
+    //         ray = vec3(sign(ray.x), 0, 0);
+    //     else
+    //         ray = vec3(0, 0, sign(ray.z));
+    // } else {
+    //     if (abs(ray.y) > abs(ray.z))
+    //         ray = vec3(0, sign(ray.y), 0);
+    //     else
+    //         ray = vec3(0, 0, sign(ray.z));
+    // }
+
+    // outColor = vec4(ray * 0.5 + 0.5, 1.0);
 }

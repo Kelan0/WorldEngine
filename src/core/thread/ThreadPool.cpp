@@ -18,7 +18,6 @@ ThreadPool::ThreadPool(size_t concurrency) {
         m_threads[i] = new Thread();
         m_threads[i]->running = true;
         m_threads[i]->thread = std::thread(&ThreadPool::executor, this);
-        m_threads[i]->initialized = true;
     }
 }
 
@@ -123,15 +122,30 @@ BaseTask* ThreadPool::nextTask(Thread* currentThread) {
 void ThreadPool::executor() {
     PROFILE_SCOPE("ThreadPool::executor");
 
+    // Wait for all threads to be allocated.
     while (true) {
         for (const auto& thread : m_threads)
-            if (thread == nullptr || !thread->initialized)
-                continue; // One or more threads are uninitialized
-        break; // All threads are initialized
+            if (thread == nullptr)
+                continue; // One or more threads are unallocated
+        break; // All threads are allocated
     }
 
     Thread* thread = getCurrentThread();
-    assert(thread != nullptr);
+
+    // TODO: implement less hacky way of dealing with this.
+    // Sometimes getCurrentThread() is called before all threads have been spun up, resulting in a nullptr.
+    // We retry 100 times, once every 10 milliseconds if it fails. 99% of the time it should work on the first or second attempt.
+    // 1000 milliseconds should be enough for even the slowest systems.
+    for (size_t i = 0; thread == nullptr && i < 100; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        thread = getCurrentThread();
+    }
+
+    if (thread == nullptr) {
+        printf("Failed to initialize ThreadPool worker thread\n");
+        assert(false);
+        return;
+    }
 
     thread->forceWake = false;
 
