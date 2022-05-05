@@ -95,16 +95,17 @@ bool SceneRenderer::init() {
     initialImageLayouts.resize(maxTextures, vk::ImageLayout::eShaderReadOnlyOptimal);
 
     m_globalDescriptorSetLayout = builder
-            .addUniformBlock(0, vk::ShaderStageFlagBits::eVertex, sizeof(CameraInfoUBO))
+            .addUniformBuffer(0, vk::ShaderStageFlagBits::eVertex, sizeof(CameraInfoUBO))
             .build();
 
     m_objectDescriptorSetLayout = builder
-            .addStorageBlock(0, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, sizeof(ObjectDataUBO))
+            .addStorageBuffer(0, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
+                              sizeof(ObjectDataUBO))
             .build();
 
     m_materialDescriptorSetLayout = builder
             .addCombinedImageSampler(0, vk::ShaderStageFlagBits::eFragment, maxTextures)
-            .addStorageBlock(1, vk::ShaderStageFlagBits::eFragment, sizeof(GPUMaterial))
+            .addStorageBuffer(1, vk::ShaderStageFlagBits::eFragment, sizeof(GPUMaterial))
             .build();
 
     for (int i = 0; i < CONCURRENT_FRAMES; ++i) {

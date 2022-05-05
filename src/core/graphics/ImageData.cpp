@@ -3,8 +3,11 @@
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/Buffer.h"
 #include "core/graphics/CommandPool.h"
+#include "core/graphics/ComputePipeline.h"
+#include "core/graphics/DescriptorSet.h"
 
-std::map<std::string, ImageData*> ImageData::s_imageCache;
+std::unordered_map<std::string, ImageData*> ImageData::s_imageCache;
+std::unordered_map<std::string, ComputePipeline*> ImageData::ImageTransform::s_transformComputePipelines;
 
 ImageData::ImageData(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, bool stbiAllocated):
         m_data(data),
@@ -58,6 +61,7 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
     int width, height, channels;
     uint8_t* data;
 
+
     if (channelSize == 1) {
         data = reinterpret_cast<uint8_t*>(stbi_load(filePath.c_str(), &width, &height, &channels, desiredChannelCount));
     } else if (channelSize == 2) {
@@ -70,7 +74,7 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
     }
 
     if (data == nullptr) {
-        printf("Failed to load image \"%s\"\n", filePath.c_str());
+        printf("Failed to load image \"%s\" - Reason: %s\n", filePath.c_str(), stbi_failure_reason());
         return nullptr;
     }
 
@@ -530,6 +534,17 @@ bool ImageData::ImageTransform::isNoOp() const {
     return true;
 }
 
+void ImageData::ImageTransform::initComputeResources() {
+    Application::instance()->graphics()->commandPool()->allocateCommandBuffer("image_compute_buffer", { vk::CommandBufferLevel::ePrimary });
+}
+
+void ImageData::ImageTransform::destroyComputeResources() {
+    for (const auto& it : s_transformComputePipelines)
+        delete it.second;
+}
+
+
+
 ImageData::Flip::Flip(bool x, bool y):
     flip_x(x),
     flip_y(y) {
@@ -589,6 +604,21 @@ ImageData* ImageData::Flip::apply(uint8_t* data, uint32_t width, uint32_t height
 
 bool ImageData::Flip::isNoOp() const {
     return !flip_x && !flip_y;
+}
+
+ComputePipeline* ImageData::Flip::getComputePipeline() {
+    constexpr const char* key = "TransformPipeline_ImageFlip";
+    auto it = s_transformComputePipelines.find(key);
+    if (it == s_transformComputePipelines.end()) {
+        ComputePipelineConfiguration pipelineConfig{};
+        pipelineConfig.device = Application::instance()->graphics()->getDevice();
+        pipelineConfig.computeShader = "res/shaders/util/imageTransform/compute_flip.glsl";
+        ComputePipeline* pipeline = ComputePipeline::create(pipelineConfig);
+        s_transformComputePipelines.insert(std::make_pair(key, pipeline));
+        return pipeline;
+    } else {
+        return it->second;
+    }
 }
 
 
@@ -704,7 +734,7 @@ bool ImageUtil::transitionLayout(const vk::Image& image, vk::CommandBuffer comma
     return true;
 }
 
-bool ImageUtil::upload(const vk::Image& dstImage, void* data, const uint32_t& bytesPerPixel, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
+bool ImageUtil::upload(const vk::Image& dstImage, void* data, const uint32_t& bytesPerPixel, const vk::ImageAspectFlags& aspectMask, const ImageRegion& imageRegion, const ImageTransitionState& dstState) {
 
     if (!dstImage) {
         assert(false);
@@ -730,7 +760,19 @@ bool ImageUtil::upload(const vk::Image& dstImage, void* data, const uint32_t& by
         return false;
     }
 
-    vk::BufferImageCopy imageCopy;
+    BufferConfiguration bufferConfig{};
+    bufferConfig.device = Application::instance()->graphics()->getDevice();
+    bufferConfig.data = data;
+    bufferConfig.size = (vk::DeviceSize)imageRegion.width * (vk::DeviceSize)imageRegion.height * (vk::DeviceSize)imageRegion.depth * (vk::DeviceSize)bytesPerPixel;
+    bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+    bufferConfig.usage = vk::BufferUsageFlagBits::eTransferSrc;
+    Buffer* srcBuffer = Buffer::create(bufferConfig);
+    if (srcBuffer == nullptr) {
+        printf("Failed to create image data staging buffer\n");
+        return false;
+    }
+
+    vk::BufferImageCopy imageCopy{};
     imageCopy.setBufferOffset(0);
     imageCopy.setBufferRowLength(0);
     imageCopy.setBufferImageHeight(0);
@@ -745,17 +787,14 @@ bool ImageUtil::upload(const vk::Image& dstImage, void* data, const uint32_t& by
     imageCopy.imageExtent.setHeight(imageRegion.height);
     imageCopy.imageExtent.setDepth(imageRegion.depth);
 
-    BufferConfiguration bufferConfig;
-    bufferConfig.device = Application::instance()->graphics()->getDevice();
-    bufferConfig.data = data;
-    bufferConfig.size = (vk::DeviceSize)imageRegion.width * (vk::DeviceSize)imageRegion.height * (vk::DeviceSize)imageRegion.depth * (vk::DeviceSize)bytesPerPixel;
-    bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-    bufferConfig.usage = vk::BufferUsageFlagBits::eTransferSrc;
-    Buffer* srcBuffer = Buffer::create(bufferConfig);
-    if (srcBuffer == nullptr) {
-        printf("Failed to create image data staging buffer\n");
-        return false;
-    }
+    bool success = transferBuffer(dstImage, srcBuffer->getBuffer(), imageCopy, aspectMask, imageRegion.baseLayer, imageRegion.layerCount, imageRegion.baseMipLevel, imageRegion.mipLevelCount, dstState);
+
+    delete srcBuffer;
+    return success;
+}
+
+
+bool ImageUtil::transferBuffer(const vk::Image& dstImage, const vk::Buffer& srcBuffer, const vk::BufferImageCopy& imageCopy, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const uint32_t& baseMipLevel, const uint32_t& mipLevelCount, const ImageTransitionState& dstState) {
 
     const vk::Queue& transferQueue = **Application::instance()->graphics()->getQueue(QUEUE_TRANSFER_MAIN);
     const vk::CommandBuffer& transferCommandBuffer = **Application::instance()->graphics()->commandPool()->getCommandBuffer("transfer_buffer");
@@ -765,13 +804,13 @@ bool ImageUtil::upload(const vk::Image& dstImage, void* data, const uint32_t& by
 
     vk::ImageSubresourceRange subresourceRange;
     subresourceRange.setAspectMask(aspectMask);
-    subresourceRange.setBaseArrayLayer(imageRegion.baseLayer);
-    subresourceRange.setLayerCount(imageRegion.layerCount);
-    subresourceRange.setBaseMipLevel(imageRegion.baseMipLevel);
-    subresourceRange.setLevelCount(imageRegion.mipLevelCount);
+    subresourceRange.setBaseArrayLayer(baseLayer);
+    subresourceRange.setLayerCount(layerCount);
+    subresourceRange.setBaseMipLevel(baseMipLevel);
+    subresourceRange.setLevelCount(mipLevelCount);
     transferCommandBuffer.begin(commandBeginInfo);
     ImageUtil::transitionLayout(dstImage, transferCommandBuffer, subresourceRange, ImageTransition::FromAny(), ImageTransition::TransferDst());
-    transferCommandBuffer.copyBufferToImage(srcBuffer->getBuffer(), dstImage, vk::ImageLayout::eTransferDstOptimal, 1, &imageCopy);
+    transferCommandBuffer.copyBufferToImage(srcBuffer, dstImage, vk::ImageLayout::eTransferDstOptimal, 1, &imageCopy);
     ImageUtil::transitionLayout(dstImage, transferCommandBuffer, subresourceRange, ImageTransition::TransferDst(), dstState);
     transferCommandBuffer.end();
 
@@ -780,8 +819,6 @@ bool ImageUtil::upload(const vk::Image& dstImage, void* data, const uint32_t& by
     queueSumbitInfo.setPCommandBuffers(&transferCommandBuffer);
     transferQueue.submit(1, &queueSumbitInfo, VK_NULL_HANDLE);
     transferQueue.waitIdle();
-
-    delete srcBuffer;
 
     return true;
 }

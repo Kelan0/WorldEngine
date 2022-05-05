@@ -88,7 +88,8 @@ bool ImmediateRenderer::init() {
 
     DescriptorSetLayoutBuilder builder(descriptorPool->getDevice());
 
-    m_descriptorSetLayout = builder.addUniformBlock(0, vk::ShaderStageFlagBits::eVertex, sizeof(UniformBufferData), true).build();
+    m_descriptorSetLayout = builder.addUniformBuffer(0, vk::ShaderStageFlagBits::eVertex, sizeof(UniformBufferData),
+                                                     true).build();
 
     Application::instance()->eventDispatcher()->connect(&ImmediateRenderer::recreateSwapchain, this);
 

@@ -3,6 +3,9 @@
 #include "core/graphics/DescriptorSet.h"
 
 
+std::unordered_map<size_t, ComputePipeline*> ComputePipeline::s_cachedComputePipelines;
+
+
 void ComputePipelineConfiguration::addDescriptorSetLayout(const vk::DescriptorSetLayout& descriptorSetLayout) {
     assert(descriptorSetLayout);
     descriptorSetLayouts.emplace_back(descriptorSetLayout);
@@ -56,6 +59,19 @@ ComputePipeline* ComputePipeline::create(const ComputePipelineConfiguration& com
     }
 
     return computePipeline;
+}
+
+ComputePipeline* ComputePipeline::getComputePipeline(const ComputePipelineConfiguration& computePipelineConfiguration) {
+    size_t hash = std::hash<ComputePipelineConfiguration>()(computePipelineConfiguration);
+    auto it = s_cachedComputePipelines.find(hash);
+    if (it == s_cachedComputePipelines.end()) {
+        ComputePipeline* computePipeline = ComputePipeline::create(computePipelineConfiguration);
+        if (computePipeline != nullptr)
+            s_cachedComputePipelines.insert(std::make_pair(hash, computePipeline));
+        return computePipeline;
+    } else {
+        return it->second;
+    }
 }
 
 bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipelineConfiguration) {

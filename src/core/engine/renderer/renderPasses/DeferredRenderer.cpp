@@ -293,7 +293,8 @@ bool DeferredLightingRenderPass::init() {
     std::shared_ptr<DescriptorPool> descriptorPool = Application::instance()->graphics()->descriptorPool();
 
     m_uniformDescriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
-            .addUniformBlock(UNIFORM_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment, sizeof(LightingPassUniformData))
+            .addUniformBuffer(UNIFORM_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment,
+                              sizeof(LightingPassUniformData))
             .addCombinedImageSampler(ALBEDO_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(NORMAL_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(DEPTH_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
@@ -321,14 +322,15 @@ bool DeferredLightingRenderPass::init() {
     ImageData::ImageTransform* flipY = new ImageData::Flip(false, true);
     ImageCubeConfiguration imageCubeConfig;
     imageCubeConfig.device = Application::instance()->graphics()->getDevice();
-    imageCubeConfig.format = vk::Format::eR8G8B8A8Srgb;
+    imageCubeConfig.format = vk::Format::eR32G32B32A32Sfloat;
     imageCubeConfig.usage = vk::ImageUsageFlagBits::eSampled;
-    imageCubeConfig.setSource(ImageCubeFace_NegX, "res/textures/test_cubemap2/neg_x.png", flipX);
-    imageCubeConfig.setSource(ImageCubeFace_PosX, "res/textures/test_cubemap2/pos_x.png", flipX);
-    imageCubeConfig.setSource(ImageCubeFace_NegY, "res/textures/test_cubemap2/neg_y.png", flipY);
-    imageCubeConfig.setSource(ImageCubeFace_PosY, "res/textures/test_cubemap2/pos_y.png", flipY);
-    imageCubeConfig.setSource(ImageCubeFace_NegZ, "res/textures/test_cubemap2/neg_z.png", flipX);
-    imageCubeConfig.setSource(ImageCubeFace_PosZ, "res/textures/test_cubemap2/pos_z.png", flipX);
+    imageCubeConfig.imageSource.setEquirectangularSource("res/environment_maps/wide_street_02_2k.hdr");
+//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_NegX, "res/textures/test_cubemap2/neg_x.png", flipX);
+//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_PosX, "res/textures/test_cubemap2/pos_x.png", flipX);
+//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_NegY, "res/textures/test_cubemap2/neg_y.png", flipY);
+//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_PosY, "res/textures/test_cubemap2/pos_y.png", flipY);
+//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_NegZ, "res/textures/test_cubemap2/neg_z.png", flipX);
+//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_PosZ, "res/textures/test_cubemap2/pos_z.png", flipX);
     imageCube = ImageCube::create(imageCubeConfig);
     delete flipX;
     delete flipY;

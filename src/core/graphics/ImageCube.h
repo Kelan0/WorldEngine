@@ -6,6 +6,8 @@
 #include "core/graphics/ImageData.h"
 
 class DeviceMemoryBlock;
+class ComputePipeline;
+class DescriptorSet;
 
 enum ImageCubeFace {
     ImageCubeFace_PosX = 0,
@@ -16,13 +18,36 @@ enum ImageCubeFace {
     ImageCubeFace_NegZ = 5,
 };
 
+struct ImageSource {
+    ImageData* imageData = nullptr;
+    std::string filePath = "";
+    ImageData::ImageTransform* imageTransform = nullptr;
+
+    void setImageData(ImageData* imageData, ImageData::ImageTransform* imageTransform = nullptr);
+    void setFilePath(const std::string& filePath, ImageData::ImageTransform* imageTransform = nullptr);
+    void setImageTransform(ImageData::ImageTransform* imageTransform);
+
+    bool hasSource() const;
+};
+
+struct ImageCubeSource {
+    std::array<ImageSource, 6> faceImages = {};
+    ImageSource equirectangularImage = {};
+
+    void setFaceSource(const ImageCubeFace& face, const ImageSource& imageSource);
+    void setFaceSource(const ImageCubeFace& face, ImageData* imageData, ImageData::ImageTransform* imageTransform = nullptr);
+    void setFaceSource(const ImageCubeFace& face, const std::string& filePath, ImageData::ImageTransform* imageTransform = nullptr);
+    void setEquirectangularSource(const ImageSource& imageSource);
+    void setEquirectangularSource(ImageData* imageData, ImageData::ImageTransform* imageTransform = nullptr);
+    void setEquirectangularSource(const std::string& filePath, ImageData::ImageTransform* imageTransform = nullptr);
+
+    bool isEquirectangular() const;
+};
+
 struct ImageCubeConfiguration {
     std::weak_ptr<vkr::Device> device;
 
-    std::array<ImageData*, 6> faceImageData = { nullptr };
-    std::array<std::string, 6> faceFilePath = { "" };
-    std::array<ImageData::ImageTransform*, 6> faceImageTransforms = { nullptr };
-    std::string equirectangularFilePath = "";
+    ImageCubeSource imageSource = {};
     uint32_t size = 0;
     uint32_t mipLevels = 1;
     vk::Format format = vk::Format::eR8G8B8A8Srgb;
@@ -31,12 +56,6 @@ struct ImageCubeConfiguration {
     bool enabledTexelAccess = false;
     bool preInitialized = false;
     vk::MemoryPropertyFlags memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-
-    void setSource(const std::array<ImageData*, 6>& faceImageData, const std::array<ImageData::ImageTransform*, 6>& faceImageTransforms = { nullptr });
-    void setSource(const ImageCubeFace& face, ImageData* faceImageData, ImageData::ImageTransform* faceImageTransform = nullptr);
-    void setSource(const std::array<std::string, 6>& faceFilePaths, const std::array<ImageData::ImageTransform*, 6>& faceImageTransforms = { nullptr });
-    void setSource(const ImageCubeFace& face, const std::string& faceFilePath, ImageData::ImageTransform* faceImageTransform = nullptr);
-    void setSource(const std::string& equirectangularFilePath);
 };
 
 class ImageCube {
@@ -49,9 +68,13 @@ public:
 
     static ImageCube* create(const ImageCubeConfiguration& imageCubeConfiguration);
 
-    static bool upload(ImageCube* dstImage, const ImageCubeFace& face, void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
+    static bool uploadFace(ImageCube* dstImage, const ImageCubeFace& face, void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
 
-    bool upload(const ImageCubeFace& face, void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
+    static bool uploadEquirectangular(ImageCube* dstImage, void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
+
+    bool uploadFace(const ImageCubeFace& face, void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
+
+    bool uploadEquirectangular(void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
 
     std::shared_ptr<vkr::Device> getDevice() const;
 
@@ -67,10 +90,17 @@ public:
 
     const GraphicsResource& getResourceId() const;
 
-    static std::array<bool, 6> loadCubeFacesImageData(const std::array<std::string, 6>& cubeFaceFilePaths, const vk::Format& format, std::array<ImageData*, 6>& outImageData, std::vector<ImageData*>& allocatedImageData);
+    static std::array<bool, 6> loadCubeFacesImageData(const std::array<ImageSource, 6>& cubeFaceImageSources, const vk::Format& format, std::array<ImageData*, 6>& outImageData, std::vector<ImageData*>& allocatedImageData);
+
+    static bool loadImageData(const ImageSource& imageSource, const vk::Format& format, ImageData*& outImageData, std::vector<ImageData*>& allocatedImageData);
 
 private:
-    static bool validateImageRegion(const ImageCube* image, const ImageCubeFace& face, ImageRegion& imageRegion);
+    static bool validateFaceImageRegion(const ImageCube* image, const ImageCubeFace& face, ImageRegion& imageRegion);
+
+    static bool validateEquirectangularFaceImageRegion(const ImageCube* image, ImageRegion& imageRegion);
+
+    static ComputePipeline* getEquirectangularComputePipeline();
+    static DescriptorSet* getEquirectangularComputeDescriptorSet();
 
 private:
     std::shared_ptr<vkr::Device> m_device;
@@ -79,6 +109,9 @@ private:
     uint32_t m_size;
     vk::Format m_format;
     GraphicsResource m_ResourceId;
+
+    static ComputePipeline* s_computeEquirectangularPipeline;
+    static DescriptorSet* s_computeEquirectangularDescriptorSet;
 };
 
 

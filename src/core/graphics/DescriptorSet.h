@@ -5,6 +5,7 @@
 #include "core/core.h"
 
 class Buffer;
+class BufferView;
 class Sampler;
 class ImageView2D;
 class Texture2D;
@@ -114,9 +115,11 @@ public:
 
     ~DescriptorSetLayoutBuilder();
 
-    DescriptorSetLayoutBuilder& addUniformBlock(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& sizeBytes, const bool& dynamic = false);
+    DescriptorSetLayoutBuilder& addUniformBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& sizeBytes, const bool& dynamic = false);
 
-    DescriptorSetLayoutBuilder& addStorageBlock(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& sizeBytes, const bool& dynamic = false);
+    DescriptorSetLayoutBuilder& addStorageBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& sizeBytes, const bool& dynamic = false);
+
+    DescriptorSetLayoutBuilder& addStorageTexelBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages);
 
     DescriptorSetLayoutBuilder& addSampler(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& arraySize = 1);
 
@@ -213,6 +216,9 @@ public:
     DescriptorSetWriter& writeBuffer(uint32_t binding, vk::Buffer buffer, vk::DeviceSize offset = 0, vk::DeviceSize range = VK_WHOLE_SIZE);
     DescriptorSetWriter& writeBuffer(uint32_t binding, Buffer* buffer, vk::DeviceSize offset = 0, vk::DeviceSize range = VK_WHOLE_SIZE);
 
+    DescriptorSetWriter& writeTexelBufferView(uint32_t binding, const vk::BufferView& bufferView);
+    DescriptorSetWriter& writeTexelBufferView(uint32_t binding, const BufferView* bufferView);
+
     DescriptorSetWriter& writeImage(uint32_t binding, const vk::DescriptorImageInfo* imageInfos, uint32_t arrayCount = 1, uint32_t arrayIndex = 0);
     DescriptorSetWriter& writeImage(uint32_t binding, const vk::DescriptorImageInfo& imageInfo, uint32_t arrayIndex = 0);
     DescriptorSetWriter& writeImage(uint32_t binding, vk::Sampler* samplers, vk::ImageView* imageViews, vk::ImageLayout* imageLayouts, uint32_t arrayCount = 1, uint32_t arrayIndex = 0);
@@ -228,6 +234,7 @@ private:
     std::vector<vk::WriteDescriptorSet> m_writes;
     DescriptorSet* m_descriptorSet;
 
+    std::vector<vk::BufferView> m_tempBufferViews;
     std::vector<vk::DescriptorBufferInfo> m_tempBufferInfo;
     std::vector<vk::DescriptorImageInfo> m_tempImageInfo;
 };

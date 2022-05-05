@@ -59,7 +59,7 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
 
     if (memory == nullptr) {
         device.destroyBuffer(buffer);
-        printf("Failed to allocate device memory for buffer: %s\n", vk::to_string(result).c_str());
+        printf("Failed to allocate device memory for buffer\n");
         return nullptr;
     }
 

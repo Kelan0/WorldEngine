@@ -1,5 +1,6 @@
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Buffer.h"
+#include "core/graphics/BufferView.h"
 #include "core/graphics/Texture.h"
 #include "core/application/Application.h"
 #include "core/graphics/GraphicsManager.h"
@@ -29,7 +30,7 @@ std::shared_ptr<DescriptorSetLayout> DescriptorSetLayout::get(std::weak_ptr<vkr:
 	for (uint32_t i = 0; i < key.bindingCount; ++i) {
 		int binding = (int)key.pBindings[i].binding;
 		if (binding == lastBinding) {
-			printf("Descriptor setOrtho layout has duplicated bindings\n");
+			printf("Descriptor set layout has duplicated bindings\n");
 			assert(false);
 			return NULL;
 		}
@@ -41,7 +42,7 @@ std::shared_ptr<DescriptorSetLayout> DescriptorSetLayout::get(std::weak_ptr<vkr:
         vk::DescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
         vk::Result result = (**device.lock()).createDescriptorSetLayout(&descriptorSetLayoutCreateInfo, NULL, &descriptorSetLayout);
         if (result != vk::Result::eSuccess) {
-            printf("Failed to create descriptor setOrtho layout: %s\n", vk::to_string(result).c_str());
+            printf("Failed to create descriptor set layout: %s\n", vk::to_string(result).c_str());
             return NULL;
         }
 
@@ -66,7 +67,7 @@ void DescriptorSetLayout::clearCache() {
 	}
 
 	if (count > 0) {
-		printf("Clearing descriptor setOrtho layout cache. %d descriptor setOrtho layouts have external references and will not be freed\n", count);
+		printf("Clearing descriptor set layout cache. %d descriptor set layouts have external references and will not be freed\n", count);
 	}
 #endif
 
@@ -361,6 +362,32 @@ DescriptorSetWriter& DescriptorSetWriter::writeBuffer(uint32_t binding, Buffer* 
     return writeBuffer(binding, bufferInfo);
 }
 
+DescriptorSetWriter& DescriptorSetWriter::writeTexelBufferView(uint32_t binding, const vk::BufferView& bufferView) {
+    int bindingIndex = m_descriptorSet->getLayout()->findBindingIndex(binding);
+    assert(bindingIndex >= 0);
+
+    const auto& bindingInfo = m_descriptorSet->getLayout()->getBinding(bindingIndex);
+
+    assert(bindingInfo.descriptorCount == 1);
+
+    size_t firstIndex = m_tempBufferViews.size();
+    m_tempBufferViews.emplace_back(bufferView);
+
+    vk::WriteDescriptorSet& write = m_writes.emplace_back();
+    write.setDstSet(m_descriptorSet->getDescriptorSet());
+    write.setDescriptorType(bindingInfo.descriptorType);
+    write.setDstBinding(binding);
+    write.setPTexelBufferView((vk::BufferView*)(firstIndex + 1));
+    //write.setPTexelBufferView(&m_tempBufferViews.back());
+    write.setDescriptorCount(1);
+
+    return *this;
+}
+
+DescriptorSetWriter& DescriptorSetWriter::writeTexelBufferView(uint32_t binding, const BufferView* bufferView) {
+    return writeTexelBufferView(binding, bufferView->getBufferView());
+}
+
 DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, const vk::DescriptorImageInfo* imageInfos, uint32_t arrayCount, uint32_t arrayIndex) {
     int bindingIndex = m_descriptorSet->getLayout()->findBindingIndex(binding);
     assert(bindingIndex >= 0);
@@ -450,6 +477,7 @@ bool DescriptorSetWriter::write() {
     for (auto& write : m_writes) {
         if (write.pImageInfo != nullptr) write.pImageInfo = &m_tempImageInfo[(size_t)write.pImageInfo - 1];
         if (write.pBufferInfo != nullptr) write.pBufferInfo = &m_tempBufferInfo[(size_t)write.pBufferInfo - 1];
+        if (write.pTexelBufferView != nullptr) write.pTexelBufferView = &m_tempBufferViews[(size_t)write.pTexelBufferView - 1];
     }
     device->updateDescriptorSets(m_writes, {});
     return true;
@@ -538,7 +566,7 @@ DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(vk::DescriptorSetLayoutCr
 DescriptorSetLayoutBuilder::~DescriptorSetLayoutBuilder() {
 }
 
-DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBlock(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& sizeBytes, const bool& dynamic) {
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& sizeBytes, const bool& dynamic) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
 		printf("Unable to add DescriptorSetLayout UniformBlock binding %d - The binding is already added\n", binding);
@@ -559,7 +587,7 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBlock(const ui
     return *this;
 }
 
-DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageBlock(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& sizeBytes, const bool& dynamic) {
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& sizeBytes, const bool& dynamic) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
 		printf("Unable to add DescriptorSetLayout StorageBlock binding %d - The binding is already added\n", binding);
@@ -573,6 +601,24 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageBlock(const ui
     vk::DescriptorSetLayoutBinding bindingInfo;
     bindingInfo.setBinding(binding);
     bindingInfo.setDescriptorType(dynamic ? vk::DescriptorType::eStorageBufferDynamic : vk::DescriptorType::eStorageBuffer);
+    bindingInfo.setDescriptorCount(1);
+    bindingInfo.setStageFlags(shaderStages);
+    bindingInfo.setPImmutableSamplers(NULL);
+    m_bindings.insert(std::make_pair(binding, bindingInfo));
+    return *this;
+}
+
+
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageTexelBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages) {
+#if _DEBUG
+    if (m_bindings.count(binding) != 0) {
+		printf("Unable to add DescriptorSetLayout StorageTexelBuffer binding %d - The binding is already added\n", binding);
+		assert(false);
+	}
+#endif
+    vk::DescriptorSetLayoutBinding bindingInfo;
+    bindingInfo.setBinding(binding);
+    bindingInfo.setDescriptorType(vk::DescriptorType::eStorageTexelBuffer);
     bindingInfo.setDescriptorCount(1);
     bindingInfo.setStageFlags(shaderStages);
     bindingInfo.setPImmutableSamplers(NULL);

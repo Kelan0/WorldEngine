@@ -26,17 +26,25 @@ enum class ImagePixelFormat {
     Float32 = 8,
 };
 
+class ComputePipeline;
+
 class ImageData {
     //NO_COPY(ImageData)
 public:
 
     struct ImageTransform {
+        static std::unordered_map<std::string, ComputePipeline*> s_transformComputePipelines;
+
         ImageTransform() = default;
         ImageTransform(const ImageTransform& copy) = default;
 
         virtual ImageData* apply(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout layout, ImagePixelFormat format) const;
 
         virtual bool isNoOp() const;
+
+        static void initComputeResources();
+
+        static void destroyComputeResources();
     };
 
     typedef ImageTransform NoOp;
@@ -50,6 +58,8 @@ public:
         virtual ImageData* apply(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout layout, ImagePixelFormat format) const override;
 
         virtual bool isNoOp() const override;
+
+        static ComputePipeline* getComputePipeline();
     };
 
 private:
@@ -99,7 +109,7 @@ private:
     bool m_stbiAllocated;
     bool m_externallyAllocated;
 
-    static std::map<std::string, ImageData*> s_imageCache;
+    static std::unordered_map<std::string, ImageData*> s_imageCache;
 };
 
 
@@ -151,8 +161,9 @@ namespace ImageUtil {
 
     bool transitionLayout(const vk::Image& image, vk::CommandBuffer commandBuffer, const vk::ImageSubresourceRange& subresourceRange, const ImageTransitionState& srcState, const ImageTransitionState& dstState);
 
-    bool upload(const vk::Image& dstImage, void* data, const uint32_t& bytesPerPixel, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
+    bool upload(const vk::Image& dstImage, void* data, const uint32_t& bytesPerPixel, const vk::ImageAspectFlags& aspectMask, const ImageRegion& imageRegion, const ImageTransitionState& dstState);
 
+    bool transferBuffer(const vk::Image& dstImage, const vk::Buffer& srcBuffer, const vk::BufferImageCopy& imageCopy, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const uint32_t& baseMipLevel, const uint32_t& mipLevelCount, const ImageTransitionState& dstState);
 }
 
 

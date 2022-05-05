@@ -169,6 +169,7 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
     m_descriptorPool = std::shared_ptr<DescriptorPool>(DescriptorPool::create(descriptorPoolConfig));
 
     m_commandPool->allocateCommandBuffer("transfer_buffer", { vk::CommandBufferLevel::ePrimary });
+    m_commandPool->allocateCommandBuffer("image_compute_buffer", { vk::CommandBufferLevel::ePrimary });
 
     m_isInitialized = true;
     m_recreateSwapchain = true;
@@ -979,7 +980,7 @@ const vk::Instance& GraphicsManager::getInstance() const {
     return **m_instance;
 }
 
-std::shared_ptr<vkr::Device> GraphicsManager::getDevice() const {
+const std::shared_ptr<vkr::Device>& GraphicsManager::getDevice() const {
     return m_device.device;
 }
 
@@ -991,7 +992,7 @@ const vk::PhysicalDeviceMemoryProperties& GraphicsManager::getDeviceMemoryProper
     return m_device.memoryProperties;
 }
 
-uint32_t GraphicsManager::getCurrentFrameIndex() const {
+const uint32_t& GraphicsManager::getCurrentFrameIndex() const {
     return m_swapchain.currentFrameIndex;
 }
 
@@ -1003,7 +1004,7 @@ const Framebuffer* GraphicsManager::getCurrentFramebuffer() const {
     return m_swapchain.framebuffers[m_swapchain.currentImageIndex].get();
 }
 
-std::shared_ptr<vkr::Queue> GraphicsManager::getQueue(const std::string& name) const {
+const std::shared_ptr<vkr::Queue>& GraphicsManager::getQueue(const std::string& name) const {
     return m_queues.queues.at(name);
 }
 

@@ -114,19 +114,19 @@ public:
 
     const vk::Instance& getInstance() const;
 
-    std::shared_ptr<vkr::Device> getDevice() const;
+    const std::shared_ptr<vkr::Device>& getDevice() const;
 
     const vk::PhysicalDevice& getPhysicalDevice() const;
 
     const vk::PhysicalDeviceMemoryProperties& getDeviceMemoryProperties() const;
 
-    uint32_t getCurrentFrameIndex() const;
+    const uint32_t& getCurrentFrameIndex() const;
 
     const vk::CommandBuffer& getCurrentCommandBuffer() const;
 
     const Framebuffer* getCurrentFramebuffer() const;
 
-    std::shared_ptr<vkr::Queue> getQueue(const std::string& name) const;
+    const std::shared_ptr<vkr::Queue>& getQueue(const std::string& name) const;
 
     bool hasQueue(const std::string& name) const;
 
@@ -171,6 +171,8 @@ private:
     std::shared_ptr<CommandPool> m_commandPool;
     std::shared_ptr<DescriptorPool> m_descriptorPool;
     DeviceMemoryManager* m_memory;
+
+    std::vector<std::function<void()>> m_globalResourceCleanup;
 
     std::unique_ptr<vkr::DebugUtilsMessengerEXT> m_debugMessenger;
 
