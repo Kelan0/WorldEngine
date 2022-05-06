@@ -50,8 +50,10 @@ GraphicsManager::GraphicsManager() {
 GraphicsManager::~GraphicsManager() {
     printf("Uninitializing graphics engine\n");
 
+    Application::instance()->eventDispatcher()->trigger(ShutdownGraphicsEvent());
+
     //DescriptorSetLayout::clearCache();
-    Buffer::resetStagingBuffer();
+    //Buffer::resetStagingBuffer();
 
 //    m_swapchain.depthImageView.reset();
 //    m_swapchain.depthImage.reset();

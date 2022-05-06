@@ -4,6 +4,7 @@
 
 #include "core/core.h"
 #include "core/graphics/ImageData.h"
+#include "core/engine/scene/event/Events.h"
 
 class DeviceMemoryBlock;
 class ComputePipeline;
@@ -101,6 +102,7 @@ private:
 
     static ComputePipeline* getEquirectangularComputePipeline();
     static DescriptorSet* getEquirectangularComputeDescriptorSet();
+    static void onCleanupGraphics(const ShutdownGraphicsEvent& event);
 
 private:
     std::shared_ptr<vkr::Device> m_device;

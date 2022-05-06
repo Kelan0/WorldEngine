@@ -2,6 +2,7 @@
 #include "core/graphics/DeviceMemory.h"
 #include "core/graphics/CommandPool.h"
 #include "core/application/Application.h"
+#include "core/engine/scene/event/EventDispatcher.h"
 
 FrameResource<Buffer> Buffer::s_stagingBuffer = nullptr;
 vk::DeviceSize Buffer::s_maxStagingBufferSize = 128 * 1024 * 1024; // 128 MiB
@@ -223,10 +224,6 @@ const Buffer* Buffer::getStagingBuffer() {
     return s_stagingBuffer.get();
 }
 
-void Buffer::resetStagingBuffer() {
-    s_stagingBuffer.reset();
-}
-
 bool Buffer::stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data) {
     reserveStagingBuffer(dstBuffer->getDevice(), size);
 
@@ -272,6 +269,9 @@ void Buffer::resizeStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSi
         size = s_maxStagingBufferSize;
     }
 
+    if (!s_stagingBuffer) {
+        Application::instance()->eventDispatcher()->connect(&Buffer::onCleanupGraphics);
+    }
     std::string startSize = !s_stagingBuffer ? "UNALLOCATED" : std::to_string(s_stagingBuffer->getSize());
 
     if (s_stagingBuffer) {
@@ -279,7 +279,7 @@ void Buffer::resizeStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSi
             return; // Do nothing, we are resizing to the same size.
         }
 
-        resetStagingBuffer();
+        s_stagingBuffer.reset();
     }
 
     printf("Resizing staging buffer from %s to %llu bytes\n", startSize.c_str(), size);
@@ -298,4 +298,9 @@ void Buffer::reserveStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceS
     if (!s_stagingBuffer || size > s_stagingBuffer->getSize()) {
         Buffer::resizeStagingBuffer(device, size);
     }
+}
+
+void Buffer::onCleanupGraphics(const ShutdownGraphicsEvent& event) {
+    printf("Destroying staging buffer\n");
+    s_stagingBuffer.reset();
 }

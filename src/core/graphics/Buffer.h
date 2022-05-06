@@ -5,6 +5,7 @@
 #include "core/core.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/FrameResource.h"
+#include "core/engine/scene/event/Events.h"
 
 struct BufferConfiguration {
     std::weak_ptr<vkr::Device> device;
@@ -58,8 +59,6 @@ public:
 public:
     static const Buffer* getStagingBuffer();
 
-    static void resetStagingBuffer();
-
     static bool stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data);
 
     static bool mappedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data);
@@ -68,6 +67,8 @@ private:
     static void resizeStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSize size);
 
     static void reserveStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSize size);
+
+    static void onCleanupGraphics(const ShutdownGraphicsEvent& event);
 
 private:
     std::shared_ptr<vkr::Device> m_device;

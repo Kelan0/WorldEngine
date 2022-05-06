@@ -172,8 +172,6 @@ private:
     std::shared_ptr<DescriptorPool> m_descriptorPool;
     DeviceMemoryManager* m_memory;
 
-    std::vector<std::function<void()>> m_globalResourceCleanup;
-
     std::unique_ptr<vkr::DebugUtilsMessengerEXT> m_debugMessenger;
 
     vk::PresentModeKHR m_preferredPresentMode;

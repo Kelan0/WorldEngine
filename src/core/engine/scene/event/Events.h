@@ -17,4 +17,8 @@ struct RecreateSwapchainEvent {
     uint8_t _v;
 };
 
+struct ShutdownGraphicsEvent {
+    uint8_t _v;
+};
+
 #endif //WORLDENGINE_EVENTS_H

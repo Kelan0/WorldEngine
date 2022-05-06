@@ -8,6 +8,8 @@
 #include "core/graphics/ComputePipeline.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/application/Application.h"
+#include "core/engine/scene/event/EventDispatcher.h"
+#include "core/engine/scene/event/Events.h"
 #include "core/util/Util.h"
 
 
@@ -18,6 +20,7 @@ DescriptorSet* ImageCube::s_computeEquirectangularDescriptorSet = nullptr;
 struct EquirectangularComputeUBO {
     glm::ivec2 faceSize;
     glm::ivec2 sourceSize;
+    glm::ivec2 sampleCount;
 };
 
 
@@ -347,18 +350,20 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
     uniformBufferData.faceSize.y = dstImage->getSize();
     uniformBufferData.sourceSize.x = imageRegion.width;
     uniformBufferData.sourceSize.y = imageRegion.height;
-
-    vk::DeviceSize cubemapImageSizeBytes = (vk::DeviceSize)dstImage->getWidth() * (vk::DeviceSize)dstImage->getHeight() * 6 * (vk::DeviceSize)bytesPerPixel;
-    vk::DeviceSize equirectangularImageSizeBytes = (vk::DeviceSize)imageRegion.width * (vk::DeviceSize)imageRegion.height * (vk::DeviceSize)bytesPerPixel;
-    vk::DeviceSize equirectangularBufferOffsetBytes = sizeof(EquirectangularComputeUBO);
-    vk::DeviceSize cubemapBufferOffsetBytes = equirectangularBufferOffsetBytes + cubemapImageSizeBytes;
+    uniformBufferData.sampleCount = glm::ivec2(8);
 
     BufferConfiguration tempBufferConfig;
     tempBufferConfig.device = Application::instance()->graphics()->getDevice();
-    tempBufferConfig.size = cubemapImageSizeBytes + equirectangularImageSizeBytes + sizeof(EquirectangularComputeUBO);
     tempBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 //    tempBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
     tempBufferConfig.usage = vk::BufferUsageFlagBits::eStorageTexelBuffer | vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferSrc;
+
+    vk::DeviceSize equirectangularImageSizeBytes = (vk::DeviceSize)imageRegion.width * (vk::DeviceSize)imageRegion.height * (vk::DeviceSize)bytesPerPixel;
+    vk::DeviceSize cubemapImageSizeBytes = (vk::DeviceSize)dstImage->getWidth() * (vk::DeviceSize)dstImage->getHeight() * 6 * (vk::DeviceSize)bytesPerPixel;
+    vk::DeviceSize equirectangularBufferOffsetBytes = INT_DIV_CEIL(sizeof(EquirectangularComputeUBO), 256) * 256;
+    vk::DeviceSize cubemapBufferOffsetBytes = INT_DIV_CEIL(equirectangularBufferOffsetBytes + equirectangularImageSizeBytes, 256) * 256;
+    tempBufferConfig.size = INT_DIV_CEIL(cubemapBufferOffsetBytes + cubemapImageSizeBytes, 256) * 256;
+
     Buffer* tempBuffer = Buffer::create(tempBufferConfig);
 
     if (tempBuffer == nullptr) {
@@ -419,7 +424,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
 
     equirectangularComputePipeline->bind(commandBuffer);
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute,equirectangularComputePipeline->getPipelineLayout(), 0, descriptorSets,nullptr);
-    equirectangularComputePipeline->dispatch(commandBuffer, (uint32_t) glm::ceil(dstImage->getWidth() / 16),(uint32_t) glm::ceil(dstImage->getHeight() / 16), 1);
+    equirectangularComputePipeline->dispatch(commandBuffer, (uint32_t) glm::ceil(dstImage->getWidth() / 16),(uint32_t) glm::ceil(dstImage->getHeight() / 16), 6);
 
     commandBuffer.end();
 
@@ -579,6 +584,8 @@ bool ImageCube::validateEquirectangularFaceImageRegion(const ImageCube* image, I
     return true;
 }
 
+
+
 ComputePipeline* ImageCube::getEquirectangularComputePipeline() {
     if (s_computeEquirectangularPipeline == nullptr) {
 
@@ -587,6 +594,8 @@ ComputePipeline* ImageCube::getEquirectangularComputePipeline() {
         pipelineConfig.computeShader = "res/shaders/compute/compute_equirectangular.glsl";
         pipelineConfig.addDescriptorSetLayout(getEquirectangularComputeDescriptorSet()->getLayout().get());
         s_computeEquirectangularPipeline = ComputePipeline::create(pipelineConfig);
+
+        Application::instance()->eventDispatcher()->connect(&ImageCube::onCleanupGraphics);
     }
 
     return s_computeEquirectangularPipeline;
@@ -603,11 +612,18 @@ DescriptorSet* ImageCube::getEquirectangularComputeDescriptorSet() {
                 .build();
 
         s_computeEquirectangularDescriptorSet = DescriptorSet::create(descriptorSetLayout, Application::instance()->graphics()->descriptorPool());
+
+        Application::instance()->eventDispatcher()->connect(&ImageCube::onCleanupGraphics);
     }
 
     return s_computeEquirectangularDescriptorSet;
 }
 
+void ImageCube::onCleanupGraphics(const ShutdownGraphicsEvent& event) {
+    printf("Destroying ImageCube equirectangular compute resources\n");
+    delete s_computeEquirectangularDescriptorSet;
+    delete s_computeEquirectangularPipeline;
+}
 
 
 
