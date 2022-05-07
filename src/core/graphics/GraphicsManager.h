@@ -12,6 +12,7 @@
 #define QUEUE_GRAPHICS_MAIN "graphics_main"
 #define QUEUE_COMPUTE_MAIN "compute_main"
 #define QUEUE_TRANSFER_MAIN "transfer_main"
+#define QUEUE_GRAPHICS_TRANSFER_MAIN "graphics_transfer_main"
 
 class RenderPass;
 class CommandPool;
@@ -19,6 +20,7 @@ class DescriptorPool;
 class DeviceMemoryManager;
 class DeviceMemoryBlock;
 class Framebuffer;
+class ImageView;
 
 struct QueueDetails {
     union {
@@ -54,7 +56,7 @@ struct SurfaceDetails {
 
 struct SwapchainDetails {
     std::unique_ptr<vkr::SwapchainKHR> swapchain;
-    std::vector<std::shared_ptr<ImageView2D>> imageViews;
+    std::vector<std::shared_ptr<ImageView>> imageViews;
     std::vector<std::shared_ptr<Framebuffer>> framebuffers;
     std::vector<std::shared_ptr<vkr::CommandBuffer>> commandBuffers;
     vk::Extent2D imageExtent;

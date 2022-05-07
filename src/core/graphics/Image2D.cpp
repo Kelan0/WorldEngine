@@ -31,12 +31,13 @@ void Image2DConfiguration::setSource(const std::string& filePath) {
     this->filePath = filePath;
 }
 
-Image2D::Image2D(const std::weak_ptr<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& width, const uint32_t& height, const vk::Format& format):
+Image2D::Image2D(const std::weak_ptr<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& width, const uint32_t& height, const uint32_t& mipLevelCount, const vk::Format& format):
         m_device(device),
         m_image(image),
         m_memory(memory),
         m_width(width),
         m_height(height),
+        m_mipLevelCount(mipLevelCount),
         m_format(format),
         m_ResourceId(GraphicsManager::nextResourceId()) {
     //printf("Create image\n");
@@ -86,6 +87,15 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration) {
         usage |= vk::ImageUsageFlagBits::eTransferDst;
     }
 
+    bool generateMipmap = image2DConfiguration.generateMipmap && image2DConfiguration.mipLevels > 1;
+
+    if (generateMipmap) {
+        usage |= vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst;
+    }
+
+    uint32_t maxMipLevels = ImageUtil::getMaxMipLevels(width, height, 1);
+    uint32_t mipLevels = glm::clamp(image2DConfiguration.mipLevels, 1u, maxMipLevels);
+
     vk::ImageCreateInfo imageCreateInfo;
     imageCreateInfo.setFlags({});
     imageCreateInfo.setImageType(vk::ImageType::e2D);
@@ -93,7 +103,7 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration) {
     imageCreateInfo.extent.setWidth(width);
     imageCreateInfo.extent.setHeight(height);
     imageCreateInfo.extent.setDepth(1);
-    imageCreateInfo.setMipLevels(image2DConfiguration.mipLevels);
+    imageCreateInfo.setMipLevels(mipLevels);
     imageCreateInfo.setArrayLayers(1);
     imageCreateInfo.setSamples(image2DConfiguration.sampleCount);
     imageCreateInfo.setTiling(image2DConfiguration.enabledTexelAccess ? vk::ImageTiling::eLinear : vk::ImageTiling::eOptimal);
@@ -122,17 +132,22 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration) {
 
     memory->bindImage(image);
 
-    Image2D* returnImage = new Image2D(image2DConfiguration.device, image, memory, width, height, imageCreateInfo.format);
+    Image2D* returnImage = new Image2D(image2DConfiguration.device, image, memory, width, height, mipLevels, imageCreateInfo.format);
 
     if (imageData != nullptr) {
         ImageRegion uploadRegion;
         uploadRegion.width = imageData->getWidth();
         uploadRegion.height = imageData->getHeight();
         ImageTransitionState dstState = ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader);
+
         if (!returnImage->upload(imageData->getData(), imageData->getPixelLayout(), imageData->getPixelFormat(), vk::ImageAspectFlagBits::eColor, uploadRegion, dstState)) {
             printf("Failed to upload buffer data\n");
             delete returnImage;
             return nullptr;
+        }
+
+        if (generateMipmap) {
+            returnImage->generateMipmap(vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor, image2DConfiguration.mipLevels, dstState);
         }
     }
 
@@ -181,13 +196,37 @@ bool Image2D::upload(Image2D* dstImage, void* data, const ImagePixelLayout& pixe
         return false;
     }
 
-    bool success = ImageUtil::upload(dstImage->getImage(), uploadData, bytesPerPixel, aspectMask, imageRegion, dstState);
+    const vk::CommandBuffer& transferCommandBuffer = ImageUtil::beginTransferCommands();
+
+    bool success = ImageUtil::upload(transferCommandBuffer, dstImage->getImage(), uploadData, bytesPerPixel, aspectMask, imageRegion, dstState);
+
+    if (dstImage->getMipLevelCount() > 1) {
+        // Transition all other mip levels to dstState, since transferBuffer only transitions imageCopy.imageSubresource.mipLevel
+        vk::ImageSubresourceRange subresourceRange{};
+        subresourceRange.setAspectMask(aspectMask);
+        subresourceRange.setBaseArrayLayer(imageRegion.baseLayer);
+        subresourceRange.setLayerCount(imageRegion.layerCount);
+        subresourceRange.setBaseMipLevel(0);
+        subresourceRange.setLevelCount(dstImage->getMipLevelCount());
+        ImageUtil::transitionLayout(transferCommandBuffer, dstImage->getImage(), subresourceRange, ImageTransition::FromAny(), dstState);
+    }
+
+    ImageUtil::endTransferCommands(**Application::instance()->graphics()->getQueue(QUEUE_TRANSFER_MAIN), true);
+
     delete tempImageData;
     return success;
 }
 
 bool Image2D::upload(void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
     return Image2D::upload(this, data, pixelLayout, pixelFormat, aspectMask, imageRegion, dstState);
+}
+
+bool Image2D::generateMipmap(Image2D* image, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState) {
+    return ImageUtil::generateMipmap(image->getImage(), image->getFormat(), filter, aspectMask, 0, 1, image->getWidth(), image->getHeight(), 1, mipLevels, dstState);
+}
+
+bool Image2D::generateMipmap(const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState) {
+    return Image2D::generateMipmap(this, filter, aspectMask, mipLevels, dstState);
 }
 
 std::shared_ptr<vkr::Device> Image2D::getDevice() const {
@@ -204,6 +243,10 @@ const uint32_t& Image2D::getWidth() const {
 
 const uint32_t& Image2D::getHeight() const {
     return m_height;
+}
+
+const uint32_t Image2D::getMipLevelCount() const {
+    return m_mipLevelCount;
 }
 
 const vk::Format& Image2D::getFormat() const {
@@ -241,73 +284,4 @@ bool Image2D::validateImageRegion(const Image2D* image, ImageRegion& imageRegion
 }
 
 
-
-void ImageView2DConfiguration::setImage(const vk::Image& image) {
-    assert(image);
-    this->image = image;
-}
-
-void ImageView2DConfiguration::setImage(const Image2D* image) {
-    assert(image != nullptr);
-    setImage(image->getImage());
-}
-
-ImageView2D::ImageView2D(std::weak_ptr<vkr::Device> device, vk::ImageView imageView):
-        m_device(device),
-        m_imageView(imageView),
-        m_resourceId(GraphicsManager::nextResourceId()) {
-    //printf("Create ImageView\n");
-}
-
-ImageView2D::~ImageView2D() {
-    //printf("Destroy ImageView\n");
-    (**m_device).destroyImageView(m_imageView);
-}
-
-ImageView2D* ImageView2D::create(const ImageView2DConfiguration& imageView2DConfiguration) {
-    const vk::Device& device = **imageView2DConfiguration.device.lock();
-
-    if (!imageView2DConfiguration.image) {
-        printf("Unable to create ImageView2D: Image is NULL\n");
-        return nullptr;
-    }
-
-    vk::ImageViewCreateInfo imageViewCreateInfo;
-    imageViewCreateInfo.setImage(imageView2DConfiguration.image);
-    imageViewCreateInfo.setViewType(vk::ImageViewType::e2D);
-    imageViewCreateInfo.setFormat(imageView2DConfiguration.format);
-    imageViewCreateInfo.components.setR(imageView2DConfiguration.redSwizzle);
-    imageViewCreateInfo.components.setG(imageView2DConfiguration.greenSwizzle);
-    imageViewCreateInfo.components.setB(imageView2DConfiguration.blueSwizzle);
-    imageViewCreateInfo.components.setA(imageView2DConfiguration.alphaSwizzle);
-    imageViewCreateInfo.subresourceRange.setAspectMask(imageView2DConfiguration.aspectMask);
-    imageViewCreateInfo.subresourceRange.setBaseMipLevel(imageView2DConfiguration.baseMipLevel);
-    imageViewCreateInfo.subresourceRange.setLevelCount(imageView2DConfiguration.mipLevelCount);
-    imageViewCreateInfo.subresourceRange.setBaseArrayLayer(imageView2DConfiguration.baseArrayLayer);
-    imageViewCreateInfo.subresourceRange.setLayerCount(imageView2DConfiguration.arrayLayerCount);
-
-    vk::ImageView imageView = VK_NULL_HANDLE;
-
-    vk::Result result;
-    result = device.createImageView(&imageViewCreateInfo, nullptr, &imageView);
-
-    if (result != vk::Result::eSuccess) {
-        printf("Failed to create ImageView2D: %s\n", vk::to_string(result).c_str());
-        return nullptr;
-    }
-
-    return new ImageView2D(imageView2DConfiguration.device, imageView);
-}
-
-std::shared_ptr<vkr::Device> ImageView2D::getDevice() const {
-    return m_device;
-}
-
-const vk::ImageView& ImageView2D::getImageView() const {
-    return m_imageView;
-}
-
-const GraphicsResource& ImageView2D::getResourceId() const {
-    return m_resourceId;
-}
 

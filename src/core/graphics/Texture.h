@@ -4,6 +4,7 @@
 
 
 #include "core/core.h"
+#include "core/graphics/ImageView.h"
 #include "core/graphics/Image2D.h"
 
 struct SamplerConfiguration {
@@ -60,26 +61,26 @@ private:
 
 class Texture2D {
 public:
-    Texture2D(std::weak_ptr<ImageView2D> imageView, std::weak_ptr<Sampler> sampler);
+    Texture2D(std::weak_ptr<ImageView> imageView, std::weak_ptr<Sampler> sampler);
 
     ~Texture2D();
 
-    static Texture2D* create(std::weak_ptr<ImageView2D> image, std::weak_ptr<Sampler> sampler);
+    static Texture2D* create(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler);
 
-    static Texture2D* create(std::weak_ptr<ImageView2D> image, const SamplerConfiguration& samplerConfiguration);
+    static Texture2D* create(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration);
 
-    static Texture2D* create(const ImageView2DConfiguration& imageView2DConfiguration, std::weak_ptr<Sampler> sampler);
+    static Texture2D* create(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler);
 
-    static Texture2D* create(const ImageView2DConfiguration& imageView2DConfiguration, const SamplerConfiguration& samplerConfiguration);
+    static Texture2D* create(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration);
 
-    std::shared_ptr<ImageView2D> getImageView() const;
+    std::shared_ptr<ImageView> getImageView() const;
 
     std::shared_ptr<Sampler> getSampler() const;
 
     const GraphicsResource& getResourceId() const;
 
 private:
-    std::shared_ptr<ImageView2D> m_imageView;
+    std::shared_ptr<ImageView> m_imageView;
     std::shared_ptr<Sampler> m_sampler;
     GraphicsResource m_resourceId;
 };

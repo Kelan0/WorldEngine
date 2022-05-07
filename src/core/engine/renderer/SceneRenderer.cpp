@@ -287,10 +287,10 @@ void SceneRenderer::initMissingTextureMaterial() {
     missingTextureImageConfig.imageData = &imageData;
     m_missingTextureImage = std::shared_ptr<Image2D>(Image2D::create(missingTextureImageConfig));
 
-    ImageView2DConfiguration missingTextureImageViewConfig;
+    ImageViewConfiguration missingTextureImageViewConfig;
     missingTextureImageViewConfig.device = missingTextureImageConfig.device;
     missingTextureImageViewConfig.format = missingTextureImageConfig.format;
-    missingTextureImageViewConfig.image = m_missingTextureImage->getImage();
+    missingTextureImageViewConfig.setImage(m_missingTextureImage.get());
 
     SamplerConfiguration missingTextureSamplerConfig;
     missingTextureSamplerConfig.device = missingTextureImageConfig.device;

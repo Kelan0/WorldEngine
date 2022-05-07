@@ -165,33 +165,36 @@ void main() {
     SurfacePoint surface;
     loadSurface(fs_texture, surface);
 
+    vec3 finalColour = vec3(0.0);
+
     if (!surface.exists) {
         // outColor = vec4(0.0, 0.0, 0.0, 1.0);
-        outColor = vec4(texture(environmentCubeMap, createRay(fs_texture)).rgb, 1.0);
-        return;
+        finalColour = textureLod(environmentCubeMap, createRay(fs_texture), 0).rgb;
+
+    } else {
+        vec3 cameraPos = vec3(0.0); // camera at origin
+
+        const uint numPointLights = 4;
+        PointLight[4] pointLights;
+        pointLights[0].position = vec3(viewMatrix * vec4(vec3(3.0, 0.8, -1.0), 1.0));
+        pointLights[0].intensity = vec3(32.0, 8.0, 0.0);
+        pointLights[1].position = vec3(viewMatrix * vec4(vec3(0.4, 1.3, 2.0), 1.0));
+        pointLights[1].intensity = vec3(32.0, 32.0, 32.0);
+        pointLights[2].position = vec3(viewMatrix * vec4(vec3(-2.0, 1.1, -1.2), 1.0));
+        pointLights[2].intensity = vec3(0.8, 6.4, 32.0);
+        pointLights[3].position = vec3(viewMatrix * vec4(vec3(-2.1, 1.1, 2.3), 1.0));
+        pointLights[3].intensity = vec3(0.8, 32.0, 6.4);
+
+        vec3 Lo = vec3(0.0);
+
+        for (uint i = 0; i < numPointLights; ++i) {
+            Lo += surface.albedo * calculatePointLight(surface, pointLights[i]);
+        }
+
+        vec3 ambient = vec3(0.03) * surface.albedo * surface.ambientOcclusion;
+        finalColour = ambient + Lo;
     }
 
-    vec3 cameraPos = vec3(0.0); // camera at origin
-
-    const uint numPointLights = 4;
-    PointLight[4] pointLights;
-    pointLights[0].position = vec3(viewMatrix * vec4(vec3(3.0, 0.8, -1.0), 1.0));
-    pointLights[0].intensity = vec3(32.0, 8.0, 0.0);
-    pointLights[1].position = vec3(viewMatrix * vec4(vec3(0.4, 1.3, 2.0), 1.0));
-    pointLights[1].intensity = vec3(32.0, 32.0, 32.0);
-    pointLights[2].position = vec3(viewMatrix * vec4(vec3(-2.0, 1.1, -1.2), 1.0));
-    pointLights[2].intensity = vec3(0.8, 6.4, 32.0);
-    pointLights[3].position = vec3(viewMatrix * vec4(vec3(-2.1, 1.1, 2.3), 1.0));
-    pointLights[3].intensity = vec3(0.8, 32.0, 6.4);
-
-    vec3 Lo = vec3(0.0);
-
-    for (uint i = 0; i < numPointLights; ++i) {
-        Lo += surface.albedo * calculatePointLight(surface, pointLights[i]);
-    }
-
-    vec3 ambient = vec3(0.03) * surface.albedo * surface.ambientOcclusion;
-    vec3 finalColour = ambient + Lo;
 
     finalColour = finalColour / (finalColour + vec3(1.0));
     finalColour = pow(finalColour, vec3(1.0 / 2.2));  

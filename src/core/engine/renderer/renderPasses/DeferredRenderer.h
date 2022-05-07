@@ -8,7 +8,7 @@
 
 class GraphicsPipeline;
 class Image2D;
-class ImageView2D;
+class ImageView;
 class Sampler;
 class RenderPass;
 class Framebuffer;
@@ -28,7 +28,7 @@ class DeferredGeometryRenderPass {
 private:
     struct RenderResources {
         std::array<Image2D*, NumAttachments> images;
-        std::array<ImageView2D*, NumAttachments> imageViews;
+        std::array<ImageView*, NumAttachments> imageViews;
         Framebuffer* framebuffer;
     };
 
@@ -45,11 +45,11 @@ public:
 
     GraphicsPipeline* getGraphicsPipeline() const;
 
-    ImageView2D* getAlbedoImageView() const;
+    ImageView* getAlbedoImageView() const;
 
-    ImageView2D* getNormalImageView() const;
+    ImageView* getNormalImageView() const;
 
-    ImageView2D* getDepthImageView() const;
+    ImageView* getDepthImageView() const;
 
     vk::Format getAttachmentFormat(const uint32_t& attachment) const;
 

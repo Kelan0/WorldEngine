@@ -1,5 +1,6 @@
 #include "core/graphics/Framebuffer.h"
 #include "core/graphics/RenderPass.h"
+#include "core/graphics/ImageView.h"
 #include "core/graphics/Image2D.h"
 
 
@@ -18,7 +19,7 @@ void FramebufferConfiguration::addAttachment(const vk::ImageView& imageView) {
     attachments.emplace_back(imageView);
 }
 
-void FramebufferConfiguration::addAttachment(const ImageView2D* imageView) {
+void FramebufferConfiguration::addAttachment(const ImageView* imageView) {
     assert(imageView != nullptr);
     addAttachment(imageView->getImageView());
 }
@@ -29,7 +30,7 @@ void FramebufferConfiguration::setAttachments(const vk::ArrayProxy<vk::ImageView
         addAttachment(imageView);
 }
 
-void FramebufferConfiguration::setAttachments(const vk::ArrayProxy<ImageView2D*>& imageViews) {
+void FramebufferConfiguration::setAttachments(const vk::ArrayProxy<ImageView*>& imageViews) {
     attachments.clear();
     for (const auto& imageView : imageViews)
         addAttachment(imageView);

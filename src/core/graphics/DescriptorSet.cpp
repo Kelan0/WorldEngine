@@ -2,6 +2,7 @@
 #include "core/graphics/Buffer.h"
 #include "core/graphics/BufferView.h"
 #include "core/graphics/Texture.h"
+#include "core/graphics/ImageView.h"
 #include "core/application/Application.h"
 #include "core/graphics/GraphicsManager.h"
 
@@ -440,7 +441,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, vk::Sampl
     return writeImage(binding, &imageInfo, 1, arrayIndex);
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Sampler** samplers, ImageView2D** imageViews, vk::ImageLayout* imageLayouts, uint32_t arrayCount, uint32_t arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Sampler** samplers, ImageView** imageViews, vk::ImageLayout* imageLayouts, uint32_t arrayCount, uint32_t arrayIndex) {
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
         imageInfos[i].setSampler(samplers[i]->getSampler());
@@ -452,7 +453,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Sampler**
     return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Sampler* samplers, ImageView2D* imageViews, vk::ImageLayout imageLayouts, uint32_t arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Sampler* samplers, ImageView* imageViews, vk::ImageLayout imageLayouts, uint32_t arrayIndex) {
     return writeImage(binding, &samplers, &imageViews, &imageLayouts, 1, arrayIndex);
 }
 

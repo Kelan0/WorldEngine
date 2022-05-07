@@ -7,7 +7,7 @@
 class Buffer;
 class BufferView;
 class Sampler;
-class ImageView2D;
+class ImageView;
 class Texture2D;
 
 class DescriptorSet;
@@ -223,8 +223,8 @@ public:
     DescriptorSetWriter& writeImage(uint32_t binding, const vk::DescriptorImageInfo& imageInfo, uint32_t arrayIndex = 0);
     DescriptorSetWriter& writeImage(uint32_t binding, vk::Sampler* samplers, vk::ImageView* imageViews, vk::ImageLayout* imageLayouts, uint32_t arrayCount = 1, uint32_t arrayIndex = 0);
     DescriptorSetWriter& writeImage(uint32_t binding, vk::Sampler sampler, vk::ImageView imageView, vk::ImageLayout imageLayout, uint32_t arrayIndex = 0);
-    DescriptorSetWriter& writeImage(uint32_t binding, Sampler** samplers, ImageView2D** imageViews, vk::ImageLayout* imageLayouts, uint32_t arrayCount = 1, uint32_t arrayIndex = 0);
-    DescriptorSetWriter& writeImage(uint32_t binding, Sampler* samplers, ImageView2D* imageViews, vk::ImageLayout imageLayouts, uint32_t arrayIndex = 0);
+    DescriptorSetWriter& writeImage(uint32_t binding, Sampler** samplers, ImageView** imageViews, vk::ImageLayout* imageLayouts, uint32_t arrayCount = 1, uint32_t arrayIndex = 0);
+    DescriptorSetWriter& writeImage(uint32_t binding, Sampler* samplers, ImageView* imageViews, vk::ImageLayout imageLayouts, uint32_t arrayIndex = 0);
     DescriptorSetWriter& writeImage(uint32_t binding, Texture2D** textures, vk::ImageLayout* imageLayouts, uint32_t arrayCount = 1, uint32_t arrayIndex = 0);
     DescriptorSetWriter& writeImage(uint32_t binding, Texture2D* texture, vk::ImageLayout imageLayout, uint32_t arrayIndex = 0);
 

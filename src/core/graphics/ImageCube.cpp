@@ -84,14 +84,14 @@ bool ImageCubeSource::isEquirectangular() const {
 
 
 
-ImageCube::ImageCube(const std::weak_ptr<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& size, const vk::Format& format):
+ImageCube::ImageCube(const std::weak_ptr<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& size, const uint32_t& mipLevelCount, const vk::Format& format):
         m_device(device),
         m_image(image),
         m_memory(memory),
         m_size(size),
+        m_mipLevelCount(mipLevelCount),
         m_format(format),
         m_ResourceId(GraphicsManager::nextResourceId()) {
-
 }
 
 ImageCube::~ImageCube() {
@@ -179,8 +179,17 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         }
     }
 
-    if (suppliedFaceData || suppliedEquirectangularData)
+    if (suppliedFaceData || suppliedEquirectangularData) {
         usage |= vk::ImageUsageFlagBits::eTransferDst;
+    }
+
+    bool generateMipmap = imageCubeConfiguration.generateMipmap && imageCubeConfiguration.mipLevels > 1;
+    if (generateMipmap) {
+        usage |= vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst;
+    }
+
+    uint32_t maxMipLevels = ImageUtil::getMaxMipLevels(size, size, 1);
+    uint32_t mipLevels = glm::clamp(imageCubeConfiguration.mipLevels, 1u, maxMipLevels);
 
     vk::ImageCreateInfo imageCreateInfo;
     imageCreateInfo.setFlags(vk::ImageCreateFlagBits::eCubeCompatible);
@@ -189,7 +198,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
     imageCreateInfo.extent.setWidth(size);
     imageCreateInfo.extent.setHeight(size);
     imageCreateInfo.extent.setDepth(1);
-    imageCreateInfo.setMipLevels(imageCubeConfiguration.mipLevels);
+    imageCreateInfo.setMipLevels(mipLevels);
     imageCreateInfo.setArrayLayers(6);
     imageCreateInfo.setSamples(imageCubeConfiguration.sampleCount);
     imageCreateInfo.setTiling(imageCubeConfiguration.enabledTexelAccess ? vk::ImageTiling::eLinear : vk::ImageTiling::eOptimal);
@@ -221,31 +230,40 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
 
     memory->bindImage(image);
 
-    ImageCube* returnImage = new ImageCube(imageCubeConfiguration.device, image, memory, size, imageCreateInfo.format);
+    ImageCube* returnImage = new ImageCube(imageCubeConfiguration.device, image, memory, size, mipLevels, imageCreateInfo.format);
 
     if (suppliedEquirectangularData) {
+        ImageTransitionState dstState = ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader);
         ImageRegion region;
         region.width = equirectangularImageData->getWidth();
         region.height = equirectangularImageData->getHeight();
 
-        ImageTransitionState dstState = ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader);
         if (!returnImage->uploadEquirectangular(equirectangularImageData->getData(), equirectangularImageData->getPixelLayout(), equirectangularImageData->getPixelFormat(), vk::ImageAspectFlagBits::eColor, region, dstState)) {
             printf("Failed to upload buffer data\n");
             delete returnImage;
             returnImage = nullptr;
         }
 
+        if (generateMipmap) {
+            returnImage->generateMipmap(vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor, mipLevels, dstState);
+        }
+
     } else if (suppliedFaceData) {
+        ImageTransitionState dstState = ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader);
+        ImageRegion region;
+        region.width = size;
+        region.height = size;
+
         for (size_t i = 0; i < 6; ++i) {
-            ImageRegion region;
-            region.width = size;
-            region.height = size;
-            ImageTransitionState dstState = ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader);
             if (!returnImage->uploadFace((ImageCubeFace) i, cubeFacesImageData[i]->getData(), cubeFacesImageData[i]->getPixelLayout(), cubeFacesImageData[i]->getPixelFormat(), vk::ImageAspectFlagBits::eColor, region, dstState)) {
                 printf("Failed to upload buffer data\n");
                 delete returnImage;
                 returnImage = nullptr;
             }
+        }
+
+        if (generateMipmap) {
+            returnImage->generateMipmap(vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor, mipLevels, dstState);
         }
     }
 
@@ -320,16 +338,22 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
         return false;
     }
 
-    if (!validateEquirectangularFaceImageRegion(dstImage, imageRegion)) {
+    if (!validateEquirectangularImageRegion(dstImage, imageRegion)) {
         return false;
     }
+
+    uint32_t mipLevel = glm::min((uint32_t)imageRegion.baseMipLevel, dstImage->getMipLevelCount());
+    const uint32_t& equirectangularWidth = imageRegion.width;
+    const uint32_t& equirectangularHeight = imageRegion.height;
+    uint32_t cubeImageWidth = glm::max(1u, dstImage->getWidth() >> mipLevel);
+    uint32_t cubeImageHeight = glm::max(1u, dstImage->getWidth() >> mipLevel);
 
     ImageData* tempImageData = nullptr;
 
     if (dstPixelFormat != pixelFormat || dstPixelLayout != pixelLayout) {
-        tempImageData = ImageData::mutate(static_cast<uint8_t*>(data), imageRegion.width, imageRegion.height, pixelLayout, pixelFormat, dstPixelLayout, dstPixelFormat);
+        tempImageData = ImageData::mutate(static_cast<uint8_t*>(data), equirectangularWidth, equirectangularHeight, pixelLayout, pixelFormat, dstPixelLayout, dstPixelFormat);
     } else {
-        tempImageData = new ImageData(static_cast<uint8_t*>(data), imageRegion.width, imageRegion.height, pixelLayout, pixelFormat);
+        tempImageData = new ImageData(static_cast<uint8_t*>(data), equirectangularWidth, equirectangularHeight, pixelLayout, pixelFormat);
     }
 
     uint32_t bytesPerPixel = ImageData::getChannelSize(dstPixelFormat) * ImageData::getChannels(dstPixelLayout);
@@ -348,8 +372,8 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
 
     uniformBufferData.faceSize.x = dstImage->getSize();
     uniformBufferData.faceSize.y = dstImage->getSize();
-    uniformBufferData.sourceSize.x = imageRegion.width;
-    uniformBufferData.sourceSize.y = imageRegion.height;
+    uniformBufferData.sourceSize.x = equirectangularWidth;
+    uniformBufferData.sourceSize.y = equirectangularHeight;
     uniformBufferData.sampleCount = glm::ivec2(8);
 
     BufferConfiguration tempBufferConfig;
@@ -358,8 +382,8 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
 //    tempBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
     tempBufferConfig.usage = vk::BufferUsageFlagBits::eStorageTexelBuffer | vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferSrc;
 
-    vk::DeviceSize equirectangularImageSizeBytes = (vk::DeviceSize)imageRegion.width * (vk::DeviceSize)imageRegion.height * (vk::DeviceSize)bytesPerPixel;
-    vk::DeviceSize cubemapImageSizeBytes = (vk::DeviceSize)dstImage->getWidth() * (vk::DeviceSize)dstImage->getHeight() * 6 * (vk::DeviceSize)bytesPerPixel;
+    vk::DeviceSize equirectangularImageSizeBytes = (vk::DeviceSize)equirectangularWidth * (vk::DeviceSize)equirectangularHeight * (vk::DeviceSize)bytesPerPixel;
+    vk::DeviceSize cubemapImageSizeBytes = (vk::DeviceSize)cubeImageWidth * (vk::DeviceSize)cubeImageHeight * 6 * (vk::DeviceSize)bytesPerPixel;
     vk::DeviceSize equirectangularBufferOffsetBytes = INT_DIV_CEIL(sizeof(EquirectangularComputeUBO), 256) * 256;
     vk::DeviceSize cubemapBufferOffsetBytes = INT_DIV_CEIL(equirectangularBufferOffsetBytes + equirectangularImageSizeBytes, 256) * 256;
     tempBufferConfig.size = INT_DIV_CEIL(cubemapBufferOffsetBytes + cubemapImageSizeBytes, 256) * 256;
@@ -403,8 +427,8 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
         return false;
     }
 
-    const vk::Queue &computeQueue = **Application::instance()->graphics()->getQueue(QUEUE_COMPUTE_MAIN);
-    const vk::CommandBuffer &commandBuffer = **Application::instance()->graphics()->commandPool()->getCommandBuffer("image_compute_buffer");
+    const vk::Queue& computeQueue = ImageUtil::getComputeQueue();
+    const vk::CommandBuffer& commandBuffer = ImageUtil::getComputeCommandBuffer();
     ComputePipeline* equirectangularComputePipeline = getEquirectangularComputePipeline();
     DescriptorSet* equirectangularComputeDescriptorSet = getEquirectangularComputeDescriptorSet();
 
@@ -424,7 +448,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
 
     equirectangularComputePipeline->bind(commandBuffer);
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute,equirectangularComputePipeline->getPipelineLayout(), 0, descriptorSets,nullptr);
-    equirectangularComputePipeline->dispatch(commandBuffer, (uint32_t) glm::ceil(dstImage->getWidth() / 16),(uint32_t) glm::ceil(dstImage->getHeight() / 16), 6);
+    equirectangularComputePipeline->dispatch(commandBuffer, (uint32_t) glm::ceil(cubeImageWidth / 16),(uint32_t) glm::ceil(cubeImageHeight / 16), 6);
 
     commandBuffer.end();
 
@@ -439,17 +463,32 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
     imageCopy.setBufferRowLength(0);
     imageCopy.setBufferImageHeight(0);
     imageCopy.imageSubresource.setAspectMask(aspectMask);
-    imageCopy.imageSubresource.setMipLevel(0);
-    imageCopy.imageSubresource.setBaseArrayLayer(0);
-    imageCopy.imageSubresource.setLayerCount(6);
+    imageCopy.imageSubresource.setMipLevel(imageRegion.baseMipLevel);
+    imageCopy.imageSubresource.setBaseArrayLayer(imageRegion.baseLayer);
+    imageCopy.imageSubresource.setLayerCount(imageRegion.layerCount * 6);
     imageCopy.imageOffset.setX(0);
     imageCopy.imageOffset.setY(0);
     imageCopy.imageOffset.setZ(0);
-    imageCopy.imageExtent.setWidth(dstImage->getWidth());
-    imageCopy.imageExtent.setHeight(dstImage->getHeight());
+    imageCopy.imageExtent.setWidth(cubeImageWidth);
+    imageCopy.imageExtent.setHeight(cubeImageHeight);
     imageCopy.imageExtent.setDepth(1);
 
-    success = ImageUtil::transferBuffer(dstImage->getImage(), tempBuffer->getBuffer(), imageCopy, aspectMask, 0, 6, 0, 1, dstState);
+    const vk::CommandBuffer& transferCommandBuffer = ImageUtil::beginTransferCommands();
+
+    success = ImageUtil::transferBuffer(transferCommandBuffer, dstImage->getImage(), tempBuffer->getBuffer(), imageCopy, dstState);
+
+    if (dstImage->getMipLevelCount() > 1) {
+        // Transition all other mip levels to dstState, since transferBuffer only transitions imageCopy.imageSubresource.mipLevel
+        vk::ImageSubresourceRange subresourceRange{};
+        subresourceRange.setAspectMask(imageCopy.imageSubresource.aspectMask);
+        subresourceRange.setBaseArrayLayer(imageCopy.imageSubresource.baseArrayLayer);
+        subresourceRange.setLayerCount(imageCopy.imageSubresource.layerCount);
+        subresourceRange.setBaseMipLevel(0);
+        subresourceRange.setLevelCount(dstImage->getMipLevelCount());
+        ImageUtil::transitionLayout(transferCommandBuffer, dstImage->getImage(), subresourceRange, ImageTransition::FromAny(), dstState);
+    }
+
+    ImageUtil::endTransferCommands(**Application::instance()->graphics()->getQueue(QUEUE_TRANSFER_MAIN), true);
 
     if (!success)
         printf("Failed to transfer buffer data to destination CubeMap image\n");
@@ -467,6 +506,15 @@ bool ImageCube::uploadFace(const ImageCubeFace& face, void* data, const ImagePix
 bool ImageCube::uploadEquirectangular(void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
     return ImageCube::uploadEquirectangular(this, data, pixelLayout, pixelFormat, aspectMask, imageRegion, dstState);
 }
+
+bool ImageCube::generateMipmap(ImageCube* image, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState) {
+    return ImageUtil::generateMipmap(image->getImage(), image->getFormat(), filter, aspectMask, 0, 6, image->getWidth(), image->getHeight(), 1, mipLevels, dstState);
+}
+
+bool ImageCube::generateMipmap(const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState) {
+    return ImageCube::generateMipmap(this, filter, aspectMask, mipLevels, dstState);
+}
+
 
 std::shared_ptr<vkr::Device> ImageCube::getDevice() const {
     return m_device;
@@ -486,6 +534,10 @@ const uint32_t& ImageCube::getWidth() const {
 
 const uint32_t& ImageCube::getHeight() const {
     return m_size;
+}
+
+const uint32_t ImageCube::getMipLevelCount() const {
+    return m_mipLevelCount;
 }
 
 vk::Format ImageCube::getFormat() const {
@@ -562,7 +614,7 @@ bool ImageCube::validateFaceImageRegion(const ImageCube* image, const ImageCubeF
     return true;
 }
 
-bool ImageCube::validateEquirectangularFaceImageRegion(const ImageCube* image, ImageRegion& imageRegion) {
+bool ImageCube::validateEquirectangularImageRegion(const ImageCube* image, ImageRegion& imageRegion) {
     if (image == nullptr) {
         return false;
     }
@@ -572,8 +624,8 @@ bool ImageCube::validateEquirectangularFaceImageRegion(const ImageCube* image, I
         return false;
     }
 
-    imageRegion.baseMipLevel = 0;
-    if (imageRegion.mipLevelCount == VK_WHOLE_SIZE) imageRegion.mipLevelCount = 1;
+//    imageRegion.baseMipLevel = 0;
+    if (imageRegion.mipLevelCount == VK_WHOLE_SIZE) imageRegion.mipLevelCount = image->getMipLevelCount() - imageRegion.baseMipLevel;
     imageRegion.x = 0;
     imageRegion.y = 0;
     imageRegion.z = 0;
@@ -625,69 +677,3 @@ void ImageCube::onCleanupGraphics(const ShutdownGraphicsEvent& event) {
     delete s_computeEquirectangularPipeline;
 }
 
-
-
-void ImageViewCubeConfiguration::setImage(const vk::Image& image) {
-    this->image = image;
-}
-
-void ImageViewCubeConfiguration::setImage(const ImageCube* image) {
-    this->image = image->getImage();
-}
-
-ImageViewCube::ImageViewCube(std::weak_ptr<vkr::Device> device, vk::ImageView imageView):
-    m_device(device),
-    m_imageView(imageView),
-    m_resourceId(GraphicsManager::nextResourceId()) {
-}
-
-ImageViewCube::~ImageViewCube() {
-    (**m_device).destroyImageView(m_imageView);
-}
-
-ImageViewCube* ImageViewCube::create(const ImageViewCubeConfiguration& imageViewCubeConfiguration) {
-    const vk::Device& device = **imageViewCubeConfiguration.device.lock();
-
-    if (!imageViewCubeConfiguration.image) {
-        printf("Unable to create ImageViewCube: Image is NULL\n");
-        return nullptr;
-    }
-
-    vk::ImageViewCreateInfo imageViewCreateInfo;
-    imageViewCreateInfo.setImage(imageViewCubeConfiguration.image);
-    imageViewCreateInfo.setViewType(vk::ImageViewType::eCube);
-    imageViewCreateInfo.setFormat(imageViewCubeConfiguration.format);
-    imageViewCreateInfo.components.setR(imageViewCubeConfiguration.redSwizzle);
-    imageViewCreateInfo.components.setG(imageViewCubeConfiguration.greenSwizzle);
-    imageViewCreateInfo.components.setB(imageViewCubeConfiguration.blueSwizzle);
-    imageViewCreateInfo.components.setA(imageViewCubeConfiguration.alphaSwizzle);
-    imageViewCreateInfo.subresourceRange.setAspectMask(imageViewCubeConfiguration.aspectMask);
-    imageViewCreateInfo.subresourceRange.setBaseMipLevel(imageViewCubeConfiguration.baseMipLevel);
-    imageViewCreateInfo.subresourceRange.setLevelCount(imageViewCubeConfiguration.mipLevelCount);
-    imageViewCreateInfo.subresourceRange.setBaseArrayLayer(imageViewCubeConfiguration.baseArrayLayer * 6);
-    imageViewCreateInfo.subresourceRange.setLayerCount(imageViewCubeConfiguration.arrayLayerCount * 6);
-
-    vk::ImageView imageView = VK_NULL_HANDLE;
-
-    vk::Result result;
-    result = device.createImageView(&imageViewCreateInfo, nullptr, &imageView);
-
-    if (result != vk::Result::eSuccess) {
-        printf("Failed to create ImageViewCube: %s\n", vk::to_string(result).c_str());
-        return nullptr;
-    }
-
-    return new ImageViewCube(imageViewCubeConfiguration.device, imageView);
-}
-
-std::shared_ptr<vkr::Device> ImageViewCube::getDevice() const {
-    return m_device;
-}
-
-const vk::ImageView& ImageViewCube::getImageView() const {
-    return m_imageView;
-}
-
-const GraphicsResource& ImageViewCube::getResourceId() const {
-    return m_resourceId;
-}

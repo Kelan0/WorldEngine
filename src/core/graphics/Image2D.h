@@ -21,6 +21,7 @@ struct Image2DConfiguration {
     bool enabledTexelAccess = false;
     bool preInitialized = false;
     vk::MemoryPropertyFlags memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+    bool generateMipmap = false;
 
     void setSize(const uint32_t& width, const uint32_t& height);
     void setSize(const glm::uvec2& size);
@@ -33,7 +34,7 @@ struct Image2DConfiguration {
 class Image2D {
     NO_COPY(Image2D);
 private:
-    Image2D(const std::weak_ptr<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& width, const uint32_t& height, const vk::Format& format);
+    Image2D(const std::weak_ptr<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& width, const uint32_t& height, const uint32_t& mipLevelCount, const vk::Format& format);
 
 public:
     ~Image2D();
@@ -44,6 +45,10 @@ public:
 
     bool upload(void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
 
+    static bool generateMipmap(Image2D* image, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState);
+
+    bool generateMipmap(const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState);
+
     std::shared_ptr<vkr::Device> getDevice() const;
 
     const vk::Image& getImage() const;
@@ -51,6 +56,8 @@ public:
     const uint32_t& getWidth() const;
 
     const uint32_t& getHeight() const;
+
+    const uint32_t getMipLevelCount() const;
 
     const vk::Format& getFormat() const;
 
@@ -65,51 +72,9 @@ private:
     DeviceMemoryBlock* m_memory;
     uint32_t m_width;
     uint32_t m_height;
+    uint32_t m_mipLevelCount;
     vk::Format m_format;
     GraphicsResource m_ResourceId;
-};
-
-
-
-struct ImageView2DConfiguration {
-    std::weak_ptr<vkr::Device> device;
-    vk::Image image;
-    vk::Format format;
-    vk::ImageAspectFlags aspectMask = vk::ImageAspectFlagBits::eColor;
-    uint32_t baseMipLevel = 0;
-    uint32_t mipLevelCount = 1;
-    uint32_t baseArrayLayer = 0;
-    uint32_t arrayLayerCount = 1;
-    vk::ComponentSwizzle redSwizzle = vk::ComponentSwizzle::eIdentity;
-    vk::ComponentSwizzle greenSwizzle = vk::ComponentSwizzle::eIdentity;
-    vk::ComponentSwizzle blueSwizzle = vk::ComponentSwizzle::eIdentity;
-    vk::ComponentSwizzle alphaSwizzle = vk::ComponentSwizzle::eIdentity;
-
-    void setImage(const vk::Image& image);
-
-    void setImage(const Image2D* image);
-};
-
-class ImageView2D {
-    NO_COPY(ImageView2D)
-private:
-    ImageView2D(std::weak_ptr<vkr::Device> device, vk::ImageView imageView);
-
-public:
-    ~ImageView2D();
-
-    static ImageView2D* create(const ImageView2DConfiguration& imageView2DConfiguration);
-
-    std::shared_ptr<vkr::Device> getDevice() const;
-
-    const vk::ImageView& getImageView() const;
-
-    const GraphicsResource& getResourceId() const;
-
-private:
-    std::shared_ptr<vkr::Device> m_device;
-    vk::ImageView m_imageView;
-    GraphicsResource m_resourceId;
 };
 
 

@@ -9,6 +9,7 @@
 #include "core/graphics/GraphicsPipeline.h"
 #include "core/graphics/ComputePipeline.h"
 #include "core/graphics/DescriptorSet.h"
+#include "core/graphics/ImageView.h"
 #include "core/graphics/Image2D.h"
 #include "core/graphics/ImageCube.h"
 #include "core/graphics/Texture.h"
@@ -21,7 +22,8 @@
 
 
 ImageCube* imageCube = nullptr;
-ImageViewCube* imageViewCube = nullptr;
+ImageView* imageViewCube = nullptr;
+Sampler* imageCubeSampler = nullptr;
 
 ComputePipeline* computePipeline = nullptr;
 
@@ -75,15 +77,15 @@ GraphicsPipeline* DeferredGeometryRenderPass::getGraphicsPipeline() const {
     return m_graphicsPipeline.get();
 }
 
-ImageView2D* DeferredGeometryRenderPass::getAlbedoImageView() const {
+ImageView* DeferredGeometryRenderPass::getAlbedoImageView() const {
     return m_resources->imageViews[Attachment_AlbedoRGB_Roughness];
 }
 
-ImageView2D* DeferredGeometryRenderPass::getNormalImageView() const {
+ImageView* DeferredGeometryRenderPass::getNormalImageView() const {
     return m_resources->imageViews[Attachment_NormalXYZ_Metallic];
 }
 
-ImageView2D* DeferredGeometryRenderPass::getDepthImageView() const {
+ImageView* DeferredGeometryRenderPass::getDepthImageView() const {
     return m_resources->imageViews[Attachment_Depth];
 }
 
@@ -132,7 +134,7 @@ bool DeferredGeometryRenderPass::createFramebuffer(RenderResources* resources) {
     imageConfig.sampleCount = sampleCount;
     imageConfig.setSize(m_resolution);
 
-    ImageView2DConfiguration imageViewConfig;
+    ImageViewConfiguration imageViewConfig;
     imageViewConfig.device = Application::instance()->graphics()->getDevice();
 
     // Albedo image
@@ -142,7 +144,7 @@ bool DeferredGeometryRenderPass::createFramebuffer(RenderResources* resources) {
     imageViewConfig.format = getAttachmentFormat(Attachment_AlbedoRGB_Roughness);
     imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
     imageViewConfig.setImage(resources->images[Attachment_AlbedoRGB_Roughness]);
-    resources->imageViews[Attachment_AlbedoRGB_Roughness] = ImageView2D::create(imageViewConfig);
+    resources->imageViews[Attachment_AlbedoRGB_Roughness] = ImageView::create(imageViewConfig);
 
     // Normal image
     imageConfig.format = getAttachmentFormat(Attachment_NormalXYZ_Metallic);
@@ -151,7 +153,7 @@ bool DeferredGeometryRenderPass::createFramebuffer(RenderResources* resources) {
     imageViewConfig.format = getAttachmentFormat(Attachment_NormalXYZ_Metallic);
     imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
     imageViewConfig.setImage(resources->images[Attachment_NormalXYZ_Metallic]);
-    resources->imageViews[Attachment_NormalXYZ_Metallic] = ImageView2D::create(imageViewConfig);
+    resources->imageViews[Attachment_NormalXYZ_Metallic] = ImageView::create(imageViewConfig);
 
     // Depth image
     imageConfig.format = getAttachmentFormat(Attachment_Depth);
@@ -162,7 +164,7 @@ bool DeferredGeometryRenderPass::createFramebuffer(RenderResources* resources) {
 //    if (ImageUtil::isStencilAttachment(imageViewConfig.format))
 //        imageViewConfig.aspectMask |= vk::ImageAspectFlagBits::eStencil;
     imageViewConfig.setImage(resources->images[Attachment_Depth]);
-    resources->imageViews[Attachment_Depth] = ImageView2D::create(imageViewConfig);
+    resources->imageViews[Attachment_Depth] = ImageView::create(imageViewConfig);
 
     // Framebuffer
     FramebufferConfiguration framebufferConfig;
@@ -282,6 +284,7 @@ DeferredLightingRenderPass::~DeferredLightingRenderPass() {
 
     delete imageCube;
     delete imageViewCube;
+    delete imageCubeSampler;
     delete computePipeline;
 
     Application::instance()->eventDispatcher()->disconnect(&DeferredLightingRenderPass::recreateSwapchain, this);
@@ -324,21 +327,28 @@ bool DeferredLightingRenderPass::init() {
     imageCubeConfig.device = Application::instance()->graphics()->getDevice();
     imageCubeConfig.format = vk::Format::eR32G32B32A32Sfloat;
     imageCubeConfig.usage = vk::ImageUsageFlagBits::eSampled;
-    imageCubeConfig.imageSource.setEquirectangularSource("res/environment_maps/wide_street_02_2k.hdr");
-//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_NegX, "res/textures/test_cubemap2/neg_x.png", flipX);
-//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_PosX, "res/textures/test_cubemap2/pos_x.png", flipX);
-//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_NegY, "res/textures/test_cubemap2/neg_y.png", flipY);
-//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_PosY, "res/textures/test_cubemap2/pos_y.png", flipY);
-//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_NegZ, "res/textures/test_cubemap2/neg_z.png", flipX);
-//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_PosZ, "res/textures/test_cubemap2/pos_z.png", flipX);
+    imageCubeConfig.generateMipmap = true;
+    imageCubeConfig.mipLevels = UINT32_MAX;
+    imageCubeConfig.imageSource.setEquirectangularSource("res/environment_maps/abandoned_workshop_02_8k.hdr");
     imageCube = ImageCube::create(imageCubeConfig);
     delete flipX;
     delete flipY;
-    ImageViewCubeConfiguration imageViewCubeConfig;
+    ImageViewConfiguration imageViewCubeConfig;
     imageViewCubeConfig.device = Application::instance()->graphics()->getDevice();
     imageViewCubeConfig.format = imageCube->getFormat();
+    imageViewCubeConfig.mipLevelCount = imageCube->getMipLevelCount();
+    imageViewCubeConfig.arrayLayerCount = 6;
     imageViewCubeConfig.setImage(imageCube);
-    imageViewCube = ImageViewCube::create(imageViewCubeConfig);
+    imageViewCube = ImageView::create(imageViewCubeConfig);
+
+    SamplerConfiguration imageCubeSamplerConfig;
+    imageCubeSamplerConfig.device = Application::instance()->graphics()->getDevice();
+    imageCubeSamplerConfig.minFilter = vk::Filter::eLinear;
+    imageCubeSamplerConfig.magFilter = vk::Filter::eLinear;
+    imageCubeSamplerConfig.mipmapMode = vk::SamplerMipmapMode::eLinear;
+    imageCubeSamplerConfig.minLod = 0.0F;
+    imageCubeSamplerConfig.maxLod = imageCube->getMipLevelCount();
+    imageCubeSampler = Sampler::create(imageCubeSamplerConfig);
 
     SamplerConfiguration samplerConfig;
     samplerConfig.device = Application::instance()->graphics()->getDevice();
@@ -379,7 +389,7 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
             .writeImage(ALBEDO_TEXTURE_BINDING, m_attachmentSamplers[Attachment_AlbedoRGB_Roughness], m_geometryPass->getAlbedoImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
             .writeImage(NORMAL_TEXTURE_BINDING, m_attachmentSamplers[Attachment_NormalXYZ_Metallic], m_geometryPass->getNormalImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
             .writeImage(DEPTH_TEXTURE_BINDING, m_attachmentSamplers[Attachment_Depth], m_geometryPass->getDepthImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
-            .writeImage(4, m_attachmentSamplers[0]->getSampler(), imageViewCube->getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
+            .writeImage(4, imageCubeSampler, imageViewCube, vk::ImageLayout::eShaderReadOnlyOptimal)
             .write();
 
     std::vector<vk::DescriptorSet> descriptorSets = {

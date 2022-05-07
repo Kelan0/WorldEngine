@@ -5,6 +5,8 @@
 #include "core/graphics/DeviceMemory.h"
 #include "core/graphics/Mesh.h"
 #include "core/graphics/DescriptorSet.h"
+#include "core/graphics/ImageView.h"
+#include "core/graphics/Image2D.h"
 #include "core/graphics/Buffer.h"
 #include "core/graphics/Framebuffer.h"
 #include "core/application/Application.h"
@@ -105,6 +107,7 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
     queueLayout.insert(std::make_pair(QUEUE_GRAPHICS_MAIN, QUEUE_TYPE_GRAPHICS_BIT | QUEUE_TYPE_PRESENT_BIT));
     queueLayout.insert(std::make_pair(QUEUE_COMPUTE_MAIN, QUEUE_TYPE_COMPUTE_BIT));
     queueLayout.insert(std::make_pair(QUEUE_TRANSFER_MAIN, QUEUE_TYPE_TRANSFER_BIT));
+    queueLayout.insert(std::make_pair(QUEUE_GRAPHICS_TRANSFER_MAIN, QUEUE_TYPE_GRAPHICS_BIT | QUEUE_TYPE_TRANSFER_BIT));
 
     vk::PhysicalDeviceFeatures deviceFeatures;
     deviceFeatures.fillModeNonSolid = true;
@@ -171,7 +174,6 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
     m_descriptorPool = std::shared_ptr<DescriptorPool>(DescriptorPool::create(descriptorPoolConfig));
 
     m_commandPool->allocateCommandBuffer("transfer_buffer", { vk::CommandBufferLevel::ePrimary });
-    m_commandPool->allocateCommandBuffer("image_compute_buffer", { vk::CommandBufferLevel::ePrimary });
 
     m_isInitialized = true;
     m_recreateSwapchain = true;
@@ -758,11 +760,11 @@ bool GraphicsManager::createSwapchainImages() {
     m_swapchain.imageViews.resize(images.size());
 
     for (int i = 0; i < images.size(); ++i) {
-        ImageView2DConfiguration imageViewConfig;
+        ImageViewConfiguration imageViewConfig;
         imageViewConfig.device = m_device.device;
         imageViewConfig.image = vk::Image(images[i]);
         imageViewConfig.format = m_surface.surfaceFormat.format;
-        m_swapchain.imageViews[i] = std::shared_ptr<ImageView2D>(ImageView2D::create(imageViewConfig));
+        m_swapchain.imageViews[i] = std::shared_ptr<ImageView>(ImageView::create(imageViewConfig));
     }
 
 //    m_swapchain.depthImageView.reset();
@@ -783,12 +785,12 @@ bool GraphicsManager::createSwapchainImages() {
 //        if (!m_swapchain.depthImage) {
 //            printf("Failed to create depth image\n");
 //        } else {
-//            ImageView2DConfiguration depthImageViewConfig;
+//            ImageViewConfiguration depthImageViewConfig;
 //            depthImageViewConfig.device = m_device.device;
 //            depthImageViewConfig.image = m_swapchain.depthImage->getImage();
 //            depthImageViewConfig.format = m_swapchain.depthImage->getFormat();
 //            depthImageViewConfig.aspectMask = vk::ImageAspectFlagBits::eDepth;
-//            m_swapchain.depthImageView = std::shared_ptr<ImageView2D>(ImageView2D::create(depthImageViewConfig));
+//            m_swapchain.depthImageView = std::shared_ptr<ImageView>(ImageView::create(depthImageViewConfig));
 //
 //            if (!m_swapchain.depthImageView) {
 //                printf("Failed to create depth image view\n");

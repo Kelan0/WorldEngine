@@ -4,6 +4,7 @@
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Buffer.h"
+#include "core/graphics/ImageView.h"
 #include "core/graphics/Image2D.h"
 #include "core/graphics/ImageCube.h"
 #include "core/graphics/Mesh.h"
@@ -45,13 +46,17 @@ class App : public Application {
         imageConfig.filePath = filePath;
         imageConfig.usage = vk::ImageUsageFlagBits::eSampled;
         imageConfig.format = format;
+        imageConfig.mipLevels = 3;
+        imageConfig.generateMipmap = true;
         Image2D* image = Image2D::create(imageConfig);
         images.emplace_back(image);
 
-        ImageView2DConfiguration imageViewConfig;
+        ImageViewConfiguration imageViewConfig;
         imageViewConfig.device = graphics()->getDevice();
         imageViewConfig.image = image->getImage();
         imageViewConfig.format = format;
+        imageViewConfig.baseMipLevel = 0;
+        imageViewConfig.mipLevelCount = image->getMipLevelCount();
 
         return std::shared_ptr<Texture2D>(Texture2D::create(imageViewConfig, sampler));
     }
@@ -63,6 +68,9 @@ class App : public Application {
         samplerConfig.device = graphics()->getDevice();
         samplerConfig.minFilter = vk::Filter::eLinear;
         samplerConfig.magFilter = vk::Filter::eLinear;
+        samplerConfig.minLod = 0.0F;
+        samplerConfig.maxLod = 3.0F;
+        samplerConfig.mipLodBias = 0.0F;
         std::shared_ptr<Sampler> sampler = std::shared_ptr<Sampler>(Sampler::create(samplerConfig));
 
         MaterialConfiguration floorMaterialConfig;

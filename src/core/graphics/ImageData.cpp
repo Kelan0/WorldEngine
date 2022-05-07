@@ -5,9 +5,15 @@
 #include "core/graphics/CommandPool.h"
 #include "core/graphics/ComputePipeline.h"
 #include "core/graphics/DescriptorSet.h"
+#include "core/graphics/BufferView.h"
+#include "core/util/Util.h"
+#include "core/engine/scene/event/EventDispatcher.h"
+#include "core/engine/scene/event/Events.h"
 
 std::unordered_map<std::string, ImageData*> ImageData::s_imageCache;
 std::unordered_map<std::string, ComputePipeline*> ImageData::ImageTransform::s_transformComputePipelines;
+
+Buffer* g_imageStagingBuffer = nullptr;
 
 ImageData::ImageData(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, bool stbiAllocated):
         m_data(data),
@@ -715,7 +721,10 @@ bool ImageUtil::validateImageCreateInfo(const vk::ImageCreateInfo& imageCreateIn
     return true;
 }
 
-bool ImageUtil::transitionLayout(const vk::Image& image, vk::CommandBuffer commandBuffer, const vk::ImageSubresourceRange& subresourceRange, const ImageTransitionState& srcState, const ImageTransitionState& dstState) {
+bool ImageUtil::transitionLayout(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::ImageSubresourceRange& subresourceRange, const ImageTransitionState& srcState, const ImageTransitionState& dstState) {
+//    if (srcState == dstState)
+//        return true;
+
     vk::ImageMemoryBarrier barrier;
     barrier.setImage(image);
     barrier.setOldLayout(srcState.layout);
@@ -734,7 +743,16 @@ bool ImageUtil::transitionLayout(const vk::Image& image, vk::CommandBuffer comma
     return true;
 }
 
-bool ImageUtil::upload(const vk::Image& dstImage, void* data, const uint32_t& bytesPerPixel, const vk::ImageAspectFlags& aspectMask, const ImageRegion& imageRegion, const ImageTransitionState& dstState) {
+bool ImageUtil::upload(const vk::Image& dstImage, void* data, const uint32_t& bytesPerPixel, const vk::ImageAspectFlags& aspectMask, const ImageRegion& imageRegion, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
+    const vk::CommandBuffer& commandBuffer = ImageUtil::beginTransferCommands();
+
+    bool success = ImageUtil::upload(commandBuffer, dstImage, data, bytesPerPixel, aspectMask, imageRegion, dstState, srcState);
+
+    ImageUtil::endTransferCommands(**Application::instance()->graphics()->getQueue(QUEUE_TRANSFER_MAIN), true);
+    return success;
+}
+
+bool ImageUtil::upload(const vk::CommandBuffer& commandBuffer, const vk::Image& dstImage, void* data, const uint32_t& bytesPerPixel, const vk::ImageAspectFlags& aspectMask, const ImageRegion& imageRegion, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
 
     if (!dstImage) {
         assert(false);
@@ -754,23 +772,18 @@ bool ImageUtil::upload(const vk::Image& dstImage, void* data, const uint32_t& by
     if (imageRegion.width == VK_WHOLE_SIZE
         || imageRegion.height == VK_WHOLE_SIZE
         || imageRegion.depth == VK_WHOLE_SIZE
-        || imageRegion.layerCount == VK_WHOLE_SIZE
-        || imageRegion.mipLevelCount == VK_WHOLE_SIZE) {
+        || imageRegion.layerCount == VK_WHOLE_SIZE) {
         printf("Unable to upload Image: Image region is out of bounds\n");
         return false;
     }
 
-    BufferConfiguration bufferConfig{};
-    bufferConfig.device = Application::instance()->graphics()->getDevice();
-    bufferConfig.data = data;
-    bufferConfig.size = (vk::DeviceSize)imageRegion.width * (vk::DeviceSize)imageRegion.height * (vk::DeviceSize)imageRegion.depth * (vk::DeviceSize)bytesPerPixel;
-    bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-    bufferConfig.usage = vk::BufferUsageFlagBits::eTransferSrc;
-    Buffer* srcBuffer = Buffer::create(bufferConfig);
+    Buffer* srcBuffer = getImageStagingBuffer(imageRegion, bytesPerPixel);
     if (srcBuffer == nullptr) {
-        printf("Failed to create image data staging buffer\n");
+        printf("Unable to upload Image: Failed to get staging buffer\n");
         return false;
     }
+
+    srcBuffer->upload(0, ImageUtil::getImageSizeBytes(imageRegion, bytesPerPixel), data);
 
     vk::BufferImageCopy imageCopy{};
     imageCopy.setBufferOffset(0);
@@ -787,46 +800,263 @@ bool ImageUtil::upload(const vk::Image& dstImage, void* data, const uint32_t& by
     imageCopy.imageExtent.setHeight(imageRegion.height);
     imageCopy.imageExtent.setDepth(imageRegion.depth);
 
-    bool success = transferBuffer(dstImage, srcBuffer->getBuffer(), imageCopy, aspectMask, imageRegion.baseLayer, imageRegion.layerCount, imageRegion.baseMipLevel, imageRegion.mipLevelCount, dstState);
+    bool success = transferBuffer(commandBuffer, dstImage, srcBuffer->getBuffer(), imageCopy, dstState, srcState);
 
-    delete srcBuffer;
     return success;
 }
 
 
-bool ImageUtil::transferBuffer(const vk::Image& dstImage, const vk::Buffer& srcBuffer, const vk::BufferImageCopy& imageCopy, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const uint32_t& baseMipLevel, const uint32_t& mipLevelCount, const ImageTransitionState& dstState) {
+bool ImageUtil::transferBuffer(const vk::Image& dstImage, const vk::Buffer& srcBuffer, const vk::BufferImageCopy& imageCopy, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
 
-    const vk::Queue& transferQueue = **Application::instance()->graphics()->getQueue(QUEUE_TRANSFER_MAIN);
-    const vk::CommandBuffer& transferCommandBuffer = **Application::instance()->graphics()->commandPool()->getCommandBuffer("transfer_buffer");
+    const vk::CommandBuffer& commandBuffer = ImageUtil::beginTransferCommands();
 
-    vk::CommandBufferBeginInfo commandBeginInfo;
-    commandBeginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+    bool success = ImageUtil::transferBuffer(commandBuffer, dstImage, srcBuffer, imageCopy, dstState, srcState);
 
-    vk::ImageSubresourceRange subresourceRange;
+    ImageUtil::endTransferCommands(**Application::instance()->graphics()->getQueue(QUEUE_TRANSFER_MAIN), true);
+    return success;
+}
+
+bool ImageUtil::transferBuffer(const vk::CommandBuffer& commandBuffer, const vk::Image& dstImage, const vk::Buffer& srcBuffer, const vk::BufferImageCopy& imageCopy, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
+    vk::ImageSubresourceRange subresourceRange{};
+    subresourceRange.setAspectMask(imageCopy.imageSubresource.aspectMask);
+    subresourceRange.setBaseArrayLayer(imageCopy.imageSubresource.baseArrayLayer);
+    subresourceRange.setLayerCount(imageCopy.imageSubresource.layerCount);
+    subresourceRange.setBaseMipLevel(imageCopy.imageSubresource.mipLevel);
+    subresourceRange.setLevelCount(1);
+
+    ImageUtil::transitionLayout(commandBuffer, dstImage, subresourceRange, srcState, ImageTransition::TransferDst());
+    commandBuffer.copyBufferToImage(srcBuffer, dstImage, vk::ImageLayout::eTransferDstOptimal, 1, &imageCopy);
+    ImageUtil::transitionLayout(commandBuffer, dstImage, subresourceRange, ImageTransition::TransferDst(), dstState);
+
+    return true;
+}
+
+bool ImageUtil::generateMipmap(const vk::Image& image, const vk::Format& format, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const uint32_t& width, const uint32_t& height, const uint32_t& depth, const uint32_t& mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
+
+    const vk::CommandBuffer& commandBuffer = ImageUtil::beginTransferCommands();
+
+    bool success = ImageUtil::generateMipmap(commandBuffer, image, format, filter, aspectMask, baseLayer, layerCount, width, height, depth, mipLevels, dstState, srcState);
+
+    ImageUtil::endTransferCommands(**Application::instance()->graphics()->getQueue(QUEUE_GRAPHICS_TRANSFER_MAIN), true);
+    return success;
+}
+
+bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::Format& format, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const uint32_t& width, const uint32_t& height, const uint32_t& depth, const uint32_t& mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
+
+    vk::ImageTiling tiling = vk::ImageTiling::eOptimal;
+    vk::FormatFeatureFlags testFormatFeatureFlags{};
+    if (filter == vk::Filter::eLinear) testFormatFeatureFlags |= vk::FormatFeatureFlagBits::eSampledImageFilterLinear;
+    if (filter == vk::Filter::eCubicEXT) testFormatFeatureFlags |= vk::FormatFeatureFlagBits::eSampledImageFilterCubicEXT;
+    if (filter == vk::Filter::eCubicIMG) testFormatFeatureFlags |= vk::FormatFeatureFlagBits::eSampledImageFilterCubicIMG;
+
+    if (testFormatFeatureFlags && !ImageUtil::checkAllImageFormatFeatures(format, tiling, testFormatFeatureFlags)) {
+        printf("Unable to generate mipmap: Image format %s does not support filter type %s\n", vk::to_string(format).c_str(), vk::to_string(filter).c_str());
+        return false;
+    }
+
+    int32_t levelWidth = glm::max(width, 1u);
+    int32_t levelHeight = glm::max(height, 1u);
+    int32_t levelDepth = glm::max(depth, 1u);
+    uint32_t mipLevelCount = glm::clamp(mipLevels, 1u, ImageUtil::getMaxMipLevels(levelWidth, levelHeight, levelDepth));
+
+    if (mipLevelCount == 1)
+        return true;
+
+    vk::ImageSubresourceRange subresourceRange{};
     subresourceRange.setAspectMask(aspectMask);
     subresourceRange.setBaseArrayLayer(baseLayer);
     subresourceRange.setLayerCount(layerCount);
-    subresourceRange.setBaseMipLevel(baseMipLevel);
-    subresourceRange.setLevelCount(mipLevelCount);
+    subresourceRange.setLevelCount(1);
+
+    vk::ImageBlit blit{};
+    blit.srcOffsets[0] = vk::Offset3D(0, 0, 0);
+    blit.dstOffsets[0] = vk::Offset3D(0, 0, 0);
+    blit.srcSubresource.aspectMask = aspectMask;
+    blit.srcSubresource.baseArrayLayer = baseLayer;
+    blit.srcSubresource.layerCount = layerCount;
+    blit.dstSubresource.aspectMask = aspectMask;
+    blit.dstSubresource.baseArrayLayer = baseLayer;
+    blit.dstSubresource.layerCount = layerCount;
+
+
+    ImageTransitionState prevLevelState = srcState;
+
+    for (size_t i = 1; i < mipLevelCount; ++i) {
+
+        subresourceRange.setBaseMipLevel(i - 1);
+        ImageUtil::transitionLayout(commandBuffer, image, subresourceRange, prevLevelState, ImageTransition::TransferSrc());
+
+        subresourceRange.setBaseMipLevel(i);
+        ImageUtil::transitionLayout(commandBuffer, image, subresourceRange, srcState, ImageTransition::TransferDst());
+        prevLevelState = ImageTransition::TransferDst();
+
+        blit.srcOffsets[1] = vk::Offset3D(levelWidth, levelHeight, levelDepth);
+        blit.srcSubresource.mipLevel = i - 1;
+
+        if (levelWidth > 1) levelWidth /= 2;
+        if (levelHeight > 1) levelHeight /= 2;
+        if (levelDepth > 1) levelDepth /= 2;
+
+        blit.dstOffsets[1] = vk::Offset3D(levelWidth, levelHeight, levelDepth);
+        blit.dstSubresource.mipLevel = i;
+
+        commandBuffer.blitImage(image, vk::ImageLayout::eTransferSrcOptimal, image, vk::ImageLayout::eTransferDstOptimal, 1, &blit, filter);
+
+        subresourceRange.setBaseMipLevel(i - 1);
+        ImageUtil::transitionLayout(commandBuffer, image, subresourceRange, ImageTransition::TransferSrc(), dstState);
+
+    }
+
+    subresourceRange.setBaseMipLevel(mipLevelCount - 1);
+    ImageUtil::transitionLayout(commandBuffer, image, subresourceRange, prevLevelState, dstState);
+
+    return true;
+}
+
+uint32_t ImageUtil::getMaxMipLevels(const uint32_t& width, const uint32_t& height, const uint32_t& depth) {
+    return static_cast<uint32_t>(glm::floor(glm::log2((float)glm::max(glm::max(width, height), depth)))) + 1;
+}
+
+bool ImageUtil::checkAllImageFormatFeatures(const vk::Format& format, const vk::ImageTiling& tiling, const vk::FormatFeatureFlags& formatFeatureFlags) {
+    const vk::PhysicalDevice& physicalDevice = Application::instance()->graphics()->getPhysicalDevice();
+
+    vk::FormatProperties formatProperties{};
+    physicalDevice.getFormatProperties(format, &formatProperties);
+
+    vk::FormatFeatureFlags testFlags =
+            tiling == vk::ImageTiling::eOptimal ? formatProperties.optimalTilingFeatures :
+            tiling == vk::ImageTiling::eLinear ? formatProperties.linearTilingFeatures :
+            vk::FormatFeatureFlags(0);
+
+    return (testFlags & formatFeatureFlags) == formatFeatureFlags; // All desired flag bits are set.
+}
+
+bool ImageUtil::checkAnyImageFormatFeatures(const vk::Format& format, const vk::ImageTiling& tiling, const vk::FormatFeatureFlags& formatFeatureFlags) {
+    const vk::PhysicalDevice& physicalDevice = Application::instance()->graphics()->getPhysicalDevice();
+
+    vk::FormatProperties formatProperties{};
+    physicalDevice.getFormatProperties(format, &formatProperties);
+
+    vk::FormatFeatureFlags testFlags =
+            tiling == vk::ImageTiling::eOptimal ? formatProperties.optimalTilingFeatures :
+            tiling == vk::ImageTiling::eLinear ? formatProperties.linearTilingFeatures :
+            vk::FormatFeatureFlags(0);
+
+    return !!(testFlags & formatFeatureFlags); // Any desired flag bits are set.
+}
+
+const vk::CommandBuffer& ImageUtil::beginTransferCommands() {
+    const vk::CommandBuffer& transferCommandBuffer = ImageUtil::getTransferCommandBuffer();
+
+    vk::CommandBufferBeginInfo commandBeginInfo;
+    commandBeginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
     transferCommandBuffer.begin(commandBeginInfo);
-    ImageUtil::transitionLayout(dstImage, transferCommandBuffer, subresourceRange, ImageTransition::FromAny(), ImageTransition::TransferDst());
-    transferCommandBuffer.copyBufferToImage(srcBuffer, dstImage, vk::ImageLayout::eTransferDstOptimal, 1, &imageCopy);
-    ImageUtil::transitionLayout(dstImage, transferCommandBuffer, subresourceRange, ImageTransition::TransferDst(), dstState);
+
+    return transferCommandBuffer;
+}
+
+void ImageUtil::endTransferCommands(const vk::Queue& queue, const bool& waitComplete) {
+    const vk::CommandBuffer& transferCommandBuffer = ImageUtil::getTransferCommandBuffer();
+
     transferCommandBuffer.end();
 
     vk::SubmitInfo queueSumbitInfo;
     queueSumbitInfo.setCommandBufferCount(1);
     queueSumbitInfo.setPCommandBuffers(&transferCommandBuffer);
-    transferQueue.submit(1, &queueSumbitInfo, VK_NULL_HANDLE);
-    transferQueue.waitIdle();
+    const vk::Queue& graphicsTransferQueue = **Application::instance()->graphics()->getQueue(QUEUE_GRAPHICS_TRANSFER_MAIN);
+    queue.submit(1, &queueSumbitInfo, VK_NULL_HANDLE);
+    if (waitComplete)
+        queue.waitIdle();
+}
 
-    return true;
+const vk::CommandBuffer& ImageUtil::getTransferCommandBuffer() {
+    if (!Application::instance()->graphics()->commandPool()->hasCommandBuffer("image_transfer_buffer"))
+        Application::instance()->graphics()->commandPool()->allocateCommandBuffer("image_transfer_buffer", { vk::CommandBufferLevel::ePrimary });
+
+    return **Application::instance()->graphics()->commandPool()->getCommandBuffer("image_transfer_buffer");
+}
+
+const vk::CommandBuffer& ImageUtil::getComputeCommandBuffer() {
+    if (!Application::instance()->graphics()->commandPool()->hasCommandBuffer("image_compute_buffer"))
+        Application::instance()->graphics()->commandPool()->allocateCommandBuffer("image_compute_buffer", { vk::CommandBufferLevel::ePrimary });
+
+    return **Application::instance()->graphics()->commandPool()->getCommandBuffer("image_compute_buffer");
+}
+
+const vk::Queue& ImageUtil::getComputeQueue() {
+    return **Application::instance()->graphics()->getQueue(QUEUE_COMPUTE_MAIN);
+}
+
+vk::DeviceSize ImageUtil::getImageSizeBytes(const ImageRegion& imageRegion, const uint32_t& bytesPerPixel) {
+    return ImageUtil::getImageSizeBytes(imageRegion.width, imageRegion.height, imageRegion.depth, bytesPerPixel);
+}
+
+vk::DeviceSize ImageUtil::getImageSizeBytes(const uint32_t& width, const uint32_t& height, const uint32_t& depth, const uint32_t& bytesPerPixel) {
+    return (vk::DeviceSize)width * (vk::DeviceSize)height * (vk::DeviceSize)depth * (vk::DeviceSize)bytesPerPixel;
+}
+
+Buffer* ImageUtil::getImageStagingBuffer(const ImageRegion& imageRegion, const uint32_t& bytesPerPixel) {
+    return ImageUtil::getImageStagingBuffer(imageRegion.width, imageRegion.height, imageRegion.depth, bytesPerPixel);
+}
+
+void onCleanupGraphics(const ShutdownGraphicsEvent& event) {
+    printf("Destroying image staging buffer\n");
+    delete g_imageStagingBuffer;
+}
+
+Buffer* ImageUtil::getImageStagingBuffer(const uint32_t& width, const uint32_t& height, const uint32_t& depth, const uint32_t& bytesPerPixel) {
+    constexpr uint32_t maxImageDimension = 32768;
+    if (width > maxImageDimension || height > maxImageDimension || depth > maxImageDimension || bytesPerPixel > 64) {
+        printf("Unable to get image data staging buffer: Requested dimensions too large\n");
+    }
+
+    constexpr vk::DeviceSize maxSizeBytes = UINT32_MAX; // 4 GiB
+
+    vk::DeviceSize requiredSize = ImageUtil::getImageSizeBytes(width, height, depth, bytesPerPixel);
+    if (requiredSize > 1llu << 32) {
+        char c1[6] = "", c2[6] = "";
+        printf("Unable to get image data staging buffer: Requested dimensions exceed maximum allocatable size for staging buffer (Requested %.3f %s, maximum %.3f %s)\n",
+               Util::getMemorySizeMagnitude(requiredSize, c1), c1, Util::getMemorySizeMagnitude(maxSizeBytes, c2), c2);
+    }
+
+    if (g_imageStagingBuffer == nullptr) {
+        Application::instance()->eventDispatcher()->connect(&onCleanupGraphics);
+    }
+
+    if (g_imageStagingBuffer == nullptr || g_imageStagingBuffer->getSize() < requiredSize) {
+        delete g_imageStagingBuffer;
+
+        char c1[6] = "";
+        printf("Resizing image staging buffer to %.3f %s\n", Util::getMemorySizeMagnitude(requiredSize, c1), c1);
+
+        BufferConfiguration bufferConfig{};
+        bufferConfig.device = Application::instance()->graphics()->getDevice();
+        bufferConfig.size = requiredSize;
+        bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+        bufferConfig.usage = vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;
+        g_imageStagingBuffer = Buffer::create(bufferConfig);
+        if (g_imageStagingBuffer == nullptr) {
+            printf("Failed to create image data staging buffer\n");
+            return nullptr;
+        }
+    }
+
+    return g_imageStagingBuffer;
 }
 
 
 
 
 
+
+
+bool ImageTransitionState::operator==(const ImageTransitionState& other) const {
+    if (layout != other.layout) return false;
+    if (pipelineStage != other.pipelineStage) return false;
+    if (accessMask != other.accessMask) return false;
+    if (queueFamilyIndex != other.queueFamilyIndex) return false;
+    return true;
+}
 
 
 ImageTransition::FromAny::FromAny() {
@@ -843,7 +1073,7 @@ ImageTransition::TransferDst::TransferDst() {
 
 ImageTransition::TransferSrc::TransferSrc() {
     layout = vk::ImageLayout::eTransferSrcOptimal;
-    pipelineStage = vk::PipelineStageFlagBits::eTopOfPipe;
+    pipelineStage = vk::PipelineStageFlagBits::eTransfer; // is eTopOfPipe correct here?
     accessMask = vk::AccessFlagBits::eTransferRead;
 }
 

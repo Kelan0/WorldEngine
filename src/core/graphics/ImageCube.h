@@ -57,12 +57,13 @@ struct ImageCubeConfiguration {
     bool enabledTexelAccess = false;
     bool preInitialized = false;
     vk::MemoryPropertyFlags memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+    bool generateMipmap = false;
 };
 
 class ImageCube {
     NO_COPY(ImageCube);
 private:
-    ImageCube(const std::weak_ptr<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& size, const vk::Format& format);
+    ImageCube(const std::weak_ptr<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& size, const uint32_t& mipLevelCount, const vk::Format& format);
 
 public:
     ~ImageCube();
@@ -77,6 +78,10 @@ public:
 
     bool uploadEquirectangular(void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
 
+    static bool generateMipmap(ImageCube* image, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState);
+
+    bool generateMipmap(const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState);
+
     std::shared_ptr<vkr::Device> getDevice() const;
 
     const vk::Image& getImage() const;
@@ -86,6 +91,8 @@ public:
     const uint32_t& getWidth() const;
 
     const uint32_t& getHeight() const;
+
+    const uint32_t getMipLevelCount() const;
 
     vk::Format getFormat() const;
 
@@ -98,7 +105,7 @@ public:
 private:
     static bool validateFaceImageRegion(const ImageCube* image, const ImageCubeFace& face, ImageRegion& imageRegion);
 
-    static bool validateEquirectangularFaceImageRegion(const ImageCube* image, ImageRegion& imageRegion);
+    static bool validateEquirectangularImageRegion(const ImageCube* image, ImageRegion& imageRegion);
 
     static ComputePipeline* getEquirectangularComputePipeline();
     static DescriptorSet* getEquirectangularComputeDescriptorSet();
@@ -109,54 +116,12 @@ private:
     vk::Image m_image;
     DeviceMemoryBlock* m_memory;
     uint32_t m_size;
+    uint32_t m_mipLevelCount;
     vk::Format m_format;
     GraphicsResource m_ResourceId;
 
     static ComputePipeline* s_computeEquirectangularPipeline;
     static DescriptorSet* s_computeEquirectangularDescriptorSet;
-};
-
-
-
-struct ImageViewCubeConfiguration {
-    std::weak_ptr<vkr::Device> device;
-    vk::Image image;
-    vk::Format format;
-    vk::ImageAspectFlags aspectMask = vk::ImageAspectFlagBits::eColor;
-    uint32_t baseMipLevel = 0;
-    uint32_t mipLevelCount = 1;
-    uint32_t baseArrayLayer = 0;
-    uint32_t arrayLayerCount = 1;
-    vk::ComponentSwizzle redSwizzle = vk::ComponentSwizzle::eIdentity;
-    vk::ComponentSwizzle greenSwizzle = vk::ComponentSwizzle::eIdentity;
-    vk::ComponentSwizzle blueSwizzle = vk::ComponentSwizzle::eIdentity;
-    vk::ComponentSwizzle alphaSwizzle = vk::ComponentSwizzle::eIdentity;
-
-    void setImage(const vk::Image& image);
-
-    void setImage(const ImageCube* image);
-};
-
-class ImageViewCube {
-    NO_COPY(ImageViewCube)
-private:
-    ImageViewCube(std::weak_ptr<vkr::Device> device, vk::ImageView imageView);
-
-public:
-    ~ImageViewCube();
-
-    static ImageViewCube* create(const ImageViewCubeConfiguration& imageViewCubeConfiguration);
-
-    std::shared_ptr<vkr::Device> getDevice() const;
-
-    const vk::ImageView& getImageView() const;
-
-    const GraphicsResource& getResourceId() const;
-
-private:
-    std::shared_ptr<vkr::Device> m_device;
-    vk::ImageView m_imageView;
-    GraphicsResource m_resourceId;
 };
 
 

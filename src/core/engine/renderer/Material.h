@@ -3,6 +3,7 @@
 #define WORLDENGINE_MATERIAL_H
 
 #include "core/core.h"
+#include "core/graphics/ImageView.h"
 #include "core/graphics/Image2D.h"
 #include "core/graphics/Texture.h"
 
@@ -22,32 +23,32 @@ struct MaterialConfiguration {
     void setAlbedo(const glm::uvec3& albedo);
     void setAlbedo(const glm::vec3& albedo);
     void setAlbedoMap(std::weak_ptr<Texture2D> albedoMap);
-    void setAlbedoMap(std::weak_ptr<ImageView2D> image, std::weak_ptr<Sampler> sampler);
-    void setAlbedoMap(std::weak_ptr<ImageView2D> image, const SamplerConfiguration& samplerConfiguration);
-    void setAlbedoMap(const ImageView2DConfiguration& imageView2DConfiguration, std::weak_ptr<Sampler> sampler);
-    void setAlbedoMap(const ImageView2DConfiguration& imageView2DConfiguration, const SamplerConfiguration& samplerConfiguration);
+    void setAlbedoMap(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler);
+    void setAlbedoMap(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration);
+    void setAlbedoMap(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler);
+    void setAlbedoMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration);
 
     void setRoughness(const uint32_t& roughness);
     void setRoughness(const float& roughness);
     void setRoughnessMap(std::weak_ptr<Texture2D> roughnessMap);
-    void setRoughnessMap(std::weak_ptr<ImageView2D> image, std::weak_ptr<Sampler> sampler);
-    void setRoughnessMap(std::weak_ptr<ImageView2D> image, const SamplerConfiguration& samplerConfiguration);
-    void setRoughnessMap(const ImageView2DConfiguration& imageView2DConfiguration, std::weak_ptr<Sampler> sampler);
-    void setRoughnessMap(const ImageView2DConfiguration& imageView2DConfiguration, const SamplerConfiguration& samplerConfiguration);
+    void setRoughnessMap(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler);
+    void setRoughnessMap(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration);
+    void setRoughnessMap(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler);
+    void setRoughnessMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration);
 
     void setMetallic(const uint32_t& metallic);
     void setMetallic(const float& metallic);
     void setMetallicMap(std::weak_ptr<Texture2D> metallicMap);
-    void setMetallicMap(std::weak_ptr<ImageView2D> image, std::weak_ptr<Sampler> sampler);
-    void setMetallicMap(std::weak_ptr<ImageView2D> image, const SamplerConfiguration& samplerConfiguration);
-    void setMetallicMap(const ImageView2DConfiguration& imageView2DConfiguration, std::weak_ptr<Sampler> sampler);
-    void setMetallicMap(const ImageView2DConfiguration& imageView2DConfiguration, const SamplerConfiguration& samplerConfiguration);
+    void setMetallicMap(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler);
+    void setMetallicMap(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration);
+    void setMetallicMap(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler);
+    void setMetallicMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration);
 
     void setNormalMap(std::weak_ptr<Texture2D> metallicMap);
-    void setNormalMap(std::weak_ptr<ImageView2D> image, std::weak_ptr<Sampler> sampler);
-    void setNormalMap(std::weak_ptr<ImageView2D> image, const SamplerConfiguration& samplerConfiguration);
-    void setNormalMap(const ImageView2DConfiguration& imageView2DConfiguration, std::weak_ptr<Sampler> sampler);
-    void setNormalMap(const ImageView2DConfiguration& imageView2DConfiguration, const SamplerConfiguration& samplerConfiguration);
+    void setNormalMap(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler);
+    void setNormalMap(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration);
+    void setNormalMap(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler);
+    void setNormalMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration);
 };
 
 class Material {

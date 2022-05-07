@@ -3,7 +3,7 @@
 
 #include "core/core.h"
 
-class ImageView2D;
+class ImageView;
 class RenderPass;
 
 struct FramebufferConfiguration {
@@ -20,11 +20,11 @@ struct FramebufferConfiguration {
 
     void addAttachment(const vk::ImageView& imageView);
 
-    void addAttachment(const ImageView2D* imageView);
+    void addAttachment(const ImageView* imageView);
 
     void setAttachments(const vk::ArrayProxy<vk::ImageView>& imageViews);
 
-    void setAttachments(const vk::ArrayProxy<ImageView2D*>& imageViews);
+    void setAttachments(const vk::ArrayProxy<ImageView*>& imageViews);
 
     void setSize(const uint32_t& width, const uint32_t& height);
 
