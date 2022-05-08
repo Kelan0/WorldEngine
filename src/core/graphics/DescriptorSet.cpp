@@ -457,7 +457,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Sampler* 
     return writeImage(binding, &samplers, &imageViews, &imageLayouts, 1, arrayIndex);
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Texture2D** textures, vk::ImageLayout* imageLayouts, uint32_t arrayCount, uint32_t arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Texture** textures, vk::ImageLayout* imageLayouts, uint32_t arrayCount, uint32_t arrayIndex) {
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
         imageInfos[i].setSampler(textures[i]->getSampler()->getSampler());
@@ -469,7 +469,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Texture2D
     return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Texture2D* texture, vk::ImageLayout imageLayout, uint32_t arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Texture* texture, vk::ImageLayout imageLayout, uint32_t arrayIndex) {
     return writeImage(binding, &texture, &imageLayout, 1, arrayIndex);
 }
 
@@ -683,6 +683,27 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addCombinedImageSampler(
     vk::DescriptorSetLayoutBinding bindingInfo;
     bindingInfo.setBinding(binding);
     bindingInfo.setDescriptorType(vk::DescriptorType::eCombinedImageSampler);
+    bindingInfo.setDescriptorCount(arraySize);
+    bindingInfo.setStageFlags(shaderStages);
+    bindingInfo.setPImmutableSamplers(NULL);
+    m_bindings.insert(std::make_pair(binding, bindingInfo));
+    return *this;
+}
+
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageImage(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& arraySize) {
+#if _DEBUG
+    if (m_bindings.count(binding) != 0) {
+        printf("Unable to add DescriptorSetLayout StorageImage binding %d - The binding is already added\n", binding);
+        assert(false);
+    }
+    if (arraySize == 0) {
+        printf("Unable to add DescriptorSetLayout StorageImage binding %d - Array size must not be zero\n", binding);
+        assert(false);
+    }
+#endif
+    vk::DescriptorSetLayoutBinding bindingInfo;
+    bindingInfo.setBinding(binding);
+    bindingInfo.setDescriptorType(vk::DescriptorType::eStorageImage);
     bindingInfo.setDescriptorCount(arraySize);
     bindingInfo.setStageFlags(shaderStages);
     bindingInfo.setPImmutableSamplers(NULL);

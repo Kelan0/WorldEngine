@@ -51,6 +51,14 @@ std::shared_ptr<vkr::CommandBuffer> CommandPool::allocateCommandBuffer(const std
     return commandBuffer;
 }
 
+std::shared_ptr<vkr::CommandBuffer> CommandPool::getOrCreateCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration) {
+    if (hasCommandBuffer(name)) {
+        return getCommandBuffer(name);
+    } else {
+        return allocateCommandBuffer(name, commandBufferConfiguration);
+    }
+}
+
 std::shared_ptr<vkr::CommandBuffer> CommandPool::getCommandBuffer(const std::string& name) {
 #if _DEBUG
     assert(m_commandBuffers.contains(name));

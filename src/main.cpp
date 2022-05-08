@@ -36,11 +36,11 @@ class App : public Application {
 
     std::vector<Image2D*> images;
     std::vector<Sampler*> samplers;
-    std::vector<std::shared_ptr<Texture2D>> textures;
+    std::vector<std::shared_ptr<Texture>> textures;
     double cameraPitch = 0.0F;
     double cameraYaw = 0.0F;
 
-    std::shared_ptr<Texture2D> loadTexture(const std::string& filePath, vk::Format format, std::weak_ptr<Sampler> sampler) {
+    std::shared_ptr<Texture> loadTexture(const std::string& filePath, vk::Format format, std::weak_ptr<Sampler> sampler) {
         Image2DConfiguration imageConfig;
         imageConfig.device = graphics()->getDevice();
         imageConfig.filePath = filePath;
@@ -58,7 +58,7 @@ class App : public Application {
         imageViewConfig.baseMipLevel = 0;
         imageViewConfig.mipLevelCount = image->getMipLevelCount();
 
-        return std::shared_ptr<Texture2D>(Texture2D::create(imageViewConfig, sampler));
+        return std::shared_ptr<Texture>(Texture::create(imageViewConfig, sampler));
     }
 
     void init() override {
@@ -74,17 +74,17 @@ class App : public Application {
         std::shared_ptr<Sampler> sampler = std::shared_ptr<Sampler>(Sampler::create(samplerConfig));
 
         MaterialConfiguration floorMaterialConfig;
-        floorMaterialConfig.setAlbedoMap(loadTexture("res/textures/blacktiles04/albedo.png", vk::Format::eR8G8B8A8Srgb, sampler));
-        floorMaterialConfig.setRoughnessMap(loadTexture("res/textures/blacktiles04/roughness.png", vk::Format::eR8G8B8A8Srgb, sampler));
-//        floorMaterialConfig.setMetallicMap(loadTexture("res/textures/blacktiles04/metallic.png", vk::Format::eR8G8B8A8Srgb, sampler));
-        floorMaterialConfig.setNormalMap(loadTexture("res/textures/blacktiles04/normal.png", vk::Format::eR8G8B8A8Srgb, sampler));
+        floorMaterialConfig.setAlbedoMap(loadTexture("res/textures/blacktiles04/albedo.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        floorMaterialConfig.setRoughnessMap(loadTexture("res/textures/blacktiles04/roughness.png", vk::Format::eR8G8B8A8Unorm, sampler));
+//        floorMaterialConfig.setMetallicMap(loadTexture("res/textures/blacktiles04/metallic.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        floorMaterialConfig.setNormalMap(loadTexture("res/textures/blacktiles04/normal.png", vk::Format::eR8G8B8A8Unorm, sampler));
         std::shared_ptr<Material> floorMaterial = std::shared_ptr<Material>(Material::create(floorMaterialConfig));
 
         MaterialConfiguration cubeMaterialConfig;
-        cubeMaterialConfig.setAlbedoMap(loadTexture("res/textures/mossybark02/albedo.png", vk::Format::eR8G8B8A8Srgb, sampler));
-        cubeMaterialConfig.setRoughnessMap(loadTexture("res/textures/mossybark02/roughness.png", vk::Format::eR8G8B8A8Srgb, sampler));
-//        cubeMaterialConfig.setMetallicMap(loadTexture("res/textures/mossybark02/metallic.png", vk::Format::eR8G8B8A8Srgb, sampler));
-        cubeMaterialConfig.setNormalMap(loadTexture("res/textures/mossybark02/normal.png", vk::Format::eR8G8B8A8Srgb, sampler));
+        cubeMaterialConfig.setAlbedoMap(loadTexture("res/textures/mossybark02/albedo.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        cubeMaterialConfig.setRoughnessMap(loadTexture("res/textures/mossybark02/roughness.png", vk::Format::eR8G8B8A8Unorm, sampler));
+//        cubeMaterialConfig.setMetallicMap(loadTexture("res/textures/mossybark02/metallic.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        cubeMaterialConfig.setNormalMap(loadTexture("res/textures/mossybark02/normal.png", vk::Format::eR8G8B8A8Unorm, sampler));
         std::shared_ptr<Material> cubeMaterial = std::shared_ptr<Material>(Material::create(cubeMaterialConfig));
 
 

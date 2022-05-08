@@ -132,38 +132,38 @@ size_t Sampler::KeyHasher::operator()(const Key& samplerKey) const {
     return s;
 }
 
-Texture2D::Texture2D(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler):
+Texture::Texture(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler):
         m_imageView(std::move(image)),
         m_sampler(std::move(sampler)),
         m_resourceId(GraphicsManager::nextResourceId()) {
 }
 
-Texture2D::~Texture2D() {
+Texture::~Texture() {
     m_sampler.reset();
     m_imageView.reset();
 }
 
-Texture2D* Texture2D::create(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler) {
-    return new Texture2D(std::move(image), std::move(sampler));
+Texture* Texture::create(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler) {
+    return new Texture(std::move(image), std::move(sampler));
 }
 
-Texture2D* Texture2D::create(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration) {
+Texture* Texture::create(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration) {
     std::shared_ptr<Sampler> sampler = Sampler::get(samplerConfiguration);
     if (sampler == NULL)
         return NULL;
 
-    return new Texture2D(std::move(image), std::move(sampler));
+    return new Texture(std::move(image), std::move(sampler));
 }
 
-Texture2D* Texture2D::create(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler) {
+Texture* Texture::create(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler) {
     ImageView* rawImageView = ImageView::create(imageViewConfiguration);
     if (rawImageView == NULL)
         return NULL;
 
-    return new Texture2D(std::shared_ptr<ImageView>(rawImageView), std::move(sampler));
+    return new Texture(std::shared_ptr<ImageView>(rawImageView), std::move(sampler));
 }
 
-Texture2D* Texture2D::create(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration) {
+Texture* Texture::create(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration) {
     ImageView* rawImageView = ImageView::create(imageViewConfiguration);
     if (rawImageView == NULL)
         return NULL;
@@ -174,17 +174,21 @@ Texture2D* Texture2D::create(const ImageViewConfiguration& imageViewConfiguratio
         return NULL;
     }
 
-    return new Texture2D(std::move(imageView), std::move(sampler));
+    return new Texture(std::move(imageView), std::move(sampler));
 }
 
-std::shared_ptr<ImageView> Texture2D::getImageView() const {
+const vk::ImageViewType& Texture::getType() const {
+    return m_imageView->getType();
+}
+
+std::shared_ptr<ImageView> Texture::getImageView() const {
     return m_imageView;
 }
 
-std::shared_ptr<Sampler> Texture2D::getSampler() const {
+std::shared_ptr<Sampler> Texture::getSampler() const {
     return m_sampler;
 }
 
-const GraphicsResource& Texture2D::getResourceId() const {
+const GraphicsResource& Texture::getResourceId() const {
     return m_resourceId;
 }

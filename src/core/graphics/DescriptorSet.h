@@ -8,7 +8,7 @@ class Buffer;
 class BufferView;
 class Sampler;
 class ImageView;
-class Texture2D;
+class Texture;
 
 class DescriptorSet;
 class DescriptorPool;
@@ -127,6 +127,8 @@ public:
 
     DescriptorSetLayoutBuilder& addCombinedImageSampler(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& arraySize = 1);
 
+    DescriptorSetLayoutBuilder& addStorageImage(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& arraySize = 1);
+
     std::shared_ptr<DescriptorSetLayout> build();
 
     DescriptorSetLayoutBuilder& reset(vk::DescriptorSetLayoutCreateFlags flags = {});
@@ -225,8 +227,8 @@ public:
     DescriptorSetWriter& writeImage(uint32_t binding, vk::Sampler sampler, vk::ImageView imageView, vk::ImageLayout imageLayout, uint32_t arrayIndex = 0);
     DescriptorSetWriter& writeImage(uint32_t binding, Sampler** samplers, ImageView** imageViews, vk::ImageLayout* imageLayouts, uint32_t arrayCount = 1, uint32_t arrayIndex = 0);
     DescriptorSetWriter& writeImage(uint32_t binding, Sampler* samplers, ImageView* imageViews, vk::ImageLayout imageLayouts, uint32_t arrayIndex = 0);
-    DescriptorSetWriter& writeImage(uint32_t binding, Texture2D** textures, vk::ImageLayout* imageLayouts, uint32_t arrayCount = 1, uint32_t arrayIndex = 0);
-    DescriptorSetWriter& writeImage(uint32_t binding, Texture2D* texture, vk::ImageLayout imageLayout, uint32_t arrayIndex = 0);
+    DescriptorSetWriter& writeImage(uint32_t binding, Texture** textures, vk::ImageLayout* imageLayouts, uint32_t arrayCount = 1, uint32_t arrayIndex = 0);
+    DescriptorSetWriter& writeImage(uint32_t binding, Texture* texture, vk::ImageLayout imageLayout, uint32_t arrayIndex = 0);
 
     bool write();
 

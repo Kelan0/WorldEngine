@@ -20,6 +20,7 @@ layout(set = 0, binding = 1) uniform sampler2D texture_AlbedoRGB_Roughness;
 layout(set = 0, binding = 2) uniform sampler2D texture_NormalXYZ_Metallic;
 layout(set = 0, binding = 3) uniform sampler2D texture_Depth;
 layout(set = 0, binding = 4) uniform samplerCube environmentCubeMap;
+layout(set = 0, binding = 5) uniform samplerCube diffuseIrradianceCubeMap;
 
 const float PI = 3.14159265359;
 
@@ -31,6 +32,7 @@ struct SurfacePoint {
     vec3 albedo;
     float roughness;
     vec3 normal;
+    vec3 worldNormal;
     float metallic;
     float ambientOcclusion;
     vec3 emission;
@@ -75,7 +77,8 @@ void loadSurface(in vec2 textureCoord, inout SurfacePoint surface) {
     surface.albedo = texelValue.rgb;
     surface.roughness = texelValue.w;
     texelValue = texture(texture_NormalXYZ_Metallic, fs_texture);
-    surface.normal = texelValue.xyz;
+    surface.normal = normalize(texelValue.xyz);
+    surface.worldNormal = vec3(invViewMatrix * vec4(surface.normal, 0.0));
     surface.metallic = texelValue.w;
     surface.ambientOcclusion = 1.0;
     surface.emission = vec3(0.0);
@@ -86,6 +89,10 @@ void loadSurface(in vec2 textureCoord, inout SurfacePoint surface) {
 vec3 fresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
+
+vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}   
 
 float distributionGGX(vec3 N, vec3 H, float roughness) {
     float a = roughness * roughness;
@@ -169,7 +176,7 @@ void main() {
 
     if (!surface.exists) {
         // outColor = vec4(0.0, 0.0, 0.0, 1.0);
-        finalColour = textureLod(environmentCubeMap, createRay(fs_texture), 0).rgb;
+        finalColour = texture(environmentCubeMap, createRay(fs_texture)).rgb;
 
     } else {
         vec3 cameraPos = vec3(0.0); // camera at origin
@@ -191,20 +198,27 @@ void main() {
             Lo += surface.albedo * calculatePointLight(surface, pointLights[i]);
         }
 
-        vec3 ambient = vec3(0.03) * surface.albedo * surface.ambientOcclusion;
+        // vec3 ambient = vec3(0.03) * surface.albedo * surface.ambientOcclusion;
+        
+        float NdotV = max(dot(surface.normal, surface.dirToCamera), 0.0);
+        vec3 kS = fresnelSchlickRoughness(NdotV, surface.F0, surface.roughness); 
+        vec3 kD = 1.0 - kS;
+        vec3 irradiance = texture(diffuseIrradianceCubeMap, surface.worldNormal).rgb;
+        vec3 diffuse = irradiance * surface.albedo;
+        vec3 ambient = (kD * diffuse) * surface.ambientOcclusion; 
         finalColour = ambient + Lo;
     }
 
 
     finalColour = finalColour / (finalColour + vec3(1.0));
-    finalColour = pow(finalColour, vec3(1.0 / 2.2));  
+    // finalColour = pow(finalColour, vec3(1.0 / 2.2));  
 
     outColor = vec4(finalColour, 1.0);
 
 
 
 
-    // outColor = vec4(texture(environmentCubeMap, createRay(fs_texture)).rgb, 1.0);
+    // outColor = vec4(texture(diffuseIrradianceCubeMap, createRay(fs_texture)).rgb, 1.0);
 
 
 

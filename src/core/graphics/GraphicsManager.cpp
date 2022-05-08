@@ -625,10 +625,17 @@ bool GraphicsManager::initSurfaceDetails() {
         return false;
     }
 
+    bool useSRGB = true;
+
     auto selectedFormat = formats.end();
     for (auto it = formats.begin(); it != formats.end() && selectedFormat == formats.end(); ++it) {
-        if (it->format == vk::Format::eB8G8R8A8Srgb && it->colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
-            selectedFormat = it;
+        if (useSRGB) {
+            if (it->format == vk::Format::eB8G8R8A8Srgb && it->colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
+                selectedFormat = it;
+        } else {
+            if (it->format == vk::Format::eB8G8R8A8Unorm && it->colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
+                selectedFormat = it;
+        }
     }
 
     if (selectedFormat != formats.end()) {

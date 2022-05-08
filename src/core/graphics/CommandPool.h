@@ -30,6 +30,8 @@ public:
 
     std::shared_ptr<vkr::CommandBuffer> allocateCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration);
 
+    std::shared_ptr<vkr::CommandBuffer> getOrCreateCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration);
+
     std::shared_ptr<vkr::CommandBuffer> getCommandBuffer(const std::string& name);
 
     void freeCommandBuffer(const std::string name);

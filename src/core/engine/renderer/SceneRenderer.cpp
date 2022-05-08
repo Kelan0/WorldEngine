@@ -88,7 +88,7 @@ bool SceneRenderer::init() {
 
     constexpr size_t maxTextures = 0xFFFF;
 
-    std::vector<Texture2D*> initialTextures;
+    std::vector<Texture*> initialTextures;
     initialTextures.resize(maxTextures, m_missingTextureMaterial->getAlbedoMap().get());
 
     std::vector<vk::ImageLayout> initialImageLayouts;
@@ -724,7 +724,7 @@ void SceneRenderer::streamObjectData() {
     //memcpy(&objectBufferMap[0], &m_resources->objectBuffer[0], m_resources->objectBuffer.size() * sizeof(ObjectDataUBO));
 }
 
-uint32_t SceneRenderer::registerTexture(Texture2D* texture) {
+uint32_t SceneRenderer::registerTexture(Texture* texture) {
     uint32_t textureIndex;
 
     auto it = m_textureDescriptorIndices.find(texture);
@@ -827,7 +827,7 @@ void SceneRenderer::onRenderComponentAdded(const ComponentAddedEvent<RenderCompo
     notifyMeshChanged(event.component->meshUpdateType());
 
     UpdateTypeHandler<Transform>::setEntityUpdateType(event.entity, event.component->transformUpdateType());
-    UpdateTypeHandler<Texture2D>::setEntityUpdateType(event.entity, event.component->materialUpdateType());
+    UpdateTypeHandler<Texture>::setEntityUpdateType(event.entity, event.component->materialUpdateType());
     UpdateTypeHandler<Mesh>::setEntityUpdateType(event.entity, event.component->meshUpdateType());
 }
 
@@ -835,7 +835,7 @@ void SceneRenderer::onRenderComponentRemoved(const ComponentRemovedEvent<RenderC
     notifyMeshChanged(event.component->meshUpdateType());
 
     UpdateTypeHandler<Transform>::removeEntityUpdateType(event.entity, event.component->transformUpdateType());
-    UpdateTypeHandler<Texture2D>::removeEntityUpdateType(event.entity, event.component->materialUpdateType());
+    UpdateTypeHandler<Texture>::removeEntityUpdateType(event.entity, event.component->materialUpdateType());
     UpdateTypeHandler<Mesh>::removeEntityUpdateType(event.entity, event.component->meshUpdateType());
 }
 

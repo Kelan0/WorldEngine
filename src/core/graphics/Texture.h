@@ -59,19 +59,21 @@ private:
     static std::unordered_map<Key, std::weak_ptr<Sampler>, KeyHasher> s_cachedSamplers;
 };
 
-class Texture2D {
+class Texture {
 public:
-    Texture2D(std::weak_ptr<ImageView> imageView, std::weak_ptr<Sampler> sampler);
+    Texture(std::weak_ptr<ImageView> imageView, std::weak_ptr<Sampler> sampler);
 
-    ~Texture2D();
+    ~Texture();
 
-    static Texture2D* create(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler);
+    static Texture* create(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler);
 
-    static Texture2D* create(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration);
+    static Texture* create(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration);
 
-    static Texture2D* create(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler);
+    static Texture* create(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler);
 
-    static Texture2D* create(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration);
+    static Texture* create(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration);
+
+    const vk::ImageViewType& getType() const;
 
     std::shared_ptr<ImageView> getImageView() const;
 

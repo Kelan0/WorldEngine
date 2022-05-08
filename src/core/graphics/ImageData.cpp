@@ -999,7 +999,7 @@ Buffer* ImageUtil::getImageStagingBuffer(const ImageRegion& imageRegion, const u
     return ImageUtil::getImageStagingBuffer(imageRegion.width, imageRegion.height, imageRegion.depth, bytesPerPixel);
 }
 
-void onCleanupGraphics(const ShutdownGraphicsEvent& event) {
+void _ImageUtil_onCleanupGraphics(const ShutdownGraphicsEvent& event) {
     printf("Destroying image staging buffer\n");
     delete g_imageStagingBuffer;
 }
@@ -1020,7 +1020,7 @@ Buffer* ImageUtil::getImageStagingBuffer(const uint32_t& width, const uint32_t& 
     }
 
     if (g_imageStagingBuffer == nullptr) {
-        Application::instance()->eventDispatcher()->connect(&onCleanupGraphics);
+        Application::instance()->eventDispatcher()->connect(&_ImageUtil_onCleanupGraphics);
     }
 
     if (g_imageStagingBuffer == nullptr || g_imageStagingBuffer->getSize() < requiredSize) {

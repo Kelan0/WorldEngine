@@ -13,7 +13,7 @@
 class Buffer;
 class DescriptorSet;
 class DescriptorSetLayout;
-class Texture2D;
+class Texture;
 class Material;
 class Image2D;
 
@@ -83,7 +83,7 @@ public:
 
     void initPipelineDescriptorSetLayouts(GraphicsPipelineConfiguration& graphicsPipelineConfiguration) const;
 
-    uint32_t registerTexture(Texture2D* texture);
+    uint32_t registerTexture(Texture* texture);
 
     uint32_t registerMaterial(Material* material);
 
@@ -156,9 +156,9 @@ private:
     std::shared_ptr<Material> m_missingTextureMaterial;
 
     std::unordered_map<Material*, uint32_t> m_materialIndices;
-    std::unordered_map<Texture2D*, uint32_t> m_textureDescriptorIndices;
+    std::unordered_map<Texture*, uint32_t> m_textureDescriptorIndices;
     std::vector<GPUMaterial> m_materials;
-    std::vector<Texture2D*> m_materialBufferTextures;
+    std::vector<Texture*> m_materialBufferTextures;
     std::vector<vk::ImageLayout> m_materialBufferImageLayouts;
     size_t m_numRenderEntities;
 

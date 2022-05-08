@@ -8,21 +8,21 @@
 #include "core/graphics/Texture.h"
 
 struct MaterialConfiguration {
-    std::shared_ptr<Texture2D> albedoMap;
+    std::shared_ptr<Texture> albedoMap;
     glm::u8vec3 albedo = glm::u8vec3(255, 255, 255);
 
-    std::shared_ptr<Texture2D> roughnessMap;
+    std::shared_ptr<Texture> roughnessMap;
     uint8_t roughness = 255;
 
-    std::shared_ptr<Texture2D> metallicMap;
+    std::shared_ptr<Texture> metallicMap;
     uint8_t metallic = 0;
 
-    std::shared_ptr<Texture2D> normalMap;
+    std::shared_ptr<Texture> normalMap;
 
 
     void setAlbedo(const glm::uvec3& albedo);
     void setAlbedo(const glm::vec3& albedo);
-    void setAlbedoMap(std::weak_ptr<Texture2D> albedoMap);
+    void setAlbedoMap(std::weak_ptr<Texture> albedoMap);
     void setAlbedoMap(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler);
     void setAlbedoMap(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration);
     void setAlbedoMap(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler);
@@ -30,7 +30,7 @@ struct MaterialConfiguration {
 
     void setRoughness(const uint32_t& roughness);
     void setRoughness(const float& roughness);
-    void setRoughnessMap(std::weak_ptr<Texture2D> roughnessMap);
+    void setRoughnessMap(std::weak_ptr<Texture> roughnessMap);
     void setRoughnessMap(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler);
     void setRoughnessMap(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration);
     void setRoughnessMap(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler);
@@ -38,13 +38,13 @@ struct MaterialConfiguration {
 
     void setMetallic(const uint32_t& metallic);
     void setMetallic(const float& metallic);
-    void setMetallicMap(std::weak_ptr<Texture2D> metallicMap);
+    void setMetallicMap(std::weak_ptr<Texture> metallicMap);
     void setMetallicMap(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler);
     void setMetallicMap(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration);
     void setMetallicMap(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler);
     void setMetallicMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration);
 
-    void setNormalMap(std::weak_ptr<Texture2D> metallicMap);
+    void setNormalMap(std::weak_ptr<Texture> metallicMap);
     void setNormalMap(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler);
     void setNormalMap(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration);
     void setNormalMap(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler);
@@ -60,13 +60,13 @@ public:
 
     static Material* create(const MaterialConfiguration& materialConfiguration);
 
-    std::shared_ptr<Texture2D> getAlbedoMap() const;
+    std::shared_ptr<Texture> getAlbedoMap() const;
 
-    std::shared_ptr<Texture2D> getRoughnessMap() const;
+    std::shared_ptr<Texture> getRoughnessMap() const;
 
-    std::shared_ptr<Texture2D> getMetallicMap() const;
+    std::shared_ptr<Texture> getMetallicMap() const;
 
-    std::shared_ptr<Texture2D> getNormalMap() const;
+    std::shared_ptr<Texture> getNormalMap() const;
 
     const glm::u8vec3& getAlbedo() const;
 
@@ -83,10 +83,10 @@ public:
     bool hasNormalMap() const;
 
 private:
-    std::shared_ptr<Texture2D> m_albedoMap;
-    std::shared_ptr<Texture2D> m_roughnessMap;
-    std::shared_ptr<Texture2D> m_metallicMap;
-    std::shared_ptr<Texture2D> m_normalMap;
+    std::shared_ptr<Texture> m_albedoMap;
+    std::shared_ptr<Texture> m_roughnessMap;
+    std::shared_ptr<Texture> m_metallicMap;
+    std::shared_ptr<Texture> m_normalMap;
     glm::u8vec3 m_albedo;
     uint8_t m_roughness;
     uint8_t m_metallic;

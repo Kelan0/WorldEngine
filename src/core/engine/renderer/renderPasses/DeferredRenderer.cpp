@@ -1,5 +1,6 @@
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/renderer/SceneRenderer.h"
+#include "core/engine/renderer/EnvironmentMap.h"
 #include "core/engine/scene/event/EventDispatcher.h"
 #include "core/engine/geometry/MeshData.h"
 #include "core/application/Application.h"
@@ -7,7 +8,6 @@
 #include "core/graphics/Framebuffer.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/GraphicsPipeline.h"
-#include "core/graphics/ComputePipeline.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/ImageView.h"
 #include "core/graphics/Image2D.h"
@@ -21,11 +21,7 @@
 #define DEPTH_TEXTURE_BINDING 3
 
 
-ImageCube* imageCube = nullptr;
-ImageView* imageViewCube = nullptr;
-Sampler* imageCubeSampler = nullptr;
-
-ComputePipeline* computePipeline = nullptr;
+EnvironmentMap* environmentMap = nullptr;
 
 
 DeferredGeometryRenderPass::DeferredGeometryRenderPass() {
@@ -282,10 +278,7 @@ DeferredLightingRenderPass::~DeferredLightingRenderPass() {
     for (size_t i = 0; i < NumAttachments; ++i)
         delete m_attachmentSamplers[i];
 
-    delete imageCube;
-    delete imageViewCube;
-    delete imageCubeSampler;
-    delete computePipeline;
+    delete environmentMap;
 
     Application::instance()->eventDispatcher()->disconnect(&DeferredLightingRenderPass::recreateSwapchain, this);
 }
@@ -302,6 +295,7 @@ bool DeferredLightingRenderPass::init() {
             .addCombinedImageSampler(NORMAL_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(DEPTH_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(4, vk::ShaderStageFlagBits::eFragment)
+            .addCombinedImageSampler(5, vk::ShaderStageFlagBits::eFragment)
             .build();
 
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
@@ -320,35 +314,19 @@ bool DeferredLightingRenderPass::init() {
                 .writeBuffer(UNIFORM_BUFFER_BINDING, m_resources[i]->uniformBuffer, 0, m_resources[i]->uniformBuffer->getSize())
                 .write();
     }
-
-    ImageData::ImageTransform* flipX = new ImageData::Flip(true, false);
-    ImageData::ImageTransform* flipY = new ImageData::Flip(false, true);
     ImageCubeConfiguration imageCubeConfig;
     imageCubeConfig.device = Application::instance()->graphics()->getDevice();
     imageCubeConfig.format = vk::Format::eR32G32B32A32Sfloat;
     imageCubeConfig.usage = vk::ImageUsageFlagBits::eSampled;
     imageCubeConfig.generateMipmap = true;
     imageCubeConfig.mipLevels = UINT32_MAX;
-    imageCubeConfig.imageSource.setEquirectangularSource("res/environment_maps/abandoned_workshop_02_8k.hdr");
-    imageCube = ImageCube::create(imageCubeConfig);
-    delete flipX;
-    delete flipY;
-    ImageViewConfiguration imageViewCubeConfig;
-    imageViewCubeConfig.device = Application::instance()->graphics()->getDevice();
-    imageViewCubeConfig.format = imageCube->getFormat();
-    imageViewCubeConfig.mipLevelCount = imageCube->getMipLevelCount();
-    imageViewCubeConfig.arrayLayerCount = 6;
-    imageViewCubeConfig.setImage(imageCube);
-    imageViewCube = ImageView::create(imageViewCubeConfig);
+    imageCubeConfig.imageSource.setEquirectangularSource("res/environment_maps/blaubeuren_night_8k.hdr");
+    std::shared_ptr<ImageCube> imageCube = std::shared_ptr<ImageCube>(ImageCube::create(imageCubeConfig));
 
-    SamplerConfiguration imageCubeSamplerConfig;
-    imageCubeSamplerConfig.device = Application::instance()->graphics()->getDevice();
-    imageCubeSamplerConfig.minFilter = vk::Filter::eLinear;
-    imageCubeSamplerConfig.magFilter = vk::Filter::eLinear;
-    imageCubeSamplerConfig.mipmapMode = vk::SamplerMipmapMode::eLinear;
-    imageCubeSamplerConfig.minLod = 0.0F;
-    imageCubeSamplerConfig.maxLod = imageCube->getMipLevelCount();
-    imageCubeSampler = Sampler::create(imageCubeSamplerConfig);
+
+    environmentMap = new EnvironmentMap();
+    environmentMap->setEnvironmentImage(imageCube);
+    environmentMap->update();
 
     SamplerConfiguration samplerConfig;
     samplerConfig.device = Application::instance()->graphics()->getDevice();
@@ -360,12 +338,6 @@ bool DeferredLightingRenderPass::init() {
     m_attachmentSamplers[Attachment_AlbedoRGB_Roughness] = Sampler::create(samplerConfig);
     m_attachmentSamplers[Attachment_NormalXYZ_Metallic] = Sampler::create(samplerConfig);
     m_attachmentSamplers[Attachment_Depth] = Sampler::create(samplerConfig);
-
-
-    ComputePipelineConfiguration computePipelineConfig;
-    computePipelineConfig.device = Application::instance()->graphics()->getDevice();
-    computePipelineConfig.computeShader = "res/shaders/util/compute_equirectangular.glsl";
-    computePipeline = ComputePipeline::create(computePipelineConfig);
 
     Application::instance()->eventDispatcher()->connect(&DeferredLightingRenderPass::recreateSwapchain, this);
     return true;
@@ -389,7 +361,8 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
             .writeImage(ALBEDO_TEXTURE_BINDING, m_attachmentSamplers[Attachment_AlbedoRGB_Roughness], m_geometryPass->getAlbedoImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
             .writeImage(NORMAL_TEXTURE_BINDING, m_attachmentSamplers[Attachment_NormalXYZ_Metallic], m_geometryPass->getNormalImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
             .writeImage(DEPTH_TEXTURE_BINDING, m_attachmentSamplers[Attachment_Depth], m_geometryPass->getDepthImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
-            .writeImage(4, imageCubeSampler, imageViewCube, vk::ImageLayout::eShaderReadOnlyOptimal)
+            .writeImage(4, environmentMap->getEnvironmentMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
+            .writeImage(5, environmentMap->getDiffuseIrradianceMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
             .write();
 
     std::vector<vk::DescriptorSet> descriptorSets = {

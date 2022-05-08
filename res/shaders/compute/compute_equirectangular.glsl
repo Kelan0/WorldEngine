@@ -4,13 +4,6 @@ layout (local_size_x = 16) in;
 layout (local_size_y = 16) in;
 layout (local_size_z = 1) in;
 
-#define FACE_POS_X = 0,
-#define FACE_NEG_X = 1,
-#define FACE_POS_Y = 2,
-#define FACE_NEG_Y = 3,
-#define FACE_POS_Z = 4,
-#define FACE_NEG_Z = 5,
-
 
 const vec2 invAtan = vec2(0.15915494309, 0.31830988618);
 const vec3 cubeCornerVertices[24] = vec3[](

@@ -245,7 +245,9 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         }
 
         if (generateMipmap) {
+            auto t0 = Performance::now();
             returnImage->generateMipmap(vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor, mipLevels, dstState);
+            printf("Took %.2f msec to generate %d mipmap levels for ImageCube\n", Performance::milliseconds(t0), mipLevels);
         }
 
     } else if (suppliedFaceData) {
@@ -434,7 +436,6 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
 
     vk::CommandBufferBeginInfo commandBeginInfo;
     commandBeginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-
     commandBuffer.begin(commandBeginInfo);
 
 
@@ -452,10 +453,10 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
 
     commandBuffer.end();
 
-    vk::SubmitInfo queueSumbitInfo;
-    queueSumbitInfo.setCommandBufferCount(1);
-    queueSumbitInfo.setPCommandBuffers(&commandBuffer);
-    computeQueue.submit(1, &queueSumbitInfo, VK_NULL_HANDLE);
+    vk::SubmitInfo queueSubmitInfo;
+    queueSubmitInfo.setCommandBufferCount(1);
+    queueSubmitInfo.setPCommandBuffers(&commandBuffer);
+    computeQueue.submit(1, &queueSubmitInfo, VK_NULL_HANDLE);
     computeQueue.waitIdle();
 
     vk::BufferImageCopy imageCopy{};
@@ -656,8 +657,7 @@ ComputePipeline* ImageCube::getEquirectangularComputePipeline() {
 DescriptorSet* ImageCube::getEquirectangularComputeDescriptorSet() {
 
     if (s_computeEquirectangularDescriptorSet == nullptr) {
-        std::shared_ptr<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(
-                Application::instance()->graphics()->getDevice())
+        std::shared_ptr<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(Application::instance()->graphics()->getDevice())
                 .addUniformBuffer(0, vk::ShaderStageFlagBits::eCompute, sizeof(EquirectangularComputeUBO))
                 .addStorageTexelBuffer(1, vk::ShaderStageFlagBits::eCompute)
                 .addStorageTexelBuffer(2, vk::ShaderStageFlagBits::eCompute)
