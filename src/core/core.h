@@ -66,6 +66,7 @@ namespace vkr = vk::raii;
     ClassName(ClassName&&) = delete;
 
 #define INT_DIV_CEIL(num, denom) (((num) + (denom) - 1) / (denom))
+#define ROUND_TO_MULTIPLE(value, multiple) (INT_DIV_CEIL(value, multiple) * multiple)
 
 constexpr uint32_t CONCURRENT_FRAMES = 1;
 

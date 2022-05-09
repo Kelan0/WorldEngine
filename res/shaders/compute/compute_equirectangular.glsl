@@ -4,16 +4,7 @@ layout (local_size_x = 16) in;
 layout (local_size_y = 16) in;
 layout (local_size_z = 1) in;
 
-
-const vec2 invAtan = vec2(0.15915494309, 0.31830988618);
-const vec3 cubeCornerVertices[24] = vec3[](
-    vec3(+1.0, -1.0, -1.0), vec3(+1.0, +1.0, -1.0), vec3(+1.0, +1.0, +1.0), vec3(+1.0, -1.0, +1.0), // +x
-    vec3(-1.0, -1.0, -1.0), vec3(-1.0, -1.0, +1.0), vec3(-1.0, +1.0, +1.0), vec3(-1.0, +1.0, -1.0), // -x
-    vec3(-1.0, +1.0, -1.0), vec3(-1.0, +1.0, +1.0), vec3(+1.0, +1.0, +1.0), vec3(+1.0, +1.0, -1.0), // +y
-    vec3(-1.0, -1.0, -1.0), vec3(+1.0, -1.0, -1.0), vec3(+1.0, -1.0, +1.0), vec3(-1.0, -1.0, +1.0), // -y
-    vec3(-1.0, -1.0, +1.0), vec3(+1.0, -1.0, +1.0), vec3(+1.0, +1.0, +1.0), vec3(-1.0, +1.0, +1.0), // +z
-    vec3(-1.0, -1.0, -1.0), vec3(-1.0, +1.0, -1.0), vec3(+1.0, +1.0, -1.0), vec3(+1.0, -1.0, -1.0)  // -z
-);
+#include "res/shaders/common/common.glsl"
 
 layout(set = 0, binding = 0) uniform UBO1 {
     ivec2 faceSize;
@@ -26,51 +17,6 @@ layout(set = 0, binding = 2, rgba32f) uniform writeonly imageBuffer dstCubemapLa
 
 // layout(binding = 0, rgba32f) uniform readonly image2D srcImage;
 // layout(binding = 1) uniform writeonly imageCube dstImage;
-
-ivec3 getCubemapCoordinate(vec3 ray) {
-    vec3 absRay = abs(ray);
-    float sc, tc, ma;
-    int layer;
-
-    if (absRay.x > absRay.y && absRay.x > absRay.z) { // major axis = x
-        ma = absRay.x;
-        if (ray.x > 0) 
-            sc = -ray.z, tc = -ray.y, layer = 0; // positive x
-        else 
-            sc = ray.z, tc = -ray.y, layer = 1; // negative x
-    } else if (absRay.y > absRay.z) { // major axis = y
-        ma = absRay.y;
-        if (ray.y > 0) 
-            sc = ray.x, tc = ray.z, layer = 2; // positive y
-        else 
-            sc = ray.x, tc = -ray.z, layer = 3; // negative y
-    } else { // major axis = z
-        ma = absRay.z;
-        if (ray.z > 0) 
-            sc = ray.x, tc = -ray.y, layer = 4; // positive z
-        else 
-            sc = -ray.x, tc = -ray.y, layer = 5; // negative z
-    }
-
-    float s = (sc / ma) * 0.5 + 0.5;
-    float t = (tc / ma) * 0.5 + 0.5;
-
-    return ivec3(faceSize.x * s, faceSize.y * t, layer);
-}
-
-vec2 getEquirectangularCoordinate(vec3 ray, ivec2 size) {
-    return vec2((0.5 + (vec2(atan(ray.z, ray.x), asin(-ray.y)) * invAtan)) * size);
-}
-
-vec3 calculateRay(vec2 textureCoord, int face) {
-    vec3 v00 = cubeCornerVertices[face * 4 + 0];
-    vec3 v10 = cubeCornerVertices[face * 4 + 1];
-    vec3 v11 = cubeCornerVertices[face * 4 + 2];
-    vec3 v01 = cubeCornerVertices[face * 4 + 3];
-    vec3 vy0 = mix(v00, v10, textureCoord.x);
-    vec3 vy1 = mix(v01, v11, textureCoord.x);
-    return normalize(mix(vy0, vy1, textureCoord.y)); // normalized interpolated coordinate on unit cube
-}
 
 vec4 loadSourceTexel(in vec2 coord) {
     int texelIndex00 = int(coord.x) + int(coord.y) * int(sourceSize.x);
@@ -112,17 +58,17 @@ void main() {
 
     for (i = 0, subpixelCoord.y = pixelCoord.y + sampleOffset.y * 0.5; i < numSamples.y; ++i, subpixelCoord.y += sampleOffset.y) {
         for (j = 0, subpixelCoord.x = pixelCoord.x + sampleOffset.x * 0.5; j < numSamples.x; ++j, subpixelCoord.x += sampleOffset.x) {
-            vec3 ray = calculateRay(subpixelCoord * inverseFaceSize, pixelCoord.z);
+            vec3 ray = getCubemapRay(subpixelCoord * inverseFaceSize, pixelCoord.z);
             colour += loadSourceTexel(getEquirectangularCoordinate(ray, sourceSize));
             counter += 1.0;
         }
-    }    
+    }
 
     colour /= counter;
 
 
-    vec3 centerRay = calculateRay(vec2(pixelCoord.x + 0.5, pixelCoord.y + 0.5) / vec2(faceSize), pixelCoord.z);
-    ivec3 dstCoord = getCubemapCoordinate(centerRay);
+    vec3 centerRay = getCubemapRay(vec2(pixelCoord.x + 0.5, pixelCoord.y + 0.5) / vec2(faceSize), pixelCoord.z);
+    ivec3 dstCoord = ivec3(getCubemapCoordinate(centerRay) * vec3(faceSize.xy, 1));
     int dstTexelIndex = int(dstCoord.x + dstCoord.y * faceSize.x + dstCoord.z * faceSize.x * faceSize.y);
 
     imageStore(dstCubemapLayersImageBuffer, dstTexelIndex, colour);

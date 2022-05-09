@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <filesystem>
+#include "core/application/Application.h"
 
 #ifndef GLSL_COMPILER_EXECUTABLE
 #define GLSL_COMPILER_EXECUTABLE "D:/Code/VulkanSDK/1.2.198.1/Bin/glslc.exe"
@@ -52,15 +53,22 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
 
         if (shouldCompile) {
             printf("Compiling shader file \"%s\"\n", filePath.c_str());
-            std::string loadStageCmd =
-                    shaderStage == ShaderStage_VertexShader ? "-fshader-stage=vert" :
-                    shaderStage == ShaderStage_FragmentShader ? "-fshader-stage=frag" :
-                    shaderStage == ShaderStage_TessellationControlShader ? "-fshader-stage=tesc" :
-                    shaderStage == ShaderStage_TessellationEvaluationShader ? "-fshader-stage=tese" :
-                    shaderStage == ShaderStage_GeometryShader ? "-fshader-stage=geom" :
-                    shaderStage == ShaderStage_ComputeShader ? "-fshader-stage=comp" : "";
 
-            if (!runCommand(std::string(GLSL_COMPILER_EXECUTABLE) + " " + loadStageCmd + " \"" + filePath + "\" -o \"" + outputFilePath + "\"")) {
+            std::string command(GLSL_COMPILER_EXECUTABLE);
+
+            command +=
+                    shaderStage == ShaderStage_VertexShader ? " -fshader-stage=vert" :
+                    shaderStage == ShaderStage_FragmentShader ? " -fshader-stage=frag" :
+                    shaderStage == ShaderStage_TessellationControlShader ? " -fshader-stage=tesc" :
+                    shaderStage == ShaderStage_TessellationEvaluationShader ? " -fshader-stage=tese" :
+                    shaderStage == ShaderStage_GeometryShader ? " -fshader-stage=geom" :
+                    shaderStage == ShaderStage_ComputeShader ? " -fshader-stage=comp" : "";
+
+            command += std::string(" \"") + filePath + "\" -o \"" + outputFilePath + "\"";
+
+            command += std::string(" -I \"") + Application::instance()->getExecutionDirectory() + "\"";
+
+            if (!runCommand(command)) {
                 printf("Could not execute SPIR-V compile command. Provide a pre-compiled .spv file instead\n");
                 return false;
             }
@@ -95,7 +103,7 @@ bool ShaderUtils::loadShaderModule(const ShaderStage& shaderStage, const vk::Dev
     shaderModuleCreateInfo.setPCode(reinterpret_cast<const uint32_t*>(shaderBytecode.data()));
     vk::Result result = device.createShaderModule(&shaderModuleCreateInfo, nullptr, outShaderModule);
     if (result != vk::Result::eSuccess) {
-        printf("Failed to load Vertex shader module (file %s): %s\n", filePath.c_str(), vk::to_string(result).c_str());
+        printf("Failed to load shader module (file %s): %s\n", filePath.c_str(), vk::to_string(result).c_str());
         return false;
     }
     return true;

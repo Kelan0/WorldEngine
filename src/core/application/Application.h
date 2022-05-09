@@ -5,6 +5,7 @@
 #include "core/core.h"
 #include <SDL.h>
 
+
 class GraphicsManager;
 class InputHandler;
 class Scene;
@@ -29,7 +30,7 @@ public:
     virtual void render(double dt) = 0;
 
     template<class T>
-    static int create();
+    static int create(int argc, char* argv[]);
 
     static void destroy();
 
@@ -59,6 +60,7 @@ public:
 
     bool isViewportInverted() const;
 
+    const std::string& getExecutionDirectory() const;
 private:
     void start();
 
@@ -69,6 +71,8 @@ private:
     void renderInternal(double dt);
 
     void processEventsInternal();
+
+    static std::string findExecutionDirectory();
 
 private:
     static Application* s_instance;
@@ -82,12 +86,13 @@ private:
     DeferredGeometryRenderPass* m_deferredGeometryPass;
     DeferredLightingRenderPass* m_deferredLightingPass;
     EventDispatcher* m_eventDispatcher;
+    std::string m_executionDirectory;
 
     bool m_running;
 };
 
 template<class T>
-inline int Application::create() {
+inline int Application::create(int argc, char* argv[]) {
     printf("Creating application\n");
 
     constexpr bool isApplication = std::is_base_of<Application, T>::value;
@@ -98,6 +103,7 @@ inline int Application::create() {
     }
 
     s_instance = new T();
+    s_instance->m_executionDirectory = Application::findExecutionDirectory();
     if (!s_instance->initInternal()) {
         Application::destroy();
         return -1;

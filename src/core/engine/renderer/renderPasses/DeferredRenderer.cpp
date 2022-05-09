@@ -289,13 +289,14 @@ bool DeferredLightingRenderPass::init() {
     std::shared_ptr<DescriptorPool> descriptorPool = Application::instance()->graphics()->descriptorPool();
 
     m_uniformDescriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
-            .addUniformBuffer(UNIFORM_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment,
-                              sizeof(LightingPassUniformData))
+            .addUniformBuffer(UNIFORM_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment, sizeof(LightingPassUniformData))
             .addCombinedImageSampler(ALBEDO_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(NORMAL_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(DEPTH_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(4, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(5, vk::ShaderStageFlagBits::eFragment)
+            .addCombinedImageSampler(6, vk::ShaderStageFlagBits::eFragment)
+            .addCombinedImageSampler(7, vk::ShaderStageFlagBits::eFragment)
             .build();
 
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
@@ -362,7 +363,9 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
             .writeImage(NORMAL_TEXTURE_BINDING, m_attachmentSamplers[Attachment_NormalXYZ_Metallic], m_geometryPass->getNormalImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
             .writeImage(DEPTH_TEXTURE_BINDING, m_attachmentSamplers[Attachment_Depth], m_geometryPass->getDepthImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
             .writeImage(4, environmentMap->getEnvironmentMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
-            .writeImage(5, environmentMap->getDiffuseIrradianceMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
+            .writeImage(5, environmentMap->getSpecularReflectionMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
+            .writeImage(6, environmentMap->getDiffuseIrradianceMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
+            .writeImage(7, EnvironmentMap::getBRDFIntegrationMap().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
             .write();
 
     std::vector<vk::DescriptorSet> descriptorSets = {

@@ -2,6 +2,9 @@
 
 #extension GL_EXT_nonuniform_qualifier : enable
 
+#include "res/shaders/common/common.glsl"
+#include "res/shaders/common/pbr.glsl"
+
 layout(location = 0) in vec2 fs_texture;
 
 layout(location = 0) out vec4 outColor;
@@ -16,27 +19,30 @@ layout(set = 0, binding = 0) uniform UBO1 {
     mat4 cameraRays;
 };
 
+const float MAX_REFLECTION_LOD = 4.0;
+
 layout(set = 0, binding = 1) uniform sampler2D texture_AlbedoRGB_Roughness;
 layout(set = 0, binding = 2) uniform sampler2D texture_NormalXYZ_Metallic;
 layout(set = 0, binding = 3) uniform sampler2D texture_Depth;
 layout(set = 0, binding = 4) uniform samplerCube environmentCubeMap;
-layout(set = 0, binding = 5) uniform samplerCube diffuseIrradianceCubeMap;
-
-const float PI = 3.14159265359;
+layout(set = 0, binding = 5) uniform samplerCube specularReflectionCubeMap;
+layout(set = 0, binding = 6) uniform samplerCube diffuseIrradianceCubeMap;
+layout(set = 0, binding = 7) uniform sampler2D BRDFIntegrationMap;
 
 
 struct SurfacePoint {
     bool exists;
     float depth;
-    vec3 position;
+    vec3 viewPosition;
     vec3 albedo;
     float roughness;
-    vec3 normal;
+    vec3 viewNormal;
     vec3 worldNormal;
     float metallic;
     float ambientOcclusion;
     vec3 emission;
-    vec3 dirToCamera;
+    vec3 viewDirToCamera;
+    vec3 worldDirToCamera;
     float distToCamera;
     vec3 F0;
 };
@@ -68,17 +74,21 @@ void loadSurface(in vec2 textureCoord, inout SurfacePoint surface) {
         surface.exists = true;
     }
 
-    surface.position = depthToViewSpacePosition(surface.depth, textureCoord, invProjectionMatrix);
-    surface.dirToCamera = -1.0 * surface.position; // Position is in view-space, thus camera is at origin, thus dirToCamera is the negative position
-    surface.distToCamera = length(surface.dirToCamera);
-    surface.dirToCamera /= surface.distToCamera;
+    mat3 invViewRotationMatrix = mat3(invViewMatrix);
+
+    surface.viewPosition = depthToViewSpacePosition(surface.depth, textureCoord, invProjectionMatrix);
+    surface.viewDirToCamera = -1.0 * surface.viewPosition; // Position is in view-space, thus camera is at origin, thus viewDirToCamera is the negative viewPosition
+    surface.distToCamera = length(surface.viewDirToCamera);
+    surface.viewDirToCamera /= surface.distToCamera;
+
+    surface.worldDirToCamera = invViewRotationMatrix * surface.viewDirToCamera;
 
     texelValue = texture(texture_AlbedoRGB_Roughness, fs_texture);
     surface.albedo = texelValue.rgb;
     surface.roughness = texelValue.w;
     texelValue = texture(texture_NormalXYZ_Metallic, fs_texture);
-    surface.normal = normalize(texelValue.xyz);
-    surface.worldNormal = vec3(invViewMatrix * vec4(surface.normal, 0.0));
+    surface.viewNormal = normalize(texelValue.xyz);
+    surface.worldNormal = invViewRotationMatrix * surface.viewNormal;
     surface.metallic = texelValue.w;
     surface.ambientOcclusion = 1.0;
     surface.emission = vec3(0.0);
@@ -86,64 +96,20 @@ void loadSurface(in vec2 textureCoord, inout SurfacePoint surface) {
     surface.F0 = mix(vec3(0.04), surface.albedo, surface.metallic);
 }
 
-vec3 fresnelSchlick(float cosTheta, vec3 F0) {
-    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
-}
-
-vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
-    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
-}   
-
-float distributionGGX(vec3 N, vec3 H, float roughness) {
-    float a = roughness * roughness;
-    float a2 = a * a;
-    float NdotH  = max(dot(N, H), 0.0);
-    float NdotH2 = NdotH * NdotH;
-    float num = a2;
-    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-    denom = PI * denom * denom;
-    return num / denom;
-}
-
-float geometrySchlickGGX(float NdotV, float roughness) {
-    float r = (roughness + 1.0);
-    float k = (r * r) / 8.0;
-    float num = NdotV;
-    float denom = NdotV * (1.0 - k) + k;
-    return num / denom;
-}
-
-float geometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
-    float NdotV = max(dot(N, V), 0.0);
-    float NdotL = max(dot(N, L), 0.0);
-    float ggx2  = geometrySchlickGGX(NdotV, roughness);
-    float ggx1  = geometrySchlickGGX(NdotL, roughness);
-    return ggx1 * ggx2;
-}
-
-vec3 createRay(vec2 screenPos) {
-    vec3 v00 = vec3(cameraRays[0]);
-    vec3 v10 = vec3(cameraRays[1]);
-    vec3 v11 = vec3(cameraRays[2]);
-    vec3 v01 = vec3(cameraRays[3]);
-    vec3 vy0 = mix(v00, v10, screenPos.x);
-    vec3 vy1 = mix(v01, v11, screenPos.x);
-    vec3 vxy = mix(vy0, vy1, screenPos.y);
-    return normalize(vxy);
-}
-
-vec3 calculateOutgoingRadiance(in SurfacePoint surface, in vec3 incomingRadiance, in vec3 dirToLight) {
-    vec3 N = surface.normal;
-    vec3 V = surface.dirToCamera;
-    vec3 L = dirToLight;
+vec3 calculateOutgoingRadiance(in SurfacePoint surface, in vec3 incomingRadiance, in vec3 viewDirToLight) {
+    vec3 N = surface.viewNormal;
+    vec3 V = surface.viewDirToCamera;
+    vec3 L = viewDirToLight;
     vec3 H = normalize(V + L);
 
     float NdotL = max(dot(N, L), 0.0);
     float NdotV = max(dot(N, V), 0.0);
     float HdotV = max(dot(H, V), 0.0);
+    float NdotH = max(dot(N, H), 0.0);
 
-    float NDF = distributionGGX(N, H, surface.roughness);
-    float G = geometrySmith(N, V, L, surface.roughness);
+    float NDF = distributionGGX(NdotH, surface.roughness);
+    float k = geometryRoughnessDirect(surface.roughness);
+    float G = geometrySmith(NdotV, NdotL, k);
     vec3 F = fresnelSchlick(HdotV, surface.F0);
 
     vec3 kS = F;
@@ -158,7 +124,7 @@ vec3 calculateOutgoingRadiance(in SurfacePoint surface, in vec3 incomingRadiance
 }
 
 vec3 calculatePointLight(in SurfacePoint surface, in PointLight light) {
-    vec3 L = light.position - surface.position;
+    vec3 L = light.position - surface.viewPosition;
     float distToLight = length(L);
     L /= distToLight;
 
@@ -176,7 +142,7 @@ void main() {
 
     if (!surface.exists) {
         // outColor = vec4(0.0, 0.0, 0.0, 1.0);
-        finalColour = texture(environmentCubeMap, createRay(fs_texture)).rgb;
+        finalColour = textureLod(environmentCubeMap, getViewRay(fs_texture, cameraRays), 0.5).rgb;
 
     } else {
         vec3 cameraPos = vec3(0.0); // camera at origin
@@ -198,32 +164,38 @@ void main() {
             Lo += surface.albedo * calculatePointLight(surface, pointLights[i]);
         }
 
-        // vec3 ambient = vec3(0.03) * surface.albedo * surface.ambientOcclusion;
-        
-        float NdotV = max(dot(surface.normal, surface.dirToCamera), 0.0);
+        vec3 R = reflect(-surface.worldDirToCamera, surface.worldNormal);
+        float NdotV = max(dot(surface.viewNormal, surface.viewDirToCamera), 0.0);
+
         vec3 kS = fresnelSchlickRoughness(NdotV, surface.F0, surface.roughness); 
-        vec3 kD = 1.0 - kS;
+        vec3 kD = (1.0 - kS) * (1.0 - surface.metallic);
+        
         vec3 irradiance = texture(diffuseIrradianceCubeMap, surface.worldNormal).rgb;
         vec3 diffuse = irradiance * surface.albedo;
-        vec3 ambient = (kD * diffuse) * surface.ambientOcclusion; 
+        vec3 prefilteredColor = textureLod(specularReflectionCubeMap, R, surface.roughness * MAX_REFLECTION_LOD).rgb;   
+        vec2 integratedBRDF = texture(BRDFIntegrationMap, vec2(NdotV, surface.roughness)).xy;
+        vec3 specular = prefilteredColor * (kS * integratedBRDF[0] + integratedBRDF[1]);
+
+        vec3 ambient = (kD * diffuse + specular) * surface.ambientOcclusion; 
+
         finalColour = ambient + Lo;
     }
 
+    // finalColour = texture(BRDFIntegrationMap, vec2(fs_texture.x, 1.0 - fs_texture.y)).rgb;
 
     finalColour = finalColour / (finalColour + vec3(1.0));
-    // finalColour = pow(finalColour, vec3(1.0 / 2.2));  
+    finalColour = pow(finalColour, vec3(1.0 / 2.2));  
 
     outColor = vec4(finalColour, 1.0);
 
 
 
-
-    // outColor = vec4(texture(diffuseIrradianceCubeMap, createRay(fs_texture)).rgb, 1.0);
-
+    // outColor = vec4(texture(diffuseIrradianceCubeMap, getViewRay(fs_texture, cameraRays)).rgb, 1.0);
 
 
 
-    // vec3 ray = createRay(fs_texture);
+
+    // vec3 ray = getViewRay(fs_texture, cameraRays);
     // if (abs(ray.x) > abs(ray.y)) {
     //     if (abs(ray.x) > abs(ray.z))
     //         ray = vec3(sign(ray.x), 0, 0);

@@ -5,9 +5,11 @@
 #include "core/core.h"
 #include "core/engine/scene/event/Events.h"
 
+class Image2D;
 class ImageCube;
 class ImageView;
 class Texture;
+class Sampler;
 class DescriptorSet;
 class ComputePipeline;
 class Buffer;
@@ -34,24 +36,33 @@ public:
 
     const std::shared_ptr<Texture>& getSpecularReflectionMapTexture() const;
 
+    static std::shared_ptr<Texture> getBRDFIntegrationMap();
+
 private:
     void calculateDiffuseIrradiance(const vk::CommandBuffer& commandBuffer) const;
 
     void calculateSpecularReflection(const vk::CommandBuffer& commandBuffer) const;
 
-    std::shared_ptr<Texture> createTexture(const std::shared_ptr<ImageCube>& image) const;
+    static void calculateBRDFIntegrationMap(const vk::CommandBuffer& commandBuffer);
+
+    std::shared_ptr<Texture> createTexture(const std::shared_ptr<ImageCube>& image, const uint32_t& baseMipLevel, const uint32_t mipLevelCount) const;
 
     static DescriptorSet* getDiffuseIrradianceComputeDescriptorSet();
 
     static ComputePipeline* getDiffuseIrradianceComputePipeline();
 
-    static Buffer* getUniformBuffer(const vk::DeviceSize& size);
+    static DescriptorSet* getPrefilteredEnvironmentComputeDescriptorSet();
+
+    static ComputePipeline* getPrefilteredEnvironmentComputePipeline();
+
+    static Buffer* getUniformBuffer();
 
     static void onCleanupGraphics(const ShutdownGraphicsEvent& event);
 
 private:
     uint32_t m_irradianceMapSize;
     uint32_t m_specularMapSize;
+    uint32_t m_specularMapMipLevels;
 
     std::shared_ptr<ImageCube> m_environmentImage;
     std::shared_ptr<ImageCube> m_diffuseIrradianceImage;
@@ -60,12 +71,20 @@ private:
     std::shared_ptr<Texture> m_environmentMapTexture;
     std::shared_ptr<Texture> m_diffuseIrradianceMapTexture;
     std::shared_ptr<Texture> m_specularReflectionMapTexture;
+    std::vector<std::shared_ptr<Texture>> m_specularReflectionMapTextureMipLevels;
 
     bool m_needsRecompute;
 
     static ComputePipeline* s_diffuseIrradianceConvolutionComputePipeline;
     static DescriptorSet* s_diffuseIrradianceConvolutionDescriptorSet;
+    static ComputePipeline* s_prefilteredEnvironmentComputePipeline;
+    static DescriptorSet* s_prefilteredEnvironmentDescriptorSet;
+    static ComputePipeline* s_BRDFIntegrationMapComputePipeline;
+    static DescriptorSet* s_BRDFIntegrationMapDescriptorSet;
     static Buffer* s_uniformBuffer;
+
+    static std::shared_ptr<Image2D> s_BRDFIntegrationMapImage;
+    static std::shared_ptr<Texture> s_BRDFIntegrationMap;
 };
 
 

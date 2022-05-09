@@ -116,6 +116,7 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
     deviceFeatures.shaderStorageImageArrayDynamicIndexing = true;
     deviceFeatures.shaderStorageBufferArrayDynamicIndexing = true;
 
+
     vk::PhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures;
     descriptorIndexingFeatures.shaderInputAttachmentArrayDynamicIndexing = true;
     descriptorIndexingFeatures.shaderUniformTexelBufferArrayDynamicIndexing = true;
@@ -625,7 +626,7 @@ bool GraphicsManager::initSurfaceDetails() {
         return false;
     }
 
-    bool useSRGB = true;
+    bool useSRGB = false;
 
     auto selectedFormat = formats.end();
     for (auto it = formats.begin(); it != formats.end() && selectedFormat == formats.end(); ++it) {

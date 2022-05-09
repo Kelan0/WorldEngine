@@ -29,12 +29,11 @@ layout(set = 1, binding = 0) readonly buffer ObjectDataBuffer {
 
 void main() {
     mat4 modelMatrix = objects[gl_InstanceIndex].modelMatrix;
-    mat4 modelViewMatrix = viewMatrix * modelMatrix;
-    mat4 normalMatrix = transpose(inverse(modelViewMatrix)); 
+    mat3 normalMatrix = transpose(inverse(mat3(viewMatrix) * mat3(modelMatrix))); 
 
     vec4 worldPos = modelMatrix * vec4(position, 1.0);
-    vec3 worldNormal = normalize(vec3(normalMatrix * vec4(normal, 0.0)));
-    vec3 worldTangent = normalize(vec3(normalMatrix * vec4(tangent, 0.0)));
+    vec3 worldNormal = normalize(normalMatrix * normal);
+    vec3 worldTangent = normalize(normalMatrix * tangent);
     // worldTangent = normalize(worldTangent - dot(worldTangent, worldNormal) * worldNormal);
     vec3 worldBitangent = cross(worldNormal, worldTangent);
 

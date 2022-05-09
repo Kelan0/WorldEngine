@@ -160,6 +160,23 @@ class App : public Application {
         sphereEntity0.addComponent<Transform>().translate(-0.9, 0.333, 0.3);
         sphereEntity0.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(sphereMaterial0);
 
+        size_t numSpheresX = 10;
+        size_t numSpheresZ = 10;
+
+        for (size_t i = 0; i < numSpheresX; ++i) {
+            for (size_t j = 0; j < numSpheresZ; ++j) {
+
+                MaterialConfiguration sphereMaterial1Config;
+                sphereMaterial1Config.setAlbedo(glm::vec3(0.5F));
+                sphereMaterial1Config.setRoughness(1.0F - (((float)i + 0.5F) / (float)numSpheresX));
+                sphereMaterial1Config.setMetallic(1.0F - (((float)j + 0.5F) / (float)numSpheresX));
+                std::shared_ptr<Material> sphereMaterial1 = std::shared_ptr<Material> (Material::create(sphereMaterial1Config));
+
+                Entity sphereEntity1 = EntityHierarchy::create(scene(), "sphereEntity[" + std::to_string(i) + ", " + std::to_string(j) + "]");
+                sphereEntity1.addComponent<Transform>().translate(-4.0F + i * 0.26F, 0.333F, 2.0F + j * 0.26F).scale(0.5F);
+                sphereEntity1.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(sphereMaterial1);
+            }
+        }
 
         scene()->getMainCameraEntity().getComponent<Transform>().setTranslation(0.0F, 1.0F, 1.0F);
     }
@@ -288,7 +305,7 @@ int main(int argc, char* argv[]) {
     char* buffer = new char[1024 * 1024];
     setvbuf(stdout, buffer, _IOFBF, sizeof(buffer));
 
-    return Application::create<App>();
+    return Application::create<App>(argc, argv);
 
     std::cout << std::endl;
     fflush(stdout);

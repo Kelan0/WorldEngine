@@ -28,6 +28,14 @@ void ComputePipelineConfiguration::setDescriptorSetLayouts(const vk::ArrayProxy<
         addDescriptorSetLayout(descriptorSetLayout);
 }
 
+void ComputePipelineConfiguration::addPushConstantRange(const vk::PushConstantRange& pushConstantRange) {
+    pushConstantRanges.emplace_back(pushConstantRange);
+}
+
+void ComputePipelineConfiguration::addPushConstantRange(const vk::ShaderStageFlags& stageFlags, const uint32_t& offset, const uint32_t& size) {
+    addPushConstantRange(vk::PushConstantRange(stageFlags, offset, size));
+}
+
 ComputePipeline::ComputePipeline(std::weak_ptr<vkr::Device> device):
     m_device(device) {
 }
@@ -96,6 +104,7 @@ bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipeli
     vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
     pipelineLayoutCreateInfo.setSetLayouts(computePipelineConfiguration.descriptorSetLayouts);
     pipelineLayoutCreateInfo.setPushConstantRangeCount(0);
+    pipelineLayoutCreateInfo.setPushConstantRanges(computePipelineConfiguration.pushConstantRanges);
 
     result = device.createPipelineLayout(&pipelineLayoutCreateInfo, nullptr, &m_pipelineLayout);
     if (result != vk::Result::eSuccess) {

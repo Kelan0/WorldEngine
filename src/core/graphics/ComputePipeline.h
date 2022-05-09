@@ -14,6 +14,7 @@ struct ComputePipelineConfiguration {
     std::string computeShader;
     std::string computeStageEntryFunctionName = "main";
     std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
+    std::vector<vk::PushConstantRange> pushConstantRanges;
 
     void addDescriptorSetLayout(const vk::DescriptorSetLayout& descriptorSetLayout);
 
@@ -22,6 +23,10 @@ struct ComputePipelineConfiguration {
     void setDescriptorSetLayouts(const vk::ArrayProxy<const vk::DescriptorSetLayout>& descriptorSetLayouts);
 
     void setDescriptorSetLayouts(const vk::ArrayProxy<const DescriptorSetLayout*>& descriptorSetLayouts);
+
+    void addPushConstantRange(const vk::PushConstantRange& pushConstantRange);
+
+    void addPushConstantRange(const vk::ShaderStageFlags& stageFlags, const uint32_t& offset, const uint32_t& size);
 };
 
 class ComputePipeline {
