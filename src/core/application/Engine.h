@@ -22,19 +22,19 @@ private:
     ~Engine();
 
 public:
-    GraphicsManager* getGraphics() const;
+    [[nodiscard]] GraphicsManager* getGraphics() const;
 
-    Scene* getScene() const;
+    [[nodiscard]] Scene* getScene() const;
 
-    SceneRenderer* getSceneRenderer() const;
+    [[nodiscard]] SceneRenderer* getSceneRenderer() const;
 
-    ImmediateRenderer* getImmediateRenderer() const;
+    [[nodiscard]] ImmediateRenderer* getImmediateRenderer() const;
 
-    DeferredGeometryRenderPass* getDeferredGeometryPass() const;
+    [[nodiscard]] DeferredGeometryRenderPass* getDeferredGeometryPass() const;
 
-    DeferredLightingRenderPass* getDeferredLightingPass() const;
+    [[nodiscard]] DeferredLightingRenderPass* getDeferredLightingPass() const;
 
-    EventDispatcher* getEventDispatcher() const;
+    [[nodiscard]] EventDispatcher* getEventDispatcher() const;
 
     static GraphicsManager* graphics();
 
@@ -57,6 +57,8 @@ private:
 
     void render(double dt);
 
+    void renderMainCamera(double dt);
+
     static void destroy();
 
 private:
@@ -69,6 +71,8 @@ private:
     DeferredGeometryRenderPass* m_deferredGeometryPass;
     DeferredLightingRenderPass* m_deferredLightingPass;
     EventDispatcher* m_eventDispatcher;
+
+    RenderCamera* m_renderCamera;
 };
 
 

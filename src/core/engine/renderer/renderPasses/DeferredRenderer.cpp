@@ -6,7 +6,6 @@
 #include "core/application/Engine.h"
 #include "core/graphics/RenderPass.h"
 #include "core/graphics/Framebuffer.h"
-#include "core/graphics/GraphicsManager.h"
 #include "core/graphics/GraphicsPipeline.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/ImageView.h"
@@ -34,6 +33,8 @@ DeferredGeometryRenderPass::~DeferredGeometryRenderPass() {
             delete m_resources[i]->imageViews[j];
             delete m_resources[i]->images[j];
         }
+        delete m_resources[i]->cameraInfoBuffer;
+        delete m_resources[i]->globalDescriptorSet;
         delete m_resources[i]->framebuffer;
     }
     Engine::eventDispatcher()->disconnect(&DeferredGeometryRenderPass::recreateSwapchain, this);
@@ -45,11 +46,27 @@ bool DeferredGeometryRenderPass::init() {
     std::shared_ptr<DescriptorPool> descriptorPool = Engine::graphics()->descriptorPool();
     DescriptorSetLayoutBuilder builder(descriptorPool->getDevice());
 
+    m_globalDescriptorSetLayout = builder
+            .addUniformBuffer(0, vk::ShaderStageFlagBits::eVertex)
+            .build();
+
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_resources.set(i, new RenderResources());
+        m_resources[i]->globalDescriptorSet = DescriptorSet::create(m_globalDescriptorSetLayout, descriptorPool);
         m_resources[i]->imageViews = {}; // Default initialize elements to nullptr
         m_resources[i]->images = {};
         m_resources[i]->framebuffer = nullptr;
+
+        BufferConfiguration cameraInfoBufferConfig;
+        cameraInfoBufferConfig.device = Engine::graphics()->getDevice();
+        cameraInfoBufferConfig.size = sizeof(CameraInfoUBO);
+        cameraInfoBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+        cameraInfoBufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer;
+        m_resources[i]->cameraInfoBuffer = Buffer::create(cameraInfoBufferConfig);
+
+        DescriptorSetWriter(m_resources[i]->globalDescriptorSet)
+                .writeBuffer(0, m_resources[i]->cameraInfoBuffer, 0, m_resources[i]->cameraInfoBuffer->getSize())
+                .write();
     }
 
     if (!createRenderPass()) {
@@ -59,6 +76,28 @@ bool DeferredGeometryRenderPass::init() {
 
     Engine::eventDispatcher()->connect(&DeferredGeometryRenderPass::recreateSwapchain, this);
     return true;
+}
+
+void DeferredGeometryRenderPass::render(double dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera) {
+    PROFILE_SCOPE("DeferredGeometryRenderPass::render");
+
+    renderCamera->uploadCameraData(m_resources->cameraInfoBuffer, 0);
+
+    PROFILE_REGION("Bind resources");
+
+    std::vector<vk::DescriptorSet> descriptorSets = {
+            m_resources->globalDescriptorSet->getDescriptorSet(),
+            Engine::sceneRenderer()->getObjectDescriptorSet()->getDescriptorSet(),
+            Engine::sceneRenderer()->getMaterialDescriptorSet()->getDescriptorSet(),
+    };
+
+    std::vector<uint32_t> dynamicOffsets = {};
+
+    GraphicsPipeline* graphicsPipeline = Engine::deferredGeometryPass()->getGraphicsPipeline();
+    graphicsPipeline->bind(commandBuffer);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
+
+    Engine::sceneRenderer()->render(dt, commandBuffer, renderCamera);
 }
 
 void DeferredGeometryRenderPass::beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents) {
@@ -186,6 +225,9 @@ bool DeferredGeometryRenderPass::createGraphicsPipeline() {
     pipelineConfig.vertexInputAttributes = MeshUtils::getVertexAttributeDescriptions<Vertex>();
     pipelineConfig.setAttachmentBlendState(0, AttachmentBlendState(false, 0b1111));
     pipelineConfig.setAttachmentBlendState(1, AttachmentBlendState(false, 0b1111));
+    pipelineConfig.addDescriptorSetLayout(m_globalDescriptorSetLayout->getDescriptorSetLayout());
+    pipelineConfig.addDescriptorSetLayout(Engine::sceneRenderer()->getObjectDescriptorSetLayout()->getDescriptorSetLayout());
+    pipelineConfig.addDescriptorSetLayout(Engine::sceneRenderer()->getMaterialDescriptorSetLayout()->getDescriptorSetLayout());
     Engine::sceneRenderer()->initPipelineDescriptorSetLayouts(pipelineConfig);
     return m_graphicsPipeline->recreate(pipelineConfig);
 }

@@ -68,10 +68,8 @@ SceneRenderer::~SceneRenderer() {
     m_missingTextureMaterial.reset();
     m_missingTextureImage.reset();
     for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
-        delete m_resources[i]->cameraInfoBuffer;
         delete m_resources[i]->worldTransformBuffer;
         delete m_resources[i]->materialDataBuffer;
-        delete m_resources[i]->globalDescriptorSet;
         delete m_resources[i]->objectDescriptorSet;
         delete m_resources[i]->materialDescriptorSet;
     }
@@ -92,10 +90,6 @@ bool SceneRenderer::init() {
     std::vector<vk::ImageLayout> initialImageLayouts;
     initialImageLayouts.resize(maxTextures, vk::ImageLayout::eShaderReadOnlyOptimal);
 
-    m_globalDescriptorSetLayout = builder
-            .addUniformBuffer(0, vk::ShaderStageFlagBits::eVertex)
-            .build();
-
     m_objectDescriptorSetLayout = builder
             .addStorageBuffer(0, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
             .build();
@@ -107,24 +101,12 @@ bool SceneRenderer::init() {
 
     for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_resources.set(i, new RenderResources());
-        m_resources[i]->globalDescriptorSet = DescriptorSet::create(m_globalDescriptorSetLayout, descriptorPool);
         m_resources[i]->objectDescriptorSet = DescriptorSet::create(m_objectDescriptorSetLayout, descriptorPool);
         m_resources[i]->materialDescriptorSet = DescriptorSet::create(m_materialDescriptorSetLayout, descriptorPool);
 
         m_resources[i]->worldTransformBuffer = nullptr;
         m_resources[i]->materialDataBuffer = nullptr;
         m_resources[i]->uploadedMaterialBufferTextures = 0;
-
-        BufferConfiguration cameraInfoBufferConfig;
-        cameraInfoBufferConfig.device = Engine::graphics()->getDevice();
-        cameraInfoBufferConfig.size = sizeof(CameraInfoUBO);
-        cameraInfoBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-        cameraInfoBufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer;
-        m_resources[i]->cameraInfoBuffer = Buffer::create(cameraInfoBufferConfig);
-
-        DescriptorSetWriter(m_resources[i]->globalDescriptorSet)
-                .writeBuffer(0, m_resources[i]->cameraInfoBuffer, 0, m_resources[i]->cameraInfoBuffer->getSize())
-                .write();
 
         DescriptorSetWriter(m_resources[i]->materialDescriptorSet)
                 .writeImage(0, initialTextures.data(), initialImageLayouts.data(), maxTextures, 0)
@@ -157,41 +139,11 @@ void SceneRenderer::preRender(double dt) {
     streamObjectData();
 }
 
-void SceneRenderer::render(double dt) {
+void SceneRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera) {
     PROFILE_SCOPE("SceneRenderer::render")
-    const Entity& cameraEntity = m_scene->getMainCameraEntity();
-    m_renderCamera.setProjection(cameraEntity.getComponent<Camera>());
-    m_renderCamera.setTransform(cameraEntity.getComponent<Transform>());
-    m_renderCamera.update();
 
-    render(dt, &m_renderCamera);
-}
-
-void SceneRenderer::render(double dt, RenderCamera* renderCamera) {
-    PROFILE_SCOPE("SceneRenderer::render")
-    const uint32_t currentFrameIndex = Engine::graphics()->getCurrentFrameIndex();
-
-    CameraInfoUBO cameraInfo{};
-    cameraInfo.viewMatrix = renderCamera->getViewMatrix();
-    cameraInfo.projectionMatrix = renderCamera->getProjectionMatrix();
-    cameraInfo.viewProjectionMatrix = renderCamera->getViewProjectionMatrix();
-    m_resources->cameraInfoBuffer->upload(0, sizeof(CameraInfoUBO), &cameraInfo);
-
-    const vk::CommandBuffer& commandBuffer = Engine::graphics()->getCurrentCommandBuffer();
-
-    PROFILE_REGION("Bind resources")
-
-    std::vector<vk::DescriptorSet> descriptorSets = {
-            m_resources->globalDescriptorSet->getDescriptorSet(),
-            m_resources->objectDescriptorSet->getDescriptorSet(),
-            m_resources->materialDescriptorSet->getDescriptorSet(),
-    };
-
-    std::vector<uint32_t> dynamicOffsets = {};
-
-    GraphicsPipeline* graphicsPipeline = Engine::deferredGeometryPass()->getGraphicsPipeline();
-    graphicsPipeline->bind(commandBuffer);
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
+    // TODO: add option for simplified rendering used for shadow maps/reflection probes.
+    // TODO: frustum culling / occlusion culling based on provided camera
 
     recordRenderCommands(dt, commandBuffer);
 }
@@ -204,10 +156,24 @@ Scene* SceneRenderer::getScene() const {
     return m_scene;
 }
 
+const std::shared_ptr<DescriptorSetLayout>& SceneRenderer::getObjectDescriptorSetLayout() const {
+    return m_objectDescriptorSetLayout;
+}
+
+const std::shared_ptr<DescriptorSetLayout>& SceneRenderer::getMaterialDescriptorSetLayout() const {
+    return m_materialDescriptorSetLayout;
+}
+
+DescriptorSet* SceneRenderer::getObjectDescriptorSet() const {
+    return m_resources->objectDescriptorSet;
+}
+
+DescriptorSet* SceneRenderer::getMaterialDescriptorSet() const {
+    return m_resources->materialDescriptorSet;
+}
+
+
 void SceneRenderer::initPipelineDescriptorSetLayouts(GraphicsPipelineConfiguration& graphicsPipelineConfiguration) const {
-    graphicsPipelineConfiguration.descriptorSetLayouts.emplace_back(m_globalDescriptorSetLayout->getDescriptorSetLayout());
-    graphicsPipelineConfiguration.descriptorSetLayouts.emplace_back(m_objectDescriptorSetLayout->getDescriptorSetLayout());
-    graphicsPipelineConfiguration.descriptorSetLayouts.emplace_back(m_materialDescriptorSetLayout->getDescriptorSetLayout());
 }
 
 void SceneRenderer::recordRenderCommands(double dt, const vk::CommandBuffer& commandBuffer) {

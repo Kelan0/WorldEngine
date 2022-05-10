@@ -69,13 +69,19 @@ public:
 
     void preRender(double dt);
 
-    void render(double dt);
-
-    void render(double dt, RenderCamera* renderCamera);
+    void render(double dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera);
 
     void setScene(Scene* scene);
 
     Scene* getScene() const;
+
+    const std::shared_ptr<DescriptorSetLayout>& getObjectDescriptorSetLayout() const;
+
+    const std::shared_ptr<DescriptorSetLayout>& getMaterialDescriptorSetLayout() const;
+
+    DescriptorSet* getObjectDescriptorSet() const;
+
+    DescriptorSet* getMaterialDescriptorSet() const;
 
     void initPipelineDescriptorSetLayouts(GraphicsPipelineConfiguration& graphicsPipelineConfiguration) const;
 
@@ -124,10 +130,8 @@ private:
 
 
     struct RenderResources {
-        Buffer* cameraInfoBuffer;
         Buffer* worldTransformBuffer;
         Buffer* materialDataBuffer;
-        DescriptorSet* globalDescriptorSet;
         DescriptorSet* objectDescriptorSet;
         DescriptorSet* materialDescriptorSet;
         DenseFlagArray changedObjectTransforms;
@@ -140,7 +144,6 @@ private:
 
     FrameResource<RenderResources> m_resources;
 
-    std::shared_ptr<DescriptorSetLayout> m_globalDescriptorSetLayout;
     std::shared_ptr<DescriptorSetLayout> m_objectDescriptorSetLayout;
     std::shared_ptr<DescriptorSetLayout> m_materialDescriptorSetLayout;
 

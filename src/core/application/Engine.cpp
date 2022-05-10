@@ -21,6 +21,8 @@ Engine::Engine() {
     m_immediateRenderer = new ImmediateRenderer();
     m_deferredGeometryPass = new DeferredGeometryRenderPass();
     m_deferredLightingPass = new DeferredLightingRenderPass(m_deferredGeometryPass);
+
+    m_renderCamera = new RenderCamera();
 }
 
 Engine::~Engine() {
@@ -31,6 +33,8 @@ Engine::~Engine() {
     delete m_deferredLightingPass;
     delete m_graphics;
     delete m_eventDispatcher;
+
+    delete m_renderCamera;
 }
 
 GraphicsManager* Engine::getGraphics() const {
@@ -131,14 +135,20 @@ bool Engine::init(SDL_Window* windowHandle) {
 }
 
 void Engine::render(double dt) {
+    const Entity& cameraEntity = Engine::scene()->getMainCameraEntity();
+
+    m_renderCamera->setProjection(cameraEntity.getComponent<Camera>());
+    m_renderCamera->setTransform(cameraEntity.getComponent<Transform>());
+    m_renderCamera->update();
+
     m_sceneRenderer->preRender(dt);
 
     auto& commandBuffer = graphics()->getCurrentCommandBuffer();
 
     m_deferredGeometryPass->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
+    m_deferredGeometryPass->render(dt, commandBuffer, m_renderCamera);
 
-    m_sceneRenderer->render(dt);
-    m_immediateRenderer->render(dt);
+//    m_immediateRenderer->render(dt);
 
     commandBuffer.endRenderPass();
 

@@ -30,6 +30,8 @@ private:
         std::array<Image2D*, NumAttachments> images;
         std::array<ImageView*, NumAttachments> imageViews;
         Framebuffer* framebuffer;
+        DescriptorSet* globalDescriptorSet;
+        Buffer* cameraInfoBuffer;
     };
 
 public:
@@ -39,7 +41,7 @@ public:
 
     bool init();
 
-    void render(double dt);
+    void render(double dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera);
 
     void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
 
@@ -67,10 +69,12 @@ private:
     bool createGraphicsPipeline();
 
     bool createRenderPass();
+
 private:
     std::shared_ptr<RenderPass> m_renderPass;
     std::shared_ptr<GraphicsPipeline> m_graphicsPipeline;
     FrameResource<RenderResources> m_resources;
+    std::shared_ptr<DescriptorSetLayout> m_globalDescriptorSetLayout;
     glm::uvec2 m_resolution;
 };
 
