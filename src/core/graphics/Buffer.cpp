@@ -1,7 +1,7 @@
 #include "core/graphics/Buffer.h"
 #include "core/graphics/DeviceMemory.h"
 #include "core/graphics/CommandPool.h"
-#include "core/application/Application.h"
+#include "core/application/Engine.h"
 #include "core/engine/scene/event/EventDispatcher.h"
 
 FrameResource<Buffer> Buffer::s_stagingBuffer = nullptr;
@@ -106,8 +106,8 @@ bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk:
         return true;
     }
 
-    const vk::Queue& transferQueue = **Application::instance()->graphics()->getQueue(QUEUE_TRANSFER_MAIN);
-    const vk::CommandBuffer& transferCommandBuffer = **Application::instance()->graphics()->commandPool()->getCommandBuffer("transfer_buffer");
+    const vk::Queue& transferQueue = **Engine::graphics()->getQueue(QUEUE_TRANSFER_MAIN);
+    const vk::CommandBuffer& transferCommandBuffer = **Engine::graphics()->commandPool()->getCommandBuffer("transfer_buffer");
 
     vk::CommandBufferBeginInfo commandBeginInfo;
     commandBeginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
@@ -270,7 +270,7 @@ void Buffer::resizeStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSi
     }
 
     if (!s_stagingBuffer) {
-        Application::instance()->eventDispatcher()->connect(&Buffer::onCleanupGraphics);
+        Engine::eventDispatcher()->connect(&Buffer::onCleanupGraphics);
     }
     std::string startSize = !s_stagingBuffer ? "UNALLOCATED" : std::to_string(s_stagingBuffer->getSize());
 

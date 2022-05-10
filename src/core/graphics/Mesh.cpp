@@ -1,6 +1,6 @@
 #include "core/graphics/Mesh.h"
 #include "core/graphics/DeviceMemory.h"
-#include "core/application/Application.h"
+#include "core/application/Engine.h"
 #include <chrono>
 
 
@@ -132,12 +132,12 @@ void Mesh::draw(const vk::CommandBuffer& commandBuffer, uint32_t instanceCount, 
     // if debug
     size_t numIndices = m_indexBuffer->getSize() / m_indexSize;
     size_t numVertices = m_vertexBuffer->getSize() / m_vertexSize;
-    Application::instance()->graphics()->debugInfo().renderedPolygons += MeshUtils::getPolygonCount(numIndices, m_primitiveType);
-    Application::instance()->graphics()->debugInfo().renderedIndices += numIndices * instanceCount;
-    Application::instance()->graphics()->debugInfo().renderedVertices += numVertices * instanceCount;
-    Application::instance()->graphics()->debugInfo().drawCalls++;
-    Application::instance()->graphics()->debugInfo().drawInstances += instanceCount;
-    Application::instance()->graphics()->debugInfo().elapsedDrawNanosCPU += elapsedNanos;
+    Engine::graphics()->debugInfo().renderedPolygons += MeshUtils::getPolygonCount(numIndices, m_primitiveType);
+    Engine::graphics()->debugInfo().renderedIndices += numIndices * instanceCount;
+    Engine::graphics()->debugInfo().renderedVertices += numVertices * instanceCount;
+    Engine::graphics()->debugInfo().drawCalls++;
+    Engine::graphics()->debugInfo().drawInstances += instanceCount;
+    Engine::graphics()->debugInfo().elapsedDrawNanosCPU += elapsedNanos;
 }
 
 uint32_t Mesh::getVertexCount() const {

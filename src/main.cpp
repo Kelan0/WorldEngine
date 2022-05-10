@@ -1,5 +1,6 @@
 
 #include "core/application/Application.h"
+#include "core/application/Engine.h"
 #include "core/application/InputHandler.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/DescriptorSet.h"
@@ -42,7 +43,7 @@ class App : public Application {
 
     std::shared_ptr<Texture> loadTexture(const std::string& filePath, vk::Format format, std::weak_ptr<Sampler> sampler) {
         Image2DConfiguration imageConfig;
-        imageConfig.device = graphics()->getDevice();
+        imageConfig.device = Engine::graphics()->getDevice();
         imageConfig.filePath = filePath;
         imageConfig.usage = vk::ImageUsageFlagBits::eSampled;
         imageConfig.format = format;
@@ -52,7 +53,7 @@ class App : public Application {
         images.emplace_back(image);
 
         ImageViewConfiguration imageViewConfig;
-        imageViewConfig.device = graphics()->getDevice();
+        imageViewConfig.device = Engine::graphics()->getDevice();
         imageViewConfig.image = image->getImage();
         imageViewConfig.format = format;
         imageViewConfig.baseMipLevel = 0;
@@ -65,7 +66,7 @@ class App : public Application {
         //eventDispatcher()->connect<ScreenResizeEvent>(&App::onScreenResize, this);
 
         SamplerConfiguration samplerConfig;
-        samplerConfig.device = graphics()->getDevice();
+        samplerConfig.device = Engine::graphics()->getDevice();
         samplerConfig.minFilter = vk::Filter::eLinear;
         samplerConfig.magFilter = vk::Filter::eLinear;
         samplerConfig.minLod = 0.0F;
@@ -96,10 +97,10 @@ class App : public Application {
         testMeshData.createCuboid(glm::vec3(-0.5, -0.5F, -0.5), glm::vec3(+0.5, +0.5F, +0.5));
         testMeshData.computeTangents();
         MeshConfiguration cubeMeshConfig;
-        cubeMeshConfig.device = graphics()->getDevice();
+        cubeMeshConfig.device = Engine::graphics()->getDevice();
         cubeMeshConfig.setMeshData(&testMeshData);
         std::shared_ptr<Mesh> cubeMesh = std::shared_ptr<Mesh>(Mesh::create(cubeMeshConfig));
-        Entity cubeEntity = EntityHierarchy::create(scene(), "cubeEntity");
+        Entity cubeEntity = EntityHierarchy::create(Engine::scene(), "cubeEntity");
         cubeEntity.addComponent<Transform>().translate(1.6F, 0.5F, 0);
         cubeEntity.addComponent<RenderComponent>().setMesh(cubeMesh).setMaterial(cubeMaterial);
 
@@ -111,11 +112,11 @@ class App : public Application {
         testMeshData.addQuad(i0, i1, i2, i3);
         testMeshData.computeTangents();
         MeshConfiguration floorMeshConfig;
-        floorMeshConfig.device = graphics()->getDevice();
+        floorMeshConfig.device = Engine::graphics()->getDevice();
         floorMeshConfig.setMeshData(&testMeshData);
         std::shared_ptr<Mesh> floorMesh = std::shared_ptr<Mesh>(Mesh::create(floorMeshConfig));
 
-        Entity floorEntity = EntityHierarchy::create(scene(), "floorEntity");
+        Entity floorEntity = EntityHierarchy::create(Engine::scene(), "floorEntity");
         floorEntity.addComponent<Transform>().translate(0.0, 0.0, 0.0);
         floorEntity.addComponent<RenderComponent>().setMesh(floorMesh).setMaterial(floorMaterial);
 
@@ -130,7 +131,7 @@ class App : public Application {
 //
         printf("Loaded bunny.obj :- %llu polygons\n", testMeshData.getPolygonCount());
         MeshConfiguration bunnyMeshConfig;
-        bunnyMeshConfig.device = graphics()->getDevice();
+        bunnyMeshConfig.device = Engine::graphics()->getDevice();
         bunnyMeshConfig.setMeshData(&testMeshData);
         std::shared_ptr<Mesh> bunnyMesh = std::shared_ptr<Mesh>(Mesh::create(bunnyMeshConfig));
 //
@@ -139,14 +140,14 @@ class App : public Application {
         bunnyMaterialConfig.setRoughness(0.23F);
         std::shared_ptr<Material> bunnyMaterial = std::shared_ptr<Material>(Material::create(bunnyMaterialConfig));
 
-        Entity bunnyEntity = EntityHierarchy::create(scene(), "bunnyEntity");
+        Entity bunnyEntity = EntityHierarchy::create(Engine::scene(), "bunnyEntity");
         bunnyEntity.addComponent<Transform>().translate(0.0, 0.0, 0.0);
         bunnyEntity.addComponent<RenderComponent>().setMesh(bunnyMesh).setMaterial(bunnyMaterial);
 
         testMeshData.clear();
         testMeshData.createUVSphere(glm::vec3(0.0F), 0.25F, 45, 45);
         MeshConfiguration sphereMeshConfig;
-        sphereMeshConfig.device = graphics()->getDevice();
+        sphereMeshConfig.device = Engine::graphics()->getDevice();
         sphereMeshConfig.setMeshData(&testMeshData);
         std::shared_ptr<Mesh> sphereMesh = std::shared_ptr<Mesh>(Mesh::create(sphereMeshConfig));
 
@@ -156,7 +157,7 @@ class App : public Application {
         sphereMaterial0Config.setRoughness(0.4F);
         std::shared_ptr<Material> sphereMaterial0 = std::shared_ptr<Material>(Material::create(sphereMaterial0Config));
 
-        Entity sphereEntity0 = EntityHierarchy::create(scene(), "sphereEntity0");
+        Entity sphereEntity0 = EntityHierarchy::create(Engine::scene(), "sphereEntity0");
         sphereEntity0.addComponent<Transform>().translate(-0.9, 0.333, 0.3);
         sphereEntity0.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(sphereMaterial0);
 
@@ -172,13 +173,13 @@ class App : public Application {
                 sphereMaterial1Config.setMetallic(1.0F - (((float)j + 0.5F) / (float)numSpheresX));
                 std::shared_ptr<Material> sphereMaterial1 = std::shared_ptr<Material> (Material::create(sphereMaterial1Config));
 
-                Entity sphereEntity1 = EntityHierarchy::create(scene(), "sphereEntity[" + std::to_string(i) + ", " + std::to_string(j) + "]");
+                Entity sphereEntity1 = EntityHierarchy::create(Engine::scene(), "sphereEntity[" + std::to_string(i) + ", " + std::to_string(j) + "]");
                 sphereEntity1.addComponent<Transform>().translate(-4.0F + i * 0.26F, 0.333F, 2.0F + j * 0.26F).scale(0.5F);
                 sphereEntity1.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(sphereMaterial1);
             }
         }
 
-        scene()->getMainCameraEntity().getComponent<Transform>().setTranslation(0.0F, 1.0F, 1.0F);
+        Engine::scene()->getMainCameraEntity().getComponent<Transform>().setTranslation(0.0F, 1.0F, 1.0F);
     }
 
     void cleanup() override {
@@ -194,7 +195,7 @@ class App : public Application {
         }
 
         if (input()->isMouseGrabbed()) {
-            Transform& cameraTransform = Application::instance()->scene()->getMainCameraEntity().getComponent<Transform>();
+            Transform& cameraTransform = Engine::scene()->getMainCameraEntity().getComponent<Transform>();
             glm::ivec2 dMouse = input()->getRelativeMouseState();
             if (isViewportInverted())
                 dMouse.y *= -1;
@@ -230,47 +231,47 @@ class App : public Application {
         PROFILE_SCOPE("custom render")
         handleUserInput(dt);
 
-        Entity mainCamera = Application::instance()->scene()->getMainCameraEntity();
+        Entity mainCamera = Engine::scene()->getMainCameraEntity();
         Transform& cameraTransform = mainCamera.getComponent<Transform>();
         Camera& cameraProjection = mainCamera.getComponent<Camera>();
 
 
-        immediateRenderer()->matrixMode(MatrixMode_Projection);
-        immediateRenderer()->pushMatrix();
-        immediateRenderer()->loadMatrix(cameraProjection.getProjectionMatrix());
-        immediateRenderer()->matrixMode(MatrixMode_ModelView);
-        immediateRenderer()->pushMatrix();
-        immediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
+        Engine::immediateRenderer()->matrixMode(MatrixMode_Projection);
+        Engine::immediateRenderer()->pushMatrix();
+        Engine::immediateRenderer()->loadMatrix(cameraProjection.getProjectionMatrix());
+        Engine::immediateRenderer()->matrixMode(MatrixMode_ModelView);
+        Engine::immediateRenderer()->pushMatrix();
+        Engine::immediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
 
-        immediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
-        immediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
+        Engine::immediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
+        Engine::immediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
 //
-//        immediateRenderer()->setBlendEnabled(true);
-//        immediateRenderer()->setDepthTestEnabled(true);
-//        immediateRenderer()->matrixMode(MatrixMode_ModelView);
-//        immediateRenderer()->pushMatrix();
-//        immediateRenderer()->translate(2.0F, 2.0F, 0.0F);
+//        Engine::immediateRenderer()->setBlendEnabled(true);
+//        Engine::immediateRenderer()->setDepthTestEnabled(true);
+//        Engine::immediateRenderer()->matrixMode(MatrixMode_ModelView);
+//        Engine::immediateRenderer()->pushMatrix();
+//        Engine::immediateRenderer()->translate(2.0F, 2.0F, 0.0F);
 //
-//        immediateRenderer()->begin(PrimitiveType_TriangleStrip);
-//        immediateRenderer()->colour(1.0F, 0.0F, 0.0F, 0.5F);
-//        immediateRenderer()->vertex(0.0F, 0.0F, 0.0F);
-//        immediateRenderer()->vertex(1.0F, 0.0F, 0.0F);
-//        immediateRenderer()->vertex(0.0F, 1.0F, 0.0F);
-//        immediateRenderer()->vertex(1.0F, 1.0F, 0.0F);
-//        immediateRenderer()->end();
+//        Engine::immediateRenderer()->begin(PrimitiveType_TriangleStrip);
+//        Engine::immediateRenderer()->colour(1.0F, 0.0F, 0.0F, 0.5F);
+//        Engine::immediateRenderer()->vertex(0.0F, 0.0F, 0.0F);
+//        Engine::immediateRenderer()->vertex(1.0F, 0.0F, 0.0F);
+//        Engine::immediateRenderer()->vertex(0.0F, 1.0F, 0.0F);
+//        Engine::immediateRenderer()->vertex(1.0F, 1.0F, 0.0F);
+//        Engine::immediateRenderer()->end();
 //
-//        immediateRenderer()->setBlendEnabled(false);
-//        immediateRenderer()->setDepthTestEnabled(false);
-//        immediateRenderer()->setLineWidth(3.0F);
-//        immediateRenderer()->begin(PrimitiveType_LineLoop);
-//        immediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
-//        immediateRenderer()->vertex(0.0F, 0.0F, 0.0F);
-//        immediateRenderer()->vertex(1.0F, 0.0F, 0.0F);
-//        immediateRenderer()->vertex(1.0F, 1.0F, 0.0F);
-//        immediateRenderer()->vertex(0.0F, 1.0F, 0.0F);
-//        immediateRenderer()->end();
+//        Engine::immediateRenderer()->setBlendEnabled(false);
+//        Engine::immediateRenderer()->setDepthTestEnabled(false);
+//        Engine::immediateRenderer()->setLineWidth(3.0F);
+//        Engine::immediateRenderer()->begin(PrimitiveType_LineLoop);
+//        Engine::immediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
+//        Engine::immediateRenderer()->vertex(0.0F, 0.0F, 0.0F);
+//        Engine::immediateRenderer()->vertex(1.0F, 0.0F, 0.0F);
+//        Engine::immediateRenderer()->vertex(1.0F, 1.0F, 0.0F);
+//        Engine::immediateRenderer()->vertex(0.0F, 1.0F, 0.0F);
+//        Engine::immediateRenderer()->end();
 //
-//        immediateRenderer()->popMatrix();
+//        Engine::immediateRenderer()->popMatrix();
 
         if (input()->keyPressed(SDL_SCANCODE_F)) {
             if (!pauseFrustum) {
@@ -282,20 +283,20 @@ class App : public Application {
         }
 
         if (pauseFrustum) {
-            immediateRenderer()->setBlendEnabled(true);
-            immediateRenderer()->setDepthTestEnabled(true);
-            immediateRenderer()->colour(1.0F, 0.0F, 0.0F, 0.25F);
+            Engine::immediateRenderer()->setBlendEnabled(true);
+            Engine::immediateRenderer()->setDepthTestEnabled(true);
+            Engine::immediateRenderer()->colour(1.0F, 0.0F, 0.0F, 0.25F);
             frustum.drawFill();
 
-            immediateRenderer()->setLineWidth(1.0F);
-            immediateRenderer()->setBlendEnabled(false);
-            immediateRenderer()->setDepthTestEnabled(false);
-            immediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
+            Engine::immediateRenderer()->setLineWidth(1.0F);
+            Engine::immediateRenderer()->setBlendEnabled(false);
+            Engine::immediateRenderer()->setDepthTestEnabled(false);
+            Engine::immediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
             frustum.drawLines();
         }
 
-        immediateRenderer()->popMatrix(MatrixMode_ModelView);
-        immediateRenderer()->popMatrix(MatrixMode_Projection);
+        Engine::immediateRenderer()->popMatrix(MatrixMode_ModelView);
+        Engine::immediateRenderer()->popMatrix(MatrixMode_Projection);
     }
 };
 

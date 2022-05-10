@@ -6,6 +6,16 @@
 
 #include "core/engine/scene/Transform.h"
 #include "core/engine/scene/Camera.h"
+#include "core/graphics/FrameResource.h"
+#include "core/graphics/DescriptorSet.h"
+
+class Buffer;
+
+struct CameraInfoUBO {
+    glm::mat4 viewMatrix;
+    glm::mat4 projectionMatrix;
+    glm::mat4 viewProjectionMatrix;
+};
 
 class RenderCamera {
 public:
@@ -47,6 +57,7 @@ public:
 
     const glm::mat4& getInverseViewProjectionMatrix() const;
 
+    size_t uploadCameraData(Buffer* buffer, const size_t& offset) const;
 
 private:
     Transform m_transform;
@@ -56,11 +67,9 @@ private:
     Camera m_prevProjection;
 
     glm::mat4 m_viewMatrix;
-    glm::mat4 m_viewRotationMatrix;
     glm::mat4 m_projectionMatrix;
     glm::mat4 m_viewProjectionMatrix;
     glm::mat4 m_inverseViewMatrix;
-    glm::mat4 m_inverseViewRotationMatrix;
     glm::mat4 m_inverseProjectionMatrix;
     glm::mat4 m_inverseViewProjectionMatrix;
 

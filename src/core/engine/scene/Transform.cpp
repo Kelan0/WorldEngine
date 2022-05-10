@@ -1,5 +1,5 @@
 #include "core/engine/scene/Transform.h"
-#include "core/application/Application.h"
+#include "core/application/Engine.h"
 #include "core/engine/renderer/SceneRenderer.h"
 
 
@@ -507,13 +507,13 @@ Transform::operator glm::dmat4() const {
 }
 
 void Transform::change() {
-    Application::instance()->sceneRenderer()->notifyTransformChanged(m_entityIndex);
+    Engine::sceneRenderer()->notifyTransformChanged(m_entityIndex);
 }
 
 void Transform::reindex(Transform& transform, const EntityChangeTracker::entity_index& newEntityIndex) {
     if (newEntityIndex == transform.m_entityIndex)
         return;
-//    Application::instance()->renderer()->notifyTransformChanged(transform.m_entityIndex);
-//    Application::instance()->renderer()->notifyTransformChanged(newEntityIndex);
+//    Engine::renderer()->notifyTransformChanged(transform.m_entityIndex);
+//    Engine::renderer()->notifyTransformChanged(newEntityIndex);
     transform.m_entityIndex = newEntityIndex;
 }

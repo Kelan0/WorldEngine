@@ -115,9 +115,9 @@ public:
 
     ~DescriptorSetLayoutBuilder();
 
-    DescriptorSetLayoutBuilder& addUniformBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& sizeBytes, const bool& dynamic = false);
+    DescriptorSetLayoutBuilder& addUniformBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const bool& dynamic = false);
 
-    DescriptorSetLayoutBuilder& addStorageBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& sizeBytes, const bool& dynamic = false);
+    DescriptorSetLayoutBuilder& addStorageBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const bool& dynamic = false);
 
     DescriptorSetLayoutBuilder& addStorageTexelBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages);
 

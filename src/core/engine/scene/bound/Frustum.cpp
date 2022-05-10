@@ -1,6 +1,6 @@
 #include "core/engine/scene/bound/Frustum.h"
 #include "core/engine/renderer/ImmediateRenderer.h"
-#include "core/application/Application.h"
+#include "core/application/Engine.h"
 
 Frustum::Frustum():
     Frustum(glm::dmat4(1.0)) {
@@ -111,7 +111,7 @@ const glm::dvec3& Frustum::getCorner(const uint32_t& cornerIndex) const {
 
 
 void Frustum::drawLines() {
-    auto* renderer = Application::instance()->immediateRenderer();
+    auto* renderer = Engine::immediateRenderer();
     auto createLine = [&renderer](const glm::dvec3& a, const glm::dvec3& b) {
         renderer->vertex(a); // 0
         renderer->vertex(b); // 1
@@ -141,7 +141,7 @@ void Frustum::drawLines() {
 }
 
 void Frustum::drawFill() {
-    auto* renderer = Application::instance()->immediateRenderer();
+    auto* renderer = Engine::immediateRenderer();
     auto createQuad = [&renderer](const glm::dvec3 normal, const glm::dvec3& a, const glm::dvec3& b, const glm::dvec3& c, const glm::dvec3& d) {
         renderer->normal(normal);
         renderer->vertex(a); // 0

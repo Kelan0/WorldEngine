@@ -4,6 +4,7 @@
 #include "core/engine/scene/event/EventDispatcher.h"
 #include "core/engine/scene/event/Events.h"
 #include "core/application/Application.h"
+#include "core/application/Engine.h"
 #include "core/graphics/ImageCube.h"
 #include "core/graphics/ImageView.h"
 #include "core/graphics/Texture.h"
@@ -74,7 +75,7 @@ void EnvironmentMap::update() {
 
         if (recreateDiffuseImage || recreateSpecularImage) {
             ImageCubeConfiguration imageConfig;
-            imageConfig.device = Application::instance()->graphics()->getDevice();
+            imageConfig.device = Engine::graphics()->getDevice();
             imageConfig.format = vk::Format::eR32G32B32A32Sfloat;
             imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eStorage;
             imageConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
@@ -114,9 +115,9 @@ void EnvironmentMap::update() {
             }
         }
 
-        const std::shared_ptr<CommandPool>& commandPool = Application::instance()->graphics()->commandPool();
+        const std::shared_ptr<CommandPool>& commandPool = Engine::graphics()->commandPool();
         const vk::CommandBuffer& commandBuffer = **commandPool->getOrCreateCommandBuffer("compute_main", { vk::CommandBufferLevel::ePrimary });
-        const vk::Queue& computeQueue = **Application::instance()->graphics()->getQueue(QUEUE_COMPUTE_MAIN);
+        const vk::Queue& computeQueue = **Engine::graphics()->getQueue(QUEUE_COMPUTE_MAIN);
 
         vk::CommandBufferBeginInfo commandBeginInfo;
         commandBeginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
@@ -268,14 +269,14 @@ void EnvironmentMap::calculateSpecularReflection(const vk::CommandBuffer& comman
 void EnvironmentMap::calculateBRDFIntegrationMap(const vk::CommandBuffer& commandBuffer) {
     if (s_BRDFIntegrationMap == nullptr) {
         constexpr uint32_t BRDFIntegrationMapSize = 512;
-        Application::instance()->eventDispatcher()->connect(&EnvironmentMap::onCleanupGraphics);
+        Engine::eventDispatcher()->connect(&EnvironmentMap::onCleanupGraphics);
 
         struct BRDFIntegrationPushConstants {
             glm::uvec2 dstSize;
         };
 
         Image2DConfiguration imageConfig{};
-        imageConfig.device = Application::instance()->graphics()->getDevice();
+        imageConfig.device = Engine::graphics()->getDevice();
         imageConfig.setSize(BRDFIntegrationMapSize, BRDFIntegrationMapSize);
         imageConfig.usage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
         imageConfig.format = vk::Format::eR16G16B16A16Sfloat;
@@ -287,7 +288,7 @@ void EnvironmentMap::calculateBRDFIntegrationMap(const vk::CommandBuffer& comman
         assert(s_BRDFIntegrationMapImage != nullptr);
 
         ImageViewConfiguration imageViewConfig{};
-        imageViewConfig.device = Application::instance()->graphics()->getDevice();
+        imageViewConfig.device = Engine::graphics()->getDevice();
         imageViewConfig.format = s_BRDFIntegrationMapImage->getFormat();
         imageViewConfig.setImage(s_BRDFIntegrationMapImage.get());
         imageViewConfig.baseMipLevel = 0;
@@ -295,7 +296,7 @@ void EnvironmentMap::calculateBRDFIntegrationMap(const vk::CommandBuffer& comman
         imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
 
         SamplerConfiguration samplerConfig{};
-        samplerConfig.device = Application::instance()->graphics()->getDevice();
+        samplerConfig.device = Engine::graphics()->getDevice();
         samplerConfig.minFilter = vk::Filter::eLinear;
         samplerConfig.magFilter = vk::Filter::eLinear;
         samplerConfig.minLod = 0.0F;
@@ -305,15 +306,15 @@ void EnvironmentMap::calculateBRDFIntegrationMap(const vk::CommandBuffer& comman
         assert(s_BRDFIntegrationMap != nullptr);
 
         if (s_BRDFIntegrationMapDescriptorSet == nullptr) {
-            std::shared_ptr<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(Application::instance()->graphics()->getDevice())
+            std::shared_ptr<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
                     .addStorageImage(0, vk::ShaderStageFlagBits::eCompute).build();
-            s_BRDFIntegrationMapDescriptorSet = DescriptorSet::create(descriptorSetLayout,Application::instance()->graphics()->descriptorPool());
+            s_BRDFIntegrationMapDescriptorSet = DescriptorSet::create(descriptorSetLayout,Engine::graphics()->descriptorPool());
             assert(s_BRDFIntegrationMapDescriptorSet != nullptr);
         }
 
         if (s_BRDFIntegrationMapComputePipeline == nullptr) {
             ComputePipelineConfiguration pipelineConfig;
-            pipelineConfig.device = Application::instance()->graphics()->getDevice();
+            pipelineConfig.device = Engine::graphics()->getDevice();
             pipelineConfig.computeShader = "res/shaders/compute/compute_BRDFIntegrationMap.glsl";
             pipelineConfig.addDescriptorSetLayout(s_BRDFIntegrationMapDescriptorSet->getLayout().get());
             pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(BRDFIntegrationPushConstants));
@@ -355,12 +356,12 @@ void EnvironmentMap::calculateBRDFIntegrationMap(const vk::CommandBuffer& comman
 
 DescriptorSet* EnvironmentMap::getDiffuseIrradianceComputeDescriptorSet() {
     if (s_diffuseIrradianceConvolutionDescriptorSet == nullptr) {
-        std::shared_ptr<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(Application::instance()->graphics()->getDevice())
-                .addUniformBuffer(0, vk::ShaderStageFlagBits::eCompute, sizeof(DiffuseIrradianceComputeUBO))
+        std::shared_ptr<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
+                .addUniformBuffer(0, vk::ShaderStageFlagBits::eCompute)
                 .addCombinedImageSampler(1, vk::ShaderStageFlagBits::eCompute)
                 .addStorageImage(2, vk::ShaderStageFlagBits::eCompute)
                 .build();
-        s_diffuseIrradianceConvolutionDescriptorSet = DescriptorSet::create(descriptorSetLayout,Application::instance()->graphics()->descriptorPool());
+        s_diffuseIrradianceConvolutionDescriptorSet = DescriptorSet::create(descriptorSetLayout,Engine::graphics()->descriptorPool());
         assert(s_diffuseIrradianceConvolutionDescriptorSet != nullptr);
 
         constexpr vk::DeviceSize uboOffset = 0;
@@ -368,7 +369,7 @@ DescriptorSet* EnvironmentMap::getDiffuseIrradianceComputeDescriptorSet() {
                 .writeBuffer(0, getUniformBuffer(), uboOffset, sizeof(DiffuseIrradianceComputeUBO))
                 .write();
 
-        Application::instance()->eventDispatcher()->connect(&EnvironmentMap::onCleanupGraphics);
+        Engine::eventDispatcher()->connect(&EnvironmentMap::onCleanupGraphics);
     }
 
     return s_diffuseIrradianceConvolutionDescriptorSet;
@@ -377,13 +378,13 @@ DescriptorSet* EnvironmentMap::getDiffuseIrradianceComputeDescriptorSet() {
 ComputePipeline* EnvironmentMap::getDiffuseIrradianceComputePipeline() {
     if (s_diffuseIrradianceConvolutionComputePipeline == nullptr) {
         ComputePipelineConfiguration pipelineConfig;
-        pipelineConfig.device = Application::instance()->graphics()->getDevice();
+        pipelineConfig.device = Engine::graphics()->getDevice();
         pipelineConfig.computeShader = "res/shaders/compute/compute_diffuseIrradiance.glsl";
         pipelineConfig.addDescriptorSetLayout(getDiffuseIrradianceComputeDescriptorSet()->getLayout().get());
         s_diffuseIrradianceConvolutionComputePipeline = ComputePipeline::create(pipelineConfig);
         assert(s_diffuseIrradianceConvolutionComputePipeline != nullptr);
 
-        Application::instance()->eventDispatcher()->connect(&EnvironmentMap::onCleanupGraphics);
+        Engine::eventDispatcher()->connect(&EnvironmentMap::onCleanupGraphics);
     }
 
     return s_diffuseIrradianceConvolutionComputePipeline;
@@ -391,14 +392,14 @@ ComputePipeline* EnvironmentMap::getDiffuseIrradianceComputePipeline() {
 
 DescriptorSet* EnvironmentMap::getPrefilteredEnvironmentComputeDescriptorSet() {
     if (s_prefilteredEnvironmentDescriptorSet == nullptr) {
-        std::shared_ptr<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(Application::instance()->graphics()->getDevice())
+        std::shared_ptr<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
                 .addCombinedImageSampler(0, vk::ShaderStageFlagBits::eCompute)
                 .addStorageImage(1, vk::ShaderStageFlagBits::eCompute, MAX_SPECULAR_MIP_LEVELS)
                 .build();
-        s_prefilteredEnvironmentDescriptorSet = DescriptorSet::create(descriptorSetLayout,Application::instance()->graphics()->descriptorPool());
+        s_prefilteredEnvironmentDescriptorSet = DescriptorSet::create(descriptorSetLayout,Engine::graphics()->descriptorPool());
         assert(s_prefilteredEnvironmentDescriptorSet != nullptr);
 
-        Application::instance()->eventDispatcher()->connect(&EnvironmentMap::onCleanupGraphics);
+        Engine::eventDispatcher()->connect(&EnvironmentMap::onCleanupGraphics);
     }
 
     return s_prefilteredEnvironmentDescriptorSet;
@@ -407,14 +408,14 @@ DescriptorSet* EnvironmentMap::getPrefilteredEnvironmentComputeDescriptorSet() {
 ComputePipeline* EnvironmentMap::getPrefilteredEnvironmentComputePipeline() {
     if (s_prefilteredEnvironmentComputePipeline == nullptr) {
         ComputePipelineConfiguration pipelineConfig;
-        pipelineConfig.device = Application::instance()->graphics()->getDevice();
+        pipelineConfig.device = Engine::graphics()->getDevice();
         pipelineConfig.computeShader = "res/shaders/compute/compute_prefilterEnvMap.glsl";
         pipelineConfig.addDescriptorSetLayout(getPrefilteredEnvironmentComputeDescriptorSet()->getLayout().get());
         pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(PrefilteredEnvironmentComputePushConstants));
         s_prefilteredEnvironmentComputePipeline = ComputePipeline::create(pipelineConfig);
         assert(s_prefilteredEnvironmentComputePipeline != nullptr);
 
-        Application::instance()->eventDispatcher()->connect(&EnvironmentMap::onCleanupGraphics);
+        Engine::eventDispatcher()->connect(&EnvironmentMap::onCleanupGraphics);
     }
 
     return s_prefilteredEnvironmentComputePipeline;
@@ -423,7 +424,7 @@ ComputePipeline* EnvironmentMap::getPrefilteredEnvironmentComputePipeline() {
 Buffer* EnvironmentMap::getUniformBuffer() {
     if (s_uniformBuffer == nullptr) {
         BufferConfiguration bufferConfig;
-        bufferConfig.device = Application::instance()->graphics()->getDevice();
+        bufferConfig.device = Engine::graphics()->getDevice();
         bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         bufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst;
         bufferConfig.size = ROUND_TO_MULTIPLE(sizeof(DiffuseIrradianceComputeUBO), 256);
@@ -431,7 +432,7 @@ Buffer* EnvironmentMap::getUniformBuffer() {
         s_uniformBuffer = Buffer::create(bufferConfig);
         assert(s_uniformBuffer != nullptr);
 
-        Application::instance()->eventDispatcher()->connect(&EnvironmentMap::onCleanupGraphics);
+        Engine::eventDispatcher()->connect(&EnvironmentMap::onCleanupGraphics);
     }
 
     return s_uniformBuffer;
@@ -443,7 +444,7 @@ std::shared_ptr<Texture> EnvironmentMap::createTexture(const std::shared_ptr<Ima
         return nullptr;
 
     ImageViewConfiguration imageViewConfig;
-    imageViewConfig.device = Application::instance()->graphics()->getDevice();
+    imageViewConfig.device = Engine::graphics()->getDevice();
     imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
     imageViewConfig.setImage(image.get());
     imageViewConfig.format = image->getFormat();
@@ -453,7 +454,7 @@ std::shared_ptr<Texture> EnvironmentMap::createTexture(const std::shared_ptr<Ima
     imageViewConfig.mipLevelCount = glm::min(mipLevelCount, image->getMipLevelCount() - baseMipLevel);
 
     SamplerConfiguration samplerConfig;
-    samplerConfig.device = Application::instance()->graphics()->getDevice();
+    samplerConfig.device = Engine::graphics()->getDevice();
     samplerConfig.minFilter = vk::Filter::eLinear;
     samplerConfig.magFilter = vk::Filter::eLinear;
     samplerConfig.mipmapMode = vk::SamplerMipmapMode::eLinear;

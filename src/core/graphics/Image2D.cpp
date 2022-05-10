@@ -3,7 +3,7 @@
 #include "core/graphics/DeviceMemory.h"
 #include "core/graphics/CommandPool.h"
 #include "core/graphics/GraphicsManager.h"
-#include "core/application/Application.h"
+#include "core/application/Engine.h"
 
 
 
@@ -211,7 +211,7 @@ bool Image2D::upload(Image2D* dstImage, void* data, const ImagePixelLayout& pixe
         ImageUtil::transitionLayout(transferCommandBuffer, dstImage->getImage(), subresourceRange, ImageTransition::FromAny(), dstState);
     }
 
-    ImageUtil::endTransferCommands(**Application::instance()->graphics()->getQueue(QUEUE_TRANSFER_MAIN), true);
+    ImageUtil::endTransferCommands(**Engine::graphics()->getQueue(QUEUE_TRANSFER_MAIN), true);
 
     delete tempImageData;
     return success;

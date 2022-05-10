@@ -1,4 +1,5 @@
 #include "core/application/Application.h"
+#include "core/application/Engine.h"
 #include "core/application/InputHandler.h"
 #include "core/engine/scene/Scene.h"
 #include "core/engine/renderer/SceneRenderer.h"
@@ -19,26 +20,12 @@ Application* Application::s_instance = nullptr;
 
 Application::Application():
         m_windowHandle(nullptr),
-        m_graphics(nullptr),
         m_inputHandler(nullptr),
-        m_scene(nullptr),
-        m_sceneRenderer(nullptr),
-        m_immediateRenderer(nullptr),
-        m_deferredGeometryPass(nullptr),
-        m_deferredLightingPass(nullptr),
-        m_eventDispatcher(nullptr),
         m_running(false) {
 }
 
 Application::~Application() {
-    delete m_scene; // Scene is destroyed before SceneRenderer since destruction of components may interact with SceneRenderer. This might need to change.
-    delete m_sceneRenderer;
-    delete m_immediateRenderer;
-    delete m_deferredGeometryPass;
-    delete m_deferredLightingPass;
     delete m_inputHandler;
-    delete m_graphics;
-    delete m_eventDispatcher;
 
     printf("Destroying window\n");
     SDL_DestroyWindow(m_windowHandle);
@@ -70,46 +57,11 @@ bool Application::initInternal() {
         return false;
     }
 
-    PROFILE_REGION("Init GraphicsManager")
-
-    m_graphics = new GraphicsManager();
-    if (!m_graphics->init(m_windowHandle, "WorldEngine")) {
-        printf("Failed to initialize graphics engine\n");
-        return false;
-    }
-
-    PROFILE_REGION("Init EventDispatcher")
-    m_eventDispatcher = new EventDispatcher();
 
     PROFILE_REGION("Init InputHandler")
     m_inputHandler = new InputHandler(m_windowHandle);
 
-    PROFILE_REGION("Init Scene")
-    m_scene = new Scene();
-    m_scene->init();
-    m_eventDispatcher->repeatAll(m_scene->getEventDispatcher());
-
-
-    PROFILE_REGION("Init SceneRenderer")
-    m_sceneRenderer = new SceneRenderer();
-    m_sceneRenderer->setScene(m_scene);
-    if (!m_sceneRenderer->init())
-        return false;
-
-    PROFILE_REGION("Init ImmediateRenderer")
-    m_immediateRenderer = new ImmediateRenderer();
-    if (!m_immediateRenderer->init())
-        return false;
-
-    PROFILE_REGION("Init DeferredRenderer geometry pass")
-    m_deferredGeometryPass = new DeferredGeometryRenderPass();
-    if (!m_deferredGeometryPass->init())
-        return false;
-
-    PROFILE_REGION("Init DeferredRenderer lighting pass")
-    m_deferredLightingPass = new DeferredLightingRenderPass(m_deferredGeometryPass);
-    if (!m_deferredLightingPass->init())
-        return false;
+    Engine::instance()->init(m_windowHandle);
 
     PROFILE_REGION("Init Application")
     init();
@@ -124,21 +76,12 @@ void Application::cleanupInternal() {
 void Application::renderInternal(double dt) {
     PROFILE_SCOPE("Application::renderInternal")
 
-    auto& commandBuffer = graphics()->getCurrentCommandBuffer();
-    const Framebuffer* framebuffer = graphics()->getCurrentFramebuffer();
-
-    m_deferredGeometryPass->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
-
     PROFILE_REGION("Application::render - Implementation")
     render(dt);
     PROFILE_END_REGION()
 
-    m_sceneRenderer->render(dt);
-    m_immediateRenderer->render(dt);
+    Engine::instance()->render(dt);
 
-    commandBuffer.endRenderPass();
-
-    m_deferredLightingPass->renderScreen(dt);
 }
 
 void Application::processEventsInternal() {
@@ -157,10 +100,10 @@ void Application::processEventsInternal() {
             case SDL_WINDOWEVENT:
                 switch (event.window.event) {
                     case SDL_WINDOWEVENT_SHOWN:
-                        m_eventDispatcher->trigger(ScreenShowEvent{getWindowSize() });
+                        Engine::eventDispatcher()->trigger(ScreenShowEvent{getWindowSize() });
                         break;
                     case SDL_WINDOWEVENT_SIZE_CHANGED:
-                        m_eventDispatcher->trigger(ScreenResizeEvent{windowSize, getWindowSize() });
+                        Engine::eventDispatcher()->trigger(ScreenResizeEvent{windowSize, getWindowSize() });
                         break;
                 }
                 break;
@@ -169,14 +112,16 @@ void Application::processEventsInternal() {
         m_inputHandler->processEvent(event);
     }
 
-    if (m_graphics->didResolutionChange()) {
+    if (Engine::graphics()->didResolutionChange()) {
         printf("Resolution changed\n");
     }
 }
 
 void Application::destroy() {
     assert(s_instance != nullptr);
-    delete s_instance;
+    Engine::destroy();
+    delete Application::s_instance;
+    Application::s_instance = nullptr;
 }
 
 void Application::start() {
@@ -184,7 +129,7 @@ void Application::start() {
     m_running = true;
 
     // Trigger a ScreenResizeEvent at the beginning of the render loop so that anything that needs it can be initialized easily
-    m_eventDispatcher->trigger(ScreenResizeEvent{getWindowSize(), getWindowSize() });
+    Engine::eventDispatcher()->trigger(ScreenResizeEvent{getWindowSize(), getWindowSize() });
 
     std::vector<double> frameTimes;
     std::vector<double> cpuFrameTimes;
@@ -217,7 +162,7 @@ void Application::start() {
 
             processEventsInternal();
 
-            if (graphics()->beginFrame()) {
+            if (Engine::graphics()->beginFrame()) {
                 uint64_t frameElapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastFrame).count();
                 double dt = frameElapsedNanos / 1e+9;
 
@@ -225,9 +170,9 @@ void Application::start() {
                 renderInternal(dt);
                 auto cpuEnd = std::chrono::high_resolution_clock::now();
 
-                graphics()->endFrame();
+                Engine::graphics()->endFrame();
 
-                tempDebugInfo += graphics()->debugInfo();
+                tempDebugInfo += Engine::graphics()->debugInfo();
 
                 lastFrame = now;
 
@@ -294,7 +239,7 @@ void Application::start() {
         //SDL_Delay(1);
     }
 
-    m_graphics->getDevice()->waitIdle();
+    Engine::graphics()->getDevice()->waitIdle();
 
     cleanup();
 }
@@ -307,36 +252,8 @@ void Application::stop() {
     m_running = false;
 }
 
-GraphicsManager* Application::graphics() {
-    return m_graphics;
-}
-
 InputHandler* Application::input() {
     return m_inputHandler;
-}
-
-Scene* Application::scene() {
-    return m_scene;
-}
-
-SceneRenderer* Application::sceneRenderer() {
-    return m_sceneRenderer;
-}
-
-ImmediateRenderer* Application::immediateRenderer() {
-    return m_immediateRenderer;
-}
-
-DeferredGeometryRenderPass* Application::deferredGeometryPass() {
-    return m_deferredGeometryPass;
-}
-
-DeferredLightingRenderPass* Application::deferredLightingPass() {
-    return m_deferredLightingPass;
-}
-
-EventDispatcher* Application::eventDispatcher() {
-    return m_eventDispatcher;
 }
 
 glm::ivec2 Application::getWindowSize() const {

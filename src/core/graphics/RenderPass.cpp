@@ -1,7 +1,7 @@
 
 #include "core/graphics/RenderPass.h"
 #include "core/graphics/Image2D.h"
-#include "core/application/Application.h"
+#include "core/application/Engine.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/Framebuffer.h"
 
@@ -192,7 +192,7 @@ void RenderPass::begin(const vk::CommandBuffer& commandBuffer, const Framebuffer
 }
 
 void RenderPass::begin(const vk::CommandBuffer& commandBuffer, const vk::Framebuffer& framebuffer, const vk::SubpassContents& subpassContents) {
-    const auto& extent = Application::instance()->graphics()->getImageExtent();
+    const auto& extent = Engine::graphics()->getImageExtent();
     begin(commandBuffer, framebuffer, 0, 0, extent.width, extent.height, subpassContents);
 }
 

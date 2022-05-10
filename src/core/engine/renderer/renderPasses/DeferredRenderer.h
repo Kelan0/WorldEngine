@@ -39,6 +39,8 @@ public:
 
     bool init();
 
+    void render(double dt);
+
     void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
 
     std::shared_ptr<RenderPass> getRenderPass() const;

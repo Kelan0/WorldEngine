@@ -1,5 +1,6 @@
-#include "core/application/Application.h"
 #include "core/graphics/GraphicsPipeline.h"
+#include "core/application/Application.h"
+#include "core/application/Engine.h"
 #include "core/graphics/RenderPass.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Buffer.h"
@@ -169,8 +170,8 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
 
     vk::Viewport viewport = pipelineConfig.viewport;
     if (viewport.width < 1 || viewport.height < 1) {
-        viewport.width = (float)Application::instance()->graphics()->getResolution().x;
-        viewport.height = (float)Application::instance()->graphics()->getResolution().y;
+        viewport.width = (float)Engine::graphics()->getResolution().x;
+        viewport.height = (float)Engine::graphics()->getResolution().y;
     }
     if (viewport.maxDepth <= viewport.minDepth) {
         viewport.minDepth = 0.0F;

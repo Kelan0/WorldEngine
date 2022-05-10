@@ -7,7 +7,7 @@
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/ComputePipeline.h"
 #include "core/graphics/DescriptorSet.h"
-#include "core/application/Application.h"
+#include "core/application/Engine.h"
 #include "core/engine/scene/event/EventDispatcher.h"
 #include "core/engine/scene/event/Events.h"
 #include "core/util/Util.h"
@@ -368,7 +368,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
 
     bool success = false;
 
-    const vk::Device& device = **Application::instance()->graphics()->getDevice();
+    const vk::Device& device = **Engine::graphics()->getDevice();
 
     EquirectangularComputeUBO uniformBufferData;
 
@@ -379,7 +379,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
     uniformBufferData.sampleCount = glm::ivec2(8);
 
     BufferConfiguration tempBufferConfig;
-    tempBufferConfig.device = Application::instance()->graphics()->getDevice();
+    tempBufferConfig.device = Engine::graphics()->getDevice();
     tempBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 //    tempBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
     tempBufferConfig.usage = vk::BufferUsageFlagBits::eStorageTexelBuffer | vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferSrc;
@@ -408,7 +408,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
     }
 
     BufferViewConfiguration imageBufferViewConfig{};
-    imageBufferViewConfig.device = Application::instance()->graphics()->getDevice();
+    imageBufferViewConfig.device = Engine::graphics()->getDevice();
     imageBufferViewConfig.setBuffer(tempBuffer);
     imageBufferViewConfig.setFormat(dstImage->getFormat());
 
@@ -489,7 +489,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
         ImageUtil::transitionLayout(transferCommandBuffer, dstImage->getImage(), subresourceRange, ImageTransition::FromAny(), dstState);
     }
 
-    ImageUtil::endTransferCommands(**Application::instance()->graphics()->getQueue(QUEUE_TRANSFER_MAIN), true);
+    ImageUtil::endTransferCommands(**Engine::graphics()->getQueue(QUEUE_TRANSFER_MAIN), true);
 
     if (!success)
         printf("Failed to transfer buffer data to destination CubeMap image\n");
@@ -643,12 +643,12 @@ ComputePipeline* ImageCube::getEquirectangularComputePipeline() {
     if (s_computeEquirectangularPipeline == nullptr) {
 
         ComputePipelineConfiguration pipelineConfig;
-        pipelineConfig.device = Application::instance()->graphics()->getDevice();
+        pipelineConfig.device = Engine::graphics()->getDevice();
         pipelineConfig.computeShader = "res/shaders/compute/compute_equirectangular.glsl";
         pipelineConfig.addDescriptorSetLayout(getEquirectangularComputeDescriptorSet()->getLayout().get());
         s_computeEquirectangularPipeline = ComputePipeline::create(pipelineConfig);
 
-        Application::instance()->eventDispatcher()->connect(&ImageCube::onCleanupGraphics);
+        Engine::eventDispatcher()->connect(&ImageCube::onCleanupGraphics);
     }
 
     return s_computeEquirectangularPipeline;
@@ -657,15 +657,15 @@ ComputePipeline* ImageCube::getEquirectangularComputePipeline() {
 DescriptorSet* ImageCube::getEquirectangularComputeDescriptorSet() {
 
     if (s_computeEquirectangularDescriptorSet == nullptr) {
-        std::shared_ptr<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(Application::instance()->graphics()->getDevice())
-                .addUniformBuffer(0, vk::ShaderStageFlagBits::eCompute, sizeof(EquirectangularComputeUBO))
+        std::shared_ptr<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
+                .addUniformBuffer(0, vk::ShaderStageFlagBits::eCompute)
                 .addStorageTexelBuffer(1, vk::ShaderStageFlagBits::eCompute)
                 .addStorageTexelBuffer(2, vk::ShaderStageFlagBits::eCompute)
                 .build();
 
-        s_computeEquirectangularDescriptorSet = DescriptorSet::create(descriptorSetLayout, Application::instance()->graphics()->descriptorPool());
+        s_computeEquirectangularDescriptorSet = DescriptorSet::create(descriptorSetLayout, Engine::graphics()->descriptorPool());
 
-        Application::instance()->eventDispatcher()->connect(&ImageCube::onCleanupGraphics);
+        Engine::eventDispatcher()->connect(&ImageCube::onCleanupGraphics);
     }
 
     return s_computeEquirectangularDescriptorSet;

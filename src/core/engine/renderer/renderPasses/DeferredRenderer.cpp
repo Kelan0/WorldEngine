@@ -3,7 +3,7 @@
 #include "core/engine/renderer/EnvironmentMap.h"
 #include "core/engine/scene/event/EventDispatcher.h"
 #include "core/engine/geometry/MeshData.h"
-#include "core/application/Application.h"
+#include "core/application/Engine.h"
 #include "core/graphics/RenderPass.h"
 #include "core/graphics/Framebuffer.h"
 #include "core/graphics/GraphicsManager.h"
@@ -36,13 +36,13 @@ DeferredGeometryRenderPass::~DeferredGeometryRenderPass() {
         }
         delete m_resources[i]->framebuffer;
     }
-    Application::instance()->eventDispatcher()->disconnect(&DeferredGeometryRenderPass::recreateSwapchain, this);
+    Engine::eventDispatcher()->disconnect(&DeferredGeometryRenderPass::recreateSwapchain, this);
 }
 
 bool DeferredGeometryRenderPass::init() {
-    m_graphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Application::instance()->graphics()->getDevice()));
+    m_graphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice()));
 
-    std::shared_ptr<DescriptorPool> descriptorPool = Application::instance()->graphics()->descriptorPool();
+    std::shared_ptr<DescriptorPool> descriptorPool = Engine::graphics()->descriptorPool();
     DescriptorSetLayoutBuilder builder(descriptorPool->getDevice());
 
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
@@ -57,7 +57,7 @@ bool DeferredGeometryRenderPass::init() {
         return false;
     }
 
-    Application::instance()->eventDispatcher()->connect(&DeferredGeometryRenderPass::recreateSwapchain, this);
+    Engine::eventDispatcher()->connect(&DeferredGeometryRenderPass::recreateSwapchain, this);
     return true;
 }
 
@@ -89,7 +89,7 @@ vk::Format DeferredGeometryRenderPass::getAttachmentFormat(const uint32_t& attac
     switch (attachment) {
         case Attachment_AlbedoRGB_Roughness: return vk::Format::eR8G8B8A8Unorm;
         case Attachment_NormalXYZ_Metallic: return vk::Format::eR16G16B16A16Sfloat;
-        case Attachment_Depth: return Application::instance()->graphics()->getDepthFormat();
+        case Attachment_Depth: return Engine::graphics()->getDepthFormat();
         default:
             assert(false);
             return vk::Format::eUndefined;
@@ -111,7 +111,7 @@ void DeferredGeometryRenderPass::setResolution(const uint32_t& width, const uint
 }
 
 void DeferredGeometryRenderPass::recreateSwapchain(const RecreateSwapchainEvent& event) {
-    setResolution(Application::instance()->graphics()->getResolution());
+    setResolution(Engine::graphics()->getResolution());
     createGraphicsPipeline();
 }
 
@@ -125,13 +125,13 @@ bool DeferredGeometryRenderPass::createFramebuffer(RenderResources* resources) {
     vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1;
 
     Image2DConfiguration imageConfig;
-    imageConfig.device = Application::instance()->graphics()->getDevice();
+    imageConfig.device = Engine::graphics()->getDevice();
     imageConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
     imageConfig.sampleCount = sampleCount;
     imageConfig.setSize(m_resolution);
 
     ImageViewConfiguration imageViewConfig;
-    imageViewConfig.device = Application::instance()->graphics()->getDevice();
+    imageViewConfig.device = Engine::graphics()->getDevice();
 
     // Albedo image
     imageConfig.format = getAttachmentFormat(Attachment_AlbedoRGB_Roughness);
@@ -164,7 +164,7 @@ bool DeferredGeometryRenderPass::createFramebuffer(RenderResources* resources) {
 
     // Framebuffer
     FramebufferConfiguration framebufferConfig;
-    framebufferConfig.device = Application::instance()->graphics()->getDevice();
+    framebufferConfig.device = Engine::graphics()->getDevice();
     framebufferConfig.setSize(m_resolution);
     framebufferConfig.setRenderPass(m_renderPass.get());
     framebufferConfig.setAttachments(resources->imageViews);
@@ -177,7 +177,7 @@ bool DeferredGeometryRenderPass::createFramebuffer(RenderResources* resources) {
 
 bool DeferredGeometryRenderPass::createGraphicsPipeline() {
     GraphicsPipelineConfiguration pipelineConfig;
-    pipelineConfig.device = Application::instance()->graphics()->getDevice();
+    pipelineConfig.device = Engine::graphics()->getDevice();
     pipelineConfig.renderPass = m_renderPass;
     pipelineConfig.setViewport(m_resolution);
     pipelineConfig.vertexShader = "res/shaders/main.vert";
@@ -186,7 +186,7 @@ bool DeferredGeometryRenderPass::createGraphicsPipeline() {
     pipelineConfig.vertexInputAttributes = MeshUtils::getVertexAttributeDescriptions<Vertex>();
     pipelineConfig.setAttachmentBlendState(0, AttachmentBlendState(false, 0b1111));
     pipelineConfig.setAttachmentBlendState(1, AttachmentBlendState(false, 0b1111));
-    Application::instance()->sceneRenderer()->initPipelineDescriptorSetLayouts(pipelineConfig);
+    Engine::sceneRenderer()->initPipelineDescriptorSetLayouts(pipelineConfig);
     return m_graphicsPipeline->recreate(pipelineConfig);
 }
 
@@ -245,7 +245,7 @@ bool DeferredGeometryRenderPass::createRenderPass() {
     dependencies[1].setDependencyFlags(vk::DependencyFlagBits::eByRegion);
 
     RenderPassConfiguration renderPassConfig;
-    renderPassConfig.device = Application::instance()->graphics()->getDevice();
+    renderPassConfig.device = Engine::graphics()->getDevice();
     renderPassConfig.setAttachments(attachments);
     renderPassConfig.addSubpass(subpassConfiguration);
     renderPassConfig.setSubpassDependencies(dependencies);
@@ -280,16 +280,16 @@ DeferredLightingRenderPass::~DeferredLightingRenderPass() {
 
     delete environmentMap;
 
-    Application::instance()->eventDispatcher()->disconnect(&DeferredLightingRenderPass::recreateSwapchain, this);
+    Engine::eventDispatcher()->disconnect(&DeferredLightingRenderPass::recreateSwapchain, this);
 }
 
 bool DeferredLightingRenderPass::init() {
-    m_graphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Application::instance()->graphics()->getDevice()));
+    m_graphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice()));
 
-    std::shared_ptr<DescriptorPool> descriptorPool = Application::instance()->graphics()->descriptorPool();
+    std::shared_ptr<DescriptorPool> descriptorPool = Engine::graphics()->descriptorPool();
 
     m_uniformDescriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
-            .addUniformBuffer(UNIFORM_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment, sizeof(LightingPassUniformData))
+            .addUniformBuffer(UNIFORM_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(ALBEDO_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(NORMAL_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(DEPTH_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
@@ -303,7 +303,7 @@ bool DeferredLightingRenderPass::init() {
         m_resources.set(i, new RenderResources());
 
         BufferConfiguration uniformBufferConfig;
-        uniformBufferConfig.device = Application::instance()->graphics()->getDevice();
+        uniformBufferConfig.device = Engine::graphics()->getDevice();
         uniformBufferConfig.size = sizeof(LightingPassUniformData);
         uniformBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         uniformBufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer;
@@ -316,12 +316,12 @@ bool DeferredLightingRenderPass::init() {
                 .write();
     }
     ImageCubeConfiguration imageCubeConfig;
-    imageCubeConfig.device = Application::instance()->graphics()->getDevice();
+    imageCubeConfig.device = Engine::graphics()->getDevice();
     imageCubeConfig.format = vk::Format::eR32G32B32A32Sfloat;
     imageCubeConfig.usage = vk::ImageUsageFlagBits::eSampled;
     imageCubeConfig.generateMipmap = true;
     imageCubeConfig.mipLevels = UINT32_MAX;
-    imageCubeConfig.imageSource.setEquirectangularSource("res/environment_maps/blaubeuren_night_8k.hdr");
+    imageCubeConfig.imageSource.setEquirectangularSource("res/environment_maps/wide_street_02_8k.hdr");
     std::shared_ptr<ImageCube> imageCube = std::shared_ptr<ImageCube>(ImageCube::create(imageCubeConfig));
 
 
@@ -330,7 +330,7 @@ bool DeferredLightingRenderPass::init() {
     environmentMap->update();
 
     SamplerConfiguration samplerConfig;
-    samplerConfig.device = Application::instance()->graphics()->getDevice();
+    samplerConfig.device = Engine::graphics()->getDevice();
     samplerConfig.minFilter = vk::Filter::eNearest;
     samplerConfig.magFilter = vk::Filter::eNearest;
     samplerConfig.wrapU = vk::SamplerAddressMode::eMirroredRepeat;
@@ -340,20 +340,20 @@ bool DeferredLightingRenderPass::init() {
     m_attachmentSamplers[Attachment_NormalXYZ_Metallic] = Sampler::create(samplerConfig);
     m_attachmentSamplers[Attachment_Depth] = Sampler::create(samplerConfig);
 
-    Application::instance()->eventDispatcher()->connect(&DeferredLightingRenderPass::recreateSwapchain, this);
+    Engine::eventDispatcher()->connect(&DeferredLightingRenderPass::recreateSwapchain, this);
     return true;
 }
 
 void DeferredLightingRenderPass::renderScreen(double dt) {
 
-    const Entity& cameraEntity = Application::instance()->scene()->getMainCameraEntity();
+    const Entity& cameraEntity = Engine::scene()->getMainCameraEntity();
     m_renderCamera.setProjection(cameraEntity.getComponent<Camera>());
     m_renderCamera.setTransform(cameraEntity.getComponent<Transform>());
     m_renderCamera.update();
 
-    const vk::CommandBuffer& commandBuffer = Application::instance()->graphics()->getCurrentCommandBuffer();
-    const Framebuffer* framebuffer = Application::instance()->graphics()->getCurrentFramebuffer();
-    const auto& renderPass = Application::instance()->graphics()->renderPass();
+    const vk::CommandBuffer& commandBuffer = Engine::graphics()->getCurrentCommandBuffer();
+    const Framebuffer* framebuffer = Engine::graphics()->getCurrentFramebuffer();
+    const auto& renderPass = Engine::graphics()->renderPass();
     renderPass->begin(commandBuffer, framebuffer, vk::SubpassContents::eInline);
 
     m_graphicsPipeline->bind(commandBuffer);
@@ -405,8 +405,8 @@ GraphicsPipeline* DeferredLightingRenderPass::getGraphicsPipeline() const {
 
 void DeferredLightingRenderPass::recreateSwapchain(const RecreateSwapchainEvent& event) {
     GraphicsPipelineConfiguration pipelineConfig;
-    pipelineConfig.device = Application::instance()->graphics()->getDevice();
-    pipelineConfig.renderPass = Application::instance()->graphics()->renderPass();
+    pipelineConfig.device = Engine::graphics()->getDevice();
+    pipelineConfig.renderPass = Engine::graphics()->renderPass();
     pipelineConfig.setViewport(0, 0); // Default to full window resolution
     pipelineConfig.vertexShader = "res/shaders/screen/fullscreen_quad.vert";
     pipelineConfig.fragmentShader = "res/shaders/deferred/lighting.frag";

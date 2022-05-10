@@ -3,7 +3,7 @@
 #include "core/graphics/BufferView.h"
 #include "core/graphics/Texture.h"
 #include "core/graphics/ImageView.h"
-#include "core/application/Application.h"
+#include "core/application/Engine.h"
 #include "core/graphics/GraphicsManager.h"
 
 DescriptorSetLayout::Cache DescriptorSetLayout::s_descriptorSetLayoutCache;
@@ -560,21 +560,17 @@ DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(std::weak_ptr<vkr::Device
 }
 
 DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(vk::DescriptorSetLayoutCreateFlags flags):
-        m_device(Application::instance()->graphics()->getDevice()),
+        m_device(Engine::graphics()->getDevice()),
         m_flags(flags) {
 }
 
 DescriptorSetLayoutBuilder::~DescriptorSetLayoutBuilder() {
 }
 
-DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& sizeBytes, const bool& dynamic) {
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const bool& dynamic) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
 		printf("Unable to add DescriptorSetLayout UniformBlock binding %d - The binding is already added\n", binding);
-		assert(false);
-	}
-	if (sizeBytes % 4 != 0) {
-		printf("Unable to add DescriptorSetLayout UniformBlock binding %d - Uniform block size must be a multiple of 4 bytes\n", binding);
 		assert(false);
 	}
 #endif
@@ -588,14 +584,10 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBuffer(const u
     return *this;
 }
 
-DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& sizeBytes, const bool& dynamic) {
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const bool& dynamic) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
 		printf("Unable to add DescriptorSetLayout StorageBlock binding %d - The binding is already added\n", binding);
-		assert(false);
-	}
-	if (sizeBytes % 4 != 0) {
-		printf("Unable to add DescriptorSetLayout StorageBlock binding %d - Storage block size must be a multiple of 4 bytes\n", binding);
 		assert(false);
 	}
 #endif

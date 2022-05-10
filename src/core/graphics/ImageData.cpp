@@ -1,11 +1,10 @@
 #include "core/graphics/ImageData.h"
-#include "core/application/Application.h"
+#include "core/application/Engine.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/Buffer.h"
 #include "core/graphics/CommandPool.h"
 #include "core/graphics/ComputePipeline.h"
 #include "core/graphics/DescriptorSet.h"
-#include "core/graphics/BufferView.h"
 #include "core/util/Util.h"
 #include "core/engine/scene/event/EventDispatcher.h"
 #include "core/engine/scene/event/Events.h"
@@ -541,7 +540,7 @@ bool ImageData::ImageTransform::isNoOp() const {
 }
 
 void ImageData::ImageTransform::initComputeResources() {
-    Application::instance()->graphics()->commandPool()->allocateCommandBuffer("image_compute_buffer", { vk::CommandBufferLevel::ePrimary });
+    Engine::graphics()->commandPool()->allocateCommandBuffer("image_compute_buffer", { vk::CommandBufferLevel::ePrimary });
 }
 
 void ImageData::ImageTransform::destroyComputeResources() {
@@ -617,7 +616,7 @@ ComputePipeline* ImageData::Flip::getComputePipeline() {
     auto it = s_transformComputePipelines.find(key);
     if (it == s_transformComputePipelines.end()) {
         ComputePipelineConfiguration pipelineConfig{};
-        pipelineConfig.device = Application::instance()->graphics()->getDevice();
+        pipelineConfig.device = Engine::graphics()->getDevice();
         pipelineConfig.computeShader = "res/shaders/util/imageTransform/compute_flip.glsl";
         ComputePipeline* pipeline = ComputePipeline::create(pipelineConfig);
         s_transformComputePipelines.insert(std::make_pair(key, pipeline));
@@ -671,7 +670,7 @@ vk::Format ImageUtil::selectSupportedFormat(const vk::PhysicalDevice& physicalDe
 }
 
 bool ImageUtil::getImageFormatProperties(const vk::Format& format, const vk::ImageType& type, const vk::ImageTiling& tiling, const vk::ImageUsageFlags& usage, const vk::ImageCreateFlags& flags, vk::ImageFormatProperties* imageFormatProperties) {
-    const vk::PhysicalDevice& physicalDevice = Application::instance()->graphics()->getPhysicalDevice();
+    const vk::PhysicalDevice& physicalDevice = Engine::graphics()->getPhysicalDevice();
 
     vk::Result result;
     result = physicalDevice.getImageFormatProperties(format, type, tiling, usage, flags, imageFormatProperties);
@@ -748,7 +747,7 @@ bool ImageUtil::upload(const vk::Image& dstImage, void* data, const uint32_t& by
 
     bool success = ImageUtil::upload(commandBuffer, dstImage, data, bytesPerPixel, aspectMask, imageRegion, dstState, srcState);
 
-    ImageUtil::endTransferCommands(**Application::instance()->graphics()->getQueue(QUEUE_TRANSFER_MAIN), true);
+    ImageUtil::endTransferCommands(**Engine::graphics()->getQueue(QUEUE_TRANSFER_MAIN), true);
     return success;
 }
 
@@ -812,7 +811,7 @@ bool ImageUtil::transferBuffer(const vk::Image& dstImage, const vk::Buffer& srcB
 
     bool success = ImageUtil::transferBuffer(commandBuffer, dstImage, srcBuffer, imageCopy, dstState, srcState);
 
-    ImageUtil::endTransferCommands(**Application::instance()->graphics()->getQueue(QUEUE_TRANSFER_MAIN), true);
+    ImageUtil::endTransferCommands(**Engine::graphics()->getQueue(QUEUE_TRANSFER_MAIN), true);
     return success;
 }
 
@@ -837,7 +836,7 @@ bool ImageUtil::generateMipmap(const vk::Image& image, const vk::Format& format,
 
     bool success = ImageUtil::generateMipmap(commandBuffer, image, format, filter, aspectMask, baseLayer, layerCount, width, height, depth, mipLevels, dstState, srcState);
 
-    ImageUtil::endTransferCommands(**Application::instance()->graphics()->getQueue(QUEUE_GRAPHICS_TRANSFER_MAIN), true);
+    ImageUtil::endTransferCommands(**Engine::graphics()->getQueue(QUEUE_GRAPHICS_TRANSFER_MAIN), true);
     return success;
 }
 
@@ -918,7 +917,7 @@ uint32_t ImageUtil::getMaxMipLevels(const uint32_t& width, const uint32_t& heigh
 }
 
 bool ImageUtil::checkAllImageFormatFeatures(const vk::Format& format, const vk::ImageTiling& tiling, const vk::FormatFeatureFlags& formatFeatureFlags) {
-    const vk::PhysicalDevice& physicalDevice = Application::instance()->graphics()->getPhysicalDevice();
+    const vk::PhysicalDevice& physicalDevice = Engine::graphics()->getPhysicalDevice();
 
     vk::FormatProperties formatProperties{};
     physicalDevice.getFormatProperties(format, &formatProperties);
@@ -932,7 +931,7 @@ bool ImageUtil::checkAllImageFormatFeatures(const vk::Format& format, const vk::
 }
 
 bool ImageUtil::checkAnyImageFormatFeatures(const vk::Format& format, const vk::ImageTiling& tiling, const vk::FormatFeatureFlags& formatFeatureFlags) {
-    const vk::PhysicalDevice& physicalDevice = Application::instance()->graphics()->getPhysicalDevice();
+    const vk::PhysicalDevice& physicalDevice = Engine::graphics()->getPhysicalDevice();
 
     vk::FormatProperties formatProperties{};
     physicalDevice.getFormatProperties(format, &formatProperties);
@@ -963,28 +962,28 @@ void ImageUtil::endTransferCommands(const vk::Queue& queue, const bool& waitComp
     vk::SubmitInfo queueSumbitInfo;
     queueSumbitInfo.setCommandBufferCount(1);
     queueSumbitInfo.setPCommandBuffers(&transferCommandBuffer);
-    const vk::Queue& graphicsTransferQueue = **Application::instance()->graphics()->getQueue(QUEUE_GRAPHICS_TRANSFER_MAIN);
+    const vk::Queue& graphicsTransferQueue = **Engine::graphics()->getQueue(QUEUE_GRAPHICS_TRANSFER_MAIN);
     queue.submit(1, &queueSumbitInfo, VK_NULL_HANDLE);
     if (waitComplete)
         queue.waitIdle();
 }
 
 const vk::CommandBuffer& ImageUtil::getTransferCommandBuffer() {
-    if (!Application::instance()->graphics()->commandPool()->hasCommandBuffer("image_transfer_buffer"))
-        Application::instance()->graphics()->commandPool()->allocateCommandBuffer("image_transfer_buffer", { vk::CommandBufferLevel::ePrimary });
+    if (!Engine::graphics()->commandPool()->hasCommandBuffer("image_transfer_buffer"))
+        Engine::graphics()->commandPool()->allocateCommandBuffer("image_transfer_buffer", { vk::CommandBufferLevel::ePrimary });
 
-    return **Application::instance()->graphics()->commandPool()->getCommandBuffer("image_transfer_buffer");
+    return **Engine::graphics()->commandPool()->getCommandBuffer("image_transfer_buffer");
 }
 
 const vk::CommandBuffer& ImageUtil::getComputeCommandBuffer() {
-    if (!Application::instance()->graphics()->commandPool()->hasCommandBuffer("image_compute_buffer"))
-        Application::instance()->graphics()->commandPool()->allocateCommandBuffer("image_compute_buffer", { vk::CommandBufferLevel::ePrimary });
+    if (!Engine::graphics()->commandPool()->hasCommandBuffer("image_compute_buffer"))
+        Engine::graphics()->commandPool()->allocateCommandBuffer("image_compute_buffer", { vk::CommandBufferLevel::ePrimary });
 
-    return **Application::instance()->graphics()->commandPool()->getCommandBuffer("image_compute_buffer");
+    return **Engine::graphics()->commandPool()->getCommandBuffer("image_compute_buffer");
 }
 
 const vk::Queue& ImageUtil::getComputeQueue() {
-    return **Application::instance()->graphics()->getQueue(QUEUE_COMPUTE_MAIN);
+    return **Engine::graphics()->getQueue(QUEUE_COMPUTE_MAIN);
 }
 
 vk::DeviceSize ImageUtil::getImageSizeBytes(const ImageRegion& imageRegion, const uint32_t& bytesPerPixel) {
@@ -1020,7 +1019,7 @@ Buffer* ImageUtil::getImageStagingBuffer(const uint32_t& width, const uint32_t& 
     }
 
     if (g_imageStagingBuffer == nullptr) {
-        Application::instance()->eventDispatcher()->connect(&_ImageUtil_onCleanupGraphics);
+        Engine::eventDispatcher()->connect(&_ImageUtil_onCleanupGraphics);
     }
 
     if (g_imageStagingBuffer == nullptr || g_imageStagingBuffer->getSize() < requiredSize) {
@@ -1030,7 +1029,7 @@ Buffer* ImageUtil::getImageStagingBuffer(const uint32_t& width, const uint32_t& 
         printf("Resizing image staging buffer to %.3f %s\n", Util::getMemorySizeMagnitude(requiredSize, c1), c1);
 
         BufferConfiguration bufferConfig{};
-        bufferConfig.device = Application::instance()->graphics()->getDevice();
+        bufferConfig.device = Engine::graphics()->getDevice();
         bufferConfig.size = requiredSize;
         bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         bufferConfig.usage = vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;

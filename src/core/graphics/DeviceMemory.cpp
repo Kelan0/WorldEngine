@@ -2,7 +2,7 @@
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/Buffer.h"
 #include "core/graphics/Image2D.h"
-#include "core/application/Application.h"
+#include "core/application/Engine.h"
 #include "core/util/Util.h"
 
 constexpr vk::DeviceSize MAX_ADDR = std::numeric_limits<vk::DeviceSize>::max();
@@ -66,7 +66,7 @@ DeviceMemoryManager::~DeviceMemoryManager() {
 
 bool DeviceMemoryManager::selectMemoryType(uint32_t memoryTypeBits, vk::MemoryPropertyFlags memoryPropertyFlags, uint32_t& outMemoryType) {
 
-    const vk::PhysicalDeviceMemoryProperties& deviceMemProps = Application::instance()->graphics()->getDeviceMemoryProperties();
+    const vk::PhysicalDeviceMemoryProperties& deviceMemProps = Engine::graphics()->getDeviceMemoryProperties();
 
     for (uint32_t i = 0; i < deviceMemProps.memoryTypeCount; ++i) {
         if ((memoryTypeBits & (1 << i)) != 0 && (deviceMemProps.memoryTypes[i].propertyFlags & memoryPropertyFlags) == memoryPropertyFlags) {
@@ -586,9 +586,9 @@ DeviceMemoryHeap* DeviceMemoryBlock::getHeap() const {
 
 
 DeviceMemoryBlock* vmalloc(vk::MemoryRequirements requirements, vk::MemoryPropertyFlags memoryProperties) {
-    return Application::instance()->graphics()->memory().allocate(requirements, memoryProperties);
+    return Engine::graphics()->memory().allocate(requirements, memoryProperties);
 }
 
 void vfree(DeviceMemoryBlock* memory) {
-    return Application::instance()->graphics()->memory().free(memory);
+    return Engine::graphics()->memory().free(memory);
 }

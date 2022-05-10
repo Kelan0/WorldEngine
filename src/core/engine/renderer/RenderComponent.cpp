@@ -1,5 +1,5 @@
 #include "core/engine/renderer/RenderComponent.h"
-#include "core/application/Application.h"
+#include "core/application/Engine.h"
 #include "core/engine/renderer/SceneRenderer.h"
 #include "core/engine/renderer/Material.h"
 
@@ -21,16 +21,16 @@ RenderComponent::RenderComponent(const UpdateType& transformUpdateType,
 
 RenderComponent& RenderComponent::setMesh(const std::shared_ptr<Mesh>& mesh) {
     if (mesh.get() != m_mesh.get()) {
-        Application::instance()->sceneRenderer()->notifyMeshChanged(m_meshUpdateType);
+        Engine::sceneRenderer()->notifyMeshChanged(m_meshUpdateType);
         m_mesh = mesh;
     }
     return *this;
 }
 
 RenderComponent& RenderComponent::setMaterial(const std::shared_ptr<Material>& material) {
-    uint32_t materialIndex = Application::instance()->sceneRenderer()->registerMaterial(material.get());
+    uint32_t materialIndex = Engine::sceneRenderer()->registerMaterial(material.get());
     if (materialIndex != m_materialIndex) {
-        Application::instance()->sceneRenderer()->notifyMaterialChanged(m_entityIndex);
+        Engine::sceneRenderer()->notifyMaterialChanged(m_entityIndex);
         m_materialIndex = materialIndex;
         m_material = material;
     }

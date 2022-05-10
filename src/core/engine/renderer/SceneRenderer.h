@@ -19,12 +19,6 @@ class Image2D;
 
 struct GraphicsPipelineConfiguration;
 
-struct CameraInfoUBO {
-    glm::mat4 viewMatrix;
-    glm::mat4 projectionMatrix;
-    glm::mat4 viewProjectionMatrix;
-};
-
 struct ObjectDataUBO {
     glm::mat4 modelMatrix;
 };
@@ -73,6 +67,8 @@ public:
 
     bool init();
 
+    void preRender(double dt);
+
     void render(double dt);
 
     void render(double dt, RenderCamera* renderCamera);
@@ -93,11 +89,8 @@ public:
 
     void notifyMaterialChanged(const uint32_t& entityIndex);
 
-//    template<typename T>
-//    void setEntityUpdateType(const Entity& entity, const RenderComponent::UpdateType& updateType);
-
 private:
-    void recordRenderCommands(double dt, vk::CommandBuffer commandBuffer);
+    void recordRenderCommands(double dt, const vk::CommandBuffer& commandBuffer);
 
     void initMissingTextureMaterial();
 
@@ -125,7 +118,6 @@ private:
 
     void notifyEntityModified(const uint32_t& entityIndex);
 
-    void recreateSwapchain(const RecreateSwapchainEvent& event);
 private:
     Scene* m_scene;
     RenderCamera m_renderCamera;

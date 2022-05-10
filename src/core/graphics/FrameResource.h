@@ -4,7 +4,7 @@
 
 
 #include "core/core.h"
-#include "core/application/Application.h"
+#include "core/application/Engine.h"
 #include "core/graphics/GraphicsManager.h"
 
 template<typename T>
@@ -107,7 +107,7 @@ inline T* FrameResource<T>::get(const size_t& index) const {
 
 template<typename T>
 inline T* FrameResource<T>::get() const {
-    return ArrayType::at(Application::instance()->graphics()->getCurrentFrameIndex());
+    return ArrayType::at(Engine::graphics()->getCurrentFrameIndex());
 }
 
 template<typename T>
@@ -120,7 +120,7 @@ inline void FrameResource<T>::set(const size_t& index, T*&& resource) {
 
 template<typename T>
 inline void FrameResource<T>::set(T*&& resource) {
-    set(Application::instance()->graphics()->getCurrentFrameIndex(), std::move(resource));
+    set(Engine::graphics()->getCurrentFrameIndex(), std::move(resource));
 }
 
 template<typename T>

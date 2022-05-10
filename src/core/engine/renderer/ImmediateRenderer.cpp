@@ -1,5 +1,6 @@
 
 #include "core/engine/renderer/ImmediateRenderer.h"
+#include "core/application/Engine.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/util/Util.h"
 
@@ -84,14 +85,13 @@ ImmediateRenderer::~ImmediateRenderer() {
 
 bool ImmediateRenderer::init() {
 
-    std::shared_ptr<DescriptorPool> descriptorPool = Application::instance()->graphics()->descriptorPool();
+    std::shared_ptr<DescriptorPool> descriptorPool = Engine::graphics()->descriptorPool();
 
     DescriptorSetLayoutBuilder builder(descriptorPool->getDevice());
 
-    m_descriptorSetLayout = builder.addUniformBuffer(0, vk::ShaderStageFlagBits::eVertex, sizeof(UniformBufferData),
-                                                     true).build();
+    m_descriptorSetLayout = builder.addUniformBuffer(0, vk::ShaderStageFlagBits::eVertex, true).build();
 
-    Application::instance()->eventDispatcher()->connect(&ImmediateRenderer::recreateSwapchain, this);
+    Engine::eventDispatcher()->connect(&ImmediateRenderer::recreateSwapchain, this);
 
     return true;
 }
@@ -101,7 +101,7 @@ void ImmediateRenderer::render(double dt) {
 
     uploadBuffers();
 
-    const vk::CommandBuffer& commandBuffer = Application::instance()->graphics()->getCurrentCommandBuffer();
+    const vk::CommandBuffer& commandBuffer = Engine::graphics()->getCurrentCommandBuffer();
 
     const vk::DescriptorSet& descriptorSet = m_descriptorSet->getDescriptorSet();
 
@@ -468,7 +468,7 @@ void ImmediateRenderer::uploadBuffers() {
         PROFILE_REGION("Recreate vertex buffer");
 
         BufferConfiguration vertexBufferConfig;
-        vertexBufferConfig.device = Application::instance()->graphics()->getDevice();
+        vertexBufferConfig.device = Engine::graphics()->getDevice();
         vertexBufferConfig.size = glm::max(vertexBufferCapacity, sizeof(ColouredVertex) * 32);
         vertexBufferConfig.usage = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
 //        vertexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;// | vk::MemoryPropertyFlagBits::eHostVisible;
@@ -482,7 +482,7 @@ void ImmediateRenderer::uploadBuffers() {
         PROFILE_REGION("Recreate index buffer");
 
         BufferConfiguration indexBufferConfig;
-        indexBufferConfig.device = Application::instance()->graphics()->getDevice();
+        indexBufferConfig.device = Engine::graphics()->getDevice();
         indexBufferConfig.size = glm::max(indexBufferCapacity, sizeof(uint32_t) * 32);
         indexBufferConfig.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
 //        indexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;// | vk::MemoryPropertyFlagBits::eHostVisible;
@@ -496,12 +496,12 @@ void ImmediateRenderer::uploadBuffers() {
         PROFILE_REGION("Recreate uniform buffer");
 
         BufferConfiguration uniformBufferConfig;
-        uniformBufferConfig.device = Application::instance()->graphics()->getDevice();
+        uniformBufferConfig.device = Engine::graphics()->getDevice();
         uniformBufferConfig.size = glm::max(uniformBufferCapacity, sizeof(UniformBufferData) * 4);
         uniformBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         uniformBufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer;
 
-        std::shared_ptr<DescriptorPool> descriptorPool = Application::instance()->graphics()->descriptorPool();
+        std::shared_ptr<DescriptorPool> descriptorPool = Engine::graphics()->descriptorPool();
 
         m_uniformBuffer = Buffer::create(uniformBufferConfig);
         m_descriptorSet = DescriptorSet::create(m_descriptorSetLayout, descriptorPool);
@@ -559,8 +559,8 @@ GraphicsPipeline* ImmediateRenderer::getGraphicsPipeline(const RenderCommand& re
         PROFILE_REGION("Initialize pipeline");
 
         GraphicsPipelineConfiguration pipelineConfiguration;
-        pipelineConfiguration.device = Application::instance()->graphics()->getDevice();
-        pipelineConfiguration.renderPass = Application::instance()->graphics()->renderPass();
+        pipelineConfiguration.device = Engine::graphics()->getDevice();
+        pipelineConfiguration.renderPass = Engine::graphics()->renderPass();
         pipelineConfiguration.setViewport(0, 0); // Default to full window resolution
 
         pipelineConfiguration.primitiveTopology = primitiveTopology;

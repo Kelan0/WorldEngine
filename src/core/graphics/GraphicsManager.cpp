@@ -1,14 +1,13 @@
 #include "core/graphics/GraphicsManager.h"
-#include "core/graphics/GraphicsPipeline.h"
 #include "core/graphics/RenderPass.h"
 #include "core/graphics/CommandPool.h"
 #include "core/graphics/DeviceMemory.h"
-#include "core/graphics/Mesh.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/ImageView.h"
 #include "core/graphics/Image2D.h"
 #include "core/graphics/Buffer.h"
 #include "core/graphics/Framebuffer.h"
+#include "core/application/Engine.h"
 #include "core/application/Application.h"
 #include "core/engine/scene/event/EventDispatcher.h"
 #include "core/engine/scene/event/Events.h"
@@ -52,7 +51,7 @@ GraphicsManager::GraphicsManager() {
 GraphicsManager::~GraphicsManager() {
     printf("Uninitializing graphics engine\n");
 
-    Application::instance()->eventDispatcher()->trigger(ShutdownGraphicsEvent());
+    Engine::eventDispatcher()->trigger(ShutdownGraphicsEvent());
 
     //DescriptorSetLayout::clearCache();
     //Buffer::resetStagingBuffer();
@@ -758,7 +757,7 @@ bool GraphicsManager::recreateSwapchain() {
 
     m_swapchain.currentFrameIndex = 0;
 
-    Application::instance()->eventDispatcher()->trigger(RecreateSwapchainEvent());
+    Engine::eventDispatcher()->trigger(RecreateSwapchainEvent());
 
     return true;
 }

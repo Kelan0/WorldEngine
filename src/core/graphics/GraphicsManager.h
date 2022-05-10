@@ -72,7 +72,7 @@ struct SwapchainDetails {
 class GraphicsManager {
     NO_COPY(GraphicsManager)
 
-    friend class Application;
+    friend class Engine;
 
 private:
     GraphicsManager();

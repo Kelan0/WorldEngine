@@ -6,14 +6,7 @@
 #include <SDL.h>
 
 
-class GraphicsManager;
 class InputHandler;
-class Scene;
-class SceneRenderer;
-class ImmediateRenderer;
-class DeferredGeometryRenderPass;
-class DeferredLightingRenderPass;
-class EventDispatcher;
 
 class Application {
     NO_COPY(Application);
@@ -21,7 +14,7 @@ class Application {
 public:
     Application();
 
-    ~Application();
+    virtual ~Application();
 
     virtual void init() = 0;
 
@@ -38,21 +31,7 @@ public:
 
     void stop();
 
-    GraphicsManager* graphics();
-
     InputHandler* input();
-
-    Scene* scene();
-
-    SceneRenderer* sceneRenderer();
-
-    ImmediateRenderer* immediateRenderer();
-
-    DeferredGeometryRenderPass* deferredGeometryPass();
-
-    DeferredLightingRenderPass* deferredLightingPass();
-
-    EventDispatcher* eventDispatcher();
 
     glm::ivec2 getWindowSize() const;
 
@@ -78,14 +57,7 @@ private:
     static Application* s_instance;
 
     SDL_Window* m_windowHandle;
-    GraphicsManager* m_graphics;
     InputHandler* m_inputHandler;
-    Scene* m_scene;
-    SceneRenderer* m_sceneRenderer;
-    ImmediateRenderer* m_immediateRenderer;
-    DeferredGeometryRenderPass* m_deferredGeometryPass;
-    DeferredLightingRenderPass* m_deferredLightingPass;
-    EventDispatcher* m_eventDispatcher;
     std::string m_executionDirectory;
 
     bool m_running;

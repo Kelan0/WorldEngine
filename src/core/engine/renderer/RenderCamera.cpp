@@ -1,4 +1,5 @@
 #include "core/engine/renderer/RenderCamera.h"
+#include "core/graphics/Buffer.h"
 
 RenderCamera::RenderCamera() :
         m_transform(),
@@ -104,4 +105,13 @@ const glm::mat4& RenderCamera::getInverseProjectionMatrix() const {
 
 const glm::mat4& RenderCamera::getInverseViewProjectionMatrix() const {
     return m_inverseViewProjectionMatrix;
+}
+
+size_t RenderCamera::uploadCameraData(Buffer* buffer, const size_t& offset) const {
+    CameraInfoUBO cameraInfoUBO{};
+    cameraInfoUBO.viewMatrix = m_viewMatrix;
+    cameraInfoUBO.projectionMatrix = m_projectionMatrix;
+    cameraInfoUBO.viewProjectionMatrix = m_viewProjectionMatrix;
+    buffer->upload(offset, sizeof(CameraInfoUBO), &cameraInfoUBO);
+    return offset + sizeof(CameraInfoUBO);
 }

@@ -5,7 +5,7 @@
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/scene/Scene.h"
 #include "core/engine/scene/Transform.h"
-#include "core/application/Application.h"
+#include "core/application/Engine.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/GraphicsPipeline.h"
 #include "core/graphics/DescriptorSet.h"
@@ -78,11 +78,9 @@ SceneRenderer::~SceneRenderer() {
 }
 
 bool SceneRenderer::init() {
-//    m_graphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Application::instance()->graphics()->getDevice()));
-
     initMissingTextureMaterial();
 
-    std::shared_ptr<DescriptorPool> descriptorPool = Application::instance()->graphics()->descriptorPool();
+    std::shared_ptr<DescriptorPool> descriptorPool = Engine::graphics()->descriptorPool();
 
     DescriptorSetLayoutBuilder builder(descriptorPool->getDevice());
 
@@ -95,17 +93,16 @@ bool SceneRenderer::init() {
     initialImageLayouts.resize(maxTextures, vk::ImageLayout::eShaderReadOnlyOptimal);
 
     m_globalDescriptorSetLayout = builder
-            .addUniformBuffer(0, vk::ShaderStageFlagBits::eVertex, sizeof(CameraInfoUBO))
+            .addUniformBuffer(0, vk::ShaderStageFlagBits::eVertex)
             .build();
 
     m_objectDescriptorSetLayout = builder
-            .addStorageBuffer(0, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
-                              sizeof(ObjectDataUBO))
+            .addStorageBuffer(0, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
             .build();
 
     m_materialDescriptorSetLayout = builder
             .addCombinedImageSampler(0, vk::ShaderStageFlagBits::eFragment, maxTextures)
-            .addStorageBuffer(1, vk::ShaderStageFlagBits::eFragment, sizeof(GPUMaterial))
+            .addStorageBuffer(1, vk::ShaderStageFlagBits::eFragment)
             .build();
 
     for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
@@ -119,7 +116,7 @@ bool SceneRenderer::init() {
         m_resources[i]->uploadedMaterialBufferTextures = 0;
 
         BufferConfiguration cameraInfoBufferConfig;
-        cameraInfoBufferConfig.device = Application::instance()->graphics()->getDevice();
+        cameraInfoBufferConfig.device = Engine::graphics()->getDevice();
         cameraInfoBufferConfig.size = sizeof(CameraInfoUBO);
         cameraInfoBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         cameraInfoBufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer;
@@ -142,9 +139,22 @@ bool SceneRenderer::init() {
     m_needsSortEntities[RenderComponent::UpdateType_Dynamic] = true;
     m_needsSortEntities[RenderComponent::UpdateType_Always] = true;
 
-    Application::instance()->eventDispatcher()->connect(&SceneRenderer::recreateSwapchain, this);
-
     return true;
+}
+
+void SceneRenderer::preRender(double dt) {
+    PROFILE_SCOPE("SceneRenderer::preRender")
+    const auto& renderEntities = m_scene->registry()->group<RenderComponent, Transform>();
+    m_numRenderEntities = renderEntities.size();
+
+    mappedWorldTransformsBuffer(m_numRenderEntities);
+    mappedMaterialDataBuffer(m_numRenderEntities);
+
+    sortRenderableEntities();
+    findModifiedEntities();
+    updateMaterialsBuffer();
+    updateEntityWorldTransforms();
+    streamObjectData();
 }
 
 void SceneRenderer::render(double dt) {
@@ -159,7 +169,7 @@ void SceneRenderer::render(double dt) {
 
 void SceneRenderer::render(double dt, RenderCamera* renderCamera) {
     PROFILE_SCOPE("SceneRenderer::render")
-    const uint32_t currentFrameIndex = Application::instance()->graphics()->getCurrentFrameIndex();
+    const uint32_t currentFrameIndex = Engine::graphics()->getCurrentFrameIndex();
 
     CameraInfoUBO cameraInfo{};
     cameraInfo.viewMatrix = renderCamera->getViewMatrix();
@@ -167,20 +177,22 @@ void SceneRenderer::render(double dt, RenderCamera* renderCamera) {
     cameraInfo.viewProjectionMatrix = renderCamera->getViewProjectionMatrix();
     m_resources->cameraInfoBuffer->upload(0, sizeof(CameraInfoUBO), &cameraInfo);
 
-    const auto& renderEntities = m_scene->registry()->group<RenderComponent, Transform>();
-    m_numRenderEntities = renderEntities.size();
+    const vk::CommandBuffer& commandBuffer = Engine::graphics()->getCurrentCommandBuffer();
 
-    mappedWorldTransformsBuffer(m_numRenderEntities);
-    mappedMaterialDataBuffer(m_numRenderEntities);
+    PROFILE_REGION("Bind resources")
 
-    sortRenderableEntities();
-    findModifiedEntities();
-    updateMaterialsBuffer();
-    updateEntityWorldTransforms();
-    streamObjectData();
+    std::vector<vk::DescriptorSet> descriptorSets = {
+            m_resources->globalDescriptorSet->getDescriptorSet(),
+            m_resources->objectDescriptorSet->getDescriptorSet(),
+            m_resources->materialDescriptorSet->getDescriptorSet(),
+    };
 
+    std::vector<uint32_t> dynamicOffsets = {};
 
-    const vk::CommandBuffer& commandBuffer = Application::instance()->graphics()->getCurrentCommandBuffer();
+    GraphicsPipeline* graphicsPipeline = Engine::deferredGeometryPass()->getGraphicsPipeline();
+    graphicsPipeline->bind(commandBuffer);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
+
     recordRenderCommands(dt, commandBuffer);
 }
 
@@ -198,7 +210,7 @@ void SceneRenderer::initPipelineDescriptorSetLayouts(GraphicsPipelineConfigurati
     graphicsPipelineConfiguration.descriptorSetLayouts.emplace_back(m_materialDescriptorSetLayout->getDescriptorSetLayout());
 }
 
-void SceneRenderer::recordRenderCommands(double dt, vk::CommandBuffer commandBuffer) {
+void SceneRenderer::recordRenderCommands(double dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("SceneRenderer::recordRenderCommands")
 
     auto thread_exec = [this](size_t rangeStart, size_t rangeEnd) {
@@ -237,27 +249,6 @@ void SceneRenderer::recordRenderCommands(double dt, vk::CommandBuffer commandBuf
     auto futures = ThreadUtils::parallel_range(m_numRenderEntities, (size_t)1, (size_t)ThreadUtils::getThreadCount(), thread_exec);
     auto drawCommands = ThreadUtils::getResults(futures);
 
-    PROFILE_REGION("Bind resources")
-    GraphicsManager* graphics = Application::instance()->graphics();
-    const uint32_t currentFrameIndex = graphics->getCurrentFrameIndex();
-    const vk::Device& device = **graphics->getDevice();
-
-
-
-
-    std::vector<vk::DescriptorSet> descriptorSets = {
-            m_resources->globalDescriptorSet->getDescriptorSet(),
-            m_resources->objectDescriptorSet->getDescriptorSet(),
-            m_resources->materialDescriptorSet->getDescriptorSet(),
-    };
-
-    std::vector<uint32_t> dynamicOffsets = {};
-
-    const auto graphicsPipeline = Application::instance()->deferredGeometryPass()->getGraphicsPipeline();
-//    const auto graphicsPipeline = m_graphicsPipeline;
-    graphicsPipeline->bind(commandBuffer);
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
-
 
     PROFILE_REGION("Draw meshes")
     for (auto& commands : drawCommands)
@@ -282,7 +273,7 @@ void SceneRenderer::initMissingTextureMaterial() {
     ImageData imageData(pixelBytes, 2, 2, ImagePixelLayout::RGBA, ImagePixelFormat::UInt8);
 
     Image2DConfiguration missingTextureImageConfig;
-    missingTextureImageConfig.device = Application::instance()->graphics()->getDevice();
+    missingTextureImageConfig.device = Engine::graphics()->getDevice();
     missingTextureImageConfig.format = vk::Format::eR8G8B8A8Unorm;
     missingTextureImageConfig.imageData = &imageData;
     m_missingTextureImage = std::shared_ptr<Image2D>(Image2D::create(missingTextureImageConfig));
@@ -808,21 +799,6 @@ void SceneRenderer::notifyEntityModified(const uint32_t& entityIndex) {
         m_resources.get(i)->modifiedEntities.insert(entityIndex);
 }
 
-void SceneRenderer::recreateSwapchain(const RecreateSwapchainEvent& event) {
-//    printf("Recreating SceneRenderer pipeline\n");
-//    GraphicsPipelineConfiguration pipelineConfig;
-//    pipelineConfig.device = Application::instance()->graphics()->getDevice();
-//    pipelineConfig.renderPass = Application::instance()->graphics()->renderPass();
-//    pipelineConfig.setViewport(0, 0); // Default to full window resolution
-//
-//    pipelineConfig.vertexShader = "res/shaders/main.vert";
-//    pipelineConfig.fragmentShader = "res/shaders/main.frag";
-//    pipelineConfig.vertexInputBindings = MeshUtils::getVertexBindingDescriptions<Vertex>();
-//    pipelineConfig.vertexInputAttributes = MeshUtils::getVertexAttributeDescriptions<Vertex>();
-//    initPipelineDescriptorSetLayouts(pipelineConfig);
-//    m_graphicsPipeline->recreate(pipelineConfig);
-}
-
 void SceneRenderer::onRenderComponentAdded(const ComponentAddedEvent<RenderComponent>& event) {
     notifyMeshChanged(event.component->meshUpdateType());
 
@@ -868,7 +844,7 @@ ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
 
 
         BufferConfiguration worldTransformBufferConfig;
-        worldTransformBufferConfig.device = Application::instance()->graphics()->getDevice();
+        worldTransformBufferConfig.device = Engine::graphics()->getDevice();
         worldTransformBufferConfig.size = newBufferSize;
         worldTransformBufferConfig.memoryProperties =
                 vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
@@ -916,7 +892,7 @@ GPUMaterial* SceneRenderer::mappedMaterialDataBuffer(size_t maxObjects) {
 
 
         BufferConfiguration materialDataBufferConfig;
-        materialDataBufferConfig.device = Application::instance()->graphics()->getDevice();
+        materialDataBufferConfig.device = Engine::graphics()->getDevice();
         materialDataBufferConfig.size = newBufferSize;
         materialDataBufferConfig.memoryProperties =
                 vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
