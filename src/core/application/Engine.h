@@ -8,6 +8,7 @@ class SDL_Window;
 class GraphicsManager;
 class Scene;
 class SceneRenderer;
+class LightRenderer;
 class ImmediateRenderer;
 class DeferredGeometryRenderPass;
 class DeferredLightingRenderPass;
@@ -28,6 +29,8 @@ public:
 
     [[nodiscard]] SceneRenderer* getSceneRenderer() const;
 
+    [[nodiscard]] LightRenderer* getLightRenderer() const;
+
     [[nodiscard]] ImmediateRenderer* getImmediateRenderer() const;
 
     [[nodiscard]] DeferredGeometryRenderPass* getDeferredGeometryPass() const;
@@ -41,6 +44,8 @@ public:
     static Scene* scene();
 
     static SceneRenderer* sceneRenderer();
+
+    static LightRenderer* lightRenderer();
 
     static ImmediateRenderer* immediateRenderer();
 
@@ -57,8 +62,6 @@ private:
 
     void render(double dt);
 
-    void renderMainCamera(double dt);
-
     static void destroy();
 
 private:
@@ -67,6 +70,7 @@ private:
     GraphicsManager* m_graphics;
     Scene* m_scene;
     SceneRenderer* m_sceneRenderer;
+    LightRenderer* m_lightRenderer;
     ImmediateRenderer* m_immediateRenderer;
     DeferredGeometryRenderPass* m_deferredGeometryPass;
     DeferredLightingRenderPass* m_deferredLightingPass;

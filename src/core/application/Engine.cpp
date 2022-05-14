@@ -2,6 +2,7 @@
 #include "core/application/Engine.h"
 #include "core/engine/scene/Scene.h"
 #include "core/engine/renderer/SceneRenderer.h"
+#include "core/engine/renderer/renderPasses/LightRenderer.h"
 #include "core/engine/renderer/ImmediateRenderer.h"
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/scene/event/EventDispatcher.h"
@@ -18,6 +19,7 @@ Engine::Engine() {
     m_eventDispatcher = new EventDispatcher();
     m_scene = new Scene();
     m_sceneRenderer = new SceneRenderer();
+    m_lightRenderer = new LightRenderer();
     m_immediateRenderer = new ImmediateRenderer();
     m_deferredGeometryPass = new DeferredGeometryRenderPass();
     m_deferredLightingPass = new DeferredLightingRenderPass(m_deferredGeometryPass);
@@ -26,7 +28,9 @@ Engine::Engine() {
 }
 
 Engine::~Engine() {
+
     delete m_scene; // Scene is destroyed before SceneRenderer since destruction of components may interact with SceneRenderer. This might need to change.
+    delete m_lightRenderer;
     delete m_sceneRenderer;
     delete m_immediateRenderer;
     delete m_deferredGeometryPass;
@@ -47,6 +51,10 @@ Scene* Engine::getScene() const {
 
 SceneRenderer* Engine::getSceneRenderer() const {
     return m_sceneRenderer;
+}
+
+LightRenderer* Engine::getLightRenderer() const {
+    return m_lightRenderer;
 }
 
 ImmediateRenderer* Engine::getImmediateRenderer() const {
@@ -75,6 +83,10 @@ Scene* Engine::scene() {
 
 SceneRenderer* Engine::sceneRenderer() {
     return instance()->getSceneRenderer();
+}
+
+LightRenderer* Engine::lightRenderer() {
+    return instance()->getLightRenderer();
 }
 
 ImmediateRenderer* Engine::immediateRenderer() {
@@ -107,16 +119,17 @@ bool Engine::init(SDL_Window* windowHandle) {
         return false;
     }
 
-    PROFILE_REGION("Init EventDispatcher")
-
     PROFILE_REGION("Init Scene")
     m_scene->init();
     m_eventDispatcher->repeatAll(m_scene->getEventDispatcher());
 
-
     PROFILE_REGION("Init SceneRenderer")
     m_sceneRenderer->setScene(m_scene);
     if (!m_sceneRenderer->init())
+        return false;
+
+    PROFILE_REGION("Init LightRenderer")
+    if (!m_lightRenderer->init())
         return false;
 
     PROFILE_REGION("Init ImmediateRenderer")
@@ -144,6 +157,8 @@ void Engine::render(double dt) {
     m_sceneRenderer->preRender(dt);
 
     auto& commandBuffer = graphics()->getCurrentCommandBuffer();
+
+    m_lightRenderer->render(dt, commandBuffer, m_renderCamera);
 
     m_deferredGeometryPass->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredGeometryPass->render(dt, commandBuffer, m_renderCamera);

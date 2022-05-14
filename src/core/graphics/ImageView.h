@@ -26,12 +26,14 @@ struct ImageViewConfiguration {
     void setImage(const Image2D* image);
 
     void setImage(const ImageCube* image);
+
+    void setSwizzle(vk::ComponentSwizzle redSwizzle, vk::ComponentSwizzle greenSwizzle, vk::ComponentSwizzle blueSwizzle, vk::ComponentSwizzle alphaSwizzle);
 };
 
 class ImageView {
     NO_COPY(ImageView)
 private:
-    ImageView(std::weak_ptr<vkr::Device> device, const vk::ImageView& imageView, const vk::ImageViewType& type);
+    ImageView(std::weak_ptr<vkr::Device> device, const vk::ImageView& imageView, const vk::Image& image, const vk::ImageViewType& type);
 
 public:
     ~ImageView();
@@ -42,6 +44,8 @@ public:
 
     const vk::ImageView& getImageView() const;
 
+    const vk::Image& getImage() const;
+
     const vk::ImageViewType& getType() const;
 
     const GraphicsResource& getResourceId() const;
@@ -49,6 +53,7 @@ public:
 private:
     std::shared_ptr<vkr::Device> m_device;
     vk::ImageView m_imageView;
+    vk::Image m_image;
     vk::ImageViewType m_type;
     GraphicsResource m_resourceId;
 };

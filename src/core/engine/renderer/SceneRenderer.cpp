@@ -173,9 +173,6 @@ DescriptorSet* SceneRenderer::getMaterialDescriptorSet() const {
 }
 
 
-void SceneRenderer::initPipelineDescriptorSetLayouts(GraphicsPipelineConfiguration& graphicsPipelineConfiguration) const {
-}
-
 void SceneRenderer::recordRenderCommands(double dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("SceneRenderer::recordRenderCommands")
 
@@ -812,10 +809,11 @@ ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
         BufferConfiguration worldTransformBufferConfig;
         worldTransformBufferConfig.device = Engine::graphics()->getDevice();
         worldTransformBufferConfig.size = newBufferSize;
-        worldTransformBufferConfig.memoryProperties =
-                vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+        worldTransformBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         //vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         worldTransformBufferConfig.usage = vk::BufferUsageFlagBits::eStorageBuffer;// | vk::BufferUsageFlagBits::eTransferDst;
+
+        delete m_resources->worldTransformBuffer;
         m_resources->worldTransformBuffer = Buffer::create(worldTransformBufferConfig);
 
 
@@ -864,6 +862,8 @@ GPUMaterial* SceneRenderer::mappedMaterialDataBuffer(size_t maxObjects) {
                 vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         //vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         materialDataBufferConfig.usage = vk::BufferUsageFlagBits::eStorageBuffer;// | vk::BufferUsageFlagBits::eTransferDst;
+
+        delete m_resources->materialDataBuffer;
         m_resources->materialDataBuffer = Buffer::create(materialDataBufferConfig);
 
 

@@ -109,6 +109,19 @@ const glm::dvec3& Frustum::getCorner(const uint32_t& cornerIndex) const {
     return m_corners[cornerIndex];
 }
 
+std::array<glm::dvec3, Frustum::NumCorners> Frustum::getCornersNDC() {
+    std::array<glm::dvec3, Frustum::NumCorners> corners;
+    corners[Corner_Left_Top_Near] = glm::dvec3(-1, +1, -1);
+    corners[Corner_Right_Top_Near] = glm::dvec3(+1, +1, -1);
+    corners[Corner_Right_Bottom_Near] = glm::dvec3(+1, -1, -1);
+    corners[Corner_Left_Bottom_Near] = glm::dvec3(-1, -1, -1);
+    corners[Corner_Left_Top_Far] = glm::dvec3(-1, +1, +1);
+    corners[Corner_Right_Top_Far] = glm::dvec3(+1, +1, +1);
+    corners[Corner_Right_Bottom_Far] = glm::dvec3(+1, -1, +1);
+    corners[Corner_Left_Bottom_Far] = glm::dvec3(-1, -1, +1);
+    return corners;
+}
+
 
 void Frustum::drawLines() {
     auto* renderer = Engine::immediateRenderer();

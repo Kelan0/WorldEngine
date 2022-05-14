@@ -6,6 +6,7 @@
 
 #include "core/engine/scene/Transform.h"
 #include "core/engine/scene/Camera.h"
+//#include "core/engine/scene/bound/Frustum.h"
 #include "core/graphics/FrameResource.h"
 #include "core/graphics/DescriptorSet.h"
 
@@ -56,6 +57,8 @@ public:
     const glm::mat4& getInverseProjectionMatrix() const;
 
     const glm::mat4& getInverseViewProjectionMatrix() const;
+
+    void copyCameraData(CameraInfoUBO* dst) const;
 
     size_t uploadCameraData(Buffer* buffer, const size_t& offset) const;
 

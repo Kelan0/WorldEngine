@@ -14,31 +14,29 @@ std::unordered_map<std::string, ComputePipeline*> ImageData::ImageTransform::s_t
 
 Buffer* g_imageStagingBuffer = nullptr;
 
-ImageData::ImageData(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, bool stbiAllocated):
+ImageData::ImageData(uint8_t* data, const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const AllocationType& allocationType):
         m_data(data),
         m_width(width),
         m_height(height),
         m_pixelLayout(pixelLayout),
         m_pixelFormat(pixelFormat),
-        m_stbiAllocated(stbiAllocated),
-        m_externallyAllocated(false) {
+        m_allocationType(allocationType) {
 }
 
-ImageData::ImageData(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat) :
-        m_data(data),
-        m_width(width),
-        m_height(height),
-        m_pixelLayout(pixelLayout),
-        m_pixelFormat(pixelFormat),
-        m_stbiAllocated(false),
-        m_externallyAllocated(true) {
+//ImageData::ImageData(const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat):
+//        ImageData(nullptr, width, height, pixelLayout, pixelFormat, AllocationType_Internal) {
+//        size_t allocSize = (size_t)width * (size_t)height * (size_t)ImageData::getChannels(pixelLayout) * (size_t)ImageData::getChannelSize(pixelFormat);
+//        m_data = static_cast<uint8_t*>(malloc(allocSize));
+//}
+
+ImageData::ImageData(uint8_t* data, const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat):
+        ImageData(data, width, height, pixelLayout, pixelFormat, AllocationType_External) {
 }
 
 ImageData::~ImageData() {
-    if (m_stbiAllocated) {
+    if (m_allocationType == AllocationType_Stbi) {
         stbi_image_free(m_data);
-
-    } else if (!m_externallyAllocated) {
+    } else if (m_allocationType == AllocationType_Internal) {
         free(m_data);
     }
 }
@@ -114,7 +112,7 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
 
     printf("Loaded load image \"%s\"\n", filePath.c_str());
 
-    ImageData* image = new ImageData(data, width, height, layout, format, true);
+    ImageData* image = new ImageData(data, width, height, layout, format, AllocationType_Stbi);
 
     s_imageCache.insert(std::make_pair(filePath, image));
 
@@ -220,7 +218,7 @@ ImageData* ImageData::mutate(uint8_t* data, uint32_t width, uint32_t height, Ima
         }
     }
 
-    return new ImageData(mutatedPixels, width, height, dstLayout, dstFormat, false);
+    return new ImageData(mutatedPixels, width, height, dstLayout, dstFormat, AllocationType_Internal);
 }
 
 ImageData* ImageData::transform(const ImageData* imageData, const ImageTransform& transformation) {
@@ -490,6 +488,7 @@ bool ImageData::getPixelLayoutAndFormat(vk::Format format, ImagePixelLayout& out
         case vk::Format::eR16Uscaled:
         case vk::Format::eR16Unorm:
         case vk::Format::eR16Uint:
+        case vk::Format::eD16Unorm:
             outLayout = ImagePixelLayout::R;
             outFormat = ImagePixelFormat::UInt16;
             return true;
@@ -504,6 +503,8 @@ bool ImageData::getPixelLayoutAndFormat(vk::Format format, ImagePixelLayout& out
             outFormat = ImagePixelFormat::Float16;
             return true;
         case vk::Format::eR32Uint:
+        case vk::Format::eD24UnormS8Uint: // Is this correct?
+        case vk::Format::eD16UnormS8Uint:
             outLayout = ImagePixelLayout::R;
             outFormat = ImagePixelFormat::UInt32;
             return true;
@@ -511,6 +512,8 @@ bool ImageData::getPixelLayoutAndFormat(vk::Format format, ImagePixelLayout& out
             outLayout = ImagePixelLayout::R;
             outFormat = ImagePixelFormat::SInt32;
             return true;
+        case vk::Format::eD32Sfloat:
+//        case vk::Format::eD32SfloatS8Uint:
         case vk::Format::eR32Sfloat:
             outLayout = ImagePixelLayout::R;
             outFormat = ImagePixelFormat::Float32;
@@ -532,7 +535,7 @@ ImageData* ImageData::ImageTransform::apply(uint8_t* data, uint32_t width, uint3
     uint8_t* dstPixels = static_cast<uint8_t*>(malloc(height * width * pixelStride));
     memcpy(dstPixels, data, height * width * pixelStride);
 
-    return new ImageData(dstPixels, width, height, layout, format, false);
+    return new ImageData(dstPixels, width, height, layout, format, AllocationType_Internal);
 }
 
 bool ImageData::ImageTransform::isNoOp() const {
@@ -604,7 +607,7 @@ ImageData* ImageData::Flip::apply(uint8_t* data, uint32_t width, uint32_t height
         }
     }
 
-    return new ImageData(dstPixels, width, height, layout, format, false);
+    return new ImageData(dstPixels, width, height, layout, format, AllocationType_Internal);
 }
 
 bool ImageData::Flip::isNoOp() const {
@@ -676,10 +679,11 @@ bool ImageUtil::getImageFormatProperties(const vk::Format& format, const vk::Ima
     result = physicalDevice.getImageFormatProperties(format, type, tiling, usage, flags, imageFormatProperties);
 
     if (result != vk::Result::eSuccess) {
-        if (result == vk::Result::eErrorFormatNotSupported)
-            printf("Unable to get image format properties: requested image format %s is not supported by the physical device\n", vk::to_string(format).c_str());
-        else
+        if (result == vk::Result::eErrorFormatNotSupported) {
+            printf("Unable to get image format properties: requested image format %s is not supported by the physical device for usage %s\n", vk::to_string(format).c_str(), vk::to_string(usage).c_str());
+        } else {
             printf("Unable to get image format properties: \n", vk::to_string(result).c_str());
+        }
         return false;
     }
 

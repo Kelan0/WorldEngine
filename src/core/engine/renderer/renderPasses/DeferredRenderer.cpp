@@ -1,7 +1,8 @@
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/renderer/SceneRenderer.h"
+#include "LightRenderer.h"
+#include "core/engine/renderer/ShadowMap.h"
 #include "core/engine/renderer/EnvironmentMap.h"
-#include "core/engine/scene/event/EventDispatcher.h"
 #include "core/engine/geometry/MeshData.h"
 #include "core/application/Engine.h"
 #include "core/graphics/RenderPass.h"
@@ -18,6 +19,10 @@
 #define ALBEDO_TEXTURE_BINDING 1
 #define NORMAL_TEXTURE_BINDING 2
 #define DEPTH_TEXTURE_BINDING 3
+#define ENVIRONMENT_CUBEMAP_BINDING 4
+#define SPECULAR_REFLECTION_CUBEMAP_BINDING 5
+#define DIFFUSE_IRRADIANCE_CUBEMAP_BINDING 6
+#define BRDF_INTEGRATION_MAP_BINDING 7
 
 
 EnvironmentMap* environmentMap = nullptr;
@@ -228,7 +233,6 @@ bool DeferredGeometryRenderPass::createGraphicsPipeline() {
     pipelineConfig.addDescriptorSetLayout(m_globalDescriptorSetLayout->getDescriptorSetLayout());
     pipelineConfig.addDescriptorSetLayout(Engine::sceneRenderer()->getObjectDescriptorSetLayout()->getDescriptorSetLayout());
     pipelineConfig.addDescriptorSetLayout(Engine::sceneRenderer()->getMaterialDescriptorSetLayout()->getDescriptorSetLayout());
-    Engine::sceneRenderer()->initPipelineDescriptorSetLayouts(pipelineConfig);
     return m_graphicsPipeline->recreate(pipelineConfig);
 }
 
@@ -314,7 +318,7 @@ DeferredLightingRenderPass::DeferredLightingRenderPass(DeferredGeometryRenderPas
 
 DeferredLightingRenderPass::~DeferredLightingRenderPass() {
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
-        delete m_resources[i]->uniformDescriptorSet;
+        delete m_resources[i]->lightingDescriptorSet;
         delete m_resources[i]->uniformBuffer;
     }
     for (size_t i = 0; i < NumAttachments; ++i)
@@ -330,33 +334,39 @@ bool DeferredLightingRenderPass::init() {
 
     std::shared_ptr<DescriptorPool> descriptorPool = Engine::graphics()->descriptorPool();
 
-    m_uniformDescriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
+    m_lightingDescriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
             .addUniformBuffer(UNIFORM_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(ALBEDO_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(NORMAL_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(DEPTH_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
-            .addCombinedImageSampler(4, vk::ShaderStageFlagBits::eFragment)
-            .addCombinedImageSampler(5, vk::ShaderStageFlagBits::eFragment)
-            .addCombinedImageSampler(6, vk::ShaderStageFlagBits::eFragment)
-            .addCombinedImageSampler(7, vk::ShaderStageFlagBits::eFragment)
+            .addCombinedImageSampler(ENVIRONMENT_CUBEMAP_BINDING, vk::ShaderStageFlagBits::eFragment)
+            .addCombinedImageSampler(SPECULAR_REFLECTION_CUBEMAP_BINDING, vk::ShaderStageFlagBits::eFragment)
+            .addCombinedImageSampler(DIFFUSE_IRRADIANCE_CUBEMAP_BINDING, vk::ShaderStageFlagBits::eFragment)
+            .addCombinedImageSampler(BRDF_INTEGRATION_MAP_BINDING, vk::ShaderStageFlagBits::eFragment)
             .build();
 
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_resources.set(i, new RenderResources());
 
-        BufferConfiguration uniformBufferConfig;
-        uniformBufferConfig.device = Engine::graphics()->getDevice();
-        uniformBufferConfig.size = sizeof(LightingPassUniformData);
-        uniformBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-        uniformBufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer;
-        m_resources[i]->uniformBuffer = Buffer::create(uniformBufferConfig);
+        BufferConfiguration bufferConfig;
+        bufferConfig.device = Engine::graphics()->getDevice();
+        bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 
-        m_resources[i]->uniformDescriptorSet = DescriptorSet::create(m_uniformDescriptorSetLayout, descriptorPool);
+        bufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer;
+        bufferConfig.size = sizeof(LightingPassUniformData);
+        m_resources[i]->uniformBuffer = Buffer::create(bufferConfig);
 
-        DescriptorSetWriter(m_resources[i]->uniformDescriptorSet)
+        m_resources[i]->lightingDescriptorSet = DescriptorSet::create(m_lightingDescriptorSetLayout, descriptorPool);
+
+        std::vector<Texture*> defaultShadowMapTextures(Engine::lightRenderer()->getMaxVisibleShadowMaps(),
+                                                       Engine::lightRenderer()->getEmptyShadowMap().get());
+        std::vector<vk::ImageLayout> defaultShadowMapLayouts(Engine::lightRenderer()->getMaxVisibleShadowMaps(), vk::ImageLayout::eShaderReadOnlyOptimal);
+
+        DescriptorSetWriter(m_resources[i]->lightingDescriptorSet)
                 .writeBuffer(UNIFORM_BUFFER_BINDING, m_resources[i]->uniformBuffer, 0, m_resources[i]->uniformBuffer->getSize())
                 .write();
     }
+
     ImageCubeConfiguration imageCubeConfig;
     imageCubeConfig.device = Engine::graphics()->getDevice();
     imageCubeConfig.format = vk::Format::eR32G32B32A32Sfloat;
@@ -400,18 +410,19 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
 
     m_graphicsPipeline->bind(commandBuffer);
 
-    DescriptorSetWriter(m_resources->uniformDescriptorSet)
-            .writeImage(ALBEDO_TEXTURE_BINDING, m_attachmentSamplers[Attachment_AlbedoRGB_Roughness], m_geometryPass->getAlbedoImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
-            .writeImage(NORMAL_TEXTURE_BINDING, m_attachmentSamplers[Attachment_NormalXYZ_Metallic], m_geometryPass->getNormalImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
-            .writeImage(DEPTH_TEXTURE_BINDING, m_attachmentSamplers[Attachment_Depth], m_geometryPass->getDepthImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
-            .writeImage(4, environmentMap->getEnvironmentMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
-            .writeImage(5, environmentMap->getSpecularReflectionMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
-            .writeImage(6, environmentMap->getDiffuseIrradianceMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
-            .writeImage(7, EnvironmentMap::getBRDFIntegrationMap().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
-            .write();
+    DescriptorSetWriter(m_resources->lightingDescriptorSet)
+        .writeImage(ALBEDO_TEXTURE_BINDING, m_attachmentSamplers[Attachment_AlbedoRGB_Roughness], m_geometryPass->getAlbedoImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
+        .writeImage(NORMAL_TEXTURE_BINDING, m_attachmentSamplers[Attachment_NormalXYZ_Metallic], m_geometryPass->getNormalImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
+        .writeImage(DEPTH_TEXTURE_BINDING, m_attachmentSamplers[Attachment_Depth], m_geometryPass->getDepthImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
+        .writeImage(ENVIRONMENT_CUBEMAP_BINDING, environmentMap->getEnvironmentMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
+        .writeImage(SPECULAR_REFLECTION_CUBEMAP_BINDING, environmentMap->getSpecularReflectionMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
+        .writeImage(DIFFUSE_IRRADIANCE_CUBEMAP_BINDING, environmentMap->getDiffuseIrradianceMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
+        .writeImage(BRDF_INTEGRATION_MAP_BINDING, EnvironmentMap::getBRDFIntegrationMap().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
+        .write();
 
-    std::vector<vk::DescriptorSet> descriptorSets = {
-            m_resources->uniformDescriptorSet->getDescriptorSet()
+    vk::DescriptorSet descriptorSets[2] = {
+            m_resources->lightingDescriptorSet->getDescriptorSet(),
+            Engine::lightRenderer()->getLightingRenderPassDescriptorSet()->getDescriptorSet(),
     };
 
     glm::mat4x4 projectedRays = m_renderCamera.getInverseProjectionMatrix() * glm::mat4(
@@ -434,7 +445,7 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
     uniformData.cameraRays = worldCameraRays;
     m_resources->uniformBuffer->upload(0, sizeof(LightingPassUniformData), &uniformData);
 
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_graphicsPipeline->getPipelineLayout(), 0, descriptorSets, nullptr);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_graphicsPipeline->getPipelineLayout(), 0, 2, descriptorSets, 0, nullptr);
 
     commandBuffer.draw(3, 1, 0, 0);
 
@@ -454,6 +465,7 @@ void DeferredLightingRenderPass::recreateSwapchain(const RecreateSwapchainEvent&
     pipelineConfig.fragmentShader = "res/shaders/deferred/lighting.frag";
 //    pipelineConfig.addVertexInputBinding(0, sizeof(glm::vec2), vk::VertexInputRate::eVertex);
 //    pipelineConfig.addVertexInputAttribute(0, 0, vk::Format::eR32G32Sfloat, 0); // XY
-    pipelineConfig.addDescriptorSetLayout(m_uniformDescriptorSetLayout.get());
+    pipelineConfig.addDescriptorSetLayout(m_lightingDescriptorSetLayout.get());
+    pipelineConfig.addDescriptorSetLayout(Engine::lightRenderer()->getLightingRenderPassDescriptorSetLayout().get());
     m_graphicsPipeline->recreate(pipelineConfig);
 }

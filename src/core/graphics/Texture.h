@@ -40,7 +40,7 @@ public:
 
     std::shared_ptr<vkr::Device> getDevice() const;
 
-    const vk::Sampler& getSampler();
+    const vk::Sampler& getSampler() const;
 
 private:
     struct Key : public SamplerConfiguration {

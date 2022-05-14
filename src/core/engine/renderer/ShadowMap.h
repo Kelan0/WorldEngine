@@ -2,24 +2,53 @@
 #define WORLDENGINE_SHADOWMAP_H
 
 #include "core/core.h"
+#include "core/graphics/FrameResource.h"
+#include "core/engine/scene/event/Events.h"
 
 class Image2D;
 class Texture;
+class Framebuffer;
+class GraphicsPipeline;
+class RenderPass;
+class Buffer;
+class DescriptorSet;
+class DescriptorSetLayout;
+
+enum ShadowMapType {
+    ShadowMapType_Simple = 0,
+    ShadowMapType_Variance = 1,
+};
 
 class DirectionShadowMap {
+    friend class ShadowRenderer;
 public:
+    DirectionShadowMap(const uint32_t& width, const uint32_t& height);
+
     DirectionShadowMap(const glm::uvec2& resolution);
 
-    const glm::vec3& getDirection() const;
+    ~DirectionShadowMap();
 
-    const glm::uvec2& getResolution() const;
+    void update();
+
+    void begin(const vk::CommandBuffer& commandBuffer, const RenderPass* renderPass);
+
+    void setDirection(const glm::vec3 direction);
+
+    [[nodiscard]] const glm::vec3& getDirection() const;
+
+    [[nodiscard]] const glm::uvec2& getResolution() const;
+
+    [[nodiscard]] const ImageView* getShadowVarianceImageView() const;
 
 private:
     glm::vec3 m_direction;
     glm::uvec2 m_resolution;
-    std::shared_ptr<Image2D> m_shadowMapImage;
-    std::shared_ptr<Texture> m_shadowMapTexture;
-    bool m_needsRecompute;
+    ImageView* m_shadowDepthImageView;
+    ImageView* m_shadowVarianceImageView;
+    Image2D* m_shadowDepthImage;
+    Image2D* m_shadowVarianceImage;
+    Framebuffer* m_shadowMapFramebuffer;
+
 };
 
 

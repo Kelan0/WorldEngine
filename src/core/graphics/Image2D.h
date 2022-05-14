@@ -15,6 +15,7 @@ struct Image2DConfiguration {
     uint32_t width = 0;
     uint32_t height = 0;
     uint32_t mipLevels = 1;
+    bool mutableFormat = false;
     vk::Format format = vk::Format::eR8G8B8A8Srgb;
     vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1;
     vk::ImageUsageFlags usage = vk::ImageUsageFlagBits::eSampled;

@@ -33,6 +33,12 @@ struct AttachmentBlendState {
     void setAlphaBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op);
 };
 
+struct DepthBias {
+    float constant = 0.0F;
+    float slope = 0.0F;
+    float clamp = 0.0F;
+};
+
 struct GraphicsPipelineConfiguration {
     std::weak_ptr<vkr::Device> device;
     vk::Viewport viewport;
@@ -43,6 +49,8 @@ struct GraphicsPipelineConfiguration {
     std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
     vk::PolygonMode polygonMode = vk::PolygonMode::eFill;
     vk::CullModeFlags cullMode = vk::CullModeFlagBits::eBack;
+    DepthBias depthBias;
+    bool depthBiasEnable = false;
     vk::FrontFace frontFace = vk::FrontFace::eClockwise;
     vk::PrimitiveTopology primitiveTopology = vk::PrimitiveTopology::eTriangleList;
     std::vector<AttachmentBlendState> attachmentBlendStates;

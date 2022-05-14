@@ -95,7 +95,7 @@ private:
 
     struct RenderResources {
         Buffer* uniformBuffer;
-        DescriptorSet* uniformDescriptorSet;
+        DescriptorSet* lightingDescriptorSet;
     };
 
 public:
@@ -116,7 +116,7 @@ private:
     DeferredGeometryRenderPass* m_geometryPass;
     std::shared_ptr<GraphicsPipeline> m_graphicsPipeline;
     FrameResource<RenderResources> m_resources;
-    std::shared_ptr<DescriptorSetLayout> m_uniformDescriptorSetLayout;
+    std::shared_ptr<DescriptorSetLayout> m_lightingDescriptorSetLayout;
     std::array<Sampler*, NumAttachments> m_attachmentSamplers;
     RenderCamera m_renderCamera;
 };

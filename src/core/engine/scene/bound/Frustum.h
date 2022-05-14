@@ -54,6 +54,8 @@ public:
 
     const glm::dvec3& getCorner(const uint32_t& cornerIndex) const;
 
+    static std::array<glm::dvec3, NumCorners> getCornersNDC();
+
     void drawLines();
 
     void drawFill();

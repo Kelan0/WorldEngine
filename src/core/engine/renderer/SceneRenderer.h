@@ -83,8 +83,6 @@ public:
 
     DescriptorSet* getMaterialDescriptorSet() const;
 
-    void initPipelineDescriptorSetLayouts(GraphicsPipelineConfiguration& graphicsPipelineConfiguration) const;
-
     uint32_t registerTexture(Texture* texture);
 
     uint32_t registerMaterial(Material* material);

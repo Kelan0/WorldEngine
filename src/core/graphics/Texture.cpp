@@ -66,7 +66,7 @@ std::shared_ptr<vkr::Device> Sampler::getDevice() const {
     return m_device;
 }
 
-const vk::Sampler& Sampler::getSampler() {
+const vk::Sampler& Sampler::getSampler() const {
     return m_sampler;
 }
 

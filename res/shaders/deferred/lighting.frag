@@ -5,6 +5,48 @@
 #include "res/shaders/common/common.glsl"
 #include "res/shaders/common/pbr.glsl"
 
+
+struct SurfacePoint {
+    bool exists;
+    float depth;
+    vec3 viewPosition;
+    vec3 albedo;
+    float roughness;
+    vec3 viewNormal;
+    vec3 worldNormal;
+    float metallic;
+    float ambientOcclusion;
+    vec3 emission;
+    vec3 viewDirToCamera;
+    vec3 worldDirToCamera;
+    float distToCamera;
+    vec3 F0;
+};
+
+struct DirectionalShadowMap {
+    mat4 invViewProjectionMatrix;
+    uint shadowMapIndex;
+};
+
+struct PointLight {
+    vec3 position;
+    vec3 intensity;
+};
+
+struct LightInfo {
+    vec4 worldPosition;
+    vec4 worldDirection;
+    vec4 intensity;
+    uint shadowMapIndex;
+    uint type;
+    uint _pad[2];
+};
+
+struct ShadowMapInfo {
+    mat4 viewProjectionMatrix;
+};
+
+
 layout(location = 0) in vec2 fs_texture;
 
 layout(location = 0) out vec4 outColor;
@@ -30,27 +72,18 @@ layout(set = 0, binding = 6) uniform samplerCube diffuseIrradianceCubeMap;
 layout(set = 0, binding = 7) uniform sampler2D BRDFIntegrationMap;
 
 
-struct SurfacePoint {
-    bool exists;
-    float depth;
-    vec3 viewPosition;
-    vec3 albedo;
-    float roughness;
-    vec3 viewNormal;
-    vec3 worldNormal;
-    float metallic;
-    float ambientOcclusion;
-    vec3 emission;
-    vec3 viewDirToCamera;
-    vec3 worldDirToCamera;
-    float distToCamera;
-    vec3 F0;
+
+layout(set = 1, binding = 0) readonly buffer LightBuffer {
+    LightInfo lights[];
 };
 
-struct PointLight {
-    vec3 position;
-    vec3 intensity;
+layout(set = 1, binding = 1) readonly buffer ShadowMapBuffer {
+    ShadowMapInfo shadowMaps[];
 };
+
+layout(set = 1, binding = 2) uniform sampler2D shadowDepthTextures[];
+
+
 
 
 vec3 depthToViewSpacePosition(in float depth, in vec2 coord, in mat4 invProjectionMatrix) {
@@ -94,6 +127,50 @@ void loadSurface(in vec2 textureCoord, inout SurfacePoint surface) {
     surface.emission = vec3(0.0);
 
     surface.F0 = mix(vec3(0.04), surface.albedo, surface.metallic);
+}
+
+float linstep(in float vMin, in float vMax, in float v) {
+    return clamp((v - vMin) / (vMax - vMin), 0.0, 1.0);
+}
+
+float sampleShadowVSM(in sampler2D shadowMap, in vec2 coord, in float compareDepth) {
+    if (coord.x < 0.0 || coord.x > 1.0 || coord.y < 0.0 || coord.y > 1.0)
+        return 1.0;
+    
+    vec3 vsmTexel = texture(shadowMap, coord).xyz;
+
+    if (vsmTexel.z < compareDepth)
+        return 0.0;
+
+    float M1 = vsmTexel[0];
+    float M2 = vsmTexel[1];
+
+    float p = step(compareDepth, M1);
+    float variance = max(M2 - M1 * M1, 1e-6);
+    float diff = compareDepth - M1;
+    float pMax = variance / (variance + diff * diff);
+    pMax = linstep(0.5, 1.0, pMax);
+    return min(max(p, pMax), 1.0);
+}
+
+float calculateShadow(in SurfacePoint surface, in LightInfo lightInfo) {
+    float NdotL = max(0.0, dot(surface.worldNormal, -1.0 * vec3(lightInfo.worldDirection)));
+    if (NdotL <= 1e-5)
+        return 0.0;
+
+    mat4 lightViewProjectionMatrix = shadowMaps[0].viewProjectionMatrix;
+    vec4 lightProjectedPosition = lightViewProjectionMatrix * invViewMatrix * vec4(surface.viewPosition, 1.0); // This conversion to world-space will loose precision in large scenes
+    lightProjectedPosition.xyz /= lightProjectedPosition.w;
+    lightProjectedPosition.xy = lightProjectedPosition.xy * 0.5 + 0.5;
+
+    float currentDepth = lightProjectedPosition.z;
+
+    float shadow = sampleShadowVSM(shadowDepthTextures[lightInfo.shadowMapIndex], lightProjectedPosition.xy, currentDepth);
+    
+    // float closestDepth = texture(shadowDepthTextures[lightInfo.shadowMapIndex], lightProjectedPosition.xy).r;
+    // float shadow = currentDepth > closestDepth ? 0.0 : 1.0;
+
+    return shadow;// * NdotL;
 }
 
 vec3 calculateOutgoingRadiance(in SurfacePoint surface, in vec3 incomingRadiance, in vec3 viewDirToLight) {
@@ -178,17 +255,34 @@ void main() {
 
         vec3 ambient = (kD * diffuse + specular) * surface.ambientOcclusion; 
 
+        float shadow = calculateShadow(surface, lights[0]);
+        ambient *= (shadow * 0.92 + 0.08);
+
         finalColour = ambient + Lo;
     }
 
     // finalColour = texture(BRDFIntegrationMap, vec2(fs_texture.x, 1.0 - fs_texture.y)).rgb;
 
+
+
+
     finalColour = finalColour / (finalColour + vec3(1.0));
     finalColour = pow(finalColour, vec3(1.0 / 2.2));  
 
+    // if (lightProjectedPosition.x >= 0.0 && lightProjectedPosition.x <= 1.0 && lightProjectedPosition.y >= 0.0 && lightProjectedPosition.y <= 1.0 && lightProjectedPosition.z >= 0.0 && lightProjectedPosition.z < 0.99999) {
+    //     finalColour = vec3(lightProjectedPosition);
+    // }
+
+    // finalColour = vec3(calculateShadow(surface, lights[0]));
+    vec2 testPos = vec2(fs_texture.x, 1.0 - fs_texture.y);
+    if (testPos.x >= 0.05 && testPos.x < 0.25 && testPos.y >= 0.05 && testPos.y < 0.25) {
+        testPos = vec2(linstep(0.05, 0.25, testPos.x), linstep(0.05, 0.25, testPos.y));
+        finalColour = vec3(linstep(0.43, 0.56, texture(shadowDepthTextures[0], testPos).r));
+    }
     outColor = vec4(finalColour, 1.0);
 
 
+    
 
     // outColor = vec4(texture(diffuseIrradianceCubeMap, getViewRay(fs_texture, cameraRays)).rgb, 1.0);
 

@@ -176,7 +176,7 @@ RenderPass* RenderPass::create(const RenderPassConfiguration& renderPassConfigur
     return new RenderPass(renderPassConfiguration.device, renderPass, renderPassConfiguration);
 }
 
-void RenderPass::begin(const vk::CommandBuffer& commandBuffer, const vk::Framebuffer& framebuffer, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height, const vk::SubpassContents& subpassContents) {
+void RenderPass::begin(const vk::CommandBuffer& commandBuffer, const vk::Framebuffer& framebuffer, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height, const vk::SubpassContents& subpassContents) const {
     vk::RenderPassBeginInfo beginInfo;
     beginInfo.setRenderPass(m_renderPass);
     beginInfo.setFramebuffer(framebuffer);
@@ -187,16 +187,17 @@ void RenderPass::begin(const vk::CommandBuffer& commandBuffer, const vk::Framebu
     beginInfo.setClearValues(m_config.attachmentClearValues);
     commandBuffer.beginRenderPass(beginInfo, subpassContents);
 }
-void RenderPass::begin(const vk::CommandBuffer& commandBuffer, const Framebuffer* framebuffer, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height, const vk::SubpassContents& subpassContents) {
+
+void RenderPass::begin(const vk::CommandBuffer& commandBuffer, const Framebuffer* framebuffer, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height, const vk::SubpassContents& subpassContents) const {
     begin(commandBuffer, framebuffer->getFramebuffer(), x, y, width, height, subpassContents);
 }
 
-void RenderPass::begin(const vk::CommandBuffer& commandBuffer, const vk::Framebuffer& framebuffer, const vk::SubpassContents& subpassContents) {
+void RenderPass::begin(const vk::CommandBuffer& commandBuffer, const vk::Framebuffer& framebuffer, const vk::SubpassContents& subpassContents) const {
     const auto& extent = Engine::graphics()->getImageExtent();
     begin(commandBuffer, framebuffer, 0, 0, extent.width, extent.height, subpassContents);
 }
 
-void RenderPass::begin(const vk::CommandBuffer& commandBuffer, const Framebuffer* framebuffer, const vk::SubpassContents& subpassContents) {
+void RenderPass::begin(const vk::CommandBuffer& commandBuffer, const Framebuffer* framebuffer, const vk::SubpassContents& subpassContents) const {
     begin(commandBuffer, framebuffer->getFramebuffer(), 0, 0, framebuffer->getWidth(), framebuffer->getHeight(), subpassContents);
 }
 

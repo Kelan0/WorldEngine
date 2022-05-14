@@ -18,9 +18,17 @@ void ImageViewConfiguration::setImage(const ImageCube* image) {
     setImage(image->getImage(), vk::ImageViewType::eCube);
 }
 
-ImageView::ImageView(std::weak_ptr<vkr::Device> device, const vk::ImageView& imageView, const vk::ImageViewType& type):
+void ImageViewConfiguration::setSwizzle(vk::ComponentSwizzle redSwizzle, vk::ComponentSwizzle greenSwizzle, vk::ComponentSwizzle blueSwizzle, vk::ComponentSwizzle alphaSwizzle) {
+    this->redSwizzle = redSwizzle;
+    this->greenSwizzle = greenSwizzle;
+    this->blueSwizzle = blueSwizzle;
+    this->alphaSwizzle = alphaSwizzle;
+}
+
+ImageView::ImageView(std::weak_ptr<vkr::Device> device, const vk::ImageView& imageView, const vk::Image& image, const vk::ImageViewType& type):
         m_device(device),
         m_imageView(imageView),
+        m_image(image),
         m_type(type),
         m_resourceId(GraphicsManager::nextResourceId()) {
 }
@@ -62,7 +70,7 @@ ImageView* ImageView::create(const ImageViewConfiguration& imageViewConfiguratio
         return nullptr;
     }
 
-    return new ImageView(imageViewConfiguration.device, imageView, imageViewConfiguration.imageViewType);
+    return new ImageView(imageViewConfiguration.device, imageView, imageViewConfiguration.image, imageViewConfiguration.imageViewType);
 }
 
 std::shared_ptr<vkr::Device> ImageView::getDevice() const {
@@ -71,6 +79,10 @@ std::shared_ptr<vkr::Device> ImageView::getDevice() const {
 
 const vk::ImageView& ImageView::getImageView() const {
     return m_imageView;
+}
+
+const vk::Image& ImageView::getImage() const {
+    return m_image;
 }
 
 const vk::ImageViewType& ImageView::getType() const {

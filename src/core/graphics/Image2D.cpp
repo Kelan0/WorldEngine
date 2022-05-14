@@ -96,8 +96,12 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration) {
     uint32_t maxMipLevels = ImageUtil::getMaxMipLevels(width, height, 1);
     uint32_t mipLevels = glm::clamp(image2DConfiguration.mipLevels, 1u, maxMipLevels);
 
+    vk::ImageCreateFlags imageCreateFlags = {};
+    if (image2DConfiguration.mutableFormat)
+        imageCreateFlags |= vk::ImageCreateFlagBits::eMutableFormat;
+
     vk::ImageCreateInfo imageCreateInfo;
-    imageCreateInfo.setFlags({});
+    imageCreateInfo.setFlags(imageCreateFlags);
     imageCreateInfo.setImageType(vk::ImageType::e2D);
     imageCreateInfo.setFormat(image2DConfiguration.format);
     imageCreateInfo.extent.setWidth(width);

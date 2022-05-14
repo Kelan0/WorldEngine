@@ -107,11 +107,15 @@ const glm::mat4& RenderCamera::getInverseViewProjectionMatrix() const {
     return m_inverseViewProjectionMatrix;
 }
 
+void RenderCamera::copyCameraData(CameraInfoUBO* dst) const {
+    dst->viewMatrix = m_viewMatrix;
+    dst->projectionMatrix = m_projectionMatrix;
+    dst->viewProjectionMatrix = m_viewProjectionMatrix;
+}
+
 size_t RenderCamera::uploadCameraData(Buffer* buffer, const size_t& offset) const {
-    CameraInfoUBO cameraInfoUBO{};
-    cameraInfoUBO.viewMatrix = m_viewMatrix;
-    cameraInfoUBO.projectionMatrix = m_projectionMatrix;
-    cameraInfoUBO.viewProjectionMatrix = m_viewProjectionMatrix;
+    CameraInfoUBO cameraInfoUBO;
+    copyCameraData(&cameraInfoUBO);
     buffer->upload(offset, sizeof(CameraInfoUBO), &cameraInfoUBO);
     return offset + sizeof(CameraInfoUBO);
 }

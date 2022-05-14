@@ -32,6 +32,11 @@ class Buffer;
 class ImageData {
     //NO_COPY(ImageData)
 public:
+    enum AllocationType {
+        AllocationType_External = 0,
+        AllocationType_Internal = 1,
+        AllocationType_Stbi = 2,
+    };
 
     struct ImageTransform {
         static std::unordered_map<std::string, ComputePipeline*> s_transformComputePipelines;
@@ -64,10 +69,12 @@ public:
     };
 
 private:
-    ImageData(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, bool stbiAllocated);
+    ImageData(uint8_t* data, const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const AllocationType& allocationType);
 
 public:
-    ImageData(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat);
+//    ImageData(const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat);
+
+    ImageData(uint8_t* data, const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat);
 
     ~ImageData();
 
@@ -107,8 +114,7 @@ private:
     uint32_t m_height;
     ImagePixelLayout m_pixelLayout;
     ImagePixelFormat m_pixelFormat;
-    bool m_stbiAllocated;
-    bool m_externallyAllocated;
+    AllocationType m_allocationType;
 
     static std::unordered_map<std::string, ImageData*> s_imageCache;
 };

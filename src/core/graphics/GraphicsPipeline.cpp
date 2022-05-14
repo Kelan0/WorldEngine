@@ -204,10 +204,10 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
         return false;
     }
 
-    if (!pipelineConfig.fragmentShader.has_value()) {
-        printf("Fragment shader is required by a graphics pipeline, but was not supplied\n");
-        return false;
-    }
+//    if (!pipelineConfig.fragmentShader.has_value()) {
+//        printf("Fragment shader is required by a graphics pipeline, but was not supplied\n");
+//        return false;
+//    }
 
     if (pipelineConfig.renderPass.expired() || pipelineConfig.renderPass.lock() == nullptr) {
         printf("Unable to create graphics pipeline with NULL RenderPass\n");
@@ -222,32 +222,37 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
             device.destroyShaderModule(shaderModule);
     };
 
-    vk::ShaderModule& vertexShaderModule = allShaderModules.emplace_back(VK_NULL_HANDLE);
-    if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_VertexShader, device, pipelineConfig.vertexShader.value(), &vertexShaderModule)) {
-        cleanupShaderModules();
-        return false;
-    }
-    vk::ShaderModule& fragmentShaderModule = allShaderModules.emplace_back(VK_NULL_HANDLE);
-    if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_FragmentShader, device, pipelineConfig.fragmentShader.value(), &fragmentShaderModule)) {
-        cleanupShaderModules();
-        return false;
-    }
+
 
     m_renderPass = std::shared_ptr<RenderPass>(pipelineConfig.renderPass);
 
     std::vector<vk::PipelineShaderStageCreateInfo> pipelineShaderStages;
 
-    vk::PipelineShaderStageCreateInfo& vertexShaderStageCreateInfo = pipelineShaderStages.emplace_back();
-    vertexShaderStageCreateInfo.setStage(vk::ShaderStageFlagBits::eVertex);
-    vertexShaderStageCreateInfo.setModule(vertexShaderModule);
-    vertexShaderStageCreateInfo.setPName("main");
-    vertexShaderStageCreateInfo.setPSpecializationInfo(NULL); // TODO
+    if (pipelineConfig.vertexShader.has_value()) {
+        vk::ShaderModule &vertexShaderModule = allShaderModules.emplace_back(VK_NULL_HANDLE);
+        if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_VertexShader, device, pipelineConfig.vertexShader.value(), &vertexShaderModule)) {
+            cleanupShaderModules();
+            return false;
+        }
+        vk::PipelineShaderStageCreateInfo &vertexShaderStageCreateInfo = pipelineShaderStages.emplace_back();
+        vertexShaderStageCreateInfo.setStage(vk::ShaderStageFlagBits::eVertex);
+        vertexShaderStageCreateInfo.setModule(vertexShaderModule);
+        vertexShaderStageCreateInfo.setPName("main");
+        vertexShaderStageCreateInfo.setPSpecializationInfo(NULL); // TODO
+    }
 
-    vk::PipelineShaderStageCreateInfo& fragmentShaderStageCreateInfo = pipelineShaderStages.emplace_back();
-    fragmentShaderStageCreateInfo.setStage(vk::ShaderStageFlagBits::eFragment);
-    fragmentShaderStageCreateInfo.setModule(fragmentShaderModule);
-    fragmentShaderStageCreateInfo.setPName("main");
-    fragmentShaderStageCreateInfo.setPSpecializationInfo(NULL); // TODO
+    if (pipelineConfig.fragmentShader.has_value()) {
+        vk::ShaderModule &fragmentShaderModule = allShaderModules.emplace_back(VK_NULL_HANDLE);
+        if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_FragmentShader, device, pipelineConfig.fragmentShader.value(), &fragmentShaderModule)) {
+            cleanupShaderModules();
+            return false;
+        }
+        vk::PipelineShaderStageCreateInfo &fragmentShaderStageCreateInfo = pipelineShaderStages.emplace_back();
+        fragmentShaderStageCreateInfo.setStage(vk::ShaderStageFlagBits::eFragment);
+        fragmentShaderStageCreateInfo.setModule(fragmentShaderModule);
+        fragmentShaderStageCreateInfo.setPName("main");
+        fragmentShaderStageCreateInfo.setPSpecializationInfo(NULL); // TODO
+    }
 
     vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo;
     vertexInputStateCreateInfo.setVertexBindingDescriptions(pipelineConfig.vertexInputBindings);
@@ -269,10 +274,10 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     rasterizationStateCreateInfo.setPolygonMode(pipelineConfig.polygonMode);
     rasterizationStateCreateInfo.setCullMode(pipelineConfig.cullMode);
     rasterizationStateCreateInfo.setFrontFace(frontFace);
-    rasterizationStateCreateInfo.setDepthBiasEnable(false);
-    rasterizationStateCreateInfo.setDepthBiasConstantFactor(0.0F);
-    rasterizationStateCreateInfo.setDepthBiasClamp(0.0F);
-    rasterizationStateCreateInfo.setDepthBiasSlopeFactor(0.0F);
+    rasterizationStateCreateInfo.setDepthBiasEnable(pipelineConfig.depthBiasEnable);
+    rasterizationStateCreateInfo.setDepthBiasConstantFactor(pipelineConfig.depthBias.constant);
+    rasterizationStateCreateInfo.setDepthBiasClamp(pipelineConfig.depthBias.clamp);
+    rasterizationStateCreateInfo.setDepthBiasSlopeFactor(pipelineConfig.depthBias.slope);
     rasterizationStateCreateInfo.setLineWidth(1.0F);
 
     vk::PipelineRasterizationLineStateCreateInfoEXT lineRasterizationLineStateCreateInfo;

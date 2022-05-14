@@ -325,7 +325,7 @@ DescriptorSetWriter::~DescriptorSetWriter() {
 
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeBuffer(uint32_t binding, const vk::DescriptorBufferInfo& bufferInfo) {
+DescriptorSetWriter& DescriptorSetWriter::writeBuffer(const uint32_t& binding, const vk::DescriptorBufferInfo& bufferInfo) {
     int bindingIndex = m_descriptorSet->getLayout()->findBindingIndex(binding);
     assert(bindingIndex >= 0);
 
@@ -347,7 +347,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeBuffer(uint32_t binding, const vk
     return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeBuffer(uint32_t binding, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range) {
+DescriptorSetWriter& DescriptorSetWriter::writeBuffer(const uint32_t& binding, const vk::Buffer& buffer, const vk::DeviceSize& offset, const vk::DeviceSize& range) {
     vk::DescriptorBufferInfo bufferInfo;
     bufferInfo.setBuffer(buffer);
     bufferInfo.setOffset(offset);
@@ -355,7 +355,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeBuffer(uint32_t binding, vk::Buff
     return writeBuffer(binding, bufferInfo);
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeBuffer(uint32_t binding, Buffer* buffer, vk::DeviceSize offset, vk::DeviceSize range) {
+DescriptorSetWriter& DescriptorSetWriter::writeBuffer(const uint32_t& binding, const Buffer* buffer, const vk::DeviceSize& offset, const vk::DeviceSize& range) {
     vk::DescriptorBufferInfo bufferInfo;
     bufferInfo.setBuffer(buffer->getBuffer());
     bufferInfo.setOffset(offset);
@@ -363,7 +363,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeBuffer(uint32_t binding, Buffer* 
     return writeBuffer(binding, bufferInfo);
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeTexelBufferView(uint32_t binding, const vk::BufferView& bufferView) {
+DescriptorSetWriter& DescriptorSetWriter::writeTexelBufferView(const uint32_t& binding, const vk::BufferView& bufferView) {
     int bindingIndex = m_descriptorSet->getLayout()->findBindingIndex(binding);
     assert(bindingIndex >= 0);
 
@@ -385,11 +385,11 @@ DescriptorSetWriter& DescriptorSetWriter::writeTexelBufferView(uint32_t binding,
     return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeTexelBufferView(uint32_t binding, const BufferView* bufferView) {
+DescriptorSetWriter& DescriptorSetWriter::writeTexelBufferView(const uint32_t& binding, const BufferView* bufferView) {
     return writeTexelBufferView(binding, bufferView->getBufferView());
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, const vk::DescriptorImageInfo* imageInfos, uint32_t arrayCount, uint32_t arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const vk::DescriptorImageInfo* imageInfos, const uint32_t& arrayCount, const uint32_t& arrayIndex) {
     int bindingIndex = m_descriptorSet->getLayout()->findBindingIndex(binding);
     assert(bindingIndex >= 0);
 
@@ -417,11 +417,11 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, const vk:
     return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, const vk::DescriptorImageInfo& imageInfo, uint32_t arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const vk::DescriptorImageInfo& imageInfo, const uint32_t& arrayIndex) {
     return writeImage(binding, &imageInfo, 1, arrayIndex);
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, vk::Sampler* samplers, vk::ImageView* imageViews, vk::ImageLayout* imageLayouts, uint32_t arrayCount, uint32_t arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const vk::Sampler* samplers, const vk::ImageView* imageViews, const vk::ImageLayout* imageLayouts, const uint32_t& arrayCount, const uint32_t& arrayIndex) {
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
         imageInfos[i].setSampler(samplers[i]);
@@ -433,7 +433,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, vk::Sampl
     return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, vk::Sampler sampler, vk::ImageView imageView, vk::ImageLayout imageLayout, uint32_t arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const vk::Sampler& sampler, const vk::ImageView& imageView, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex) {
     vk::DescriptorImageInfo imageInfo;
     imageInfo.setSampler(sampler);
     imageInfo.setImageView(imageView);
@@ -441,7 +441,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, vk::Sampl
     return writeImage(binding, &imageInfo, 1, arrayIndex);
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Sampler** samplers, ImageView** imageViews, vk::ImageLayout* imageLayouts, uint32_t arrayCount, uint32_t arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* const* samplers, const ImageView* const* imageViews, const vk::ImageLayout* imageLayouts, const uint32_t& arrayCount, const uint32_t& arrayIndex) {
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
         imageInfos[i].setSampler(samplers[i]->getSampler());
@@ -453,11 +453,11 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Sampler**
     return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Sampler* samplers, ImageView* imageViews, vk::ImageLayout imageLayouts, uint32_t arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* samplers, const ImageView* imageViews, const vk::ImageLayout& imageLayouts, const uint32_t& arrayIndex) {
     return writeImage(binding, &samplers, &imageViews, &imageLayouts, 1, arrayIndex);
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Texture** textures, vk::ImageLayout* imageLayouts, uint32_t arrayCount, uint32_t arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Texture* const* textures, const vk::ImageLayout* imageLayouts, const uint32_t& arrayCount, const uint32_t& arrayIndex) {
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
         imageInfos[i].setSampler(textures[i]->getSampler()->getSampler());
@@ -469,7 +469,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Texture**
     return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, Texture* texture, vk::ImageLayout imageLayout, uint32_t arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Texture* texture, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex) {
     return writeImage(binding, &texture, &imageLayout, 1, arrayIndex);
 }
 
