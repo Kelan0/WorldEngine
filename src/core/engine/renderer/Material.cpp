@@ -31,6 +31,36 @@ void MaterialConfiguration::setAlbedoMap(const ImageViewConfiguration& imageView
     setAlbedoMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, samplerConfiguration)));
 }
 
+void MaterialConfiguration::setEmission(const glm::uvec3& emission) {
+    this->emissionMap.reset();
+    this->emission = glm::u16vec3(glm::clamp(emission, 0u, 65535u));
+}
+
+void MaterialConfiguration::setEmission(const glm::vec3& emission) {
+    setEmission(glm::uvec3(emission * 255.0F));
+}
+
+void MaterialConfiguration::setEmissionMap(std::weak_ptr<Texture> emissionMap) {
+    this->emissionMap = emissionMap.lock();
+    this->emission = glm::vec3(0.0F, 0.0F, 0.0F);
+}
+
+void MaterialConfiguration::setEmissionMap(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler) {
+    setEmissionMap(std::shared_ptr<Texture>(Texture::create(image, sampler)));
+}
+
+void MaterialConfiguration::setEmissionMap(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration) {
+    setEmissionMap(std::shared_ptr<Texture>(Texture::create(image, samplerConfiguration)));
+}
+
+void MaterialConfiguration::setEmissionMap(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler) {
+    setEmissionMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, sampler)));
+}
+
+void MaterialConfiguration::setEmissionMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration) {
+    setEmissionMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, samplerConfiguration)));
+}
+
 void MaterialConfiguration::setRoughness(const uint32_t& roughness) {
     this->roughnessMap.reset();
     this->roughness = uint8_t(glm::clamp(roughness, 0u, 255u));
@@ -130,12 +160,18 @@ Material* Material::create(const MaterialConfiguration& materialConfiguration) {
     material->m_roughness = materialConfiguration.roughness;
     material->m_metallicMap = materialConfiguration.metallicMap;
     material->m_metallic = materialConfiguration.metallic;
+    material->m_emissionMap = materialConfiguration.emissionMap;
+    material->m_emission = materialConfiguration.emission;
     material->m_normalMap = materialConfiguration.normalMap;
     return material;
 }
 
 std::shared_ptr<Texture> Material::getAlbedoMap() const {
     return m_albedoMap;
+}
+
+std::shared_ptr<Texture> Material::getEmissionMap() const {
+    return m_emissionMap;
 }
 
 std::shared_ptr<Texture> Material::getRoughnessMap() const {
@@ -154,6 +190,10 @@ const glm::u8vec3& Material::getAlbedo() const {
     return m_albedo;
 }
 
+const glm::u16vec3& Material::getEmission() const {
+    return m_emission;
+}
+
 const glm::uint8_t& Material::getRoughness() const {
     return m_roughness;
 }
@@ -164,6 +204,10 @@ const glm::uint8_t& Material::getMetallic() const {
 
 bool Material::hasAlbedoMap() const {
     return m_albedoMap != nullptr;
+}
+
+bool Material::hasEmissionMap() const {
+    return m_emissionMap != nullptr;
 }
 
 bool Material::hasRoughnessMap() const {

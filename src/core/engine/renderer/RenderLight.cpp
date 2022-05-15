@@ -1,5 +1,5 @@
 
-#include "core/engine/renderer/light/Light.h"
+#include "core/engine/renderer/RenderLight.h"
 
 Light::Light(const LightType& type):
     m_type(type) {
@@ -29,7 +29,7 @@ void DirectionalLight::setIntensity(const glm::vec3& intensity) {
     m_intensity = intensity;
 }
 
-void DirectionalLight::copyLightData(LightInfoUBO* dst) const {
+void DirectionalLight::copyLightData(GPULight* dst) const {
     dst->type = getType();
     dst->worldDirection = glm::vec4(m_direction, 0.0F);
     dst->intensity = glm::vec4(m_intensity, 1.0F);
@@ -56,7 +56,7 @@ void PointLight::setIntensity(const glm::vec3& intensity) {
     m_intensity = intensity;
 }
 
-void PointLight::copyLightData(LightInfoUBO* dst) const {
+void PointLight::copyLightData(GPULight* dst) const {
     dst->type = getType();
     dst->worldPosition = glm::vec4(m_position, 0.0F);
     dst->intensity = glm::vec4(m_intensity, 1.0F);

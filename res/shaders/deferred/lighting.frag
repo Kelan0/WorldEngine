@@ -38,8 +38,9 @@ struct LightInfo {
     vec4 worldDirection;
     vec4 intensity;
     uint shadowMapIndex;
+    uint shadowMapCount;
     uint type;
-    uint _pad[2];
+    uint _pad[1];
 };
 
 struct ShadowMapInfo {
@@ -65,11 +66,12 @@ const float MAX_REFLECTION_LOD = 4.0;
 
 layout(set = 0, binding = 1) uniform sampler2D texture_AlbedoRGB_Roughness;
 layout(set = 0, binding = 2) uniform sampler2D texture_NormalXYZ_Metallic;
-layout(set = 0, binding = 3) uniform sampler2D texture_Depth;
-layout(set = 0, binding = 4) uniform samplerCube environmentCubeMap;
-layout(set = 0, binding = 5) uniform samplerCube specularReflectionCubeMap;
-layout(set = 0, binding = 6) uniform samplerCube diffuseIrradianceCubeMap;
-layout(set = 0, binding = 7) uniform sampler2D BRDFIntegrationMap;
+layout(set = 0, binding = 3) uniform sampler2D texture_EmissionRGB_AO;
+layout(set = 0, binding = 4) uniform sampler2D texture_Depth;
+layout(set = 0, binding = 5) uniform samplerCube environmentCubeMap;
+layout(set = 0, binding = 6) uniform samplerCube specularReflectionCubeMap;
+layout(set = 0, binding = 7) uniform samplerCube diffuseIrradianceCubeMap;
+layout(set = 0, binding = 8) uniform sampler2D BRDFIntegrationMap;
 
 
 
@@ -123,8 +125,9 @@ void loadSurface(in vec2 textureCoord, inout SurfacePoint surface) {
     surface.viewNormal = normalize(texelValue.xyz);
     surface.worldNormal = invViewRotationMatrix * surface.viewNormal;
     surface.metallic = texelValue.w;
-    surface.ambientOcclusion = 1.0;
-    surface.emission = vec3(0.0);
+    texelValue = texture(texture_EmissionRGB_AO, fs_texture);
+    surface.emission = texelValue.rgb * 255.0;
+    surface.ambientOcclusion = texelValue.a;
 
     surface.F0 = mix(vec3(0.04), surface.albedo, surface.metallic);
 }
@@ -235,7 +238,7 @@ void main() {
         pointLights[3].position = vec3(viewMatrix * vec4(vec3(-2.1, 1.1, 2.3), 1.0));
         pointLights[3].intensity = vec3(0.8, 32.0, 6.4);
 
-        vec3 Lo = vec3(0.0);
+        vec3 Lo = surface.emission;
 
         for (uint i = 0; i < numPointLights; ++i) {
             Lo += surface.albedo * calculatePointLight(surface, pointLights[i]);
@@ -269,16 +272,18 @@ void main() {
     finalColour = finalColour / (finalColour + vec3(1.0));
     finalColour = pow(finalColour, vec3(1.0 / 2.2));  
 
-    // if (lightProjectedPosition.x >= 0.0 && lightProjectedPosition.x <= 1.0 && lightProjectedPosition.y >= 0.0 && lightProjectedPosition.y <= 1.0 && lightProjectedPosition.z >= 0.0 && lightProjectedPosition.z < 0.99999) {
-    //     finalColour = vec3(lightProjectedPosition);
+    // finalColour = vec3(calculateShadow(surface, lights[0]));
+
+    // vec2 testPos = vec2(fs_texture.x, 1.0 - fs_texture.y);
+    // vec2 testOffset = vec2(0.05);
+    // vec2 testSize = vec2(0.25);
+    // if (testPos.x >= testOffset.x && testPos.x < testSize.x && testPos.y >= testOffset.y && testPos.y < testSize.y) {
+    //     testPos = vec2(linstep(testOffset.x, testOffset.x + testSize.x, testPos.x), linstep(testOffset.y, testOffset.y + testSize.y, testPos.y));
+    //     finalColour = vec3(linstep(0.43, 0.56, texture(shadowDepthTextures[0], testPos).r));
     // }
 
-    // finalColour = vec3(calculateShadow(surface, lights[0]));
-    vec2 testPos = vec2(fs_texture.x, 1.0 - fs_texture.y);
-    if (testPos.x >= 0.05 && testPos.x < 0.25 && testPos.y >= 0.05 && testPos.y < 0.25) {
-        testPos = vec2(linstep(0.05, 0.25, testPos.x), linstep(0.05, 0.25, testPos.y));
-        finalColour = vec3(linstep(0.43, 0.56, texture(shadowDepthTextures[0], testPos).r));
-    }
+    // finalColour = vec3(surface.emission / 32.0);
+
     outColor = vec4(finalColour, 1.0);
 
 

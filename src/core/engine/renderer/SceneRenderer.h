@@ -27,9 +27,10 @@ struct GPUMaterial {
     uint32_t albedoTextureIndex;
     uint32_t roughnessTextureIndex;
     uint32_t metallicTextureIndex;
+    uint32_t emissionTextureIndex;
     uint32_t normalTextureIndex;
     union {
-        uint32_t packedAlbedoColour; // XRGB
+        uint32_t packedAlbedoColour; // X-R-G-B
         struct {
             uint8_t albedoColour_b;
             uint8_t albedoColour_g;
@@ -38,12 +39,18 @@ struct GPUMaterial {
         };
     };
     union {
-        uint32_t packedRoughnessMetallic; // XXRM
+        uint32_t packedRoughnessMetallicEmissionR; // EmR-Mtl-Rgh
         struct {
-            uint8_t metallic;
             uint8_t roughness;
-            uint8_t _unused1;
-            uint8_t _unused2;
+            uint8_t metallic;
+            uint16_t emission_r;
+        };
+    };
+    union {
+        uint32_t packedEmissionGB; // EmGB
+        struct {
+            uint16_t emission_g;
+            uint16_t emission_b;
         };
     };
 
@@ -53,10 +60,13 @@ struct GPUMaterial {
             bool hasAlbedoTexture : 1;
             bool hasRoughnessTexture : 1;
             bool hasMetallicTexture : 1;
+            bool hasEmissionTexture : 1;
             bool hasNormalTexture : 1;
         };
     };
     uint32_t _pad0;
+    uint32_t _pad1;
+    uint32_t _pad2;
 };
 
 class SceneRenderer {

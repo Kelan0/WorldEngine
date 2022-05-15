@@ -11,6 +11,9 @@ struct MaterialConfiguration {
     std::shared_ptr<Texture> albedoMap;
     glm::u8vec3 albedo = glm::u8vec3(255, 255, 255);
 
+    std::shared_ptr<Texture> emissionMap;
+    glm::u16vec3 emission = glm::u16vec3(0, 0, 0);
+
     std::shared_ptr<Texture> roughnessMap;
     uint8_t roughness = 255;
 
@@ -27,6 +30,14 @@ struct MaterialConfiguration {
     void setAlbedoMap(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration);
     void setAlbedoMap(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler);
     void setAlbedoMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration);
+
+    void setEmission(const glm::uvec3& emission);
+    void setEmission(const glm::vec3& emission);
+    void setEmissionMap(std::weak_ptr<Texture> emissionMap);
+    void setEmissionMap(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler);
+    void setEmissionMap(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration);
+    void setEmissionMap(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler);
+    void setEmissionMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration);
 
     void setRoughness(const uint32_t& roughness);
     void setRoughness(const float& roughness);
@@ -60,34 +71,42 @@ public:
 
     static Material* create(const MaterialConfiguration& materialConfiguration);
 
-    std::shared_ptr<Texture> getAlbedoMap() const;
+    [[nodiscard]] std::shared_ptr<Texture> getAlbedoMap() const;
 
-    std::shared_ptr<Texture> getRoughnessMap() const;
+    [[nodiscard]] std::shared_ptr<Texture> getEmissionMap() const;
 
-    std::shared_ptr<Texture> getMetallicMap() const;
+    [[nodiscard]] std::shared_ptr<Texture> getRoughnessMap() const;
 
-    std::shared_ptr<Texture> getNormalMap() const;
+    [[nodiscard]] std::shared_ptr<Texture> getMetallicMap() const;
 
-    const glm::u8vec3& getAlbedo() const;
+    [[nodiscard]] std::shared_ptr<Texture> getNormalMap() const;
 
-    const glm::uint8_t& getRoughness() const;
+    [[nodiscard]] const glm::u8vec3& getAlbedo() const;
 
-    const glm::uint8_t& getMetallic() const;
+    [[nodiscard]] const glm::u16vec3& getEmission() const;
 
-    bool hasAlbedoMap() const;
+    [[nodiscard]] const glm::uint8_t& getRoughness() const;
 
-    bool hasRoughnessMap() const;
+    [[nodiscard]] const glm::uint8_t& getMetallic() const;
 
-    bool hasMetallicMap() const;
+    [[nodiscard]] bool hasAlbedoMap() const;
 
-    bool hasNormalMap() const;
+    [[nodiscard]] bool hasEmissionMap() const;
+
+    [[nodiscard]] bool hasRoughnessMap() const;
+
+    [[nodiscard]] bool hasMetallicMap() const;
+
+    [[nodiscard]] bool hasNormalMap() const;
 
 private:
     std::shared_ptr<Texture> m_albedoMap;
+    std::shared_ptr<Texture> m_emissionMap;
     std::shared_ptr<Texture> m_roughnessMap;
     std::shared_ptr<Texture> m_metallicMap;
     std::shared_ptr<Texture> m_normalMap;
     glm::u8vec3 m_albedo;
+    glm::u16vec3 m_emission;
     uint8_t m_roughness;
     uint8_t m_metallic;
 };

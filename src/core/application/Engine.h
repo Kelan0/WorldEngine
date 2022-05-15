@@ -4,7 +4,7 @@
 
 #include "core/core.h"
 
-class SDL_Window;
+struct SDL_Window;
 class GraphicsManager;
 class Scene;
 class SceneRenderer;

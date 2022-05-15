@@ -1,6 +1,6 @@
 
-#ifndef WORLDENGINE_LIGHT_H
-#define WORLDENGINE_LIGHT_H
+#ifndef WORLDENGINE_RENDERLIGHT_H
+#define WORLDENGINE_RENDERLIGHT_H
 
 #include "core/core.h"
 
@@ -12,17 +12,19 @@ enum LightType {
     LightType_Invalid = 4
 };
 
-struct LightInfoUBO {
+struct GPULight {
     glm::vec4 worldPosition;
     glm::vec4 worldDirection;
     glm::vec4 intensity;
     uint32_t shadowMapIndex;
+    uint32_t shadowMapCount; // Number of cascades for CSM directional lights
     uint32_t type;
-    uint32_t _pad[2];
+    uint32_t _pad;
 };
 
-
 class Light {
+public:
+
 public:
     Light(const LightType& type);
 
@@ -30,7 +32,7 @@ public:
 
     const LightType& getType() const;
 
-    virtual void copyLightData(LightInfoUBO* dst) const = 0;
+    virtual void copyLightData(GPULight* dst) const = 0;
 
 private:
     LightType m_type;
@@ -48,7 +50,7 @@ public:
 
     void setIntensity(const glm::vec3& intensity);
 
-    virtual void copyLightData(LightInfoUBO* dst) const override;
+    virtual void copyLightData(GPULight* dst) const override;
 
 private:
     glm::vec3 m_direction;
@@ -67,7 +69,7 @@ public:
 
     void setIntensity(const glm::vec3& intensity);
 
-    virtual void copyLightData(LightInfoUBO* dst) const override;
+    virtual void copyLightData(GPULight* dst) const override;
 
 private:
     glm::dvec3 m_position;
@@ -77,4 +79,4 @@ private:
 
 
 
-#endif //WORLDENGINE_LIGHT_H
+#endif //WORLDENGINE_RENDERLIGHT_H

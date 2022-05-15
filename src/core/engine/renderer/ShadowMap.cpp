@@ -95,7 +95,7 @@ void DirectionShadowMap::begin(const vk::CommandBuffer& commandBuffer, const Ren
     renderPass->begin(commandBuffer, m_shadowMapFramebuffer, vk::SubpassContents::eInline);
 }
 
-void DirectionShadowMap::setDirection(const glm::vec3 direction) {
+void DirectionShadowMap::setDirection(const glm::vec3& direction) {
     m_direction = glm::normalize(direction);
 }
 

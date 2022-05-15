@@ -5,7 +5,8 @@
 #include "core/core.h"
 #include "core/graphics/FrameResource.h"
 #include "core/engine/renderer/RenderCamera.h"
-#include "core/engine/renderer/light/Light.h"
+#include "core/engine/renderer/ShadowMap.h"
+#include "core/engine/renderer/RenderLight.h"
 
 class DirectionShadowMap;
 class GraphicsPipeline;
@@ -19,6 +20,7 @@ class ImageView;
 
 #define MAX_SHADOW_MAPS 1024
 
+
 class LightRenderer {
 public:
     LightRenderer();
@@ -29,17 +31,17 @@ public:
 
     void render(double dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera);
 
-    const std::shared_ptr<RenderPass>& getRenderPass() const;
+    [[nodiscard]] const std::shared_ptr<RenderPass>& getRenderPass() const;
 
-    DirectionShadowMap* getTestShadowMap() const;
+    [[nodiscard]] DirectionShadowMap* getTestShadowMap() const;
 
-    const uint32_t& getMaxVisibleShadowMaps() const;
+    [[nodiscard]] const uint32_t& getMaxVisibleShadowMaps() const;
 
-    const std::shared_ptr<Texture>& getEmptyShadowMap() const;
+    [[nodiscard]] const std::shared_ptr<Texture>& getEmptyShadowMap() const;
 
-    const std::shared_ptr<DescriptorSetLayout>& getLightingRenderPassDescriptorSetLayout() const;
+    [[nodiscard]] const std::shared_ptr<DescriptorSetLayout>& getLightingRenderPassDescriptorSetLayout() const;
 
-    DescriptorSet* getLightingRenderPassDescriptorSet() const;
+    [[nodiscard]] DescriptorSet* getLightingRenderPassDescriptorSet() const;
 
 private:
     void initEmptyShadowMap();
@@ -90,6 +92,9 @@ private:
     ImageView* m_vsmBlurIntermediateImageView;
 
     uint32_t m_maxVisibleShadowMaps;
+
+    std::vector<GPULight> m_lights;
+    std::vector<GPUShadowMap> m_shadowMaps;
 };
 
 

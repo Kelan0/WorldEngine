@@ -51,8 +51,6 @@ private:
 
     void processEventsInternal();
 
-    static std::string findExecutionDirectory();
-
 private:
     static Application* s_instance;
 
@@ -67,6 +65,8 @@ template<class T>
 inline int Application::create(int argc, char* argv[]) {
     printf("Creating application\n");
 
+    // TODO: store argc/argv   Add --resdir to specify the resources directory, --glslcomp to specify glslc.exe location
+
     constexpr bool isApplication = std::is_base_of<Application, T>::value;
     if (!isApplication) {
         printf("Engine must be created with an instance of the Application class\n");
@@ -75,7 +75,6 @@ inline int Application::create(int argc, char* argv[]) {
     }
 
     s_instance = new T();
-    s_instance->m_executionDirectory = Application::findExecutionDirectory();
     if (!s_instance->initInternal()) {
         Application::destroy();
         return -1;

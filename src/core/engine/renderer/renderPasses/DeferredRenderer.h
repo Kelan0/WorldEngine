@@ -19,8 +19,9 @@ class Buffer;
 enum DeferredAttachmentType {
     Attachment_AlbedoRGB_Roughness = 0,
     Attachment_NormalXYZ_Metallic = 1,
-    Attachment_Depth = 2,
-    NumAttachments = 3
+    Attachment_EmissionRGB_AO = 2,
+    Attachment_Depth = 3,
+    NumAttachments = 4
 };
 
 class DeferredGeometryRenderPass {
@@ -45,17 +46,19 @@ public:
 
     void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
 
-    std::shared_ptr<RenderPass> getRenderPass() const;
+    [[nodiscard]] std::shared_ptr<RenderPass> getRenderPass() const;
 
-    GraphicsPipeline* getGraphicsPipeline() const;
+    [[nodiscard]] GraphicsPipeline* getGraphicsPipeline() const;
 
-    ImageView* getAlbedoImageView() const;
+    [[nodiscard]] ImageView* getAlbedoImageView() const;
 
-    ImageView* getNormalImageView() const;
+    [[nodiscard]] ImageView* getNormalImageView() const;
 
-    ImageView* getDepthImageView() const;
+    [[nodiscard]] ImageView* getEmissionImageView() const;
 
-    vk::Format getAttachmentFormat(const uint32_t& attachment) const;
+    [[nodiscard]] ImageView* getDepthImageView() const;
+
+    [[nodiscard]] vk::Format getAttachmentFormat(const uint32_t& attachment) const;
 
     void setResolution(const glm::uvec2& resolution);
     void setResolution(const vk::Extent2D& resolution);

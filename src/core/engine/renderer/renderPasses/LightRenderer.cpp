@@ -18,9 +18,6 @@
 #define GAUSSIAN_BLUE_DIRECTION_X 0
 #define GAUSSIAN_BLUE_DIRECTION_Y 1
 
-struct ShadowMapInfoUBO {
-    glm::mat4 viewProjectionMatrix;
-};
 
 struct GaussianBlurPushConstants {
     glm::uvec2 srcSize;
@@ -213,18 +210,18 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, Re
     RenderCamera shadowCamera;
     calculateShadowRenderCamera(renderCamera, m_testDirectionShadowMap, 0.0F, 4.0F, &shadowCamera);
 
-    LightInfoUBO lightInfoData{};
+    GPULight lightInfoData{};
     lightInfoData.type = LightType_Directional;
     lightInfoData.worldDirection = glm::vec4(m_testDirectionShadowMap->getDirection(), 0.0F);
     lightInfoData.intensity = glm::vec4(32.0F, 32.0F, 32.0F, 0.0F);
     lightInfoData.shadowMapIndex = 0;
 
 
-    ShadowMapInfoUBO cameraInfoData{};
+    GPUShadowMap cameraInfoData{};
     cameraInfoData.viewProjectionMatrix = shadowCamera.getViewProjectionMatrix();
-    m_shadowRenderPassResources->cameraInfoBuffer->upload(0, sizeof(ShadowMapInfoUBO), &cameraInfoData);
-    m_lightingRenderPassResources->shadowMapBuffer->upload(0, sizeof(ShadowMapInfoUBO), &cameraInfoData);
-    m_lightingRenderPassResources->lightInfoBuffer->upload(0, sizeof(LightInfoUBO), &lightInfoData);
+    m_shadowRenderPassResources->cameraInfoBuffer->upload(0, sizeof(GPUShadowMap), &cameraInfoData);
+    m_lightingRenderPassResources->shadowMapBuffer->upload(0, sizeof(GPUShadowMap), &cameraInfoData);
+    m_lightingRenderPassResources->lightInfoBuffer->upload(0, sizeof(GPULight), &lightInfoData);
 
     vk::DescriptorSet descriptorSets[2] = {
             m_shadowRenderPassResources->descriptorSet->getDescriptorSet(),
@@ -331,7 +328,7 @@ void LightRenderer::updateCameraInfoBuffer(const size_t& maxShadowLights) {
 void LightRenderer::updateLightInfoBuffer(const size_t& maxLights) {
     PROFILE_SCOPE("LightRenderer::updateLightInfoBuffer");
 
-    vk::DeviceSize newBufferSize = sizeof(LightInfoUBO) * maxLights;
+    vk::DeviceSize newBufferSize = sizeof(GPULight) * maxLights;
 
     if (m_lightingRenderPassResources->lightInfoBuffer == nullptr || newBufferSize > m_lightingRenderPassResources->lightInfoBuffer->getSize()) {
         PROFILE_SCOPE("Allocate updateLightInfoBuffer");
@@ -357,7 +354,7 @@ void LightRenderer::updateLightInfoBuffer(const size_t& maxLights) {
 void LightRenderer::updateShadowMapInfoBuffer(const size_t& maxShadowLights) {
     PROFILE_SCOPE("LightRenderer::updateShadowMapInfoBuffer");
 
-    vk::DeviceSize newBufferSize = sizeof(ShadowMapInfoUBO) * maxShadowLights;
+    vk::DeviceSize newBufferSize = sizeof(GPUShadowMap) * maxShadowLights;
 
     if (m_lightingRenderPassResources->shadowMapBuffer == nullptr || newBufferSize > m_lightingRenderPassResources->shadowMapBuffer->getSize()) {
         PROFILE_SCOPE("Allocate ShadowMapInfoBuffer");

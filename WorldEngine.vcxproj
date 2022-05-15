@@ -172,15 +172,21 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\core\application\Application.cpp" />
+    <ClCompile Include="src\core\application\Engine.cpp" />
     <ClCompile Include="src\core\application\InputHandler.cpp" />
     <ClCompile Include="src\core\engine\geometry\MeshData.cpp" />
+    <ClCompile Include="src\core\engine\renderer\EnvironmentMap.cpp" />
     <ClCompile Include="src\core\engine\renderer\ImmediateRenderer.cpp" />
+    <ClCompile Include="src\core\engine\renderer\LightComponent.cpp" />
     <ClCompile Include="src\core\engine\renderer\Material.cpp" />
     <ClCompile Include="src\core\engine\renderer\RenderCamera.cpp" />
     <ClCompile Include="src\core\engine\renderer\RenderComponent.cpp" />
+    <ClCompile Include="src\core\engine\renderer\RenderLight.cpp" />
     <ClCompile Include="src\core\engine\renderer\renderPasses\DeferredRenderer.cpp" />
+    <ClCompile Include="src\core\engine\renderer\renderPasses\LightRenderer.cpp" />
     <ClCompile Include="src\core\engine\renderer\RenderProperties.cpp" />
     <ClCompile Include="src\core\engine\renderer\SceneRenderer.cpp" />
+    <ClCompile Include="src\core\engine\renderer\ShadowMap.cpp" />
     <ClCompile Include="src\core\engine\scene\bound\Frustum.cpp" />
     <ClCompile Include="src\core\engine\scene\bound\Intersection.cpp" />
     <ClCompile Include="src\core\engine\scene\bound\Plane.cpp" />
@@ -218,6 +224,7 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClCompile Include="src\core\util\DenseFlagArray.cpp" />
     <ClCompile Include="src\core\util\EntityChangeTracker.cpp" />
     <ClCompile Include="src\core\util\Exception.cpp" />
+    <ClCompile Include="src\core\util\PlatformUtils.cpp" />
     <ClCompile Include="src\core\util\Profiler.cpp" />
     <ClCompile Include="src\core\util\Util.cpp" />
     <ClCompile Include="src\core\Vulkan.cpp" />
@@ -225,16 +232,22 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\application\Application.h" />
+    <ClInclude Include="src\core\application\Engine.h" />
     <ClInclude Include="src\core\application\InputHandler.h" />
     <ClInclude Include="src\core\core.h" />
     <ClInclude Include="src\core\engine\geometry\MeshData.h" />
+    <ClInclude Include="src\core\engine\renderer\EnvironmentMap.h" />
     <ClInclude Include="src\core\engine\renderer\ImmediateRenderer.h" />
+    <ClInclude Include="src\core\engine\renderer\LightComponent.h" />
     <ClInclude Include="src\core\engine\renderer\Material.h" />
     <ClInclude Include="src\core\engine\renderer\RenderCamera.h" />
     <ClInclude Include="src\core\engine\renderer\RenderComponent.h" />
+    <ClInclude Include="src\core\engine\renderer\RenderLight.h" />
     <ClInclude Include="src\core\engine\renderer\renderPasses\DeferredRenderer.h" />
+    <ClInclude Include="src\core\engine\renderer\renderPasses\LightRenderer.h" />
     <ClInclude Include="src\core\engine\renderer\RenderProperties.h" />
     <ClInclude Include="src\core\engine\renderer\SceneRenderer.h" />
+    <ClInclude Include="src\core\engine\renderer\ShadowMap.h" />
     <ClInclude Include="src\core\engine\scene\bound\Frustum.h" />
     <ClInclude Include="src\core\engine\scene\bound\Intersection.h" />
     <ClInclude Include="src\core\engine\scene\bound\Plane.h" />
@@ -273,6 +286,7 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClInclude Include="src\core\util\DenseFlagArray.h" />
     <ClInclude Include="src\core\util\EntityChangeTracker.h" />
     <ClInclude Include="src\core\util\Exception.h" />
+    <ClInclude Include="src\core\util\PlatformUtils.h" />
     <ClInclude Include="src\core\util\Profiler.h" />
     <ClInclude Include="src\core\util\Util.h" />
     <ClInclude Include="src\core\Vulkan.h" />

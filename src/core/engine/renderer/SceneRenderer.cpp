@@ -714,19 +714,26 @@ uint32_t SceneRenderer::registerMaterial(Material* material) {
         gpuMaterial.hasAlbedoTexture = material->hasAlbedoMap();
         gpuMaterial.hasRoughnessTexture = material->hasRoughnessMap();
         gpuMaterial.hasMetallicTexture = material->hasMetallicMap();
+        gpuMaterial.hasEmissionTexture = material->hasEmissionMap();
         gpuMaterial.hasNormalTexture = material->hasNormalMap();
         if (gpuMaterial.hasAlbedoTexture) gpuMaterial.albedoTextureIndex = registerTexture(material->getAlbedoMap().get());
         if (gpuMaterial.hasRoughnessTexture) gpuMaterial.roughnessTextureIndex = registerTexture(material->getRoughnessMap().get());
         if (gpuMaterial.hasMetallicTexture) gpuMaterial.metallicTextureIndex = registerTexture(material->getMetallicMap().get());
+        if (gpuMaterial.hasEmissionTexture) gpuMaterial.emissionTextureIndex = registerTexture(material->getEmissionMap().get());
         if (gpuMaterial.hasNormalTexture) gpuMaterial.normalTextureIndex = registerTexture(material->getNormalMap().get());
         gpuMaterial.albedoColour_r = material->getAlbedo().r;
         gpuMaterial.albedoColour_g = material->getAlbedo().g;
         gpuMaterial.albedoColour_b = material->getAlbedo().b;
+        gpuMaterial.emission_r = material->getEmission().r;
+        gpuMaterial.emission_g = material->getEmission().g;
+        gpuMaterial.emission_b = material->getEmission().b;
         gpuMaterial.roughness = material->getRoughness();
         gpuMaterial.metallic = material->getMetallic();
         m_materials.emplace_back(gpuMaterial);
 
         m_materialIndices.insert(std::make_pair(material, materialIndex));
+
+        printf("registered material %u - emission: [%u %u %u]\n", materialIndex, gpuMaterial.emission_r, gpuMaterial.emission_g, gpuMaterial.emission_b);
     } else {
         materialIndex = it->second;
     }
@@ -848,9 +855,11 @@ GPUMaterial* SceneRenderer::mappedMaterialDataBuffer(size_t maxObjects) {
             m_resources.get(i)->changedObjectMaterials.ensureSize(maxObjects, true);
         }
 
-        GPUMaterial defaultMaterial;
-        defaultMaterial.hasAlbedoTexture = false;
+        GPUMaterial defaultMaterial{};
+        defaultMaterial.packedFlags = 0;
         defaultMaterial.packedAlbedoColour = 0;
+        defaultMaterial.packedRoughnessMetallicEmissionR = 0;
+        defaultMaterial.packedEmissionGB = 0;
         m_resources->materialBuffer.clear();
         m_resources->materialBuffer.resize(maxObjects, defaultMaterial);
 

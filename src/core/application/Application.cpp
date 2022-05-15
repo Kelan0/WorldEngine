@@ -10,10 +10,8 @@
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/RenderPass.h"
 #include "core/thread/ThreadUtils.h"
+#include "core/util/PlatformUtils.h"
 #include <chrono>
-#ifdef _WIN32
-#include <windows.h>
-#endif
 
 Application* Application::s_instance = nullptr;
 
@@ -39,6 +37,8 @@ Application::~Application() {
 
 bool Application::initInternal() {
     PROFILE_SCOPE("Application::initInternal")
+
+    m_executionDirectory = PlatformUtils::findExecutionDirectory();
 
     PROFILE_REGION("Init SDL")
 
@@ -275,19 +275,3 @@ const std::string& Application::getExecutionDirectory() const {
     return m_executionDirectory;
 }
 
-std::string Application::findExecutionDirectory() {
-#ifdef _WIN32
-    {
-        char buffer[MAX_PATH] = { 0 };
-        GetModuleFileNameA(NULL, buffer, MAX_PATH);
-        size_t end = 0;
-        for (size_t i = 0; i < MAX_PATH && buffer[i] != '\0'; ++i) {
-            if (buffer[i] == '\\') buffer[i] = '/';
-            if (buffer[i] == '/') end = i;
-        }
-        buffer[end] = '\0';
-        std::string t(buffer);
-        return t;
-    }
-#endif
-}

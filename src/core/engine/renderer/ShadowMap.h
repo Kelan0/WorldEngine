@@ -19,6 +19,11 @@ enum ShadowMapType {
     ShadowMapType_Variance = 1,
 };
 
+struct GPUShadowMap {
+    glm::mat4 viewProjectionMatrix;
+};
+
+
 class DirectionShadowMap {
     friend class ShadowRenderer;
 public:
@@ -32,7 +37,7 @@ public:
 
     void begin(const vk::CommandBuffer& commandBuffer, const RenderPass* renderPass);
 
-    void setDirection(const glm::vec3 direction);
+    void setDirection(const glm::vec3& direction);
 
     [[nodiscard]] const glm::vec3& getDirection() const;
 

@@ -682,7 +682,7 @@ bool ImageUtil::getImageFormatProperties(const vk::Format& format, const vk::Ima
         if (result == vk::Result::eErrorFormatNotSupported) {
             printf("Unable to get image format properties: requested image format %s is not supported by the physical device for usage %s\n", vk::to_string(format).c_str(), vk::to_string(usage).c_str());
         } else {
-            printf("Unable to get image format properties: \n", vk::to_string(result).c_str());
+            printf("Unable to get image format properties: %s\n", vk::to_string(result).c_str());
         }
         return false;
     }
