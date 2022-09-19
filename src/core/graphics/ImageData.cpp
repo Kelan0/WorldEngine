@@ -30,7 +30,14 @@ ImageData::ImageData(uint8_t* data, const uint32_t& width, const uint32_t& heigh
 //}
 
 ImageData::ImageData(uint8_t* data, const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat):
-        ImageData(data, width, height, pixelLayout, pixelFormat, AllocationType_External) {
+    ImageData(data, width, height, pixelLayout, pixelFormat, AllocationType_External) {
+}
+
+ImageData::ImageData(const uint32_t &width, const uint32_t &height, const ImagePixelLayout &pixelLayout, const ImagePixelFormat &pixelFormat):
+    ImageData(nullptr, width, height, pixelLayout, pixelFormat, AllocationType_Internal) {
+
+    size_t pixelSize = ImageData::getChannels(pixelLayout) * ImageData::getChannelSize(pixelFormat);
+    m_data = static_cast<uint8_t*>(malloc(width * height * pixelSize));
 }
 
 ImageData::~ImageData() {
@@ -229,6 +236,91 @@ ImageData* ImageData::transform(uint8_t* data, uint32_t width, uint32_t height, 
     return transformation.apply(data, width, height, layout, format);
 }
 
+int64_t ImageData::getChannel(const size_t& x, const size_t& y, const size_t& channelIndex) {
+    size_t channelOffset = ImageData::getChannelOffset(x, y, channelIndex, m_width, m_height, m_pixelLayout, m_pixelFormat);
+    uint8_t* data = &m_data[channelOffset];
+
+    switch (m_pixelFormat) {
+        case ImagePixelFormat::UInt8: return (int64_t)(*(uint8_t*)(data));
+        case ImagePixelFormat::SInt8: return (int64_t)(*(int8_t*)(data));
+        case ImagePixelFormat::UInt16: return (int64_t)(*(uint16_t*)(data));
+        case ImagePixelFormat::SInt16: return (int64_t)(*(int16_t*)(data));
+        case ImagePixelFormat::UInt32: return (int64_t)(*(uint32_t*)(data));
+        case ImagePixelFormat::SInt32: return (int64_t)(*(int32_t*)(data));
+        case ImagePixelFormat::Float16: return (int64_t)(*(uint16_t*)(data)); // No c++ representation
+        case ImagePixelFormat::Float32: return (int64_t)(*(float*)(data));
+        default: assert(false);
+    }
+}
+
+void ImageData::setChannel(const size_t& x, const size_t& y, const size_t& channelIndex, const int64_t& value) {
+    size_t channelOffset = ImageData::getChannelOffset(x, y, channelIndex, m_width, m_height, m_pixelLayout, m_pixelFormat);
+    uint8_t* data = &m_data[channelOffset];
+
+    union {
+        int64_t value;int8_t s8;uint8_t u8;int16_t s16;uint16_t u16;int32_t s32;uint32_t u32;uint16_t f16;float f32;
+    } channel;
+
+    channel.value = value;
+
+    switch (m_pixelFormat) {
+        case ImagePixelFormat::UInt8: (*(uint8_t*)data) = channel.u8; break;
+        case ImagePixelFormat::SInt8: (*(int8_t*)data) = channel.s8; break;
+        case ImagePixelFormat::UInt16: (*(uint16_t*)data) = channel.u16; break;
+        case ImagePixelFormat::SInt16: (*(int16_t*)data) = channel.s16; break;
+        case ImagePixelFormat::UInt32: (*(uint32_t*)data) = channel.u32; break;
+        case ImagePixelFormat::SInt32: (*(int32_t*)data) = channel.s32; break;
+        case ImagePixelFormat::Float16: (*(uint16_t*)data) = channel.f16; break;
+        case ImagePixelFormat::Float32: (*(float*)data) = channel.f32; break;
+        default: assert(false);
+    }
+}
+
+void ImageData::setPixel(const size_t& x, const size_t& y, const int64_t& r, const int64_t& g, const int64_t& b, const int64_t& a) {
+    size_t numChannels = ImageData::getChannels(m_pixelLayout);
+    vk::ComponentSwizzle swizzle[4];
+    ImageData::getPixelSwizzle(m_pixelLayout, swizzle);
+
+    int64_t ONE = 1;
+    int64_t ZERO = 0;
+
+    for (size_t i = 0; i < numChannels; ++i) {
+        switch (swizzle[i]) {
+            case vk::ComponentSwizzle::eR: setChannel(x, y, i, r); break;
+            case vk::ComponentSwizzle::eG: setChannel(x, y, i, g); break;
+            case vk::ComponentSwizzle::eB: setChannel(x, y, i, b); break;
+            case vk::ComponentSwizzle::eA: setChannel(x, y, i, a); break;
+//            case vk::ComponentSwizzle::eOne: setChannel(x, y, i, ONE); break;
+//            case vk::ComponentSwizzle::eZero: setChannel(x, y, i, ZERO); break;
+            default: break; // break from switch, not for loop
+        }
+    }
+}
+void ImageData::setPixelf(const size_t& x, const size_t& y, const float& r, const float& g, const float& b, const float& a) {
+    assert(m_pixelFormat == ImagePixelFormat::Float32);
+
+    size_t numChannels = ImageData::getChannels(m_pixelLayout);
+    vk::ComponentSwizzle swizzle[4];
+    ImageData::getPixelSwizzle(m_pixelLayout, swizzle);
+
+    float fONE = 1.0F;
+    float fZERO = 0.0F;
+    int64_t ONE = *(int64_t*)&fONE;
+    int64_t ZERO = *(int64_t*)&fZERO;
+
+    for (size_t i = 0; i < numChannels; ++i) {
+        switch (swizzle[i]) {
+            case vk::ComponentSwizzle::eR: setChannel(x, y, i, *(int64_t*)&r); break;
+            case vk::ComponentSwizzle::eG: setChannel(x, y, i, *(int64_t*)&g); break;
+            case vk::ComponentSwizzle::eB: setChannel(x, y, i, *(int64_t*)&b); break;
+            case vk::ComponentSwizzle::eA: setChannel(x, y, i, *(int64_t*)&a); break;
+//            case vk::ComponentSwizzle::eOne: setChannel(x, y, i, ONE); break;
+//            case vk::ComponentSwizzle::eZero: setChannel(x, y, i, ZERO); break;
+            default: break; // break from switch, not for loop
+        }
+    }
+}
+
 uint8_t* ImageData::getData() const {
     return m_data;
 }
@@ -312,13 +404,13 @@ bool ImageData::getPixelSwizzle(ImagePixelLayout layout, vk::ComponentSwizzle sw
             swizzle[0] = vk::ComponentSwizzle::eR;
             swizzle[1] = vk::ComponentSwizzle::eG;
             swizzle[2] = vk::ComponentSwizzle::eB;
-            swizzle[2] = vk::ComponentSwizzle::eA;
+            swizzle[3] = vk::ComponentSwizzle::eA;
             return true;
         case ImagePixelLayout::ABGR:
             swizzle[0] = vk::ComponentSwizzle::eA;
             swizzle[1] = vk::ComponentSwizzle::eB;
             swizzle[2] = vk::ComponentSwizzle::eG;
-            swizzle[2] = vk::ComponentSwizzle::eR;
+            swizzle[3] = vk::ComponentSwizzle::eR;
             return true;
         default:
             return false;
@@ -523,6 +615,16 @@ bool ImageData::getPixelLayoutAndFormat(vk::Format format, ImagePixelLayout& out
             outFormat = ImagePixelFormat::Invalid;
             return false;
     }
+}
+
+size_t ImageData::getChannelOffset(const size_t& x, const size_t& y, const size_t& channelIndex, const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat) {
+    assert(x < width && y < height);
+    size_t numChannels = ImageData::getChannels(pixelLayout);
+    assert(channelIndex < numChannels);
+    size_t channelSize = ImageData::getChannelSize(pixelFormat);
+    size_t pixelSize = numChannels * channelSize;
+    size_t pixelOffset = y * width + x;
+    return pixelOffset * pixelSize + channelIndex * channelSize;
 }
 
 

@@ -24,36 +24,35 @@ struct GPUShadowMap {
 };
 
 
-class DirectionShadowMap {
-    friend class ShadowRenderer;
+class ShadowMap {
+    friend class LightRenderer;
 public:
-    DirectionShadowMap(const uint32_t& width, const uint32_t& height);
+    ShadowMap(const uint32_t& width, const uint32_t& height);
 
-    DirectionShadowMap(const glm::uvec2& resolution);
+    explicit ShadowMap(const glm::uvec2& resolution);
 
-    ~DirectionShadowMap();
+    ~ShadowMap();
 
     void update();
 
     void begin(const vk::CommandBuffer& commandBuffer, const RenderPass* renderPass);
 
-    void setDirection(const glm::vec3& direction);
-
-    [[nodiscard]] const glm::vec3& getDirection() const;
+    void render(const vk::CommandBuffer& commandBuffer);
 
     [[nodiscard]] const glm::uvec2& getResolution() const;
 
     [[nodiscard]] const ImageView* getShadowVarianceImageView() const;
 
+    [[nodiscard]] const glm::mat4& getViewProjectionMatrix() const;
+
 private:
-    glm::vec3 m_direction;
     glm::uvec2 m_resolution;
     ImageView* m_shadowDepthImageView;
     ImageView* m_shadowVarianceImageView;
     Image2D* m_shadowDepthImage;
     Image2D* m_shadowVarianceImage;
     Framebuffer* m_shadowMapFramebuffer;
-
+    glm::mat4 m_viewProjectionMatrix;
 };
 
 

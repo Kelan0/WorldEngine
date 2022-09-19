@@ -497,9 +497,7 @@ void SceneRenderer::findModifiedEntities() {
 void SceneRenderer::updateEntityWorldTransforms() {
     PROFILE_SCOPE("SceneRenderer::updateEntityWorldTransforms")
 
-    auto thread_exec = [this](
-            size_t rangeStart,
-            size_t rangeEnd) {
+    auto thread_exec = [this](size_t rangeStart,  size_t rangeEnd) {
 
         PROFILE_SCOPE("SceneRenderer::updateEntityWorldTransforms/thread_exec")
 
@@ -732,8 +730,6 @@ uint32_t SceneRenderer::registerMaterial(Material* material) {
         m_materials.emplace_back(gpuMaterial);
 
         m_materialIndices.insert(std::make_pair(material, materialIndex));
-
-        printf("registered material %u - emission: [%u %u %u]\n", materialIndex, gpuMaterial.emission_r, gpuMaterial.emission_g, gpuMaterial.emission_b);
     } else {
         materialIndex = it->second;
     }

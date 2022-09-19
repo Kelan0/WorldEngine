@@ -185,29 +185,39 @@ class App : public Application {
         glowMaterialConfig.setRoughness(1.0F);
         glowMaterialConfig.setMetallic(0.0F);
 
-        Entity lightEntity1 = EntityHierarchy::create(Engine::scene(), "lightEntity1");
-        lightEntity1.addComponent<Transform>().translate(3.0, 0.8, -1.0).scale(0.125F);
-        lightEntity1.addComponent<LightComponent>().setType(LightType_Point).setIntensity(32.0, 8.0, 0.0);
-        glowMaterialConfig.setEmission(glm::vec3(32.0, 8.0, 0.0));
-        lightEntity1.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig)));
+//        Entity lightEntity1 = EntityHierarchy::create(Engine::scene(), "lightEntity1");
+//        lightEntity1.addComponent<Transform>().translate(3.0, 0.8, -1.0).scale(0.125F);
+//        lightEntity1.addComponent<LightComponent>().setType(LightType_Point).setIntensity(32.0, 8.0, 0.0);
+//        glowMaterialConfig.setEmission(glm::vec3(32.0, 8.0, 0.0));
+//        lightEntity1.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig)));
+//
+//        Entity lightEntity2 = EntityHierarchy::create(Engine::scene(), "lightEntity2");
+//        lightEntity2.addComponent<Transform>().translate(0.4, 1.3, 2.0).scale(0.125F);
+//        lightEntity2.addComponent<LightComponent>().setType(LightType_Point).setIntensity(32.0, 32.0, 32.0);
+//        glowMaterialConfig.setEmission(glm::vec3(32.0, 32.0, 32.0));
+//        lightEntity2.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig)));
+//
+//        Entity lightEntity3 = EntityHierarchy::create(Engine::scene(), "lightEntity3");
+//        lightEntity3.addComponent<Transform>().translate(-2.0, 1.1, -1.2).scale(0.125F);
+//        lightEntity3.addComponent<LightComponent>().setType(LightType_Point).setIntensity(0.8, 6.4, 32.0);
+//        glowMaterialConfig.setEmission(glm::vec3(0.8, 6.4, 32.0));
+//        lightEntity3.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig)));
+//
+//        Entity lightEntity4 = EntityHierarchy::create(Engine::scene(), "lightEntity4");
+//        lightEntity4.addComponent<Transform>().translate(-2.1, 1.1, 2.3).scale(0.125F);
+//        lightEntity4.addComponent<LightComponent>().setType(LightType_Point).setIntensity(0.8, 32.0, 6.4);
+//        glowMaterialConfig.setEmission(glm::vec3(0.8, 32.0, 6.4));
+//        lightEntity4.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig)));
+//
+//        Entity lightEntity5 = EntityHierarchy::create(Engine::scene(), "lightEntity5");
+//        lightEntity5.addComponent<Transform>().translate(3.1, 1.1, 1.1).scale(0.125F);
+//        lightEntity5.addComponent<LightComponent>().setType(LightType_Point).setIntensity(0.8, 32.0, 41.0);
+//        glowMaterialConfig.setEmission(glm::vec3(0.8, 32.0, 41.0));
+//        lightEntity5.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig)));
 
-        Entity lightEntity2 = EntityHierarchy::create(Engine::scene(), "lightEntity2");
-        lightEntity2.addComponent<Transform>().translate(0.4, 1.3, 2.0).scale(0.125F);
-        lightEntity2.addComponent<LightComponent>().setType(LightType_Point).setIntensity(32.0, 32.0, 32.0);
-        glowMaterialConfig.setEmission(glm::vec3(32.0, 32.0, 32.0));
-        lightEntity2.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig)));
-
-        Entity lightEntity3 = EntityHierarchy::create(Engine::scene(), "lightEntity3");
-        lightEntity3.addComponent<Transform>().translate(-2.0, 1.1, -1.2).scale(0.125F);
-        lightEntity3.addComponent<LightComponent>().setType(LightType_Point).setIntensity(0.8, 6.4, 32.0);
-        glowMaterialConfig.setEmission(glm::vec3(0.8, 6.4, 32.0));
-        lightEntity3.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig)));
-
-        Entity lightEntity4 = EntityHierarchy::create(Engine::scene(), "lightEntity4");
-        lightEntity4.addComponent<Transform>().translate(-2.1, 1.1, 2.3).scale(0.125F);
-        lightEntity4.addComponent<LightComponent>().setType(LightType_Point).setIntensity(0.8, 32.0, 6.4);
-        glowMaterialConfig.setEmission(glm::vec3(0.8, 32.0, 6.4));
-        lightEntity4.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig)));
+        Entity lightEntity6 = EntityHierarchy::create(Engine::scene(), "lightEntity6");
+        lightEntity6.addComponent<Transform>().setRotation(glm::vec3(-1.0F, -1.3F, -1.0F), glm::vec3(0.0F, 1.0F, 0.0F), false);
+        lightEntity6.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(100.0, 100.0, 100.0).setShadowCaster(false);
 
         Engine::scene()->getMainCameraEntity().getComponent<Transform>().setTranslation(0.0F, 1.0F, 1.0F);
     }
@@ -337,8 +347,4 @@ int main(int argc, char* argv[]) {
     setvbuf(stdout, buffer, _IOFBF, sizeof(buffer));
 
     return Application::create<App>(argc, argv);
-
-    std::cout << std::endl;
-    fflush(stdout);
-    return 99;
 }

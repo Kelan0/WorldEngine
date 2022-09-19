@@ -9,16 +9,14 @@
 #include "core/graphics/RenderPass.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Buffer.h"
-#include "core/engine/geometry/MeshData.h"
 
 
-DirectionShadowMap::DirectionShadowMap(const uint32_t& width, const uint32_t& height):
-    DirectionShadowMap(glm::uvec2(width, height)) {
+ShadowMap::ShadowMap(const uint32_t& width, const uint32_t& height):
+        ShadowMap(glm::uvec2(width, height)) {
 }
 
-DirectionShadowMap::DirectionShadowMap(const glm::uvec2& resolution):
+ShadowMap::ShadowMap(const glm::uvec2& resolution):
         m_resolution(resolution),
-        m_direction(0.0F, 0.0F, 0.0F),
         m_shadowDepthImage(nullptr),
         m_shadowVarianceImage(nullptr),
         m_shadowDepthImageView(nullptr),
@@ -26,7 +24,7 @@ DirectionShadowMap::DirectionShadowMap(const glm::uvec2& resolution):
         m_shadowMapFramebuffer(nullptr) {
 }
 
-DirectionShadowMap::~DirectionShadowMap() {
+ShadowMap::~ShadowMap() {
     delete m_shadowMapFramebuffer;
     delete m_shadowDepthImageView;
     delete m_shadowVarianceImageView;
@@ -34,8 +32,8 @@ DirectionShadowMap::~DirectionShadowMap() {
     delete m_shadowVarianceImage;
 }
 
-void DirectionShadowMap::update() {
-    PROFILE_SCOPE("DirectionShadowMap::update");
+void ShadowMap::update() {
+    PROFILE_SCOPE("ShadowMap::update");
 
     if (m_shadowVarianceImage == nullptr || m_shadowVarianceImage->getWidth() != m_resolution.x || m_shadowVarianceImage->getHeight() != m_resolution.y) {
         delete m_shadowDepthImageView;
@@ -91,23 +89,18 @@ void DirectionShadowMap::update() {
     }
 }
 
-void DirectionShadowMap::begin(const vk::CommandBuffer& commandBuffer, const RenderPass* renderPass) {
+void ShadowMap::begin(const vk::CommandBuffer& commandBuffer, const RenderPass* renderPass) {
     renderPass->begin(commandBuffer, m_shadowMapFramebuffer, vk::SubpassContents::eInline);
 }
 
-void DirectionShadowMap::setDirection(const glm::vec3& direction) {
-    m_direction = glm::normalize(direction);
-}
-
-const glm::vec3& DirectionShadowMap::getDirection() const {
-    return m_direction;
-}
-
-const glm::uvec2& DirectionShadowMap::getResolution() const {
+const glm::uvec2& ShadowMap::getResolution() const {
     return m_resolution;
 }
 
-const ImageView* DirectionShadowMap::getShadowVarianceImageView() const {
+const ImageView* ShadowMap::getShadowVarianceImageView() const {
     return m_shadowVarianceImageView;
 }
 
+const glm::mat4& ShadowMap::getViewProjectionMatrix() const {
+    return m_viewProjectionMatrix;
+}

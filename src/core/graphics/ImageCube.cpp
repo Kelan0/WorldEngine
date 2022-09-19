@@ -127,7 +127,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         // supplied size of 0 means automatically determine best size. For equirectangular
         // images, it will be half the height of the source image in most cases.
         size = imageCubeConfiguration.size == 0
-                ? equirectangularImageData->getHeight() / 2
+                ? glm::max(1u, equirectangularImageData->getHeight() / 2)
                 : imageCubeConfiguration.size;
 
     } else {

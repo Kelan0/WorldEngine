@@ -14,14 +14,6 @@
 
 uint64_t GraphicsManager::s_nextResourceID = 0;
 
-enum QueueType {
-    QUEUE_TYPE_GRAPHICS_BIT = VK_QUEUE_GRAPHICS_BIT,
-    QUEUE_TYPE_COMPUTE_BIT = VK_QUEUE_COMPUTE_BIT,
-    QUEUE_TYPE_TRANSFER_BIT = VK_QUEUE_TRANSFER_BIT,
-    QUEUE_TYPE_SPARSE_BINDING_BIT = VK_QUEUE_SPARSE_BINDING_BIT,
-    QUEUE_TYPE_PROTECTED_BIT = VK_QUEUE_PROTECTED_BIT,
-    QUEUE_TYPE_PRESENT_BIT = 0x800
-};
 
 
 #define VK_PFN(funcName) PFN_ ## funcName
@@ -1022,6 +1014,51 @@ const std::shared_ptr<vkr::Queue>& GraphicsManager::getQueue(const std::string& 
 bool GraphicsManager::hasQueue(const std::string& name) const {
     return m_queues.queues.count(name) > 0;
 }
+
+const uint32_t& GraphicsManager::getGraphicsQueueFamilyIndex() const {
+    return m_queues.queueFamilies.graphicsQueueFamilyIndex.value();
+}
+
+const uint32_t& GraphicsManager::getComputeQueueFamilyIndex() const {
+    return m_queues.queueFamilies.computeQueueFamilyIndex.value();
+}
+
+const uint32_t& GraphicsManager::getTransferQueueFamilyIndex() const {
+    return m_queues.queueFamilies.transferQueueFamilyIndex.value();
+}
+
+const uint32_t& GraphicsManager::getSparseBindingQueueFamilyIndex() const {
+    return m_queues.queueFamilies.sparseBindingQueueFamilyIndex.value();
+}
+
+const uint32_t& GraphicsManager::getProtectedQueueFamilyIndex() const {
+    return m_queues.queueFamilies.protectedQueueFamilyIndex.value();
+}
+
+const uint32_t& GraphicsManager::getPresentQueueFamilyIndex() const {
+    return m_queues.queueFamilies.presentQueueFamilyIndex.value();
+}
+
+const vk::CommandBuffer& GraphicsManager::beginOneTimeCommandBuffer() {
+    CommandBufferConfiguration commandBufferConfig;
+    commandBufferConfig.level = vk::CommandBufferLevel::ePrimary;
+    const vk::CommandBuffer& commandBuffer = **Engine::graphics()->commandPool()->getOrCreateCommandBuffer("one_time_cmd", commandBufferConfig);
+
+    vk::CommandBufferBeginInfo commandBeginInfo;
+    commandBeginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+    commandBuffer.begin(commandBeginInfo);
+    return commandBuffer;
+}
+
+void GraphicsManager::endOneTimeCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Queue& queue) {
+    commandBuffer.end();
+
+    vk::SubmitInfo queueSumbitInfo;
+    queueSumbitInfo.setCommandBufferCount(1);
+    queueSumbitInfo.setPCommandBuffers(&commandBuffer);
+    queue.submit(1, &queueSumbitInfo, VK_NULL_HANDLE);
+}
+
 
 void GraphicsManager::setPreferredPresentMode(vk::PresentModeKHR presentMode) {
     if (m_preferredPresentMode != presentMode) {

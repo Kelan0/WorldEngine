@@ -7,6 +7,7 @@
 struct SDL_Window;
 class GraphicsManager;
 class Scene;
+class UIRenderer;
 class SceneRenderer;
 class LightRenderer;
 class ImmediateRenderer;
@@ -27,6 +28,8 @@ public:
 
     [[nodiscard]] Scene* getScene() const;
 
+    [[nodiscard]] UIRenderer* getUIRenderer() const;
+
     [[nodiscard]] SceneRenderer* getSceneRenderer() const;
 
     [[nodiscard]] LightRenderer* getLightRenderer() const;
@@ -42,6 +45,8 @@ public:
     static GraphicsManager* graphics();
 
     static Scene* scene();
+
+    static UIRenderer* uiRenderer();
 
     static SceneRenderer* sceneRenderer();
 
@@ -69,6 +74,7 @@ private:
 
     GraphicsManager* m_graphics;
     Scene* m_scene;
+    UIRenderer* m_uiRenderer;
     SceneRenderer* m_sceneRenderer;
     LightRenderer* m_lightRenderer;
     ImmediateRenderer* m_immediateRenderer;

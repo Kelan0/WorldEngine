@@ -3,6 +3,8 @@
 #define WORLDENGINE_APPLICATION_H
 
 #include "core/core.h"
+#include "Engine.h"
+
 #include <SDL.h>
 
 

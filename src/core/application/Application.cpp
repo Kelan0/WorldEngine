@@ -11,6 +11,7 @@
 #include "core/graphics/RenderPass.h"
 #include "core/thread/ThreadUtils.h"
 #include "core/util/PlatformUtils.h"
+#include "core/imgui/imgui_impl_sdl.h"
 #include <chrono>
 
 Application* Application::s_instance = nullptr;
@@ -61,7 +62,10 @@ bool Application::initInternal() {
     PROFILE_REGION("Init InputHandler")
     m_inputHandler = new InputHandler(m_windowHandle);
 
-    Engine::instance()->init(m_windowHandle);
+    if (!Engine::instance()->init(m_windowHandle)) {
+        printf("Failed to initialize engine, unable to continue\n");
+        return false;
+    }
 
     PROFILE_REGION("Init Application")
     init();
@@ -109,6 +113,7 @@ void Application::processEventsInternal() {
                 break;
         }
 
+        ImGui_ImplSDL2_ProcessEvent(&event);
         m_inputHandler->processEvent(event);
     }
 

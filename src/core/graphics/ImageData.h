@@ -76,6 +76,8 @@ public:
 
     ImageData(uint8_t* data, const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat);
 
+    ImageData(const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat);
+
     ~ImageData();
 
     static ImageData* load(const std::string& filePath, ImagePixelLayout desiredLayout = ImagePixelLayout::Invalid, ImagePixelFormat desiredFormat = ImagePixelFormat::UInt8);
@@ -89,6 +91,12 @@ public:
     static ImageData* transform(const ImageData* imageData, const ImageTransform& transformation);
 
     static ImageData* transform(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout layout, ImagePixelFormat format, const ImageTransform& transformation);
+
+    int64_t getChannel(const size_t& x, const size_t& y, const size_t& channelIndex);
+    void setChannel(const size_t& x, const size_t& y, const size_t& channelIndex, const int64_t& value);
+
+    void setPixel(const size_t& x, const size_t& y, const int64_t& r, const int64_t& g, const int64_t& b, const int64_t& a);
+    void setPixelf(const size_t& x, const size_t& y, const float& r, const float& g, const float& b, const float& a);
 
     uint8_t* getData() const;
 
@@ -107,6 +115,9 @@ public:
     static bool getPixelSwizzle(ImagePixelLayout layout, vk::ComponentSwizzle swizzle[4]);
 
     static bool getPixelLayoutAndFormat(vk::Format format, ImagePixelLayout& outLayout, ImagePixelFormat& outFormat);
+
+private:
+    static size_t getChannelOffset(const size_t& x, const size_t& y, const size_t& channelIndex, const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat);
 
 private:
     uint8_t* m_data;

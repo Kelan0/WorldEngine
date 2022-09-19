@@ -116,11 +116,11 @@ public:
 
     operator glm::dmat4() const;
 
+private:
     static void reindex(Transform& transform, const EntityChangeTracker::entity_index& newEntityIndex);
 
-private:
-
     void change();
+
 private:
     glm::dvec3 m_translation;
     glm::mat3 m_rotation;

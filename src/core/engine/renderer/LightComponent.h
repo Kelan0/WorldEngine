@@ -5,33 +5,46 @@
 #include "core/core.h"
 #include "core/engine/renderer/RenderLight.h"
 
+class ShadowMap;
+
 class LightComponent {
+    friend class LightRenderer;
 public:
     LightComponent();
 
     ~LightComponent();
 
-    const LightType& getType() const;
-
     LightComponent& setType(const LightType& type);
-
-    const glm::vec3& getIntensity() const;
 
     LightComponent& setIntensity(const glm::vec3& intensity);
 
     LightComponent& setIntensity(const float& r, const float& g, const float& b);
 
-    const bool& isShadowCaster() const;
-
     LightComponent& setShadowCaster(const bool& shadowCaster);
 
-    const uint32_t& getLightIndex() const;
+    LightComponent& setShadowResolution(const glm::uvec2& shadowResolution);
+
+    LightComponent& setShadowResolution(const uint32_t& shadowWidth, const uint32_t& shadowHeight);
+
+    [[nodiscard]] const LightType& getType() const;
+
+    [[nodiscard]] const glm::vec3& getIntensity() const;
+
+    [[nodiscard]] const bool& isShadowCaster() const;
+
+    [[nodiscard]] const glm::uvec2& getShadowResolution() const;
+
+    [[nodiscard]] ShadowMap* getShadowMap() const;
+
+private:
+    void setShadowMap(ShadowMap* shadowMap);
 
 private:
     LightType m_type;
     glm::vec3 m_intensity;
     bool m_shadowCaster;
-    uint32_t m_lightIndex;
+    glm::uvec2 m_shadowResolution;
+    ShadowMap* m_shadowMap;
 };
 
 

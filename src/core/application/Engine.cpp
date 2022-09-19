@@ -2,9 +2,10 @@
 #include "core/application/Engine.h"
 #include "core/engine/scene/Scene.h"
 #include "core/engine/renderer/SceneRenderer.h"
+#include "core/engine/renderer/renderPasses/UIRenderer.h"
 #include "core/engine/renderer/renderPasses/LightRenderer.h"
-#include "core/engine/renderer/ImmediateRenderer.h"
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
+#include "core/engine/renderer/ImmediateRenderer.h"
 #include "core/engine/scene/event/EventDispatcher.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/RenderPass.h"
@@ -18,6 +19,7 @@ Engine::Engine() {
     m_graphics = new GraphicsManager();
     m_eventDispatcher = new EventDispatcher();
     m_scene = new Scene();
+    m_uiRenderer = new UIRenderer();
     m_sceneRenderer = new SceneRenderer();
     m_lightRenderer = new LightRenderer();
     m_immediateRenderer = new ImmediateRenderer();
@@ -30,8 +32,9 @@ Engine::Engine() {
 Engine::~Engine() {
 
     delete m_scene; // Scene is destroyed before SceneRenderer since destruction of components may interact with SceneRenderer. This might need to change.
-    delete m_lightRenderer;
+    delete m_uiRenderer;
     delete m_sceneRenderer;
+    delete m_lightRenderer;
     delete m_immediateRenderer;
     delete m_deferredGeometryPass;
     delete m_deferredLightingPass;
@@ -47,6 +50,10 @@ GraphicsManager* Engine::getGraphics() const {
 
 Scene* Engine::getScene() const {
     return m_scene;
+}
+
+UIRenderer* Engine::getUIRenderer() const {
+    return m_uiRenderer;
 }
 
 SceneRenderer* Engine::getSceneRenderer() const {
@@ -79,6 +86,10 @@ GraphicsManager* Engine::graphics() {
 
 Scene* Engine::scene() {
     return instance()->getScene();
+}
+
+UIRenderer *Engine::uiRenderer() {
+    return instance()->getUIRenderer();
 }
 
 SceneRenderer* Engine::sceneRenderer() {
@@ -119,6 +130,10 @@ bool Engine::init(SDL_Window* windowHandle) {
         return false;
     }
 
+    PROFILE_REGION("Init UIRenderer")
+    if (!m_uiRenderer->init(windowHandle))
+        return false;
+
     PROFILE_REGION("Init Scene")
     m_scene->init();
     m_eventDispatcher->repeatAll(m_scene->getEventDispatcher());
@@ -150,11 +165,14 @@ bool Engine::init(SDL_Window* windowHandle) {
 void Engine::render(double dt) {
     const Entity& cameraEntity = Engine::scene()->getMainCameraEntity();
 
+    m_uiRenderer->preRender(dt);
+
     m_renderCamera->setProjection(cameraEntity.getComponent<Camera>());
     m_renderCamera->setTransform(cameraEntity.getComponent<Transform>());
     m_renderCamera->update();
 
     m_sceneRenderer->preRender(dt);
+    m_lightRenderer->preRender(dt);
 
     auto& commandBuffer = graphics()->getCurrentCommandBuffer();
 
@@ -167,7 +185,11 @@ void Engine::render(double dt) {
 
     commandBuffer.endRenderPass();
 
+
     m_deferredLightingPass->renderScreen(dt);
+
+    m_uiRenderer->render(dt, commandBuffer);
+    //ImGui::ShowDemoWindow();
 }
 
 void Engine::destroy() {

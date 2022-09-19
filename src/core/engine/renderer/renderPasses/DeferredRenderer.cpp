@@ -65,7 +65,7 @@ bool DeferredGeometryRenderPass::init() {
 
         BufferConfiguration cameraInfoBufferConfig;
         cameraInfoBufferConfig.device = Engine::graphics()->getDevice();
-        cameraInfoBufferConfig.size = sizeof(CameraInfoUBO);
+        cameraInfoBufferConfig.size = sizeof(GPUCamera);
         cameraInfoBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         cameraInfoBufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer;
         m_resources[i]->cameraInfoBuffer = Buffer::create(cameraInfoBufferConfig);
@@ -385,13 +385,16 @@ bool DeferredLightingRenderPass::init() {
 
         m_resources[i]->lightingDescriptorSet = DescriptorSet::create(m_lightingDescriptorSetLayout, descriptorPool);
 
-        std::vector<Texture*> defaultShadowMapTextures(Engine::lightRenderer()->getMaxVisibleShadowMaps(),
-                                                       Engine::lightRenderer()->getEmptyShadowMap().get());
-        std::vector<vk::ImageLayout> defaultShadowMapLayouts(Engine::lightRenderer()->getMaxVisibleShadowMaps(), vk::ImageLayout::eShaderReadOnlyOptimal);
-
         DescriptorSetWriter(m_resources[i]->lightingDescriptorSet)
                 .writeBuffer(UNIFORM_BUFFER_BINDING, m_resources[i]->uniformBuffer, 0, m_resources[i]->uniformBuffer->getSize())
                 .write();
+    }
+
+    ImageData* defaultEnvironmentCubeMap = new ImageData(1, 1, ImagePixelLayout::RGBA, ImagePixelFormat::Float32);
+    for (size_t y = 0; y < defaultEnvironmentCubeMap->getHeight(); ++y) {
+        for (size_t x = 0; x < defaultEnvironmentCubeMap->getWidth(); ++x) {
+            defaultEnvironmentCubeMap->setPixelf(x, y, 0.4F, 0.53F, 0.74F, 1.0F);
+        }
     }
 
     ImageCubeConfiguration imageCubeConfig;
@@ -401,6 +404,12 @@ bool DeferredLightingRenderPass::init() {
     imageCubeConfig.generateMipmap = true;
     imageCubeConfig.mipLevels = UINT32_MAX;
     imageCubeConfig.imageSource.setEquirectangularSource("res/environment_maps/wide_street_02_8k.hdr");
+//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_PosX, defaultEnvironmentCubeMap);
+//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_NegX, defaultEnvironmentCubeMap);
+//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_PosY, defaultEnvironmentCubeMap);
+//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_NegY, defaultEnvironmentCubeMap);
+//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_PosZ, defaultEnvironmentCubeMap);
+//    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_NegZ, defaultEnvironmentCubeMap);
     std::shared_ptr<ImageCube> imageCube = std::shared_ptr<ImageCube>(ImageCube::create(imageCubeConfig));
 
 

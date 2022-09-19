@@ -22,6 +22,15 @@ class DeviceMemoryBlock;
 class Framebuffer;
 class ImageView;
 
+enum QueueType {
+    QUEUE_TYPE_GRAPHICS_BIT = VK_QUEUE_GRAPHICS_BIT,
+    QUEUE_TYPE_COMPUTE_BIT = VK_QUEUE_COMPUTE_BIT,
+    QUEUE_TYPE_TRANSFER_BIT = VK_QUEUE_TRANSFER_BIT,
+    QUEUE_TYPE_SPARSE_BINDING_BIT = VK_QUEUE_SPARSE_BINDING_BIT,
+    QUEUE_TYPE_PROTECTED_BIT = VK_QUEUE_PROTECTED_BIT,
+    QUEUE_TYPE_PRESENT_BIT = 0x800
+};
+
 struct QueueDetails {
     union {
         struct {
@@ -131,6 +140,17 @@ public:
     const std::shared_ptr<vkr::Queue>& getQueue(const std::string& name) const;
 
     bool hasQueue(const std::string& name) const;
+
+    const uint32_t& getGraphicsQueueFamilyIndex() const;
+    const uint32_t& getComputeQueueFamilyIndex() const;
+    const uint32_t& getTransferQueueFamilyIndex() const;
+    const uint32_t& getSparseBindingQueueFamilyIndex() const;
+    const uint32_t& getProtectedQueueFamilyIndex() const;
+    const uint32_t& getPresentQueueFamilyIndex() const;
+
+    const vk::CommandBuffer& beginOneTimeCommandBuffer();
+
+    void endOneTimeCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Queue& queue);
 
     std::shared_ptr<RenderPass> renderPass();
 

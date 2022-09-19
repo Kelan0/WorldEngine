@@ -10,6 +10,7 @@ class Mesh;
 
 
 class RenderComponent {
+    friend class SceneRenderer;
 public:
     enum UpdateType {
         // The entity is never changed. Doing so incurs a significant performance penalty.
@@ -35,18 +36,19 @@ public:
 
     RenderComponent& setMaterial(const std::shared_ptr<Material>& material);
 
-    const uint32_t& getMaterialIndex() const;
+    [[nodiscard]] const uint32_t& getMaterialIndex() const;
 
-    const std::shared_ptr<Mesh>& mesh() const;
+    [[nodiscard]] const std::shared_ptr<Mesh>& mesh() const;
 
-    const std::shared_ptr<Material>& material() const;
+    [[nodiscard]] const std::shared_ptr<Material>& material() const;
 
-    UpdateType transformUpdateType() const;
+    [[nodiscard]] UpdateType transformUpdateType() const;
 
-    UpdateType materialUpdateType() const;
+    [[nodiscard]] UpdateType materialUpdateType() const;
 
-    UpdateType meshUpdateType() const;
+    [[nodiscard]] UpdateType meshUpdateType() const;
 
+private:
     static void reindex(RenderComponent& renderComponent, const size_t& newEntityIndex);
 
 private:

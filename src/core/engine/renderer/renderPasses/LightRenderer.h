@@ -8,7 +8,7 @@
 #include "core/engine/renderer/ShadowMap.h"
 #include "core/engine/renderer/RenderLight.h"
 
-class DirectionShadowMap;
+class ShadowMap;
 class GraphicsPipeline;
 class ComputePipeline;
 class RenderPass;
@@ -21,6 +21,11 @@ class ImageView;
 #define MAX_SHADOW_MAPS 1024
 
 
+struct LightingRenderPassUBO {
+    uint32_t lightCount;
+};
+
+
 class LightRenderer {
 public:
     LightRenderer();
@@ -29,13 +34,11 @@ public:
 
     bool init();
 
+    void preRender(double dt);
+
     void render(double dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera);
 
     [[nodiscard]] const std::shared_ptr<RenderPass>& getRenderPass() const;
-
-    [[nodiscard]] DirectionShadowMap* getTestShadowMap() const;
-
-    [[nodiscard]] const uint32_t& getMaxVisibleShadowMaps() const;
 
     [[nodiscard]] const std::shared_ptr<Texture>& getEmptyShadowMap() const;
 
@@ -46,19 +49,21 @@ public:
 private:
     void initEmptyShadowMap();
 
-    void updateCameraInfoBuffer(const size_t& maxShadowLights);
+    void updateActiveShadowMaps();
 
-    void updateLightInfoBuffer(const size_t& maxLights);
+    void updateCameraInfoBuffer(size_t maxShadowLights);
 
-    void updateShadowMapInfoBuffer(const size_t& maxShadowLights);
+    void updateLightInfoBuffer(size_t maxLights);
+
+    void updateShadowMapInfoBuffer(size_t maxShadowLights);
+
+    void streamLightData();
 
     void blurImage(const vk::CommandBuffer& commandBuffer, const Sampler* sampler, const ImageView* srcImage, const glm::uvec2& srcSize, const ImageView* dstImage, const glm::uvec2& dstSize, const glm::vec2& blurRadius);
 
-    void calculateShadowRenderCamera(const RenderCamera* viewerRenderCamera, const DirectionShadowMap* shadowMap, const double& nearDistance, const double& farDistance, RenderCamera* outShadowRenderCamera);
+    void calculateDirectionalShadowRenderCamera(const RenderCamera* viewerRenderCamera, const glm::vec3& direction, const double& nearDistance, const double& farDistance, RenderCamera* outShadowRenderCamera);
 
 private:
-    DirectionShadowMap* m_testDirectionShadowMap;
-
     std::shared_ptr<GraphicsPipeline> m_shadowGraphicsPipeline;
     std::shared_ptr<RenderPass> m_shadowRenderPass;
     std::shared_ptr<DescriptorSetLayout> m_shadowRenderPassDescriptorSetLayout;
@@ -78,6 +83,7 @@ private:
         DescriptorSet* descriptorSet;
         Buffer* lightInfoBuffer;
         Buffer* shadowMapBuffer;
+        Buffer* uniformBuffer;
     };
 
     FrameResource<ShadowRenderPassResources> m_shadowRenderPassResources;
@@ -91,10 +97,15 @@ private:
     Image2D* m_vsmBlurIntermediateImage;
     ImageView* m_vsmBlurIntermediateImageView;
 
-    uint32_t m_maxVisibleShadowMaps;
+    std::unordered_map<ShadowMap*, bool> m_visibleShadowMaps;
+    std::unordered_map<ShadowMap*, bool> m_activeShadowMaps;
+    std::deque<ShadowMap*> m_inactiveShadowMaps;
 
-    std::vector<GPULight> m_lights;
-    std::vector<GPUShadowMap> m_shadowMaps;
+    std::vector<GPULight> m_lightBufferData;
+    std::vector<GPUShadowMap> m_shadowMapBufferData;
+    std::vector<GPUCamera> m_shadowCameraInfoBufferData;
+
+    size_t m_numLightEntities;
 };
 
 

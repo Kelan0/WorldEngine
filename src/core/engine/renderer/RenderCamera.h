@@ -12,7 +12,7 @@
 
 class Buffer;
 
-struct CameraInfoUBO {
+struct GPUCamera {
     glm::mat4 viewMatrix;
     glm::mat4 projectionMatrix;
     glm::mat4 viewProjectionMatrix;
@@ -58,7 +58,7 @@ public:
 
     const glm::mat4& getInverseViewProjectionMatrix() const;
 
-    void copyCameraData(CameraInfoUBO* dst) const;
+    void copyCameraData(GPUCamera* dst) const;
 
     size_t uploadCameraData(Buffer* buffer, const size_t& offset) const;
 

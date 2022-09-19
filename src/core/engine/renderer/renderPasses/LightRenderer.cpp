@@ -13,10 +13,15 @@
 #include "core/graphics/Buffer.h"
 #include "core/engine/geometry/MeshData.h"
 #include "core/engine/renderer/RenderCamera.h"
-
+#include "core/engine/renderer/LightComponent.h"
 
 #define GAUSSIAN_BLUE_DIRECTION_X 0
 #define GAUSSIAN_BLUE_DIRECTION_Y 1
+
+#define LIGHTING_RENDER_PASS_UNIFORM_BUFFER_BINDING 0
+#define LIGHTING_RENDER_PASS_LIGHT_INFO_BUFFER_BINDING 1
+#define LIGHTING_RENDER_PASS_SHADOW_MAP_INFO_BUFFER_BINDING 2
+#define LIGHTING_RENDER_PASS_SHADOW_DEPTH_TEXTURES_BINDING 3
 
 
 struct GaussianBlurPushConstants {
@@ -29,8 +34,7 @@ struct GaussianBlurPushConstants {
 
 LightRenderer::LightRenderer():
     m_vsmBlurIntermediateImageView(nullptr),
-    m_vsmBlurIntermediateImage(nullptr),
-    m_maxVisibleShadowMaps(32) {
+    m_vsmBlurIntermediateImage(nullptr) {
 }
 
 LightRenderer::~LightRenderer() {
@@ -40,8 +44,14 @@ LightRenderer::~LightRenderer() {
         delete m_lightingRenderPassResources[i]->descriptorSet;
         delete m_lightingRenderPassResources[i]->lightInfoBuffer;
         delete m_lightingRenderPassResources[i]->shadowMapBuffer;
+        delete m_lightingRenderPassResources[i]->uniformBuffer;
     }
-    delete m_testDirectionShadowMap;
+
+    for (auto& shadowMap : m_inactiveShadowMaps)
+        delete shadowMap;
+    for (auto& entry : m_activeShadowMaps)
+        delete entry.first;
+
     m_shadowGraphicsPipeline.reset();
     m_shadowRenderPass.reset();
     m_shadowRenderPassDescriptorSetLayout.reset();
@@ -64,10 +74,12 @@ bool LightRenderer::init() {
             .build();
 
     m_lightingRenderPassDescriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
-            .addStorageBuffer(0, vk::ShaderStageFlagBits::eFragment)
-            .addStorageBuffer(1, vk::ShaderStageFlagBits::eFragment)
-            .addCombinedImageSampler(2, vk::ShaderStageFlagBits::eFragment, MAX_SHADOW_MAPS)
+            .addUniformBuffer(LIGHTING_RENDER_PASS_UNIFORM_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment)
+            .addStorageBuffer(LIGHTING_RENDER_PASS_LIGHT_INFO_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment)
+            .addStorageBuffer(LIGHTING_RENDER_PASS_SHADOW_MAP_INFO_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment)
+            .addCombinedImageSampler(LIGHTING_RENDER_PASS_SHADOW_DEPTH_TEXTURES_BINDING, vk::ShaderStageFlagBits::eFragment, MAX_SHADOW_MAPS)
             .build();
+
 
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_shadowRenderPassResources.set(i, new ShadowRenderPassResources());
@@ -75,6 +87,7 @@ bool LightRenderer::init() {
         m_shadowRenderPassResources[i]->cameraInfoBuffer = nullptr;
         m_lightingRenderPassResources[i]->lightInfoBuffer = nullptr;
         m_lightingRenderPassResources[i]->shadowMapBuffer = nullptr;
+        m_lightingRenderPassResources[i]->uniformBuffer = nullptr;
 
         m_shadowRenderPassResources[i]->descriptorSet = DescriptorSet::create(m_shadowRenderPassDescriptorSetLayout, Engine::graphics()->descriptorPool());
         if (m_shadowRenderPassResources[i]->descriptorSet == nullptr) {
@@ -88,10 +101,18 @@ bool LightRenderer::init() {
             return false;
         }
 
+        BufferConfiguration bufferConfig;
+        bufferConfig.device = Engine::graphics()->getDevice();
+        bufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer;
+        bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+        bufferConfig.size = sizeof(LightingRenderPassUBO);
+        m_lightingRenderPassResources[i]->uniformBuffer = Buffer::create(bufferConfig);
+
         std::vector<Texture*> emptyShadowMapTextures(MAX_SHADOW_MAPS, m_emptyShadowMap.get());
         std::vector<vk::ImageLayout> emptyShadowMapImageLayouts(MAX_SHADOW_MAPS, vk::ImageLayout::eShaderReadOnlyOptimal);
         DescriptorSetWriter(m_lightingRenderPassResources[i]->descriptorSet)
-            .writeImage(2, emptyShadowMapTextures.data(), emptyShadowMapImageLayouts.data(), MAX_SHADOW_MAPS)
+            .writeBuffer(LIGHTING_RENDER_PASS_UNIFORM_BUFFER_BINDING, m_lightingRenderPassResources[i]->uniformBuffer, 0, sizeof(LightingRenderPassUBO))
+            .writeImage(LIGHTING_RENDER_PASS_SHADOW_DEPTH_TEXTURES_BINDING, emptyShadowMapTextures.data(), emptyShadowMapImageLayouts.data(), MAX_SHADOW_MAPS)
             .write();
     }
 
@@ -173,8 +194,6 @@ bool LightRenderer::init() {
     computePipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(GaussianBlurPushConstants));
     m_vsmBlurComputePipeline = std::shared_ptr<ComputePipeline>(ComputePipeline::create(computePipelineConfig));
 
-
-
     SamplerConfiguration samplerConfig;
     samplerConfig.device = Engine::graphics()->getDevice();
     samplerConfig.minFilter = vk::Filter::eLinear;
@@ -183,77 +202,121 @@ bool LightRenderer::init() {
     samplerConfig.wrapV = vk::SamplerAddressMode::eClampToEdge;
     m_vsmShadowMapSampler = std::shared_ptr<Sampler>(Sampler::create(samplerConfig));
 
-
-    m_testDirectionShadowMap = new DirectionShadowMap(1024, 1024);
-    m_testDirectionShadowMap->setDirection(glm::vec3(-1.0F, -1.3F, -1.0F));
-
     return true;
+}
+
+void LightRenderer::preRender(double dt) {
+    PROFILE_SCOPE("LightRenderer::preRender")
+    const auto& lightEntities = Engine::scene()->registry()->group<LightComponent>(entt::get<Transform>);
+    m_numLightEntities = lightEntities.size();
+
+    updateActiveShadowMaps();
+
+    updateLightInfoBuffer(m_numLightEntities);
+    updateCameraInfoBuffer(m_activeShadowMaps.size());
+    updateShadowMapInfoBuffer(m_activeShadowMaps.size());
+    streamLightData();
+
+    LightingRenderPassUBO uniformData{};
+    uniformData.lightCount = m_numLightEntities;
+    m_lightingRenderPassResources->uniformBuffer->upload(0, sizeof(LightingRenderPassUBO), &uniformData);
 }
 
 void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera) {
     PROFILE_SCOPE("LightRenderer::render");
 
-    m_testDirectionShadowMap->update();
-    m_testDirectionShadowMap->begin(commandBuffer, m_shadowRenderPass.get());
+    const auto& lightEntities = Engine::scene()->registry()->group<LightComponent>(entt::get<Transform>);
 
-    uint32_t w = m_testDirectionShadowMap->getResolution().x;
-    uint32_t h = m_testDirectionShadowMap->getResolution().y;
+    PROFILE_REGION("Update shadow GPU buffers");
 
-    m_shadowGraphicsPipeline->setViewport(commandBuffer, 0, 0.0F, 0.0F, (float)w, (float)h, 0.0F, 1.0F);
-    m_shadowGraphicsPipeline->setScissor(commandBuffer, 0, 0, 0, w, h);
+    m_shadowCameraInfoBufferData.clear();
+    m_shadowMapBufferData.clear();
+
+    std::vector<RenderCamera> visibleShadowRenderCameras;
+    std::vector<ShadowMap*> visibleShadowMaps;
+
+    for (const auto& id : lightEntities) {
+        const LightComponent& lightComponent = lightEntities.get<LightComponent>(id);
+
+        if (!lightComponent.isShadowCaster())
+            continue;
+
+        ShadowMap* shadowMap = lightComponent.getShadowMap();
+        if (shadowMap == nullptr) {
+#if _DEBUG
+            printf("Error: shadow-casting light has null shadow map\n");
+#endif
+            continue;
+        }
+
+        const Transform& transform = lightEntities.get<Transform>(id);
+
+        // TODO: only render shadows if they are cast onto anything within renderCamera's view
+        // Frustum culling of sphere around point lights
+        // Occlusion culling for directional lights???
+
+        RenderCamera shadowRenderCamera;
+        if (lightComponent.getType() == LightType_Directional) {
+            calculateDirectionalShadowRenderCamera(renderCamera, transform.getForwardAxis(), 0.0F, 10.0F, &shadowRenderCamera);
+        } else {
+            continue;
+        }
+
+        shadowRenderCamera.copyCameraData(&m_shadowCameraInfoBufferData.emplace_back());
+        GPUShadowMap& gpuShadowMap = m_shadowMapBufferData.emplace_back();
+        gpuShadowMap.viewProjectionMatrix = shadowRenderCamera.getViewProjectionMatrix();
+
+        visibleShadowRenderCameras.emplace_back(shadowRenderCamera);
+        visibleShadowMaps.emplace_back(shadowMap);
+    }
+
+    m_shadowRenderPassResources->cameraInfoBuffer->upload(0, sizeof(GPUCamera) * m_shadowCameraInfoBufferData.size(), m_shadowCameraInfoBufferData.data());
+    m_lightingRenderPassResources->shadowMapBuffer->upload(0, sizeof(GPUShadowMap) * m_shadowMapBufferData.size(), m_shadowMapBufferData.data());
+
+    PROFILE_REGION("Render shadows");
+
+    for (size_t i = 0; i < visibleShadowMaps.size(); ++i) {
+        RenderCamera& shadowRenderCamera = visibleShadowRenderCameras[i];
+        ShadowMap* shadowMap = visibleShadowMaps[i];
+        shadowMap->update();
+        shadowMap->begin(commandBuffer, m_shadowRenderPass.get());
+
+        uint32_t w = shadowMap->getResolution().x;
+        uint32_t h = shadowMap->getResolution().y;
+
+        m_shadowGraphicsPipeline->setViewport(commandBuffer, 0, 0.0F, 0.0F, (float) w, (float) h, 0.0F, 1.0F);
+        m_shadowGraphicsPipeline->setScissor(commandBuffer, 0, 0, 0, w, h);
 
 
-    updateCameraInfoBuffer(1);
-    updateLightInfoBuffer(32);
-    updateShadowMapInfoBuffer(MAX_SHADOW_MAPS);
+        updateCameraInfoBuffer(1);
+        updateShadowMapInfoBuffer(MAX_SHADOW_MAPS);
 
-    RenderCamera shadowCamera;
-    calculateShadowRenderCamera(renderCamera, m_testDirectionShadowMap, 0.0F, 4.0F, &shadowCamera);
+        vk::DescriptorSet descriptorSets[2] = {
+                m_shadowRenderPassResources->descriptorSet->getDescriptorSet(),
+                Engine::sceneRenderer()->getObjectDescriptorSet()->getDescriptorSet(),
+        };
 
-    GPULight lightInfoData{};
-    lightInfoData.type = LightType_Directional;
-    lightInfoData.worldDirection = glm::vec4(m_testDirectionShadowMap->getDirection(), 0.0F);
-    lightInfoData.intensity = glm::vec4(32.0F, 32.0F, 32.0F, 0.0F);
-    lightInfoData.shadowMapIndex = 0;
+        uint32_t dynamicOffsets[1] = {0};
 
+        m_shadowGraphicsPipeline->bind(commandBuffer);
+        commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,m_shadowGraphicsPipeline->getPipelineLayout(), 0, 2, descriptorSets, 1,dynamicOffsets);
 
-    GPUShadowMap cameraInfoData{};
-    cameraInfoData.viewProjectionMatrix = shadowCamera.getViewProjectionMatrix();
-    m_shadowRenderPassResources->cameraInfoBuffer->upload(0, sizeof(GPUShadowMap), &cameraInfoData);
-    m_lightingRenderPassResources->shadowMapBuffer->upload(0, sizeof(GPUShadowMap), &cameraInfoData);
-    m_lightingRenderPassResources->lightInfoBuffer->upload(0, sizeof(GPULight), &lightInfoData);
+        Engine::sceneRenderer()->render(dt, commandBuffer, &shadowRenderCamera);
 
-    vk::DescriptorSet descriptorSets[2] = {
-            m_shadowRenderPassResources->descriptorSet->getDescriptorSet(),
-            Engine::sceneRenderer()->getObjectDescriptorSet()->getDescriptorSet(),
-    };
+        commandBuffer.endRenderPass();
 
-    uint32_t dynamicOffsets[1] = { 0 };
+        blurImage(commandBuffer, m_vsmShadowMapSampler.get(), shadowMap->getShadowVarianceImageView(),
+                  shadowMap->getResolution(), shadowMap->getShadowVarianceImageView(),
+                  shadowMap->getResolution(), glm::vec2(10.0));
 
-    m_shadowGraphicsPipeline->bind(commandBuffer);
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_shadowGraphicsPipeline->getPipelineLayout(), 0, 2, descriptorSets, 1, dynamicOffsets);
-
-    Engine::sceneRenderer()->render(dt, commandBuffer, &shadowCamera);
-
-    commandBuffer.endRenderPass();
-
-    blurImage(commandBuffer, m_vsmShadowMapSampler.get(), m_testDirectionShadowMap->getShadowVarianceImageView(), m_testDirectionShadowMap->getResolution(), m_testDirectionShadowMap->getShadowVarianceImageView(), m_testDirectionShadowMap->getResolution(), glm::vec2(10.0));
-
-    DescriptorSetWriter(m_lightingRenderPassResources->descriptorSet)
-            .writeImage(2, m_vsmShadowMapSampler.get(), m_testDirectionShadowMap->getShadowVarianceImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0)
-            .write();
+        DescriptorSetWriter(m_lightingRenderPassResources->descriptorSet)
+                .writeImage(LIGHTING_RENDER_PASS_SHADOW_DEPTH_TEXTURES_BINDING, m_vsmShadowMapSampler.get(), shadowMap->getShadowVarianceImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0)
+                .write();
+    }
 }
 
 const std::shared_ptr<RenderPass>& LightRenderer::getRenderPass() const {
     return m_shadowRenderPass;
-}
-
-DirectionShadowMap* LightRenderer::getTestShadowMap() const {
-    return m_testDirectionShadowMap;
-}
-
-const uint32_t& LightRenderer::getMaxVisibleShadowMaps() const {
-    return m_maxVisibleShadowMaps;
 }
 
 const std::shared_ptr<Texture>& LightRenderer::getEmptyShadowMap() const {
@@ -299,12 +362,92 @@ void LightRenderer::initEmptyShadowMap() {
     m_emptyShadowMap = std::shared_ptr<Texture>(Texture::create(emptyShadowMapImageViewConfig, samplerConfig));
 }
 
-void LightRenderer::updateCameraInfoBuffer(const size_t& maxShadowLights) {
+void LightRenderer::updateActiveShadowMaps() {
+    PROFILE_SCOPE("LightRenderer::updateActiveShadowMaps");
+
+    // Mark all shadow maps inactive. The active ones are re-marked, and the ones that remained inactive and processed and cleaned up later.
+    for (auto& entry : m_activeShadowMaps)
+        entry.second = false;
+
+    size_t numInactiveShadowMaps = m_inactiveShadowMaps.size();
+
+    m_shadowCameraInfoBufferData.clear();
+
+    const auto& lightEntities = Engine::scene()->registry()->group<LightComponent>(entt::get<Transform>);
+
+    for (const auto& id : lightEntities) {
+        LightComponent& lightComponent = lightEntities.get<LightComponent>(id);
+
+        bool hasShadows = lightComponent.isShadowCaster()
+                          && lightComponent.getType() == LightType_Directional
+                          && lightComponent.getShadowResolution().x > 0
+                          && lightComponent.getShadowResolution().y > 0;
+
+        if (!hasShadows) {
+            continue; // Skip this light
+        }
+
+        if (lightComponent.getShadowMap() == nullptr || lightComponent.getShadowMap()->getResolution() != lightComponent.getShadowResolution()) {
+            ShadowMap* shadowMap = nullptr;
+
+            if (!m_inactiveShadowMaps.empty()) {
+
+                // Look for an inactive shadow map with a matching resolution
+                for (auto it1 = m_inactiveShadowMaps.begin(); it1 != m_inactiveShadowMaps.end(); ++it1) {
+                    if ((*it1)->getResolution() == lightComponent.getShadowResolution()) {
+                        shadowMap = *it1;
+                        m_inactiveShadowMaps.erase(it1);
+                        break;
+                    }
+                }
+
+                // No matching resolution was found, so we choose the oldest inactive map (front of queue) to repurpose
+                if (shadowMap == nullptr) {
+                    shadowMap = m_inactiveShadowMaps.front();
+                    m_inactiveShadowMaps.pop_front();
+                }
+            }
+
+            if (shadowMap == nullptr) {
+                shadowMap = new ShadowMap(lightComponent.getShadowResolution());
+            }
+
+            lightComponent.setShadowMap(shadowMap);
+        }
+
+        ShadowMap* shadowMap = lightComponent.getShadowMap();
+
+        m_activeShadowMaps[shadowMap] = true;
+    }
+
+    if (numInactiveShadowMaps > m_inactiveShadowMaps.size())
+        printf("%d shadow maps became active\n", numInactiveShadowMaps - m_inactiveShadowMaps.size());
+
+    numInactiveShadowMaps = m_inactiveShadowMaps.size();
+
+    // All shadow maps that remained inactive are moved from the active pool to the inactive pool.
+    for (auto it = m_activeShadowMaps.begin(); it != m_activeShadowMaps.end(); ++it) {
+        if (!it->second) {
+            m_inactiveShadowMaps.emplace_back(it->first);
+            it = m_activeShadowMaps.erase(it);
+        }
+    }
+
+    if (numInactiveShadowMaps < m_inactiveShadowMaps.size())
+        printf("%d shadow maps became inactive\n", m_inactiveShadowMaps.size() - numInactiveShadowMaps);
+}
+
+void LightRenderer::updateCameraInfoBuffer(size_t maxShadowLights) {
     PROFILE_SCOPE("LightRenderer::updateCameraInfoBuffer");
 
-    vk::DeviceSize newBufferSize = sizeof(CameraInfoUBO) * maxShadowLights;
+    if (maxShadowLights < 1) {
+        maxShadowLights = 1;
+    }
 
-    if (m_shadowRenderPassResources->cameraInfoBuffer == nullptr || newBufferSize > m_shadowRenderPassResources->cameraInfoBuffer->getSize()) {
+    vk::DeviceSize newBufferSize = sizeof(GPUCamera) * maxShadowLights;
+
+    if (m_shadowRenderPassResources->cameraInfoBuffer == nullptr ||
+        newBufferSize > m_shadowRenderPassResources->cameraInfoBuffer->getSize()) {
         PROFILE_SCOPE("Allocate CameraInfoBuffer");
 
         printf("Allocating CameraInfoBuffer - %llu objects\n", maxShadowLights);
@@ -323,58 +466,117 @@ void LightRenderer::updateCameraInfoBuffer(const size_t& maxShadowLights) {
                 .writeBuffer(0, m_shadowRenderPassResources->cameraInfoBuffer, 0, newBufferSize)
                 .write();
     }
+
+    const auto& lightEntities = Engine::scene()->registry()->group<LightComponent>(entt::get<Transform>);
+
+    for (const auto& id : lightEntities) {
+
+    }
 }
 
-void LightRenderer::updateLightInfoBuffer(const size_t& maxLights) {
+void LightRenderer::updateLightInfoBuffer(size_t maxLights) {
     PROFILE_SCOPE("LightRenderer::updateLightInfoBuffer");
+
+    if (maxLights < 16) {
+        maxLights = 16;
+    }
 
     vk::DeviceSize newBufferSize = sizeof(GPULight) * maxLights;
 
-    if (m_lightingRenderPassResources->lightInfoBuffer == nullptr || newBufferSize > m_lightingRenderPassResources->lightInfoBuffer->getSize()) {
-        PROFILE_SCOPE("Allocate updateLightInfoBuffer");
+    if (newBufferSize > 0) {
+        if (m_lightingRenderPassResources->lightInfoBuffer == nullptr ||
+            newBufferSize > m_lightingRenderPassResources->lightInfoBuffer->getSize()) {
+            PROFILE_SCOPE("Allocate updateLightInfoBuffer");
 
-        printf("Allocating LightInfoBuffer - %llu objects\n", maxLights);
+            printf("Allocating LightInfoBuffer - %llu lights\n", maxLights);
 
-        BufferConfiguration bufferConfig;
-        bufferConfig.device = Engine::graphics()->getDevice();
-        bufferConfig.size = newBufferSize;
-        bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-        //vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-        bufferConfig.usage = vk::BufferUsageFlagBits::eStorageBuffer;// | vk::BufferUsageFlagBits::eTransferDst;
+            BufferConfiguration bufferConfig;
+            bufferConfig.device = Engine::graphics()->getDevice();
+            bufferConfig.size = newBufferSize;
+            bufferConfig.memoryProperties =
+                    vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+            //vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+            bufferConfig.usage = vk::BufferUsageFlagBits::eStorageBuffer;// | vk::BufferUsageFlagBits::eTransferDst;
 
-        delete m_lightingRenderPassResources->lightInfoBuffer;
-        m_lightingRenderPassResources->lightInfoBuffer = Buffer::create(bufferConfig);
+            delete m_lightingRenderPassResources->lightInfoBuffer;
+            m_lightingRenderPassResources->lightInfoBuffer = Buffer::create(bufferConfig);
 
-        DescriptorSetWriter(m_lightingRenderPassResources->descriptorSet)
-                .writeBuffer(0, m_lightingRenderPassResources->lightInfoBuffer, 0, newBufferSize)
-                .write();
+            DescriptorSetWriter(m_lightingRenderPassResources->descriptorSet)
+                    .writeBuffer(LIGHTING_RENDER_PASS_LIGHT_INFO_BUFFER_BINDING,
+                                 m_lightingRenderPassResources->lightInfoBuffer, 0, newBufferSize)
+                    .write();
+
+            GPULight defaultLight{};
+            defaultLight.type = LightType_Invalid;
+            defaultLight.intensity = glm::vec4(0.0F);
+            defaultLight.worldPosition = glm::vec4(0.0F, 0.0F, 0.0F, 1.0F);
+            defaultLight.worldDirection = glm::vec4(0.0F, 0.0F, 1.0F, 0.0F);
+            defaultLight.shadowMapIndex = 0;
+            defaultLight.shadowMapCount = 0;
+            m_lightBufferData.clear();
+            m_lightBufferData.resize(maxLights, defaultLight);
+        }
+
+        auto thread_exec = [this](size_t rangeStart, size_t rangeEnd) {
+            PROFILE_SCOPE("LightRenderer::updateLightInfoBuffer/thread_exec")
+            const auto &lightEntities = Engine::scene()->registry()->group<LightComponent>(entt::get<Transform>);
+
+            size_t itOffset = rangeStart;
+
+            auto it = lightEntities.begin() + itOffset;
+            for (size_t index = rangeStart; index != rangeEnd; ++index, ++it) {
+                const Transform &transform = lightEntities.get<Transform>(*it);
+                const LightComponent &lightComponent = lightEntities.get<LightComponent>(*it);
+                GPULight &gpuLight = m_lightBufferData[index];
+                gpuLight.type = lightComponent.getType();
+                gpuLight.worldPosition = glm::vec4(transform.getTranslation(), 1.0F); // TODO: this should probably be view-space position to avoid loosing precision in extremely large scenes. (planet rendering)
+                gpuLight.worldDirection = glm::vec4(transform.getForwardAxis(), 0.0F);
+                gpuLight.intensity = glm::vec4(lightComponent.getIntensity(), 0.0F);
+                gpuLight.shadowMapIndex = 0;
+                gpuLight.shadowMapCount = 1;
+            }
+        };
+
+        // TODO: for scenes with a huge number of lights, multi-thread this loop. Probably not a common scenario though.
+        thread_exec(0, m_numLightEntities);
     }
 }
 
-void LightRenderer::updateShadowMapInfoBuffer(const size_t& maxShadowLights) {
+void LightRenderer::updateShadowMapInfoBuffer(size_t maxShadowLights) {
     PROFILE_SCOPE("LightRenderer::updateShadowMapInfoBuffer");
+
+    if (maxShadowLights < 1) {
+        maxShadowLights = 1;
+    }
 
     vk::DeviceSize newBufferSize = sizeof(GPUShadowMap) * maxShadowLights;
 
-    if (m_lightingRenderPassResources->shadowMapBuffer == nullptr || newBufferSize > m_lightingRenderPassResources->shadowMapBuffer->getSize()) {
-        PROFILE_SCOPE("Allocate ShadowMapInfoBuffer");
+    if (newBufferSize > 0) {
+        if (m_lightingRenderPassResources->shadowMapBuffer == nullptr ||
+            newBufferSize > m_lightingRenderPassResources->shadowMapBuffer->getSize()) {
+            PROFILE_SCOPE("Allocate ShadowMapInfoBuffer");
 
-        printf("Allocating ShadowMapInfoBuffer - %llu objects\n", maxShadowLights);
+            printf("Allocating ShadowMapInfoBuffer - %llu lights\n", maxShadowLights);
 
-        BufferConfiguration bufferConfig;
-        bufferConfig.device = Engine::graphics()->getDevice();
-        bufferConfig.size = newBufferSize;
-        bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-        //vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-        bufferConfig.usage = vk::BufferUsageFlagBits::eStorageBuffer;// | vk::BufferUsageFlagBits::eTransferDst;
+            BufferConfiguration bufferConfig;
+            bufferConfig.device = Engine::graphics()->getDevice();
+            bufferConfig.size = newBufferSize;
+            bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+            //vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+            bufferConfig.usage = vk::BufferUsageFlagBits::eStorageBuffer;// | vk::BufferUsageFlagBits::eTransferDst;
 
-        delete m_lightingRenderPassResources->shadowMapBuffer;
-        m_lightingRenderPassResources->shadowMapBuffer = Buffer::create(bufferConfig);
+            delete m_lightingRenderPassResources->shadowMapBuffer;
+            m_lightingRenderPassResources->shadowMapBuffer = Buffer::create(bufferConfig);
 
-        DescriptorSetWriter(m_lightingRenderPassResources->descriptorSet)
-                .writeBuffer(1, m_lightingRenderPassResources->shadowMapBuffer, 0, newBufferSize)
-                .write();
+            DescriptorSetWriter(m_lightingRenderPassResources->descriptorSet)
+                    .writeBuffer(LIGHTING_RENDER_PASS_SHADOW_MAP_INFO_BUFFER_BINDING, m_lightingRenderPassResources->shadowMapBuffer, 0, newBufferSize)
+                    .write();
+        }
     }
+}
+
+void LightRenderer::streamLightData() {
+    m_lightingRenderPassResources->lightInfoBuffer->upload(0, m_lightBufferData.size() * sizeof(GPULight), m_lightBufferData.data());
 }
 
 void LightRenderer::blurImage(const vk::CommandBuffer& commandBuffer, const Sampler* sampler, const ImageView* srcImage, const glm::uvec2& srcSize, const ImageView* dstImage, const glm::uvec2& dstSize, const glm::vec2& blurRadius) {
@@ -462,8 +664,8 @@ void LightRenderer::blurImage(const vk::CommandBuffer& commandBuffer, const Samp
                                 ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader));
 }
 
-void LightRenderer::calculateShadowRenderCamera(const RenderCamera* viewerRenderCamera, const DirectionShadowMap* shadowMap, const double& nearDistance, const double& farDistance, RenderCamera* outShadowRenderCamera) {
-    PROFILE_SCOPE("LightRenderer::calculateShadowRenderCamera");
+void LightRenderer::calculateDirectionalShadowRenderCamera(const RenderCamera* viewerRenderCamera, const glm::vec3& direction, const double& nearDistance, const double& farDistance, RenderCamera* outShadowRenderCamera) {
+    PROFILE_SCOPE("LightRenderer::calculateDirectionalShadowRenderCamera");
 
     std::array<glm::dvec3, Frustum::NumCorners> viewerFrustumCorners = Frustum::getCornersNDC();
     glm::dvec4 temp;
@@ -502,7 +704,7 @@ void LightRenderer::calculateShadowRenderCamera(const RenderCamera* viewerRender
 
     Transform shadowCameraTransform;
     shadowCameraTransform.setTranslation(worldSpaceFrustumCenter);
-    shadowCameraTransform.setRotation(m_testDirectionShadowMap->getDirection(), glm::vec3(0.0F, 1.0F, 0.0F));
+    shadowCameraTransform.setRotation(direction, glm::vec3(0.0F, 1.0F, 0.0F));
     glm::dmat4 shadowViewMatrix = glm::inverse(shadowCameraTransform.getMatrix());
 
     glm::dvec2 shadowViewMin(std::numeric_limits<double>::max());

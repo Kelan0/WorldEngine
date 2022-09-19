@@ -12,6 +12,8 @@ layout(location = 2) in vec3 tangent;
 layout(location = 3) in vec2 texture;
 
 layout(set = 0, binding = 0) uniform UBO1 {
+    mat4 viewMatrix;
+    mat4 projectionMatrix;
     mat4 viewProjectionMatrix;
 };
 

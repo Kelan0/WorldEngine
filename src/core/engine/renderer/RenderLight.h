@@ -5,21 +5,22 @@
 #include "core/core.h"
 
 enum LightType {
-    LightType_Directional = 0,
-    LightType_Point = 1,
-    LightType_Spot = 2,
-    LightType_Area = 3,
-    LightType_Invalid = 4
+    LightType_Invalid = 0,
+    LightType_Directional = 1,
+    LightType_Point = 2,
+    LightType_Spot = 3,
+    LightType_Area = 4,
 };
 
 struct GPULight {
     glm::vec4 worldPosition;
     glm::vec4 worldDirection;
     glm::vec4 intensity;
+    glm::vec4 _pad1;
     uint32_t shadowMapIndex;
     uint32_t shadowMapCount; // Number of cascades for CSM directional lights
     uint32_t type;
-    uint32_t _pad;
+    uint32_t _pad2;
 };
 
 class Light {

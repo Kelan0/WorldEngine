@@ -137,7 +137,7 @@ bool Buffer::upload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize siz
 		return false;
 	}
 
-	if (data == nullptr) {
+	if (data == nullptr && size > 0) {
 		printf("Cannot upload NULL data to buffer\n");
 		assert(false);
 		return false;
@@ -225,6 +225,9 @@ const Buffer* Buffer::getStagingBuffer() {
 }
 
 bool Buffer::stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data) {
+    if (size == 0) {
+        return true; // We "successfully" uploaded nothing... This is valid
+    }
     reserveStagingBuffer(dstBuffer->getDevice(), size);
 
     vk::DeviceSize stageSize = glm::min(s_stagingBuffer->getSize(), size);
@@ -251,6 +254,9 @@ bool Buffer::stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSi
 }
 
 bool Buffer::mappedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data) {
+    if (size == 0) {
+        return true; // We "successfully" uploaded nothing... This is valid
+    }
     const vk::Device& device = **dstBuffer->getDevice();
     if (dstBuffer->m_memory->map() == nullptr) {
         printf("Failed to map device memory for buffer\n");

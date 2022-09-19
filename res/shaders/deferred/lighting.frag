@@ -6,6 +6,12 @@
 #include "res/shaders/common/pbr.glsl"
 
 
+#define LIGHT_TYPE_IINVALID 0
+#define LIGHT_TYPE_DIRECTIONAL 1
+#define LIGHT_TYPE_POINT 2
+#define LIGHT_TYPE_SPOT 3
+#define LIGHT_TYPE_AREA 4
+
 struct SurfacePoint {
     bool exists;
     float depth;
@@ -37,10 +43,11 @@ struct LightInfo {
     vec4 worldPosition;
     vec4 worldDirection;
     vec4 intensity;
+    vec4 _pad1;
     uint shadowMapIndex;
     uint shadowMapCount;
     uint type;
-    uint _pad[1];
+    uint _pad2;
 };
 
 struct ShadowMapInfo {
@@ -74,16 +81,19 @@ layout(set = 0, binding = 7) uniform samplerCube diffuseIrradianceCubeMap;
 layout(set = 0, binding = 8) uniform sampler2D BRDFIntegrationMap;
 
 
+layout(set = 1, binding = 0) uniform UBO2 {
+    uint lightCount;
+};
 
-layout(set = 1, binding = 0) readonly buffer LightBuffer {
+layout(set = 1, binding = 1) readonly buffer LightBuffer {
     LightInfo lights[];
 };
 
-layout(set = 1, binding = 1) readonly buffer ShadowMapBuffer {
+layout(set = 1, binding = 2) readonly buffer ShadowMapBuffer {
     ShadowMapInfo shadowMaps[];
 };
 
-layout(set = 1, binding = 2) uniform sampler2D shadowDepthTextures[];
+layout(set = 1, binding = 3) uniform sampler2D shadowDepthTextures[];
 
 
 
@@ -157,8 +167,11 @@ float sampleShadowVSM(in sampler2D shadowMap, in vec2 coord, in float compareDep
 }
 
 float calculateShadow(in SurfacePoint surface, in LightInfo lightInfo) {
+    if (lightInfo.shadowMapCount == 0)
+        return 1.0; // No shadow map, fully lit.
+
     float NdotL = max(0.0, dot(surface.worldNormal, -1.0 * vec3(lightInfo.worldDirection)));
-    if (NdotL <= 1e-5)
+    if (NdotL <= 0.0)
         return 0.0;
 
     mat4 lightViewProjectionMatrix = shadowMaps[0].viewProjectionMatrix;
@@ -173,7 +186,7 @@ float calculateShadow(in SurfacePoint surface, in LightInfo lightInfo) {
     // float closestDepth = texture(shadowDepthTextures[lightInfo.shadowMapIndex], lightProjectedPosition.xy).r;
     // float shadow = currentDepth > closestDepth ? 0.0 : 1.0;
 
-    return shadow;// * NdotL;
+    return shadow * NdotL;
 }
 
 vec3 calculateOutgoingRadiance(in SurfacePoint surface, in vec3 incomingRadiance, in vec3 viewDirToLight) {
@@ -203,13 +216,23 @@ vec3 calculateOutgoingRadiance(in SurfacePoint surface, in vec3 incomingRadiance
     return (kD * surface.albedo / PI + specular) * incomingRadiance * NdotL;
 }
 
-vec3 calculatePointLight(in SurfacePoint surface, in PointLight light) {
-    vec3 L = light.position - surface.viewPosition;
+vec3 calculatePointLight(in SurfacePoint surface, in LightInfo light) {
+    vec3 lightViewPosition = vec3(viewMatrix * light.worldPosition);
+    vec3 L = lightViewPosition - surface.viewPosition;
     float distToLight = length(L);
     L /= distToLight;
 
     float attenuation = 1.0 / (distToLight * distToLight);
-    vec3 lightRadiance = light.intensity * attenuation;
+    vec3 lightRadiance = light.intensity.rgb * attenuation;
+
+    return calculateOutgoingRadiance(surface, lightRadiance, L);
+}
+
+vec3 calculateDirectionalLight(in SurfacePoint surface, in LightInfo light) {
+    vec3 L = -1.0 * vec3(viewMatrix * light.worldDirection);
+
+    float shadow = calculateShadow(surface, light);
+    vec3 lightRadiance = light.intensity.rgb * shadow;
 
     return calculateOutgoingRadiance(surface, lightRadiance, L);
 }
@@ -221,27 +244,22 @@ void main() {
     vec3 finalColour = vec3(0.0);
 
     if (!surface.exists) {
-        // outColor = vec4(0.0, 0.0, 0.0, 1.0);
         finalColour = textureLod(environmentCubeMap, getViewRay(fs_texture, cameraRays), 0.5).rgb;
 
     } else {
         vec3 cameraPos = vec3(0.0); // camera at origin
 
-        const uint numPointLights = 4;
-        PointLight[4] pointLights;
-        pointLights[0].position = vec3(viewMatrix * vec4(vec3(3.0, 0.8, -1.0), 1.0));
-        pointLights[0].intensity = vec3(32.0, 8.0, 0.0);
-        pointLights[1].position = vec3(viewMatrix * vec4(vec3(0.4, 1.3, 2.0), 1.0));
-        pointLights[1].intensity = vec3(32.0, 32.0, 32.0);
-        pointLights[2].position = vec3(viewMatrix * vec4(vec3(-2.0, 1.1, -1.2), 1.0));
-        pointLights[2].intensity = vec3(0.8, 6.4, 32.0);
-        pointLights[3].position = vec3(viewMatrix * vec4(vec3(-2.1, 1.1, 2.3), 1.0));
-        pointLights[3].intensity = vec3(0.8, 32.0, 6.4);
-
         vec3 Lo = surface.emission;
 
-        for (uint i = 0; i < numPointLights; ++i) {
-            Lo += surface.albedo * calculatePointLight(surface, pointLights[i]);
+        for (uint i = 0; i < lightCount; ++i) {
+            switch (lights[i].type) {
+            case LIGHT_TYPE_DIRECTIONAL:
+                Lo += surface.albedo * calculateDirectionalLight(surface, lights[i]);
+                break;
+            case LIGHT_TYPE_POINT:
+                Lo += surface.albedo * calculatePointLight(surface, lights[i]);
+                break;
+            }
         }
 
         vec3 R = reflect(-surface.worldDirToCamera, surface.worldNormal);
@@ -256,17 +274,13 @@ void main() {
         vec2 integratedBRDF = texture(BRDFIntegrationMap, vec2(NdotV, surface.roughness)).xy;
         vec3 specular = prefilteredColor * (kS * integratedBRDF[0] + integratedBRDF[1]);
 
-        vec3 ambient = (kD * diffuse + specular) * surface.ambientOcclusion; 
+        //const float shadowIntensity = 0.95;
+        //float shadow = 1.0;//calculateShadow(surface, lights[0]) * shadowIntensity + (1.0 - shadowIntensity);
 
-        float shadow = calculateShadow(surface, lights[0]);
-        ambient *= (shadow * 0.92 + 0.08);
+        vec3 ambient = (kD * diffuse + specular) * surface.ambientOcclusion;// * shadow;
 
-        finalColour = ambient + Lo;
+         finalColour = ambient + Lo;
     }
-
-    // finalColour = texture(BRDFIntegrationMap, vec2(fs_texture.x, 1.0 - fs_texture.y)).rgb;
-
-
 
 
     finalColour = finalColour / (finalColour + vec3(1.0));
@@ -285,27 +299,5 @@ void main() {
     // finalColour = vec3(surface.emission / 32.0);
 
     outColor = vec4(finalColour, 1.0);
-
-
-    
-
-    // outColor = vec4(texture(diffuseIrradianceCubeMap, getViewRay(fs_texture, cameraRays)).rgb, 1.0);
-
-
-
-
-    // vec3 ray = getViewRay(fs_texture, cameraRays);
-    // if (abs(ray.x) > abs(ray.y)) {
-    //     if (abs(ray.x) > abs(ray.z))
-    //         ray = vec3(sign(ray.x), 0, 0);
-    //     else
-    //         ray = vec3(0, 0, sign(ray.z));
-    // } else {
-    //     if (abs(ray.y) > abs(ray.z))
-    //         ray = vec3(0, sign(ray.y), 0);
-    //     else
-    //         ray = vec3(0, 0, sign(ray.z));
-    // }
-
-    // outColor = vec4(ray * 0.5 + 0.5, 1.0);
+    //outColor = vec4(vec3(texture(shadowDepthTextures[0], fs_texture).r), 1.0);
 }
