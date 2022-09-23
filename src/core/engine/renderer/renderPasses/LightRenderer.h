@@ -61,6 +61,8 @@ private:
 
     void blurImage(const vk::CommandBuffer& commandBuffer, const Sampler* sampler, const ImageView* srcImage, const glm::uvec2& srcSize, const ImageView* dstImage, const glm::uvec2& dstSize, const glm::vec2& blurRadius);
 
+    void vsmBlurActiveShadowMaps(const vk::CommandBuffer& commandBuffer);
+
     void calculateDirectionalShadowRenderCamera(const RenderCamera* viewerRenderCamera, const glm::vec3& direction, const double& nearDistance, const double& farDistance, RenderCamera* outShadowRenderCamera);
 
 private:
@@ -73,6 +75,7 @@ private:
     std::shared_ptr<DescriptorSetLayout> m_vsmBlurComputeDescriptorSetLayout;
     DescriptorSet* m_vsmBlurXComputeDescriptorSet;
     DescriptorSet* m_vsmBlurYComputeDescriptorSet;
+    uint32_t m_blurElementArrayIndex;
 
     struct ShadowRenderPassResources {
         DescriptorSet* descriptorSet;
@@ -94,10 +97,10 @@ private:
 
     std::shared_ptr<Sampler> m_vsmShadowMapSampler;
 
-    Image2D* m_vsmBlurIntermediateImage;
-    ImageView* m_vsmBlurIntermediateImageView;
+//    Image2D* m_vsmBlurIntermediateImage;
+//    ImageView* m_vsmBlurIntermediateImageView;
 
-    std::unordered_map<ShadowMap*, bool> m_visibleShadowMaps;
+    std::vector<ShadowMap*> m_visibleShadowMaps;
     std::unordered_map<ShadowMap*, bool> m_activeShadowMaps;
     std::deque<ShadowMap*> m_inactiveShadowMaps;
 

@@ -152,8 +152,8 @@ float sampleShadowVSM(in sampler2D shadowMap, in vec2 coord, in float compareDep
     
     vec3 vsmTexel = texture(shadowMap, coord).xyz;
 
-    if (vsmTexel.z < compareDepth)
-        return 0.0;
+//    if (vsmTexel.z < compareDepth)
+//        return 0.0;
 
     float M1 = vsmTexel[0];
     float M2 = vsmTexel[1];
@@ -170,11 +170,11 @@ float calculateShadow(in SurfacePoint surface, in LightInfo lightInfo) {
     if (lightInfo.shadowMapCount == 0)
         return 1.0; // No shadow map, fully lit.
 
-    float NdotL = max(0.0, dot(surface.worldNormal, -1.0 * vec3(lightInfo.worldDirection)));
-    if (NdotL <= 0.0)
+    float NdotL = dot(surface.worldNormal, -1.0 * vec3(lightInfo.worldDirection));
+    if (NdotL <= 1e-5)
         return 0.0;
 
-    mat4 lightViewProjectionMatrix = shadowMaps[0].viewProjectionMatrix;
+    mat4 lightViewProjectionMatrix = shadowMaps[lightInfo.shadowMapIndex].viewProjectionMatrix;
     vec4 lightProjectedPosition = lightViewProjectionMatrix * invViewMatrix * vec4(surface.viewPosition, 1.0); // This conversion to world-space will loose precision in large scenes
     lightProjectedPosition.xyz /= lightProjectedPosition.w;
     lightProjectedPosition.xy = lightProjectedPosition.xy * 0.5 + 0.5;

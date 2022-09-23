@@ -452,6 +452,30 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, co
     delete[] imageInfos;
     return *this;
 }
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* sampler, const ImageView* const* imageViews, const vk::ImageLayout* imageLayouts, const uint32_t& arrayCount, const uint32_t& arrayIndex) {
+    vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
+    for (uint32_t i = 0; i < arrayCount; ++i) {
+        imageInfos[i].setSampler(sampler->getSampler());
+        imageInfos[i].setImageView(imageViews[i]->getImageView());
+        imageInfos[i].setImageLayout(imageLayouts[i]);
+    }
+    writeImage(binding, imageInfos, arrayCount, arrayIndex);
+    delete[] imageInfos;
+    return *this;
+}
+
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* sampler, const ImageView* const* imageViews, const vk::ImageLayout& imageLayout, const uint32_t& arrayCount, const uint32_t& arrayIndex) {
+    vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
+    for (uint32_t i = 0; i < arrayCount; ++i) {
+        imageInfos[i].setSampler(sampler->getSampler());
+        imageInfos[i].setImageView(imageViews[i]->getImageView());
+        imageInfos[i].setImageLayout(imageLayout);
+    }
+    writeImage(binding, imageInfos, arrayCount, arrayIndex);
+    delete[] imageInfos;
+    return *this;
+}
+
 
 DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* samplers, const ImageView* imageViews, const vk::ImageLayout& imageLayouts, const uint32_t& arrayIndex) {
     return writeImage(binding, &samplers, &imageViews, &imageLayouts, 1, arrayIndex);
@@ -463,6 +487,17 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, co
         imageInfos[i].setSampler(textures[i]->getSampler()->getSampler());
         imageInfos[i].setImageView(textures[i]->getImageView()->getImageView());
         imageInfos[i].setImageLayout(imageLayouts[i]);
+    }
+    writeImage(binding, imageInfos, arrayCount, arrayIndex);
+    delete[] imageInfos;
+    return *this;
+}
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Texture* const* textures, const vk::ImageLayout& imageLayout, const uint32_t& arrayCount, const uint32_t& arrayIndex) {
+    vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
+    for (uint32_t i = 0; i < arrayCount; ++i) {
+        imageInfos[i].setSampler(textures[i]->getSampler()->getSampler());
+        imageInfos[i].setImageView(textures[i]->getImageView()->getImageView());
+        imageInfos[i].setImageLayout(imageLayout);
     }
     writeImage(binding, imageInfos, arrayCount, arrayIndex);
     delete[] imageInfos;

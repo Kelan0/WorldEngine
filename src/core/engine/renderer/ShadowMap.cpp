@@ -16,6 +16,7 @@ ShadowMap::ShadowMap(const uint32_t& width, const uint32_t& height):
 }
 
 ShadowMap::ShadowMap(const glm::uvec2& resolution):
+        m_index(-1),
         m_resolution(resolution),
         m_shadowDepthImage(nullptr),
         m_shadowVarianceImage(nullptr),
@@ -89,8 +90,16 @@ void ShadowMap::update() {
     }
 }
 
-void ShadowMap::begin(const vk::CommandBuffer& commandBuffer, const RenderPass* renderPass) {
+void ShadowMap::beginRenderPass(const vk::CommandBuffer& commandBuffer, const RenderPass* renderPass) {
     renderPass->begin(commandBuffer, m_shadowMapFramebuffer, vk::SubpassContents::eInline);
+}
+
+const uint32_t &ShadowMap::getIndex() const {
+    return m_index;
+}
+
+void ShadowMap::setResolution(const glm::uvec2& resolution) {
+    m_resolution = resolution;
 }
 
 const glm::uvec2& ShadowMap::getResolution() const {

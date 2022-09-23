@@ -35,17 +35,20 @@ public:
 
     void update();
 
-    void begin(const vk::CommandBuffer& commandBuffer, const RenderPass* renderPass);
+    void beginRenderPass(const vk::CommandBuffer& commandBuffer, const RenderPass* renderPass);
 
-    void render(const vk::CommandBuffer& commandBuffer);
+    void setResolution(const glm::uvec2& resolution);
 
-    [[nodiscard]] const glm::uvec2& getResolution() const;
+    const uint32_t& getIndex() const;
 
-    [[nodiscard]] const ImageView* getShadowVarianceImageView() const;
+    const glm::uvec2& getResolution() const;
 
-    [[nodiscard]] const glm::mat4& getViewProjectionMatrix() const;
+    const ImageView* getShadowVarianceImageView() const;
+
+    const glm::mat4& getViewProjectionMatrix() const;
 
 private:
+    uint32_t m_index;
     glm::uvec2 m_resolution;
     ImageView* m_shadowDepthImageView;
     ImageView* m_shadowVarianceImageView;

@@ -24,7 +24,7 @@ namespace Util {
     }
 
     template<class Vec>
-    Vec::iterator iter(const Vec& vec, size_t idx) {
+    typename Vec::iterator iter(const Vec& vec, size_t idx) {
         return vec.begin() + idx;
     }
 
