@@ -1,10 +1,13 @@
 
 #include "core/engine/renderer/renderPasses/UIRenderer.h"
 
+#include "core/application/Application.h"
+#include "core/application/InputHandler.h"
 #include "core/imgui/imgui_impl_sdl.h"
 #include "core/imgui/imgui_impl_vulkan.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/CommandPool.h"
+#include "core/engine/ui/PerformanceGraphUI.h"
 
 void checkVulkanResult(VkResult result);
 
@@ -96,9 +99,24 @@ void UIRenderer::preRender(double dt) {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
+
+    if (Application::instance()->input()->keyPressed(SDL_SCANCODE_F1)) {
+        setUIEnabled<PerformanceGraphUI>(!isUIEnabled<PerformanceGraphUI>());
+    }
 }
 
 void UIRenderer::render(double dt, const vk::CommandBuffer& commandBuffer) {
+
+//    ImGui::ShowDemoWindow();
+
+    for (auto it = m_uis.begin(); it != m_uis.end(); ++it) {
+        const bool& visible = it->second.second;
+        if (!visible)
+            continue;
+        UI* ui = it->second.first;
+        ui->draw(dt);
+    }
+
     m_uiRenderPass->begin(commandBuffer, Engine::graphics()->getCurrentFramebuffer(), vk::SubpassContents::eInline);
     ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);

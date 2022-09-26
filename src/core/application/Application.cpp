@@ -39,6 +39,8 @@ Application::~Application() {
 bool Application::initInternal() {
     PROFILE_SCOPE("Application::initInternal")
 
+    m_mainThreadId = std::this_thread::get_id();
+    printf("Initializing application on main thread 0x%016x\n", ThreadUtils::getThreadHashedId(m_mainThreadId));
     m_executionDirectory = PlatformUtils::findExecutionDirectory();
 
     PROFILE_REGION("Init SDL")
@@ -130,7 +132,6 @@ void Application::destroy() {
 }
 
 void Application::start() {
-    PROFILE_SCOPE("Application::start")
     m_running = true;
 
     // Trigger a ScreenResizeEvent at the beginning of the render loop so that anything that needs it can be initialized easily
@@ -148,17 +149,20 @@ void Application::start() {
     DebugUtils::RenderInfo tempDebugInfo;
 
     while (m_running) {
-        PROFILE_SCOPE("Application::start/tick_loop")
         auto now = std::chrono::high_resolution_clock::now();
         uint64_t elapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastTime).count();
         lastTime = now;
 
+        bool isFrame = false;
         bool uncappedFramerate = true;
         double frameDurationNanos = uncappedFramerate ? 1.0 : (1e+9 / 144.0);
 
         partialFrames += elapsedNanos / frameDurationNanos;
 
         if (partialFrames >= 1.0) {
+            Profiler::beginFrame();
+            isFrame = true;
+
             partialFrames = 0.0;
 
             auto beginFrame = now;
@@ -242,6 +246,10 @@ void Application::start() {
         }
 
         //SDL_Delay(1);
+
+        if (isFrame) {
+            Profiler::endFrame();
+        }
     }
 
     Engine::graphics()->getDevice()->waitIdle();
@@ -278,5 +286,13 @@ bool Application::isViewportInverted() const {
 
 const std::string& Application::getExecutionDirectory() const {
     return m_executionDirectory;
+}
+
+const std::thread::id& Application::getMainThreadId() const {
+    return m_mainThreadId;
+}
+
+const uint64_t Application::getHashedMainThreadId() const {
+    return ThreadUtils::getThreadHashedId(m_mainThreadId);
 }
 

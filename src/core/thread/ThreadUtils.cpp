@@ -18,3 +18,11 @@ void ThreadUtils::wakeThreads() {
 size_t ThreadUtils::getThreadCount() {
     return ThreadPool::instance()->getThreadCount();
 }
+
+uint64_t ThreadUtils::getThreadHashedId(const std::thread::id& id) {
+    return (uint64_t)std::hash<std::thread::id>{}(id);
+}
+
+uint64_t ThreadUtils::getCurrentThreadHashedId() {
+    return ThreadUtils::getThreadHashedId(std::this_thread::get_id());
+}

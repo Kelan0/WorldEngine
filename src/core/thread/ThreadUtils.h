@@ -40,6 +40,10 @@ namespace ThreadUtils {
     void wakeThreads();
 
     size_t getThreadCount();
+
+    uint64_t getThreadHashedId(const std::thread::id& id);
+
+    uint64_t getCurrentThreadHashedId();
 };
 
 template<typename Func, typename... Args>

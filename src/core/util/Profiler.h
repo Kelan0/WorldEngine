@@ -43,18 +43,61 @@ namespace Performance {
 
 class Profiler {
 public:
+    struct Profile {
+        profile_id id = nullptr;
+        Performance::moment_t startCPU;
+        Performance::moment_t endCPU;
+        size_t parentIndex = SIZE_MAX;
+        size_t lastChildIndex = SIZE_MAX;
+        size_t nextSiblingIndex = SIZE_MAX;
+    };
+
+    struct ThreadContext {
+        bool frameStarted = false;
+        size_t currentIndex;
+        std::vector<Profile> frameProfiles;
+        std::vector<Profile> prevFrameProfiles;
+        std::mutex mtx;
+
+        ThreadContext();
+
+        ~ThreadContext();
+    };
+
+private:
     Profiler();
 
     ~Profiler();
 
+public:
     static profile_id id(const char* name);
 
     static __itt_domain* domain();
 
+    static void beginFrame();
+
+    static void endFrame();
+
     static void begin(const profile_id& id);
 
     static void end();
+
+    static void getFrameProfile(std::unordered_map<uint64_t, std::vector<Profile>>& outThreadProfiles);
+
+private:
+    static ThreadContext& context();
+
+    void flushFrames();
+
+private:
+    static thread_local ThreadContext s_context;
+    static std::unordered_map<uint64_t, ThreadContext*> s_threadContexts;
 };
+
+
+
+
+
 
 class ScopeProfiler {
 public:

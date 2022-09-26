@@ -82,7 +82,7 @@ private:
 
 template<class Event>
 inline void EventDispatcher::connect(void(*callback)(const Event&)) {
-    PROFILE_SCOPE("EntityHierarchy::connect")
+    PROFILE_SCOPE("EventDispatcher::connect")
     if (callback == NULL)
         return;
 
@@ -100,7 +100,7 @@ inline void EventDispatcher::connect(void(*callback)(const Event&)) {
 
 template<typename Event, typename T>
 inline void EventDispatcher::connect(void(T::* callback)(const Event&), T* instance) {
-    PROFILE_SCOPE("EntityHierarchy::connect")
+    PROFILE_SCOPE("EventDispatcher::connect")
     if (instance == NULL)
         return;
 
@@ -127,7 +127,7 @@ inline void EventDispatcher::connect(void(T::* callback)(const Event&), T* insta
 
 template<class Event>
 inline void EventDispatcher::disconnect(void(*callback)(const Event&)) {
-    PROFILE_SCOPE("EntityHierarchy::disconnect")
+    PROFILE_SCOPE("EventDispatcher::disconnect")
     auto it = m_eventListeners.find(std::type_index(typeid(Event)));
     if (it == m_eventListeners.end())
         return;
@@ -151,7 +151,7 @@ inline void EventDispatcher::disconnect(void(*callback)(const Event&)) {
 
 template<class Event, typename T>
 inline void EventDispatcher::disconnect(void(T::* callback)(const Event&), T* instance) {
-    PROFILE_SCOPE("EntityHierarchy::disconnect")
+    PROFILE_SCOPE("EventDispatcher::disconnect")
     auto it = m_eventListeners.find(std::type_index(typeid(Event)));
     if (it == m_eventListeners.end())
         return;
@@ -187,7 +187,7 @@ inline void EventDispatcher::disconnect(void(T::* callback)(const Event&), T* in
 
 template<class Event, typename T>
 inline void EventDispatcher::disconnect(T* instance) {
-    PROFILE_SCOPE("EntityHierarchy::disconnect")
+    PROFILE_SCOPE("EventDispatcher::disconnect")
     auto it = m_eventListeners.find(std::type_index(typeid(Event)));
     if (it == m_eventListeners.end())
         return; // No listeners bound for this event
@@ -223,7 +223,7 @@ inline void EventDispatcher::disconnect(T* instance) {
 
 template<class Event>
 inline void EventDispatcher::trigger(const Event& event) {
-    PROFILE_SCOPE("EntityHierarchy::trigger")
+    PROFILE_SCOPE("EventDispatcher::trigger")
     m_dispatcher.trigger<Event>(event);
 
     auto& dispatchers = m_repeatEventDispatchers[std::type_index(typeid(Event))];
@@ -238,7 +238,7 @@ inline void EventDispatcher::trigger(const Event& event) {
 
 template<class Event>
 inline void EventDispatcher::repeatTo(EventDispatcher* eventDispatcher) {
-    PROFILE_SCOPE("EntityHierarchy::repeatTo")
+    PROFILE_SCOPE("EventDispatcher::repeatTo")
     if (eventDispatcher == NULL)
         return;
 
@@ -252,7 +252,7 @@ inline void EventDispatcher::repeatTo(EventDispatcher* eventDispatcher) {
 
 template<class Event>
 inline bool EventDispatcher::isRepeatingTo(EventDispatcher* eventDispatcher) {
-    PROFILE_SCOPE("EntityHierarchy::isRepeatingTo")
+    PROFILE_SCOPE("EventDispatcher::isRepeatingTo")
     if (eventDispatcher == NULL)
         return false;
 

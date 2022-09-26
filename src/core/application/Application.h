@@ -42,6 +42,9 @@ public:
     bool isViewportInverted() const;
 
     const std::string& getExecutionDirectory() const;
+
+    const std::thread::id& getMainThreadId() const;
+    const uint64_t getHashedMainThreadId() const;
 private:
     void start();
 
@@ -59,6 +62,8 @@ private:
     SDL_Window* m_windowHandle;
     InputHandler* m_inputHandler;
     std::string m_executionDirectory;
+
+    std::thread::id m_mainThreadId;
 
     bool m_running;
 };

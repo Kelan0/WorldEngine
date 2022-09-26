@@ -1,5 +1,6 @@
 
-#include "ThreadPool.h"
+#include "core/thread/ThreadPool.h"
+#include "core/thread/ThreadUtils.h"
 #include "core/util/Profiler.h"
 
 
@@ -122,6 +123,8 @@ BaseTask* ThreadPool::nextTask(Thread* currentThread) {
 void ThreadPool::executor() {
     PROFILE_SCOPE("ThreadPool::executor");
 
+    printf("Starting thread pool executor for thread 0x%016x\n", ThreadUtils::getCurrentThreadHashedId());
+
     // Wait for all threads to be allocated.
     while (true) {
         for (const auto& thread : m_threads)
@@ -150,15 +153,19 @@ void ThreadPool::executor() {
     thread->forceWake = false;
 
     while (thread->running) {
-        PROFILE_SCOPE("ThreadPool::executor/task_loop")
-        BaseTask* task = nextTask(thread);
+        Profiler::beginFrame();
+        {
+            PROFILE_SCOPE("ThreadPool::executor/task_loop")
+            BaseTask* task = nextTask(thread);
 
-        if (task == nullptr)
-            continue;
+            if (task == nullptr)
+                continue;
 
-        task->exec();
+            task->exec();
 
-        thread->completeTasks.emplace_back(task);
+            thread->completeTasks.emplace_back(task);
+        }
+        Profiler::endFrame();
     }
 }
 

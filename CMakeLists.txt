@@ -18,20 +18,20 @@ set(ITT_PATH "C:/Program Files (x86)/Intel/oneAPI/vtune/2022.2.0/sdk")
 #ENDIF(CMAKE_COMPILER_IS_GNUCC)
 
 if (MSVC)
-set_target_properties(${BUILD_TARGET} PROPERTIES LINK_FLAGS "/PROFILE")
-endif()
+    set_target_properties(${BUILD_TARGET} PROPERTIES LINK_FLAGS "/PROFILE")
+endif ()
 
-if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
-add_compile_definitions(_DEBUG)
-endif()
+if (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+    add_compile_definitions(_DEBUG)
+endif ()
 
 # INIT SDL2 LIBRARY
 set(SDL2_INCLUDE_DIR "${SDL2_PATH}/include")
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(SDL2_LIB_DIR "${SDL2_PATH}/lib/x64")
-else()
+else ()
     set(SDL2_LIB_DIR "${SDL2_PATH}/lib/x86")
-endif()
+endif ()
 list(APPEND COPY_BINARIES "${SDL2_LIB_DIR}/SDL2.dll")
 set(SDL2_LIBRARIES SDL2main SDL2)
 
@@ -70,18 +70,14 @@ set(STB_IMAGE_LIBRARIES stb_image)
 #set(VOLK_LIBRARIES volk)
 
 
-
 # INIT ITT LIBRARY
 set(ITT_INCLUDE_DIR "${ITT_PATH}/include")
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(ITT_LIB_DIR "${ITT_PATH}/lib64")
-else()
+else ()
     set(ITT_LIB_DIR "${ITT_PATH}/lib32")
-endif()
+endif ()
 set(ITT_LIBRARIES libittnotify.lib)
-
-
-
 
 
 include_directories(
@@ -90,9 +86,9 @@ include_directories(
         ${Vulkan_INCLUDE_DIR}
         ${GLM_INCLUDE_DIR}
         ${ENTT_INCLUDE_DIR}
-#        ${IMGUI_INCLUDE_DIR}
+        #        ${IMGUI_INCLUDE_DIR}
         ${STB_IMAGE_INCLUDE_DIR}
-#        ${VOLK_INCLUDE_DIR}
+        #        ${VOLK_INCLUDE_DIR}
         ${ITT_INCLUDE_DIR})
 
 link_directories(
@@ -105,24 +101,159 @@ file(GLOB_RECURSE PROJECT_SOURCE_FILES
         ${CMAKE_SOURCE_DIR}/src/*.hpp
         ${CMAKE_SOURCE_DIR}/src/*.h)
 
-add_executable(${PROJECT_NAME} src/main.cpp src/core/core.h src/core/hash.h src/core/application/Application.cpp src/core/application/Application.h src/core/application/InputHandler.cpp src/core/application/InputHandler.h src/core/engine/geometry/MeshData.cpp src/core/engine/geometry/MeshData.h src/core/engine/renderer/RenderCamera.cpp src/core/engine/renderer/RenderCamera.h src/core/engine/renderer/RenderComponent.cpp src/core/engine/renderer/RenderComponent.h src/core/engine/renderer/SceneRenderer.cpp src/core/engine/renderer/SceneRenderer.h src/core/engine/scene/Camera.cpp src/core/engine/scene/Camera.h src/core/engine/scene/Entity.cpp src/core/engine/scene/Entity.h src/core/engine/scene/EntityHierarchy.cpp src/core/engine/scene/EntityHierarchy.h src/core/engine/scene/Scene.cpp src/core/engine/scene/Scene.h src/core/engine/scene/Transform.cpp src/core/engine/scene/Transform.h src/core/engine/scene/event/EventDispatcher.cpp src/core/engine/scene/event/EventDispatcher.h src/core/engine/scene/event/Events.h src/core/graphics/Buffer.cpp src/core/graphics/Buffer.h src/core/graphics/CommandPool.cpp src/core/graphics/CommandPool.h src/core/graphics/DescriptorSet.cpp src/core/graphics/DescriptorSet.h src/core/graphics/DeviceMemory.cpp src/core/graphics/DeviceMemory.h src/core/graphics/FrameResource.cpp src/core/graphics/FrameResource.h src/core/graphics/GraphicsManager.cpp src/core/graphics/GraphicsManager.h src/core/graphics/GraphicsPipeline.cpp src/core/graphics/GraphicsPipeline.h src/core/graphics/Image2D.cpp src/core/graphics/Image2D.h src/core/graphics/ImageCube.cpp src/core/graphics/ImageCube.h src/core/graphics/ImageData.cpp src/core/graphics/ImageData.h src/core/graphics/Mesh.cpp src/core/graphics/Mesh.h src/core/graphics/Texture.cpp src/core/graphics/Texture.h src/core/util/DebugUtils.cpp src/core/util/DebugUtils.h src/core/util/Exception.cpp src/core/util/Exception.h src/core/util/Util.cpp src/core/util/Util.h src/core/util/Profiler.cpp src/core/util/Profiler.h src/core/thread/Scheduler.cpp src/core/thread/Scheduler.h src/core/thread/ThreadPool.cpp src/core/thread/ThreadPool.h src/core/thread/Task.cpp src/core/thread/Task.h src/core/thread/ThreadUtils.cpp src/core/thread/ThreadUtils.h src/core/engine/renderer/RenderProperties.cpp src/core/engine/renderer/RenderProperties.h src/core/util/DenseFlagArray.cpp src/core/util/DenseFlagArray.h src/core/util/EntityChangeTracker.cpp src/core/util/EntityChangeTracker.h src/core/engine/scene/bound/Frustum.cpp src/core/engine/scene/bound/Frustum.h src/core/engine/scene/bound/Plane.cpp src/core/engine/scene/bound/Plane.h src/core/engine/scene/bound/Sphere.cpp src/core/engine/scene/bound/Sphere.h src/core/engine/scene/bound/Intersection.cpp src/core/engine/scene/bound/Intersection.h src/core/engine/renderer/ImmediateRenderer.cpp src/core/engine/renderer/ImmediateRenderer.h src/core/graphics/RenderPass.cpp src/core/graphics/RenderPass.h src/core/Vulkan.cpp src/core/Vulkan.h src/core/graphics/Framebuffer.cpp src/core/graphics/Framebuffer.h src/core/engine/renderer/renderPasses/DeferredRenderer.cpp src/core/engine/renderer/renderPasses/DeferredRenderer.h src/core/engine/renderer/Material.cpp src/core/engine/renderer/Material.h src/core/graphics/ComputePipeline.cpp src/core/graphics/ComputePipeline.h src/core/graphics/ShaderUtils.cpp src/core/graphics/ShaderUtils.h src/core/graphics/BufferView.cpp src/core/graphics/BufferView.h src/core/graphics/ImageView.cpp src/core/graphics/ImageView.h src/core/engine/renderer/EnvironmentMap.cpp src/core/engine/renderer/EnvironmentMap.h src/core/engine/renderer/ShadowMap.cpp src/core/engine/renderer/ShadowMap.h src/core/application/Engine.cpp src/core/application/Engine.h src/core/engine/renderer/renderPasses/LightRenderer.cpp src/core/engine/renderer/renderPasses/LightRenderer.h src/core/engine/renderer/RenderLight.cpp src/core/engine/renderer/RenderLight.h src/core/engine/renderer/LightComponent.cpp src/core/engine/renderer/LightComponent.h src/core/util/PlatformUtils.cpp src/core/util/PlatformUtils.h src/core/imgui/imconfig.h src/core/imgui/imgui.cpp src/core/imgui/imgui.h src/core/imgui/imgui_draw.cpp src/core/imgui/imgui_internal.h src/core/imgui/imgui_tables.cpp src/core/imgui/imgui_widgets.cpp src/core/imgui/imstb_rectpack.h src/core/imgui/imstb_textedit.h src/core/imgui/imstb_truetype.h src/core/engine/renderer/renderPasses/UIRenderer.cpp src/core/engine/renderer/renderPasses/UIRenderer.h src/core/imgui/imgui_impl_sdl.cpp src/core/imgui/imgui_impl_sdl.h src/core/imgui/imgui_impl_vulkan.cpp src/core/imgui/imgui_impl_vulkan.h src/core/imgui/imgui_demo.cpp)
+add_executable(${PROJECT_NAME}
+        src/main.cpp
+        src/core/core.h
+        src/core/hash.h
+        src/core/application/Application.cpp
+        src/core/application/Application.h
+        src/core/application/InputHandler.cpp
+        src/core/application/InputHandler.h
+        src/core/engine/geometry/MeshData.cpp
+        src/core/engine/geometry/MeshData.h
+        src/core/engine/renderer/RenderCamera.cpp
+        src/core/engine/renderer/RenderCamera.h
+        src/core/engine/renderer/RenderComponent.cpp
+        src/core/engine/renderer/RenderComponent.h
+        src/core/engine/renderer/SceneRenderer.cpp
+        src/core/engine/renderer/SceneRenderer.h
+        src/core/engine/scene/Camera.cpp
+        src/core/engine/scene/Camera.h
+        src/core/engine/scene/Entity.cpp
+        src/core/engine/scene/Entity.h
+        src/core/engine/scene/EntityHierarchy.cpp
+        src/core/engine/scene/EntityHierarchy.h
+        src/core/engine/scene/Scene.cpp
+        src/core/engine/scene/Scene.h
+        src/core/engine/scene/Transform.cpp
+        src/core/engine/scene/Transform.h
+        src/core/engine/scene/event/EventDispatcher.cpp
+        src/core/engine/scene/event/EventDispatcher.h
+        src/core/engine/scene/event/Events.h
+        src/core/graphics/Buffer.cpp
+        src/core/graphics/Buffer.h
+        src/core/graphics/CommandPool.cpp
+        src/core/graphics/CommandPool.h
+        src/core/graphics/DescriptorSet.cpp
+        src/core/graphics/DescriptorSet.h
+        src/core/graphics/DeviceMemory.cpp
+        src/core/graphics/DeviceMemory.h
+        src/core/graphics/FrameResource.cpp
+        src/core/graphics/FrameResource.h
+        src/core/graphics/GraphicsManager.cpp
+        src/core/graphics/GraphicsManager.h
+        src/core/graphics/GraphicsPipeline.cpp
+        src/core/graphics/GraphicsPipeline.h
+        src/core/graphics/Image2D.cpp
+        src/core/graphics/Image2D.h
+        src/core/graphics/ImageCube.cpp
+        src/core/graphics/ImageCube.h
+        src/core/graphics/ImageData.cpp
+        src/core/graphics/ImageData.h
+        src/core/graphics/Mesh.cpp
+        src/core/graphics/Mesh.h
+        src/core/graphics/Texture.cpp
+        src/core/graphics/Texture.h
+        src/core/util/DebugUtils.cpp
+        src/core/util/DebugUtils.h
+        src/core/util/Exception.cpp
+        src/core/util/Exception.h
+        src/core/util/Util.cpp
+        src/core/util/Util.h
+        src/core/util/Profiler.cpp
+        src/core/util/Profiler.h
+        src/core/thread/ThreadPool.cpp
+        src/core/thread/ThreadPool.h
+        src/core/thread/Task.cpp
+        src/core/thread/Task.h
+        src/core/thread/ThreadUtils.cpp
+        src/core/thread/ThreadUtils.h
+        src/core/engine/renderer/RenderProperties.cpp
+        src/core/engine/renderer/RenderProperties.h
+        src/core/util/DenseFlagArray.cpp
+        src/core/util/DenseFlagArray.h
+        src/core/util/EntityChangeTracker.cpp
+        src/core/util/EntityChangeTracker.h
+        src/core/engine/scene/bound/Frustum.cpp
+        src/core/engine/scene/bound/Frustum.h
+        src/core/engine/scene/bound/Plane.cpp
+        src/core/engine/scene/bound/Plane.h
+        src/core/engine/scene/bound/Sphere.cpp
+        src/core/engine/scene/bound/Sphere.h
+        src/core/engine/scene/bound/Intersection.cpp
+        src/core/engine/scene/bound/Intersection.h
+        src/core/engine/renderer/ImmediateRenderer.cpp
+        src/core/engine/renderer/ImmediateRenderer.h
+        src/core/graphics/RenderPass.cpp
+        src/core/graphics/RenderPass.h
+        src/core/Vulkan.cpp
+        src/core/Vulkan.h
+        src/core/graphics/Framebuffer.cpp
+        src/core/graphics/Framebuffer.h
+        src/core/engine/renderer/renderPasses/DeferredRenderer.cpp
+        src/core/engine/renderer/renderPasses/DeferredRenderer.h
+        src/core/engine/renderer/Material.cpp
+        src/core/engine/renderer/Material.h
+        src/core/graphics/ComputePipeline.cpp
+        src/core/graphics/ComputePipeline.h
+        src/core/graphics/ShaderUtils.cpp
+        src/core/graphics/ShaderUtils.h
+        src/core/graphics/BufferView.cpp
+        src/core/graphics/BufferView.h
+        src/core/graphics/ImageView.cpp
+        src/core/graphics/ImageView.h
+        src/core/engine/renderer/EnvironmentMap.cpp
+        src/core/engine/renderer/EnvironmentMap.h
+        src/core/engine/renderer/ShadowMap.cpp
+        src/core/engine/renderer/ShadowMap.h
+        src/core/application/Engine.cpp
+        src/core/application/Engine.h
+        src/core/engine/renderer/renderPasses/LightRenderer.cpp
+        src/core/engine/renderer/renderPasses/LightRenderer.h
+        src/core/engine/renderer/RenderLight.cpp
+        src/core/engine/renderer/RenderLight.h
+        src/core/engine/renderer/LightComponent.cpp
+        src/core/engine/renderer/LightComponent.h
+        src/core/util/PlatformUtils.cpp
+        src/core/util/PlatformUtils.h
+        src/core/imgui/imconfig.h
+        src/core/imgui/imgui.cpp
+        src/core/imgui/imgui.h
+        src/core/imgui/imgui_draw.cpp
+        src/core/imgui/imgui_internal.h
+        src/core/imgui/imgui_tables.cpp
+        src/core/imgui/imgui_widgets.cpp
+        src/core/imgui/imstb_rectpack.h
+        src/core/imgui/imstb_textedit.h
+        src/core/imgui/imstb_truetype.h
+        src/core/engine/renderer/renderPasses/UIRenderer.cpp
+        src/core/engine/renderer/renderPasses/UIRenderer.h
+        src/core/imgui/imgui_impl_sdl.cpp
+        src/core/imgui/imgui_impl_sdl.h
+        src/core/imgui/imgui_impl_vulkan.cpp
+        src/core/imgui/imgui_impl_vulkan.h
+        src/core/imgui/imgui_demo.cpp
+        src/core/engine/ui/PerformanceGraphUI.cpp
+        src/core/engine/ui/PerformanceGraphUI.h
+        src/core/engine/ui/UI.cpp
+        src/core/engine/ui/UI.h)
 
 target_link_libraries(${PROJECT_NAME}
         ${Vulkan_LIBRARIES}
         ${SDL2_LIBRARIES}
         ${STB_IMAGE_LIBRARIES}
-#        ${VOLK_LIBRARIES}
+        #        ${VOLK_LIBRARIES}
         ${ITT_LIBRARIES})
 
 
-if(WIN32)
+if (WIN32)
     foreach (CPY_SRC ${COPY_BINARIES})
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy "${CPY_SRC}" "${CMAKE_BINARY_DIR}")
     endforeach ()
 
     #configure_file(${SDL2_LIBRARY_DLLS} ${CMAKE_BINARY_DIR})
-endif()
+endif ()
 
 
 add_custom_target(copy_resources ALL
