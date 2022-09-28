@@ -184,6 +184,7 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClCompile Include="src\core\engine\renderer\RenderLight.cpp" />
     <ClCompile Include="src\core\engine\renderer\renderPasses\DeferredRenderer.cpp" />
     <ClCompile Include="src\core\engine\renderer\renderPasses\LightRenderer.cpp" />
+    <ClCompile Include="src\core\engine\renderer\renderPasses\UIRenderer.cpp" />
     <ClCompile Include="src\core\engine\renderer\RenderProperties.cpp" />
     <ClCompile Include="src\core\engine\renderer\SceneRenderer.cpp" />
     <ClCompile Include="src\core\engine\renderer\ShadowMap.cpp" />
@@ -197,6 +198,8 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClCompile Include="src\core\engine\scene\event\EventDispatcher.cpp" />
     <ClCompile Include="src\core\engine\scene\Scene.cpp" />
     <ClCompile Include="src\core\engine\scene\Transform.cpp" />
+    <ClCompile Include="src\core\engine\ui\PerformanceGraphUI.cpp" />
+    <ClCompile Include="src\core\engine\ui\UI.cpp" />
     <ClCompile Include="src\core\graphics\Buffer.cpp" />
     <ClCompile Include="src\core\graphics\BufferView.cpp" />
     <ClCompile Include="src\core\graphics\CommandPool.cpp" />
@@ -215,8 +218,14 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClCompile Include="src\core\graphics\RenderPass.cpp" />
     <ClCompile Include="src\core\graphics\ShaderUtils.cpp" />
     <ClCompile Include="src\core\graphics\Texture.cpp" />
+    <ClCompile Include="src\core\imgui\imgui.cpp" />
+    <ClCompile Include="src\core\imgui\imgui_demo.cpp" />
+    <ClCompile Include="src\core\imgui\imgui_draw.cpp" />
+    <ClCompile Include="src\core\imgui\imgui_impl_sdl.cpp" />
+    <ClCompile Include="src\core\imgui\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="src\core\imgui\imgui_tables.cpp" />
+    <ClCompile Include="src\core\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\core\stb_image_impl.cpp" />
-    <ClCompile Include="src\core\thread\Scheduler.cpp" />
     <ClCompile Include="src\core\thread\Task.cpp" />
     <ClCompile Include="src\core\thread\ThreadPool.cpp" />
     <ClCompile Include="src\core\thread\ThreadUtils.cpp" />
@@ -245,6 +254,7 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClInclude Include="src\core\engine\renderer\RenderLight.h" />
     <ClInclude Include="src\core\engine\renderer\renderPasses\DeferredRenderer.h" />
     <ClInclude Include="src\core\engine\renderer\renderPasses\LightRenderer.h" />
+    <ClInclude Include="src\core\engine\renderer\renderPasses\UIRenderer.h" />
     <ClInclude Include="src\core\engine\renderer\RenderProperties.h" />
     <ClInclude Include="src\core\engine\renderer\SceneRenderer.h" />
     <ClInclude Include="src\core\engine\renderer\ShadowMap.h" />
@@ -259,6 +269,8 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClInclude Include="src\core\engine\scene\event\Events.h" />
     <ClInclude Include="src\core\engine\scene\Scene.h" />
     <ClInclude Include="src\core\engine\scene\Transform.h" />
+    <ClInclude Include="src\core\engine\ui\PerformanceGraphUI.h" />
+    <ClInclude Include="src\core\engine\ui\UI.h" />
     <ClInclude Include="src\core\graphics\Buffer.h" />
     <ClInclude Include="src\core\graphics\BufferView.h" />
     <ClInclude Include="src\core\graphics\CommandPool.h" />
@@ -278,7 +290,14 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClInclude Include="src\core\graphics\ShaderUtils.h" />
     <ClInclude Include="src\core\graphics\Texture.h" />
     <ClInclude Include="src\core\hash.h" />
-    <ClInclude Include="src\core\thread\Scheduler.h" />
+    <ClInclude Include="src\core\imgui\imconfig.h" />
+    <ClInclude Include="src\core\imgui\imgui.h" />
+    <ClInclude Include="src\core\imgui\imgui_impl_sdl.h" />
+    <ClInclude Include="src\core\imgui\imgui_impl_vulkan.h" />
+    <ClInclude Include="src\core\imgui\imgui_internal.h" />
+    <ClInclude Include="src\core\imgui\imstb_rectpack.h" />
+    <ClInclude Include="src\core\imgui\imstb_textedit.h" />
+    <ClInclude Include="src\core\imgui\imstb_truetype.h" />
     <ClInclude Include="src\core\thread\Task.h" />
     <ClInclude Include="src\core\thread\ThreadPool.h" />
     <ClInclude Include="src\core\thread\ThreadUtils.h" />

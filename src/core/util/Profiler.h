@@ -53,6 +53,7 @@ public:
     };
 
     struct ThreadContext {
+        bool threadActive = false;
         bool frameStarted = false;
         size_t currentIndex;
         std::vector<Profile> frameProfiles;
@@ -92,6 +93,7 @@ private:
 private:
     static thread_local ThreadContext s_context;
     static std::unordered_map<uint64_t, ThreadContext*> s_threadContexts;
+    static std::mutex s_threadContextsMtx;
 };
 
 

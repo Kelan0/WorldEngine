@@ -49,6 +49,16 @@ namespace Util {
 
         return size;
     }
+
+    template<typename T>
+    size_t removeVectorOverflowStart(std::vector<T>& vec, const size_t& maxSize) {
+        if (vec.size() > maxSize) {
+            int64_t removeCount = vec.size() - maxSize;
+            vec.erase(vec.begin(), vec.begin() + removeCount);
+            return removeCount;
+        }
+        return 0;
+    }
 }
 
 #endif //WORLDENGINE_UTIL_H

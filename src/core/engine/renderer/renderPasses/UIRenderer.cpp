@@ -71,8 +71,8 @@ bool UIRenderer::init(SDL_Window* windowHandle) {
     initInfo.PipelineCache = VK_NULL_HANDLE;
     initInfo.DescriptorPool = Engine::graphics()->descriptorPool()->getDescriptorPool();
     initInfo.Allocator = nullptr;
-    initInfo.MinImageCount = 2;
-    initInfo.ImageCount = 2;
+    initInfo.MinImageCount = glm::max((uint32_t)2, (uint32_t)CONCURRENT_FRAMES);
+    initInfo.ImageCount = glm::max((uint32_t)2, (uint32_t)CONCURRENT_FRAMES);
     initInfo.CheckVkResultFn = checkVulkanResult;
     ImGui_ImplVulkan_Init(&initInfo, m_uiRenderPass->getRenderPass());
 
@@ -111,10 +111,10 @@ void UIRenderer::render(double dt, const vk::CommandBuffer& commandBuffer) {
 
     for (auto it = m_uis.begin(); it != m_uis.end(); ++it) {
         const bool& visible = it->second.second;
-        if (!visible)
-            continue;
         UI* ui = it->second.first;
-        ui->draw(dt);
+        ui->update(dt);
+        if (visible)
+            ui->draw(dt);
     }
 
     m_uiRenderPass->begin(commandBuffer, Engine::graphics()->getCurrentFramebuffer(), vk::SubpassContents::eInline);

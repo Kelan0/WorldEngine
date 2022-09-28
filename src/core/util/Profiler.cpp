@@ -7,6 +7,7 @@
 thread_local Performance::moment_t Performance::s_lastTime = Performance::now();
 thread_local Profiler::ThreadContext Profiler::s_context;
 std::unordered_map<uint64_t, Profiler::ThreadContext*> Profiler::s_threadContexts;
+std::mutex Profiler::s_threadContextsMtx;
 
 Performance::duration_t Performance::mark() {
     return mark(s_lastTime);
@@ -54,11 +55,13 @@ double Performance::milliseconds(const moment_t& startTime) {
 
 
 Profiler::ThreadContext::ThreadContext() {
-    Profiler::s_threadContexts.insert(std::make_pair(ThreadUtils::getCurrentThreadHashedId(), this));
+    std::scoped_lock<std::mutex> lock(s_threadContextsMtx);
+    s_threadContexts.insert(std::make_pair(ThreadUtils::getCurrentThreadHashedId(), this));
 }
 
 Profiler::ThreadContext::~ThreadContext() {
-//    Profiler::s_threadContexts.erase(ThreadUtils::getCurrentThreadHashedId()); // TODO: why does this cause an exception when closing the application?
+    std::scoped_lock<std::mutex> lock(s_threadContextsMtx);
+    s_threadContexts.erase(ThreadUtils::getCurrentThreadHashedId()); // TODO: why does this cause an exception when closing the application?
 }
 
 Profiler::Profiler() {}
@@ -118,6 +121,7 @@ void Profiler::beginFrame() {
 //    printf("======== FRAME BEGIN thread 0x%016x\n", ThreadUtils::getCurrentThreadHashedId());
 
     ThreadContext& ctx = context();
+    ctx.threadActive = true;
 
     ctx.currentIndex = SIZE_MAX;
     ctx.frameProfiles.clear();
@@ -134,54 +138,9 @@ void Profiler::endFrame() {
     ctx.frameStarted = false;
 
     {
-        std::unique_lock<std::mutex> lock(ctx.mtx);
+        std::scoped_lock<std::mutex> lock(ctx.mtx);
         ctx.prevFrameProfiles.swap(ctx.frameProfiles);
     }
-
-//    printf("======== FRAME END thread 0x%016x\n", ThreadUtils::getCurrentThreadHashedId());
-//
-//    size_t numFrames = 1;
-//    size_t start = ctx.frames.size() >= numFrames ? ctx.frames.size() - numFrames : 0;
-//    for (size_t i = start; i < ctx.frames.size(); ++i) {
-//        printf("Thread 0x%016x, Frame %llu :: %llu profiles, %.2f msec\n", ThreadUtils::getCurrentThreadHashedId(), i, ctx.frames[i].profiles.size(), Performance::milliseconds(ctx.frames[i].profiles[0].startCPU, ctx.frames[i].profiles[0].endCPU));
-//    }
-
-//    size_t parentIndex = SIZE_MAX;
-//    size_t depth = 0;
-//    char indent[256];
-//    const wchar_t* msecStr = L"msec";
-//    const wchar_t* usecStr = L"μsec";
-//
-//    printf("======== END FRAME\n");
-//    for (size_t i = 0; i < ctx.frameProfiles.size(); ++i) {
-//        Profile& profile = ctx.frameProfiles[i];
-//
-//        if (profile.parentIndex != SIZE_MAX) {
-//            if (profile.parentIndex > parentIndex || parentIndex == SIZE_MAX) {
-//                indent[depth] = ' ';
-//                ++depth;
-//            } else {
-//                while (profile.parentIndex < parentIndex && parentIndex != SIZE_MAX) {
-//                    parentIndex = ctx.frameProfiles[parentIndex].parentIndex;
-//                    --depth;
-//                    indent[depth] = '\0';
-//                }
-//            }
-//        }
-//
-//        double time = Performance::milliseconds(profile.startCPU, profile.endCPU);
-//        const wchar_t* timeStr = msecStr;
-//        if (time < 1.0) {
-//            time *= 1000.0;
-//            timeStr = usecStr;
-//        }
-//
-//        if (time >= 0.1) {
-//            printf("%s%s - %.2f %ls\n", indent, profile.id->strA, time, timeStr);
-//        }
-//
-//        parentIndex = profile.parentIndex;
-//    }
 }
 
 Profiler::ThreadContext& Profiler::context() {
@@ -193,16 +152,23 @@ void Profiler::flushFrames() {
 }
 
 void Profiler::getFrameProfile(std::unordered_map<uint64_t, std::vector<Profile>>& outThreadProfiles) {
+    std::scoped_lock<std::mutex> lock(s_threadContextsMtx);
     for (auto it = s_threadContexts.begin(); it != s_threadContexts.end(); ++it) {
         uint64_t threadId = it->first;
         ThreadContext& ctx = *it->second;
+        if (!ctx.threadActive)
+            continue;
+
+        if (ctx.prevFrameProfiles.empty())
+            continue;
 
         std::vector<Profile>& outProfiles = outThreadProfiles[threadId];
         size_t index = outProfiles.size();
 
-        std::unique_lock<std::mutex> lock(ctx.mtx);
+        std::scoped_lock<std::mutex> lock2(ctx.mtx);
         outProfiles.resize(index + ctx.prevFrameProfiles.size());
-        memcpy(&outProfiles[index], &ctx.prevFrameProfiles[0], sizeof(Profile) * ctx.prevFrameProfiles.size());
+        //memcpy(&outProfiles[index], &ctx.prevFrameProfiles[0], sizeof(Profile) * ctx.prevFrameProfiles.size());
+        std::copy(ctx.prevFrameProfiles.begin(), ctx.prevFrameProfiles.end(), outProfiles.begin() + index);
     }
 }
 
