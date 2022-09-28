@@ -66,16 +66,9 @@ private:
     void calculateDirectionalShadowRenderCamera(const RenderCamera* viewerRenderCamera, const glm::vec3& direction, const double& nearDistance, const double& farDistance, RenderCamera* outShadowRenderCamera);
 
 private:
-    std::shared_ptr<GraphicsPipeline> m_shadowGraphicsPipeline;
-    std::shared_ptr<RenderPass> m_shadowRenderPass;
-    std::shared_ptr<DescriptorSetLayout> m_shadowRenderPassDescriptorSetLayout;
-    std::shared_ptr<DescriptorSetLayout> m_lightingRenderPassDescriptorSetLayout;
-
-    std::shared_ptr<ComputePipeline> m_vsmBlurComputePipeline;
-    std::shared_ptr<DescriptorSetLayout> m_vsmBlurComputeDescriptorSetLayout;
-    DescriptorSet* m_vsmBlurXComputeDescriptorSet;
-    DescriptorSet* m_vsmBlurYComputeDescriptorSet;
-    uint32_t m_blurElementArrayIndex;
+    struct VSMBlurResources {
+        DescriptorSet* descriptorSet;
+    };
 
     struct ShadowRenderPassResources {
         DescriptorSet* descriptorSet;
@@ -88,6 +81,17 @@ private:
         Buffer* shadowMapBuffer;
         Buffer* uniformBuffer;
     };
+
+    std::shared_ptr<GraphicsPipeline> m_shadowGraphicsPipeline;
+    std::shared_ptr<RenderPass> m_shadowRenderPass;
+    std::shared_ptr<DescriptorSetLayout> m_shadowRenderPassDescriptorSetLayout;
+    std::shared_ptr<DescriptorSetLayout> m_lightingRenderPassDescriptorSetLayout;
+
+    std::shared_ptr<ComputePipeline> m_vsmBlurComputePipeline;
+    std::shared_ptr<DescriptorSetLayout> m_vsmBlurComputeDescriptorSetLayout;
+    uint32_t m_blurElementArrayIndex;
+
+    FrameResource<VSMBlurResources> m_vsmBlurResources;
 
     FrameResource<ShadowRenderPassResources> m_shadowRenderPassResources;
     FrameResource<LightingRenderPassResources> m_lightingRenderPassResources;

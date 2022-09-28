@@ -211,8 +211,8 @@ void EnvironmentMap::calculateDiffuseIrradiance(const vk::CommandBuffer& command
     uniformBuffer->upload(uboOffset, sizeof(DiffuseIrradianceComputeUBO), &uniformData);
 
     DescriptorSetWriter(descriptorSet)
-    .writeImage(1, m_environmentMapTexture.get(), vk::ImageLayout::eShaderReadOnlyOptimal)
-    .writeImage(2, m_diffuseIrradianceMapTexture.get(), vk::ImageLayout::eGeneral) // is eGeneral the only option here? Nothing for ShaderWriteOnly use case? :(
+    .writeImage(1, m_environmentMapTexture.get(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+    .writeImage(2, m_diffuseIrradianceMapTexture.get(), vk::ImageLayout::eGeneral, 0, 1) // is eGeneral the only option here? Nothing for ShaderWriteOnly use case? :(
     .write();
 
     constexpr uint32_t workgroupSize = 1;
@@ -243,8 +243,8 @@ void EnvironmentMap::calculateSpecularReflection(const vk::CommandBuffer& comman
         mipLevelImages[i] = m_specularReflectionMapTextureMipLevels[glm::min(i, m_specularMapMipLevels - 1)].get();
 
     DescriptorSetWriter(descriptorSet)
-        .writeImage(0, m_environmentMapTexture.get(), vk::ImageLayout::eShaderReadOnlyOptimal)
-        .writeImage(1, mipLevelImages.data(), mipLevelImageLayouts.data(), MAX_SPECULAR_MIP_LEVELS, 0)
+        .writeImage(0, m_environmentMapTexture.get(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+        .writeImage(1, mipLevelImages.data(), mipLevelImageLayouts.data(), 0, MAX_SPECULAR_MIP_LEVELS)
         .write();
 
     constexpr uint32_t workgroupSize = 16;
@@ -334,7 +334,7 @@ void EnvironmentMap::calculateBRDFIntegrationMap(const vk::CommandBuffer& comman
         DescriptorSet* descriptorSet = s_BRDFIntegrationMapDescriptorSet;
 
         DescriptorSetWriter(descriptorSet)
-            .writeImage(0, s_BRDFIntegrationMap.get(), vk::ImageLayout::eGeneral)
+            .writeImage(0, s_BRDFIntegrationMap.get(), vk::ImageLayout::eGeneral, 0, 1)
             .write();
 
         constexpr uint32_t workgroupSize = 16;

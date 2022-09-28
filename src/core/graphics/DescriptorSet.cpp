@@ -389,7 +389,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeTexelBufferView(const uint32_t& b
     return writeTexelBufferView(binding, bufferView->getBufferView());
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const vk::DescriptorImageInfo* imageInfos, const uint32_t& arrayCount, const uint32_t& arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const vk::DescriptorImageInfo* imageInfos, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
     int bindingIndex = m_descriptorSet->getLayout()->findBindingIndex(binding);
     assert(bindingIndex >= 0);
 
@@ -417,95 +417,124 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, co
     return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const vk::DescriptorImageInfo& imageInfo, const uint32_t& arrayIndex) {
-    return writeImage(binding, &imageInfo, 1, arrayIndex);
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const vk::DescriptorImageInfo& imageInfo, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
+    vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
+    for (uint32_t i = 0; i < arrayCount; ++i) {
+        imageInfos[i] = imageInfo; // Duplicate this image the specified number of times
+    }
+    writeImage(binding, imageInfos, arrayIndex, arrayCount);
+    delete[] imageInfos;
+    return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const vk::Sampler* samplers, const vk::ImageView* imageViews, const vk::ImageLayout* imageLayouts, const uint32_t& arrayCount, const uint32_t& arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const vk::Sampler* samplers, const vk::ImageView* imageViews, const vk::ImageLayout* imageLayouts, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
         imageInfos[i].setSampler(samplers[i]);
         imageInfos[i].setImageView(imageViews[i]);
         imageInfos[i].setImageLayout(imageLayouts[i]);
     }
-    writeImage(binding, imageInfos, arrayCount, arrayIndex);
+    writeImage(binding, imageInfos, arrayIndex, arrayCount);
     delete[] imageInfos;
     return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const vk::Sampler& sampler, const vk::ImageView& imageView, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex) {
-    vk::DescriptorImageInfo imageInfo;
-    imageInfo.setSampler(sampler);
-    imageInfo.setImageView(imageView);
-    imageInfo.setImageLayout(imageLayout);
-    return writeImage(binding, &imageInfo, 1, arrayIndex);
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const vk::Sampler& sampler, const vk::ImageView& imageView, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
+    vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
+    for (uint32_t i = 0; i < arrayCount; ++i) {
+        imageInfos[i].setSampler(sampler);
+        imageInfos[i].setImageView(imageView);
+        imageInfos[i].setImageLayout(imageLayout);
+    }
+    writeImage(binding, imageInfos, arrayIndex, arrayCount);
+    delete[] imageInfos;
+    return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* const* samplers, const ImageView* const* imageViews, const vk::ImageLayout* imageLayouts, const uint32_t& arrayCount, const uint32_t& arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* const* samplers, const ImageView* const* imageViews, const vk::ImageLayout* imageLayouts, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
         imageInfos[i].setSampler(samplers[i]->getSampler());
         imageInfos[i].setImageView(imageViews[i]->getImageView());
         imageInfos[i].setImageLayout(imageLayouts[i]);
     }
-    writeImage(binding, imageInfos, arrayCount, arrayIndex);
+    writeImage(binding, imageInfos, arrayIndex, arrayCount);
     delete[] imageInfos;
     return *this;
 }
-DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* sampler, const ImageView* const* imageViews, const vk::ImageLayout* imageLayouts, const uint32_t& arrayCount, const uint32_t& arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* sampler, const ImageView* const* imageViews, const vk::ImageLayout* imageLayouts, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
         imageInfos[i].setSampler(sampler->getSampler());
         imageInfos[i].setImageView(imageViews[i]->getImageView());
         imageInfos[i].setImageLayout(imageLayouts[i]);
     }
-    writeImage(binding, imageInfos, arrayCount, arrayIndex);
+    writeImage(binding, imageInfos, arrayIndex, arrayCount);
     delete[] imageInfos;
     return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* sampler, const ImageView* const* imageViews, const vk::ImageLayout& imageLayout, const uint32_t& arrayCount, const uint32_t& arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* sampler, const ImageView* const* imageViews, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
         imageInfos[i].setSampler(sampler->getSampler());
         imageInfos[i].setImageView(imageViews[i]->getImageView());
         imageInfos[i].setImageLayout(imageLayout);
     }
-    writeImage(binding, imageInfos, arrayCount, arrayIndex);
+    writeImage(binding, imageInfos, arrayIndex, arrayCount);
     delete[] imageInfos;
     return *this;
 }
 
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* samplers, const ImageView* imageViews, const vk::ImageLayout& imageLayouts, const uint32_t& arrayIndex) {
-    return writeImage(binding, &samplers, &imageViews, &imageLayouts, 1, arrayIndex);
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* sampler, const ImageView* imageView, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
+    vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
+    for (uint32_t i = 0; i < arrayCount; ++i) {
+        imageInfos[i].setSampler(sampler->getSampler());
+        imageInfos[i].setImageView(imageView->getImageView());
+        imageInfos[i].setImageLayout(imageLayout);
+    }
+    writeImage(binding, imageInfos, arrayIndex, arrayCount);
+    delete[] imageInfos;
+    return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Texture* const* textures, const vk::ImageLayout* imageLayouts, const uint32_t& arrayCount, const uint32_t& arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Texture* const* textures, const vk::ImageLayout* imageLayouts, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
+    assert(arrayCount > 0);
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
         imageInfos[i].setSampler(textures[i]->getSampler()->getSampler());
         imageInfos[i].setImageView(textures[i]->getImageView()->getImageView());
         imageInfos[i].setImageLayout(imageLayouts[i]);
     }
-    writeImage(binding, imageInfos, arrayCount, arrayIndex);
+    writeImage(binding, imageInfos, arrayIndex, arrayCount);
     delete[] imageInfos;
     return *this;
 }
-DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Texture* const* textures, const vk::ImageLayout& imageLayout, const uint32_t& arrayCount, const uint32_t& arrayIndex) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Texture* const* textures, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
+    assert(arrayCount > 0);
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
         imageInfos[i].setSampler(textures[i]->getSampler()->getSampler());
         imageInfos[i].setImageView(textures[i]->getImageView()->getImageView());
         imageInfos[i].setImageLayout(imageLayout);
     }
-    writeImage(binding, imageInfos, arrayCount, arrayIndex);
+    writeImage(binding, imageInfos, arrayIndex, arrayCount);
     delete[] imageInfos;
     return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Texture* texture, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex) {
-    return writeImage(binding, &texture, &imageLayout, 1, arrayIndex);
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Texture* texture, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
+    assert(arrayCount > 0);
+    vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
+    for (uint32_t i = 0; i < arrayCount; ++i) {
+        imageInfos[i].setSampler(texture->getSampler()->getSampler());
+        imageInfos[i].setImageView(texture->getImageView()->getImageView());
+        imageInfos[i].setImageLayout(imageLayout);
+    }
+    writeImage(binding, imageInfos, arrayIndex, arrayCount);
+    delete[] imageInfos;
+    return *this;
 }
 
 bool DescriptorSetWriter::write() {

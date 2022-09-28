@@ -48,6 +48,7 @@ LightRenderer::~LightRenderer() {
         delete m_lightingRenderPassResources[i]->lightInfoBuffer;
         delete m_lightingRenderPassResources[i]->shadowMapBuffer;
         delete m_lightingRenderPassResources[i]->uniformBuffer;
+        delete m_vsmBlurResources[i]->descriptorSet;
     }
 
     for (auto& shadowMap: m_inactiveShadowMaps)
@@ -61,11 +62,6 @@ LightRenderer::~LightRenderer() {
     m_lightingRenderPassDescriptorSetLayout.reset();
     m_emptyShadowMapImage.reset();
     m_emptyShadowMap.reset();
-
-    delete m_vsmBlurXComputeDescriptorSet;
-    delete m_vsmBlurYComputeDescriptorSet;
-//    delete m_vsmBlurIntermediateImageView;
-//    delete m_vsmBlurIntermediateImage;
 }
 
 bool LightRenderer::init() {
@@ -114,7 +110,7 @@ bool LightRenderer::init() {
         std::vector<Texture*> emptyShadowMapTextures(MAX_SHADOW_MAPS, m_emptyShadowMap.get());
         DescriptorSetWriter(m_lightingRenderPassResources[i]->descriptorSet)
                 .writeBuffer(LIGHTING_RENDER_PASS_UNIFORM_BUFFER_BINDING, m_lightingRenderPassResources[i]->uniformBuffer, 0, sizeof(LightingRenderPassUBO))
-                .writeImage(LIGHTING_RENDER_PASS_SHADOW_DEPTH_TEXTURES_BINDING, emptyShadowMapTextures.data(), vk::ImageLayout::eShaderReadOnlyOptimal, MAX_SHADOW_MAPS)
+                .writeImage(LIGHTING_RENDER_PASS_SHADOW_DEPTH_TEXTURES_BINDING, emptyShadowMapTextures.data(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, MAX_SHADOW_MAPS)
                 .write();
     }
 
@@ -185,16 +181,14 @@ bool LightRenderer::init() {
             .addStorageImage(0, vk::ShaderStageFlagBits::eCompute, MAX_SHADOW_MAPS)
             .build();
 
-    m_vsmBlurXComputeDescriptorSet = DescriptorSet::create(m_vsmBlurComputeDescriptorSetLayout, Engine::graphics()->descriptorPool());
-    m_vsmBlurYComputeDescriptorSet = DescriptorSet::create(m_vsmBlurComputeDescriptorSetLayout, Engine::graphics()->descriptorPool());
+    for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
+        m_vsmBlurResources.set(i, new VSMBlurResources());
+        m_vsmBlurResources[i]->descriptorSet = DescriptorSet::create(m_vsmBlurComputeDescriptorSetLayout, Engine::graphics()->descriptorPool());;
 
-    std::vector<Texture*> emptyShadowMapTextures(MAX_SHADOW_MAPS, m_emptyShadowMap.get());
-    DescriptorSetWriter(m_vsmBlurXComputeDescriptorSet)
-            .writeImage(0, emptyShadowMapTextures.data(), vk::ImageLayout::eGeneral, MAX_SHADOW_MAPS)
+        DescriptorSetWriter(m_vsmBlurResources[i]->descriptorSet)
+            .writeImage(0, m_emptyShadowMap.get(), vk::ImageLayout::eGeneral, 0, MAX_SHADOW_MAPS)
             .write();
-    DescriptorSetWriter(m_vsmBlurYComputeDescriptorSet)
-            .writeImage(0, emptyShadowMapTextures.data(), vk::ImageLayout::eGeneral, MAX_SHADOW_MAPS)
-            .write();
+    }
 
     ComputePipelineConfiguration computePipelineConfig;
     computePipelineConfig.device = Engine::graphics()->getDevice();
@@ -322,7 +316,7 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, Re
     vsmBlurActiveShadowMaps(commandBuffer);
 
     DescriptorSetWriter(m_lightingRenderPassResources->descriptorSet)
-            .writeImage(LIGHTING_RENDER_PASS_SHADOW_DEPTH_TEXTURES_BINDING, m_vsmShadowMapSampler.get(), shadowMapImages.data(), vk::ImageLayout::eShaderReadOnlyOptimal, shadowMapImages.size())
+            .writeImage(LIGHTING_RENDER_PASS_SHADOW_DEPTH_TEXTURES_BINDING, m_vsmShadowMapSampler.get(), shadowMapImages.data(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, shadowMapImages.size())
             .write();
 }
 
@@ -619,12 +613,12 @@ void LightRenderer::vsmBlurActiveShadowMaps(const vk::CommandBuffer& commandBuff
         shadowMapImageViews.emplace_back(shadowMapImageViews[0]);
     }
 
-    DescriptorSetWriter(m_vsmBlurXComputeDescriptorSet)
-            .writeImage(0, m_vsmShadowMapSampler.get(), shadowMapImageViews.data(), vk::ImageLayout::eGeneral, shadowMapImageViews.size())
+    DescriptorSetWriter(m_vsmBlurResources->descriptorSet)
+            .writeImage(0, m_vsmShadowMapSampler.get(), shadowMapImageViews.data(), vk::ImageLayout::eGeneral, 0, shadowMapImageViews.size())
             .write();
 
 
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineLayout, 0, 1, &m_vsmBlurXComputeDescriptorSet->getDescriptorSet(), 0, nullptr);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineLayout, 0, 1, &m_vsmBlurResources->descriptorSet->getDescriptorSet(), 0, nullptr);
 
     for (size_t i = 0; i < m_visibleShadowMaps.size(); ++i) {
         pushConstantData.srcSize = m_visibleShadowMaps[i]->getResolution();
@@ -714,8 +708,8 @@ void LightRenderer::blurImage(const vk::CommandBuffer& commandBuffer, const Samp
 //    std::vector<vk::ImageLayout> imageLayouts1(arrayCount, vk::ImageLayout::eGeneral);
 //
 //    DescriptorSetWriter(m_vsmBlurXComputeDescriptorSet)
-//            .writeImage(0, samplers.data(), imageViews0.data(), imageLayouts0.data(), arrayCount, m_blurElementArrayIndex)
-//            .writeImage(1, samplers.data(), imageViews1.data(), imageLayouts1.data(), arrayCount, m_blurElementArrayIndex)
+//            .writeImage(0, samplers.data(), imageViews0.data(), imageLayouts0.data(), m_blurElementArrayIndex, arrayCount)
+//            .writeImage(1, samplers.data(), imageViews1.data(), imageLayouts1.data(), m_blurElementArrayIndex, arrayCount)
 //            .write();
 //
 //    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineLayout, 0, 1, &m_vsmBlurXComputeDescriptorSet->getDescriptorSet(), 0, nullptr);
@@ -738,12 +732,12 @@ void LightRenderer::blurImage(const vk::CommandBuffer& commandBuffer, const Samp
 //                                ImageTransition::ShaderWriteOnly(vk::PipelineStageFlagBits::eComputeShader));
 //
 //    DescriptorSetWriter(m_vsmBlurYComputeDescriptorSet)
-//            .writeImage(0, samplers.data(), imageViews1.data(), imageLayouts0.data(), arrayCount, m_blurElementArrayIndex)
-//            .writeImage(1, samplers.data(), imageViews2.data(), imageLayouts1.data(), arrayCount, m_blurElementArrayIndex)
+//            .writeImage(0, samplers.data(), imageViews1.data(), imageLayouts0.data(), m_blurElementArrayIndex, arrayCount)
+//            .writeImage(1, samplers.data(), imageViews2.data(), imageLayouts1.data(), m_blurElementArrayIndex, arrayCount)
 //            .write();
 ////    DescriptorSetWriter(m_vsmBlurYComputeDescriptorSet)
-////            .writeImage(0, sampler, m_vsmBlurIntermediateImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0)
-////            .writeImage(1, sampler, dstImage, vk::ImageLayout::eGeneral, 0)
+////            .writeImage(0, sampler, m_vsmBlurIntermediateImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+////            .writeImage(1, sampler, dstImage, vk::ImageLayout::eGeneral, 0, 1)
 ////            .write();
 //
 //    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineLayout, 0, 1, &m_vsmBlurYComputeDescriptorSet->getDescriptorSet(), 0, nullptr);

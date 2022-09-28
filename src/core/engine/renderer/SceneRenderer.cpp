@@ -109,7 +109,7 @@ bool SceneRenderer::init() {
         m_resources[i]->uploadedMaterialBufferTextures = 0;
 
         DescriptorSetWriter(m_resources[i]->materialDescriptorSet)
-                .writeImage(0, initialTextures.data(), initialImageLayouts.data(), maxTextures, 0)
+                .writeImage(0, initialTextures.data(), initialImageLayouts.data(), 0, maxTextures)
                 .write();
     }
 
@@ -625,7 +625,7 @@ void SceneRenderer::updateMaterialsBuffer() {
 
         printf("Writing textures [%d to %d]\n", firstNewTextureIndex, lastNewTextureIndex);
         DescriptorSetWriter(m_resources->materialDescriptorSet)
-                .writeImage(0, &m_materialBufferTextures[firstNewTextureIndex], &m_materialBufferImageLayouts[firstNewTextureIndex], arrayCount, firstNewTextureIndex)
+                .writeImage(0, &m_materialBufferTextures[firstNewTextureIndex], &m_materialBufferImageLayouts[firstNewTextureIndex], firstNewTextureIndex, arrayCount)
                 .write();
     }
 

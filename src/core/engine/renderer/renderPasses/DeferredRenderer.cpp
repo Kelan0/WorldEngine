@@ -448,14 +448,14 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
     m_graphicsPipeline->bind(commandBuffer);
 
     DescriptorSetWriter(m_resources->lightingDescriptorSet)
-        .writeImage(ALBEDO_TEXTURE_BINDING, m_attachmentSamplers[Attachment_AlbedoRGB_Roughness], m_geometryPass->getAlbedoImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
-        .writeImage(NORMAL_TEXTURE_BINDING, m_attachmentSamplers[Attachment_NormalXYZ_Metallic], m_geometryPass->getNormalImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
-        .writeImage(EMISSION_TEXTURE_BINDING, m_attachmentSamplers[Attachment_EmissionRGB_AO], m_geometryPass->getEmissionImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
-        .writeImage(DEPTH_TEXTURE_BINDING, m_attachmentSamplers[Attachment_Depth], m_geometryPass->getDepthImageView(), vk::ImageLayout::eShaderReadOnlyOptimal)
-        .writeImage(ENVIRONMENT_CUBEMAP_BINDING, environmentMap->getEnvironmentMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
-        .writeImage(SPECULAR_REFLECTION_CUBEMAP_BINDING, environmentMap->getSpecularReflectionMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
-        .writeImage(DIFFUSE_IRRADIANCE_CUBEMAP_BINDING, environmentMap->getDiffuseIrradianceMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
-        .writeImage(BRDF_INTEGRATION_MAP_BINDING, EnvironmentMap::getBRDFIntegrationMap().get(), vk::ImageLayout::eShaderReadOnlyOptimal)
+        .writeImage(ALBEDO_TEXTURE_BINDING, m_attachmentSamplers[Attachment_AlbedoRGB_Roughness], m_geometryPass->getAlbedoImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+        .writeImage(NORMAL_TEXTURE_BINDING, m_attachmentSamplers[Attachment_NormalXYZ_Metallic], m_geometryPass->getNormalImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+        .writeImage(EMISSION_TEXTURE_BINDING, m_attachmentSamplers[Attachment_EmissionRGB_AO], m_geometryPass->getEmissionImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+        .writeImage(DEPTH_TEXTURE_BINDING, m_attachmentSamplers[Attachment_Depth], m_geometryPass->getDepthImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+        .writeImage(ENVIRONMENT_CUBEMAP_BINDING, environmentMap->getEnvironmentMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+        .writeImage(SPECULAR_REFLECTION_CUBEMAP_BINDING, environmentMap->getSpecularReflectionMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+        .writeImage(DIFFUSE_IRRADIANCE_CUBEMAP_BINDING, environmentMap->getDiffuseIrradianceMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+        .writeImage(BRDF_INTEGRATION_MAP_BINDING, EnvironmentMap::getBRDFIntegrationMap().get(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
         .write();
 
     vk::DescriptorSet descriptorSets[2] = {
