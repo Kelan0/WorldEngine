@@ -5,9 +5,11 @@
 #include <thread>
 
 thread_local Performance::moment_t Performance::s_lastTime = Performance::now();
+#if PROFILING_ENABLED
 thread_local Profiler::ThreadContext Profiler::s_context;
 std::unordered_map<uint64_t, Profiler::ThreadContext*> Profiler::s_threadContexts;
 std::mutex Profiler::s_threadContextsMtx;
+#endif
 
 Performance::duration_t Performance::mark() {
     return mark(s_lastTime);
@@ -55,13 +57,17 @@ double Performance::milliseconds(const moment_t& startTime) {
 
 
 Profiler::ThreadContext::ThreadContext() {
+#if PROFILING_ENABLED
     std::scoped_lock<std::mutex> lock(s_threadContextsMtx);
     s_threadContexts.insert(std::make_pair(ThreadUtils::getCurrentThreadHashedId(), this));
+#endif
 }
 
 Profiler::ThreadContext::~ThreadContext() {
+#if PROFILING_ENABLED
     std::scoped_lock<std::mutex> lock(s_threadContextsMtx);
     s_threadContexts.erase(ThreadUtils::getCurrentThreadHashedId()); // TODO: why does this cause an exception when closing the application?
+#endif
 }
 
 Profiler::Profiler() {}
@@ -78,9 +84,10 @@ __itt_domain* Profiler::domain() {
 }
 
 void Profiler::begin(profile_id const& id) {
+#if PROFILING_ENABLED
     __itt_task_begin(domain(), __itt_null, __itt_null, id);
 
-    ThreadContext& ctx = context();
+    ThreadContext& ctx = s_context;
     if (!ctx.frameStarted)
         return; // Ignore constructing frame profiles if this is not part of a frame.
 
@@ -101,12 +108,14 @@ void Profiler::begin(profile_id const& id) {
     }
 
     profile.startCPU = Performance::now();
+#endif
 }
 
 void Profiler::end() {
+#if PROFILING_ENABLED
     __itt_task_end(domain());
 
-    ThreadContext& ctx = context();
+    ThreadContext& ctx = s_context;
     if (!ctx.frameStarted)
         return; // Ignore constructing frame profiles if this is not part of a frame.
 
@@ -115,12 +124,14 @@ void Profiler::end() {
     Profile& profile = ctx.frameProfiles[ctx.currentIndex];
     profile.endCPU = Performance::now();
     ctx.currentIndex = profile.parentIndex;
+#endif
 }
 
 void Profiler::beginFrame() {
+#if PROFILING_ENABLED
 //    printf("======== FRAME BEGIN thread 0x%016x\n", ThreadUtils::getCurrentThreadHashedId());
 
-    ThreadContext& ctx = context();
+    ThreadContext& ctx = s_context;
     ctx.threadActive = true;
 
     ctx.currentIndex = SIZE_MAX;
@@ -129,10 +140,12 @@ void Profiler::beginFrame() {
     ctx.frameStarted = true;
     static profile_id id = Profiler::id("Frame");
     Profiler::begin(id);
+#endif
 }
 
 void Profiler::endFrame() {
-    ThreadContext& ctx = context();
+#if PROFILING_ENABLED
+    ThreadContext& ctx = s_context;
 
     Profiler::end();
     ctx.frameStarted = false;
@@ -141,17 +154,17 @@ void Profiler::endFrame() {
         std::scoped_lock<std::mutex> lock(ctx.mtx);
         ctx.prevFrameProfiles.swap(ctx.frameProfiles);
     }
-}
-
-Profiler::ThreadContext& Profiler::context() {
-    return s_context;
+#endif
 }
 
 void Profiler::flushFrames() {
+#if PROFILING_ENABLED
     // TODO: write performance log to file?
+#endif
 }
 
 void Profiler::getFrameProfile(std::unordered_map<uint64_t, std::vector<Profile>>& outThreadProfiles) {
+#if PROFILING_ENABLED
     std::scoped_lock<std::mutex> lock(s_threadContextsMtx);
     for (auto it = s_threadContexts.begin(); it != s_threadContexts.end(); ++it) {
         uint64_t threadId = it->first;
@@ -170,28 +183,37 @@ void Profiler::getFrameProfile(std::unordered_map<uint64_t, std::vector<Profile>
         //memcpy(&outProfiles[index], &ctx.prevFrameProfiles[0], sizeof(Profile) * ctx.prevFrameProfiles.size());
         std::copy(ctx.prevFrameProfiles.begin(), ctx.prevFrameProfiles.end(), outProfiles.begin() + index);
     }
+#endif
 }
 
 
 ScopeProfiler::ScopeProfiler(profile_id const& id):
     m_currentRegionId(nullptr) {
+#if PROFILING_ENABLED
     Profiler::begin(id);
+#endif
 }
 
 ScopeProfiler::~ScopeProfiler() {
+#if PROFILING_ENABLED
     endRegion();
     Profiler::end();
+#endif
 }
 
 void ScopeProfiler::beginRegion(const profile_id& id) {
+#if PROFILING_ENABLED
     endRegion();
     Profiler::begin(id);
     m_currentRegionId = id;
+#endif
 }
 
 void ScopeProfiler::endRegion() {
+#if PROFILING_ENABLED
     if (m_currentRegionId != nullptr) {
         m_currentRegionId = nullptr;
         Profiler::end();
     }
+#endif
 }

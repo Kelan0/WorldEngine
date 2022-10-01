@@ -10,6 +10,7 @@ class PerformanceGraphUI : public UI {
 
     struct ProfileData {
         uint32_t layerIndex = UINT32_MAX;
+        uint32_t pathIndex = UINT32_MAX;
         float elapsedCPU;
         uint32_t parentIndex = 0;
         uint32_t nextSiblingIndex = 0;
@@ -21,9 +22,8 @@ class PerformanceGraphUI : public UI {
     };
 
     struct FrameGraphSegment {
-        float y0;
-        float y1;
-        uint32_t layerIndex;
+        float height;
+        uint32_t colour;
     };
 
     struct FrameGraphSlice {
@@ -69,9 +69,7 @@ private:
 
     void drawFrameGraph();
 
-    void buildFrameSlice(const std::vector<ProfileData>& profileData, const size_t& index, const float& y0, const float& y1, std::vector<FrameGraphSlice>& outSlice);
-
-    void drawFrameSlice(const std::vector<ProfileData>& profileData, const size_t& index, const float& x0, const float& y0, const float& x1, const float& y1);
+    bool drawFrameSlice(const std::vector<ProfileData>& profileData, const size_t& index, const float& x0, const float& y0, const float& x1, const float& y1);
 
     void drawFrameTimeOverlays(const uint64_t& threadId, const float& xmin, const float& ymin, const float& xmax, const float& ymax);
 
@@ -85,7 +83,7 @@ private:
 
     const uint32_t& getUniqueLayerIndex(const std::string& layerName);
 
-    //const uint32_t& getPathLayerIndex(const std::vector<uint32_t>& layerPath);
+    const uint32_t& getPathLayerIndex(const std::vector<uint32_t>& layerPath);
 
 private:
     size_t m_maxFrameProfiles;
@@ -93,7 +91,7 @@ private:
     std::unordered_map<uint64_t, ThreadInfo> m_threadInfo;
     std::vector<ProfileLayer> m_layers;
     std::unordered_map<std::string, uint32_t> m_uniqueLayerIndexMap;
-    //std::unordered_map<std::vector<uint32_t>, uint32_t> m_pathLayerIndexMap;
+    std::unordered_map<std::vector<uint32_t>, uint32_t> m_pathLayerIndexMap;
 
     std::unordered_map<uint64_t, std::vector<Profiler::Profile>> m_currentFrameProfile;
     std::unordered_map<uint64_t, std::vector<FrameProfileData>> m_frameProfileData;
@@ -107,6 +105,7 @@ private:
     bool m_clearFrames;
     int m_graphVisible;
     float m_heightScaleMsec;
+    size_t m_frameGraphRootIndex;
 
 };
 

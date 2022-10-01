@@ -15,7 +15,8 @@ PerformanceGraphUI::PerformanceGraphUI():
     m_showFrameTime999Percentile(false),
     m_graphVisible(0),
     m_heightScaleMsec(5.0),
-    m_maxFrameProfiles(500) {
+    m_maxFrameProfiles(500),
+    m_frameGraphRootIndex(0) {
 }
 
 PerformanceGraphUI::~PerformanceGraphUI() {
@@ -42,27 +43,51 @@ void PerformanceGraphUI::update(double dt) {
 
     Profiler::getFrameProfile(m_currentFrameProfile);
 
+
     for (auto it = m_currentFrameProfile.begin(); it != m_currentFrameProfile.end(); ++it) {
         const uint64_t& threadId = it->first;
         const ThreadProfile& threadProfile = it->second;
         ThreadInfo& threadInfo = m_threadInfo[threadId];
         std::vector<FrameProfileData>& allProfiles = m_frameProfileData[threadId];
 
+
         FrameProfileData& currentFrame = allProfiles.emplace_back();
         currentFrame.profileData.clear();
 
         currentFrame.profileData.reserve(threadProfile.size());
 
+        std::vector<uint32_t> layerPath;
+        size_t parentIndex = SIZE_MAX;
+        size_t popCount = 0;
+
+        parentIndex = SIZE_MAX;
+
         for (size_t i = 0; i < threadProfile.size(); ++i) {
             const Profiler::Profile& profile = threadProfile[i];
             bool hasChildren = profile.lastChildIndex != SIZE_MAX;
 
+            const uint32_t& layerIndex = getUniqueLayerIndex(profile.id->strA);
+
+            popCount = 0;
+            while (parentIndex != SIZE_MAX && profile.parentIndex <= parentIndex) {
+                parentIndex = threadProfile[parentIndex].parentIndex;
+                ++popCount;
+            }
+
+            layerPath.resize(layerPath.size() - popCount);
+            layerPath.emplace_back(layerIndex);
+
+            const uint32_t& pathIndex = getPathLayerIndex(layerPath);
+
             ProfileData& profileData = currentFrame.profileData.emplace_back();
-            profileData.layerIndex = getUniqueLayerIndex(profile.id->strA);
+            profileData.layerIndex = layerIndex;
+            profileData.pathIndex = pathIndex;
             profileData.elapsedCPU = Performance::milliseconds(profile.startCPU, profile.endCPU);
             profileData.parentIndex = profile.parentIndex;
             profileData.nextSiblingIndex = profile.nextSiblingIndex;
             profileData.hasChildren = hasChildren;
+
+            parentIndex = profile.parentIndex;
         }
 
         float rootElapsed = (float)Performance::milliseconds(threadProfile[0].startCPU, threadProfile[0].endCPU);
@@ -201,12 +226,12 @@ void PerformanceGraphUI::drawProfileTree() {
 
     ImGui::BeginChild("profileTree");
     {
-        ImGui::BeginColumns("profileTree", 6, ImGuiColumnsFlags_NoPreserveWidths);
+        ImGui::BeginColumns("profileTree", 7, ImGuiColumnsFlags_NoPreserveWidths);
         {
             // TODO: this should only be initialized once
             float x = ImGui::GetWindowContentRegionMax().x;
-            //ImGui::SetColumnOffset(7, x);
-            //x -= 60;
+            ImGui::SetColumnOffset(7, x);
+            x -= 60;
             ImGui::SetColumnOffset(6, x);
             x -= 60;
             ImGui::SetColumnOffset(5, x);
@@ -232,8 +257,8 @@ void PerformanceGraphUI::drawProfileTree() {
                 ImGui::NextColumn();
                 ImGui::Text("Colour");
                 ImGui::NextColumn();
-                //ImGui::Text("Visible");
-                //ImGui::NextColumn();
+                ImGui::Text("Focus");
+                ImGui::NextColumn();
 
                 auto it = m_frameProfileData.find(Application::instance()->getHashedMainThreadId());
                 if (it != m_frameProfileData.end() && !it->second.empty()) {
@@ -322,16 +347,16 @@ void PerformanceGraphUI::drawFrameGraph() {
         if (frameData.empty())
             continue;
 
-        maxFrameTime = glm::max(maxFrameTime, frameData[0].elapsedCPU);
+        maxFrameTime = glm::max(maxFrameTime, frameData[m_frameGraphRootIndex].elapsedCPU);
     
         y1 = bbmax.y;
         if (m_graphsNormalized) {
             y0 = bbmin.y;
         } else {
-            y0 = y1 - (frameData[0].elapsedCPU / m_heightScaleMsec) * (bbsize.y - topPadding);
+            y0 = y1 - (frameData[m_frameGraphRootIndex].elapsedCPU / m_heightScaleMsec) * (bbsize.y - topPadding);
         }
     
-        drawFrameSlice(frameData, 0, x0, y0, x1, y1);
+        drawFrameSlice(frameData, m_frameGraphRootIndex, x0, y0, x1, y1);
     }
 
     drawFrameTimeOverlays(threadId, bbminInner.x + padding, bbminInner.y, bbmaxInner.x, bbmaxInner.y);
@@ -345,71 +370,38 @@ void PerformanceGraphUI::drawFrameGraph() {
     m_heightScaleMsec = m_heightScaleMsec * (1.0F - adjustmentFactor) + newHeightScaleMsec * adjustmentFactor;
 }
 
-void PerformanceGraphUI::buildFrameSlice(const std::vector<ProfileData>& profileData, const size_t& index, const float& y0, const float& y1, std::vector<FrameGraphSlice>& outSlice) {
-
-    //const ProfileData& profile = profileData[index];
-    //const ProfileLayer& layer = m_layers[profile.layerIndex];
-    //
-    //const float h = y1 - y0;
-    //float y = y1;
-    //
-    //if (profile.hasChildren && layer.expanded) {
-    //    size_t childIndex = index + 1; // First child is always the next element after its parent
-    //    while (childIndex < profileData.size()) {
-    //        const ProfileData& child = profileData[childIndex];
-    //        double fraction = child.elapsedCPU / profile.elapsedCPU; // fraction of the parent height that this child takes up.
-    //
-    //        float t1 = y;
-    //        y -= h * (float)fraction;
-    //        float t0 = y;
-    //
-    //        buildFrameSlice(profileData, childIndex, t0, t1, outSlice);
-    //
-    //        childIndex = profileData[childIndex].nextSiblingIndex;
-    //    }
-    //}
-    //
-    //if ((int)y != (int)y0) {
-    //    // At least one pixel of space was not filled by children, or this is a leaf that is larger than one pixel.
-    //    FrameSegment& segment = outSegment.emplace_back();
-    //    segment.y0 = y0;
-    //    segment.y1 = y;
-    //    segment.colour = ImGui::ColorConvertFloat4ToU32(ImVec4(layer.colour[0], layer.colour[1], layer.colour[2], 1.0F));
-    //}
-}
-
-
-void PerformanceGraphUI::drawFrameSlice(const std::vector<ProfileData>& profileData, const size_t& index, const float& x0, const float& y0, const float& x1, const float& y1) {
-
+bool PerformanceGraphUI::drawFrameSlice(const std::vector<ProfileData>& profileData, const size_t& index, const float& x0, const float& y0, const float& x1, const float& y1) {
     const ProfileData& profile = profileData[index];
-    const ProfileLayer& layer = m_layers[profile.layerIndex];
-    
+    const ProfileLayer& layer = m_layers[profile.pathIndex];
+
     const float h = y1 - y0;
     float y = y1;
-    
+
     if (profile.hasChildren && layer.expanded) {
         size_t childIndex = index + 1; // First child is always the next element after its parent
         while (childIndex < profileData.size()) {
             const ProfileData& child = profileData[childIndex];
             double fraction = child.elapsedCPU / profile.elapsedCPU; // fraction of the parent height that this child takes up.
-    
+
             float t1 = y;
             y -= h * (float)fraction;
             float t0 = y;
-    
+
             drawFrameSlice(profileData, childIndex, x0, t0, x1, t1);
-    
+
             childIndex = profileData[childIndex].nextSiblingIndex;
         }
     }
-    
+
     if ((int)y != (int)y0) {
         // At least one pixel of space was not filled by children, or this is a leaf that is larger than one pixel.
         ImU32 colour = ImGui::ColorConvertFloat4ToU32(ImVec4(layer.colour[0], layer.colour[1], layer.colour[2], 1.0F));
-    
+
         ImDrawList* dl = ImGui::GetWindowDrawList();
         dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x1, y), colour);
     }
+
+    return true;
 }
 
 void PerformanceGraphUI::drawFrameTimeOverlays(const uint64_t& threadId, const float& xmin, const float& ymin, const float& xmax, const float& ymax) {
@@ -510,14 +502,18 @@ void PerformanceGraphUI::buildProfileTree(const std::vector<ProfileData>& profil
     const ProfileData& currProfile = profiles[index];
 
     assert(currProfile.layerIndex < m_layers.size());
+    assert(currProfile.pathIndex < m_layers.size());
 
     ProfileLayer& layer = m_layers[currProfile.layerIndex];
+    ProfileLayer& pathLayer = m_layers[currProfile.pathIndex];
 
     ImGuiTreeNodeFlags treeNodeFlags = ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth;
     if (!currProfile.hasChildren)
         treeNodeFlags |= ImGuiTreeNodeFlags_Leaf;
+    if (index == m_frameGraphRootIndex)
+        treeNodeFlags |= ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Selected;
 
-    layer.expanded = ImGui::TreeNodeEx(layer.layerName.c_str(), treeNodeFlags);
+    pathLayer.expanded = ImGui::TreeNodeEx((layer.layerName + pathLayer.layerName).c_str(), treeNodeFlags);
 
     ImGui::SameLine();
     ImGui::NextColumn(); // CPU time
@@ -529,12 +525,16 @@ void PerformanceGraphUI::buildProfileTree(const std::vector<ProfileData>& profil
     ImGui::NextColumn(); // GPU %
     ImGui::Text("%.2f %%", 0.0F);
     ImGui::NextColumn(); // Colour
-    ImGui::ColorEdit3(layer.layerName.c_str(), &layer.colour[0], ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoInputs);
+    ImGui::ColorEdit3(pathLayer.layerName.c_str(), &pathLayer.colour[0], ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoInputs);
     ImGui::NextColumn(); // Visible
-    //ImGui::Checkbox("Show", &layer.visible);
-    //ImGui::NextColumn();
+    if (currProfile.hasChildren) {
+        if (ImGui::RadioButton(pathLayer.layerName.c_str(), m_frameGraphRootIndex == index))
+            m_frameGraphRootIndex = index;
+    }
+    ImGui::NextColumn();
 
-    if (layer.expanded) {
+
+    if (pathLayer.expanded) {
         if (currProfile.hasChildren) {
             tempReorderBuffer.clear();
             size_t childIndex = index + 1; // First child is always the next element after its parent
@@ -619,24 +619,32 @@ const uint32_t& PerformanceGraphUI::getUniqueLayerIndex(const std::string& layer
         layer.colour[1] = (float)rand() / RAND_MAX;
         layer.colour[2] = (float)rand() / RAND_MAX;
         layer.expanded = false;
+        layer.visible = true;
         layer.layerName = layerName;
         it = m_uniqueLayerIndexMap.insert(std::make_pair(layerName, index)).first;
     }
     return it->second;
 }
 
-//const uint32_t& PerformanceGraphUI::getPathLayerIndex(const std::vector<uint32_t>& layerPath) {
-//    auto it = m_pathLayerIndexMap.find(layerPath);
-//    if (it == m_pathLayerIndexMap.end()) {
-//        uint32_t index = m_layers.size();
-//        ProfileLayer& layer = m_layers.emplace_back();
-//        layer.colour[0] = (float)rand() / RAND_MAX;
-//        layer.colour[1] = (float)rand() / RAND_MAX;
-//        layer.colour[2] = (float)rand() / RAND_MAX;
-//        layer.expanded = false;
-//        layer.layerName = "";
-//        it = m_pathLayerIndexMap.insert(std::make_pair(layerPath, index)).first;
-//    }
-//    return it->second;
-//}
+const uint32_t& PerformanceGraphUI::getPathLayerIndex(const std::vector<uint32_t>& layerPath) {
+    auto it = m_pathLayerIndexMap.find(layerPath);
+    if (it == m_pathLayerIndexMap.end()) {
+        uint32_t index = m_layers.size();
+        ProfileLayer& layer = m_layers.emplace_back();
+        layer.colour[0] = (float)rand() / RAND_MAX;
+        layer.colour[1] = (float)rand() / RAND_MAX;
+        layer.colour[2] = (float)rand() / RAND_MAX;
+        layer.expanded = false;
+        layer.visible = true;
+        layer.layerName = std::string("##") + std::to_string(index);
+        //layer.layerName = "";
+        //for (size_t i = 0; i < layerPath.size(); ++i) {
+        //    if (i > 0)
+        //        layer.layerName += "..";
+        //    layer.layerName += m_layers[layerPath[i]].layerName;
+        //}
+        it = m_pathLayerIndexMap.insert(std::make_pair(layerPath, index)).first;
+    }
+    return it->second;
+}
 

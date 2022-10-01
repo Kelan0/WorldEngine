@@ -11,6 +11,8 @@
 #define PROFILE_DOMAIN_NAME "WorldEngine"
 #endif
 
+#define PROFILING_ENABLED 0
+
 typedef __itt_string_handle* profile_id;
 
 namespace Performance {
@@ -86,14 +88,14 @@ public:
     static void getFrameProfile(std::unordered_map<uint64_t, std::vector<Profile>>& outThreadProfiles);
 
 private:
-    static ThreadContext& context();
-
     void flushFrames();
 
 private:
+#if PROFILING_ENABLED
     static thread_local ThreadContext s_context;
     static std::unordered_map<uint64_t, ThreadContext*> s_threadContexts;
     static std::mutex s_threadContextsMtx;
+#endif
 };
 
 
@@ -116,6 +118,7 @@ private:
 };
 
 
+#if PROFILING_ENABLED
 #define CONCAT1(a, b) a##b
 #define CONCAT(a,b) CONCAT1(a,b) // Why two???? :(
 #define PFID_NAME(name) CONCAT(name, __LINE__)
@@ -130,6 +133,14 @@ private:
 
 #define PROFILE_END_REGION(x) { \
     PF_NAME.endRegion(); }
+
+#else
+
+#define PROFILE_SCOPE(name)
+#define PROFILE_REGION(name)
+#define PROFILE_END_REGION(x)
+
+#endif
 
 
 #endif //WORLDENGINE_PROFILER_H
