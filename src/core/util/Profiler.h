@@ -11,7 +11,8 @@
 #define PROFILE_DOMAIN_NAME "WorldEngine"
 #endif
 
-#define PROFILING_ENABLED 0
+#define PROFILING_ENABLED 1
+#define INTERNAL_PROFILING_ENABLED 0
 
 typedef __itt_string_handle* profile_id;
 
@@ -91,7 +92,7 @@ private:
     void flushFrames();
 
 private:
-#if PROFILING_ENABLED
+#if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
     static thread_local ThreadContext s_context;
     static std::unordered_map<uint64_t, ThreadContext*> s_threadContexts;
     static std::mutex s_threadContextsMtx;
