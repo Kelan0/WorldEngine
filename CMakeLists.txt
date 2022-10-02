@@ -3,14 +3,23 @@ project(WorldEngine)
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(SDL2_PATH "D:/Code/Libraries/SDL2-2.0.20")
-set(VULKAN_PATH "D:/Code/VulkanSDK/1.2.198.1")
-set(GLM_PATH "D:/Code/Libraries/glm-0.9.9.8")
-set(ENTT_PATH "D:/Code/Libraries/entt")
-#set(IMGUI_PATH "D:/Code/Libraries/imgui-1.88")
-set(STB_IMAGE_PATH "D:/Code/Libraries/stb")
-#set(VOLK_PATH "D:/Code/Libraries/volk")
-set(ITT_PATH "C:/Program Files (x86)/Intel/oneAPI/vtune/2022.2.0/sdk")
+#set(SDL2_PATH "D:/Code/Libraries/SDL2-2.0.20")
+#set(VULKAN_PATH "D:/Code/VulkanSDK/1.2.198.1")
+#set(GLM_PATH "D:/Code/Libraries/glm-0.9.9.8")
+#set(STB_IMAGE_PATH "D:/Code/Libraries/stb")
+##set(VOLK_PATH "D:/Code/Libraries/volk")
+#set(ITT_PATH "C:/Program Files (x86)/Intel/oneAPI/vtune/2022.2.0/sdk")
+
+#set(SDL2_INCLUDE_DIRS "${SDL2_PATH}/include")
+
+find_package(Vulkan REQUIRED FATAL_ERROR)
+find_package(SDL2 REQUIRED FATAL_ERROR)
+find_package(glm REQUIRED FATAL_ERROR)
+
+# Vulkan hash definitions are in vulkan_hash.hpp on Linux, and in vulkan.hpp on Windows... Why??
+add_compile_definitions(USE_VULKAN_HASH_HPP=1)
+
+message(STATUS "======== TEST: ${VTUNE_DIR} -- ${GLM_LIBRARIES}")
 
 #IF(CMAKE_COMPILER_IS_GNUCC)
 #    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -O1")
@@ -26,41 +35,37 @@ if (${CMAKE_BUILD_TYPE} MATCHES "Debug")
 endif ()
 
 # INIT SDL2 LIBRARY
-set(SDL2_INCLUDE_DIR "${SDL2_PATH}/include")
-if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(SDL2_LIB_DIR "${SDL2_PATH}/lib/x64")
-else ()
-    set(SDL2_LIB_DIR "${SDL2_PATH}/lib/x86")
-endif ()
-list(APPEND COPY_BINARIES "${SDL2_LIB_DIR}/SDL2.dll")
-set(SDL2_LIBRARIES SDL2main SDL2)
+if (WIN32)
+    if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(SDL2_LIB_DIR "${SDL2_PATH}/lib/x64")
+    else ()
+        set(SDL2_LIB_DIR "${SDL2_PATH}/lib/x86")
+    endif ()
+    list(APPEND COPY_BINARIES "${SDL2_LIB_DIR}/SDL2.dll")
+    set(SDL2_LIBRARIES SDL2main SDL2)
+endif()
 
 
 # INIT VULKAN LIBRARY
 set(ENV{VULKAN_SDK} ${VULKAN_PATH})
 find_package(Vulkan REQUIRED)
-#set(Vulkan_INCLUDE_DIR "${VULKAN_PATH}/Include")
-#if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-#    set(VULKAN_LIB_DIR "${VULKAN_PATH}/Lib")
-#else()
-#    set(VULKAN_LIB_DIR "${VULKAN_PATH}/Lib32")
-#endif()
 
 
 # INIT GLM LIBRARY
-set(GLM_INCLUDE_DIR "${GLM_PATH}")
+if (WIN32)
+    set(GLM_INCLUDE_DIRS "${GLM_PATH}")
+endif()
 
 
-# INIT ENTT LIBRARY
-set(ENTT_INCLUDE_DIR "${ENTT_PATH}")
+set(ENTT_INCLUDE_DIRS "src/extern/entt/")
 
 # INIT IMGUI
 #set(IMGUI_INCLUDE_DIR, "${IMGUI_PATH}")
 
 
 # INIT STB_IMAGE LIBRARY
-set(STB_IMAGE_INCLUDE_DIR "${STB_IMAGE_PATH}")
-add_library(stb_image "src/core/stb_image_impl.cpp")
+set(STB_IMAGE_INCLUDE_DIRS "src/extern/stbi/")
+add_library(stb_image "src/extern/stbi/stb_image_impl.cpp")
 set(STB_IMAGE_LIBRARIES stb_image)
 
 
@@ -71,25 +76,29 @@ set(STB_IMAGE_LIBRARIES stb_image)
 
 
 # INIT ITT LIBRARY
-set(ITT_INCLUDE_DIR "${ITT_PATH}/include")
+set(ITT_INCLUDE_DIRS "${VTUNE_DIR}/include")
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(ITT_LIB_DIR "${ITT_PATH}/lib64")
-else ()
-    set(ITT_LIB_DIR "${ITT_PATH}/lib32")
-endif ()
-set(ITT_LIBRARIES libittnotify.lib)
+    set(ITT_LIB_DIR "${VTUNE_DIR}/lib64")
+else()
+    set(ITT_LIB_DIR "${VTUNE_DIR}/lib32")
+endif()
 
+if (WIN32)
+    set(ITT_LIBRARIES libittnotify.lib)
+else()
+    set(ITT_LIBRARIES -littnotify)
+endif()
 
 include_directories(
         ${PROJECT_SOURCE_DIR}/src
-        ${SDL2_INCLUDE_DIR}
-        ${Vulkan_INCLUDE_DIR}
-        ${GLM_INCLUDE_DIR}
-        ${ENTT_INCLUDE_DIR}
-        #        ${IMGUI_INCLUDE_DIR}
-        ${STB_IMAGE_INCLUDE_DIR}
-        #        ${VOLK_INCLUDE_DIR}
-        ${ITT_INCLUDE_DIR})
+        ${SDL2_INCLUDE_DIRS}
+        ${Vulkan_INCLUDE_DIRS}
+        ${GLM_INCLUDE_DIRS}
+        ${ENTT_INCLUDE_DIRS}
+#        ${IMGUI_INCLUDE_DIR}
+        ${STB_IMAGE_INCLUDE_DIRS}
+#        ${VOLK_INCLUDE_DIR}
+        ${ITT_INCLUDE_DIRS})
 
 link_directories(
         ${SDL2_LIB_DIR}
@@ -216,23 +225,23 @@ add_executable(${PROJECT_NAME}
         src/core/engine/renderer/LightComponent.h
         src/core/util/PlatformUtils.cpp
         src/core/util/PlatformUtils.h
-        src/core/imgui/imconfig.h
-        src/core/imgui/imgui.cpp
-        src/core/imgui/imgui.h
-        src/core/imgui/imgui_draw.cpp
-        src/core/imgui/imgui_internal.h
-        src/core/imgui/imgui_tables.cpp
-        src/core/imgui/imgui_widgets.cpp
-        src/core/imgui/imstb_rectpack.h
-        src/core/imgui/imstb_textedit.h
-        src/core/imgui/imstb_truetype.h
+        src/extern/imgui/imconfig.h
+        src/extern/imgui/imgui.cpp
+        src/extern/imgui/imgui.h
+        src/extern/imgui/imgui_draw.cpp
+        src/extern/imgui/imgui_internal.h
+        src/extern/imgui/imgui_tables.cpp
+        src/extern/imgui/imgui_widgets.cpp
+        src/extern/imgui/imstb_rectpack.h
+        src/extern/imgui/imstb_textedit.h
+        src/extern/imgui/imstb_truetype.h
+        src/extern/imgui/imgui_impl_sdl.cpp
+        src/extern/imgui/imgui_impl_sdl.h
+        src/extern/imgui/imgui_impl_vulkan.cpp
+        src/extern/imgui/imgui_impl_vulkan.h
+        src/extern/imgui/imgui_demo.cpp
         src/core/engine/renderer/renderPasses/UIRenderer.cpp
         src/core/engine/renderer/renderPasses/UIRenderer.h
-        src/core/imgui/imgui_impl_sdl.cpp
-        src/core/imgui/imgui_impl_sdl.h
-        src/core/imgui/imgui_impl_vulkan.cpp
-        src/core/imgui/imgui_impl_vulkan.h
-        src/core/imgui/imgui_demo.cpp
         src/core/engine/ui/PerformanceGraphUI.cpp
         src/core/engine/ui/PerformanceGraphUI.h
         src/core/engine/ui/UI.cpp

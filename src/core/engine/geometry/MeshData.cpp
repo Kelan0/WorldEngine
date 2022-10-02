@@ -123,7 +123,7 @@ inline std::vector<std::string> split(const std::string& string, const char deli
 
 
 
-struct index {
+struct Index {
     union {
         struct { uint32_t p, t, n; };
         glm::uvec3 k;
@@ -131,9 +131,9 @@ struct index {
     };
 };
 
-struct face {
+struct Face {
     union {
-        index v[3];
+        Index v[3];
     };
 };
 
@@ -150,7 +150,7 @@ void compileOBJObject(
         object& currentObject,
         std::vector<MeshUtils::OBJMeshData::Vertex>& vertices,
         std::vector<MeshUtils::OBJMeshData::Triangle>& triangles,
-        std::vector<face>& faces,
+        std::vector<Face>& faces,
         std::vector<glm::vec3>& positions,
         std::vector<glm::vec2>& textures,
         std::vector<glm::vec3>& normals,
@@ -164,13 +164,13 @@ void compileOBJObject(
     size_t numTriangles = triangles.size();
 
     for (int i = 0; i < faces.size(); ++i) {
-        const face& face = faces[i];
+        const Face& face = faces[i];
         MeshUtils::OBJMeshData::Triangle tri;
 
         bool useFaceNormal = false;
 
         for (int j = 0; j < 3; ++j) {
-            const index& index = face.v[j];
+            const Index& index = face.v[j];
 
             uint32_t mappedIndex = mappedIndices[index.k];
 
@@ -223,7 +223,7 @@ bool MeshUtils::loadOBJFile(const std::string& filePath, MeshUtils::OBJMeshData&
     std::vector<glm::vec3> positions;
     std::vector<glm::vec2> textures;
     std::vector<glm::vec3> normals;
-    std::vector<face> faces;
+    std::vector<Face> faces;
 
     std::vector<MeshUtils::OBJMeshData::Vertex> vertices;
     std::vector<MeshUtils::OBJMeshData::Triangle> triangles;
@@ -278,7 +278,7 @@ bool MeshUtils::loadOBJFile(const std::string& filePath, MeshUtils::OBJMeshData&
                     continue;
                 }
 
-                index* indices = new index[faceSize];
+                Index* indices = new Index[faceSize];
                 for (int i = 0; i < faceSize; i++) {
                     std::vector<std::string> vertComps = split(faceComps[i + 1], '/');
 
@@ -311,7 +311,7 @@ bool MeshUtils::loadOBJFile(const std::string& filePath, MeshUtils::OBJMeshData&
 
                 // triangle fan
                 for (int i = 1; i < faceSize - 1; i++) {
-                    face f;
+                    Face f;
                     f.v[0] = indices[0];
                     f.v[1] = indices[i];
                     f.v[2] = indices[i + 1];
@@ -319,7 +319,7 @@ bool MeshUtils::loadOBJFile(const std::string& filePath, MeshUtils::OBJMeshData&
                 }
 
                 //if (faceSize >= 3) {
-                //	face f;
+                //	Face f;
                 //	f.v0 = indices[0];
                 //	f.v1 = indices[1];
                 //	f.v2 = indices[2];

@@ -224,7 +224,7 @@ inline void EventDispatcher::disconnect(T* instance) {
 template<class Event>
 inline void EventDispatcher::trigger(const Event& event) {
     PROFILE_SCOPE("EventDispatcher::trigger")
-    m_dispatcher.trigger<Event>(event);
+    m_dispatcher.trigger<Event>(static_cast<Event>(event));
 
     auto& dispatchers = m_repeatEventDispatchers[std::type_index(typeid(Event))];
     for (auto it = dispatchers.begin(); it != dispatchers.end(); ++it) {

@@ -5,6 +5,10 @@
 #include <utility>
 #include <glm/glm.hpp>
 
+#if USE_VULKAN_HASH_HPP
+#include <vulkan/vulkan_hash.hpp>
+#endif
+
 namespace std {
 
     // Why isn't this included in the standard library?

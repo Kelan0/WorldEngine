@@ -3,8 +3,8 @@
 
 #include "core/application/Application.h"
 #include "core/application/InputHandler.h"
-#include "core/imgui/imgui_impl_sdl.h"
-#include "core/imgui/imgui_impl_vulkan.h"
+#include "extern/imgui/imgui_impl_sdl.h"
+#include "extern/imgui/imgui_impl_vulkan.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/CommandPool.h"
 #include "core/engine/ui/PerformanceGraphUI.h"

@@ -5,7 +5,7 @@
 #include "core/engine/ui/UI.h"
 #include "core/graphics/FrameResource.h"
 #include "core/graphics/RenderPass.h"
-#include "core/imgui/imgui.h"
+#include "extern/imgui/imgui.h"
 
 class UIRenderer {
 public:

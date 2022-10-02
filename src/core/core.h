@@ -47,7 +47,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include <stb_image.h>
+#include "extern/stbi/stb_image.h"
 
 #define ENTT_ID_TYPE uint64_t
 #define ENTT_DISABLE_ASSERT 1

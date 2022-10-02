@@ -75,11 +75,11 @@ Profiler::Profiler() {}
 Profiler::~Profiler() {}
 
 profile_id Profiler::id(const char* name) {
-    return __itt_string_handle_createA(name);
+    return __itt_string_handle_create(name);
 }
 
 __itt_domain* Profiler::domain() {
-    static __itt_domain* s_domain = __itt_domain_createA(PROFILE_DOMAIN_NAME);
+    static __itt_domain* s_domain = __itt_domain_create(PROFILE_DOMAIN_NAME);
     return s_domain;
 }
 

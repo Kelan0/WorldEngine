@@ -2,8 +2,8 @@
 #include "core/application/Application.h"
 #include "core/util/Profiler.h"
 #include "core/util/Util.h"
-#include "core/imgui/imgui.h"
-#include "core/imgui/imgui_internal.h"
+#include "extern/imgui/imgui.h"
+#include "extern/imgui/imgui_internal.h"
 
 PerformanceGraphUI::PerformanceGraphUI():
     m_firstFrame(true),
@@ -425,26 +425,26 @@ void PerformanceGraphUI::drawFrameTimeOverlays(const uint64_t& threadId, const f
 
     x = xmin;
     y = ymin;
-    sprintf_s(str, sizeof(str), "%02.1f ms (%.1f FPS)", m_heightScaleMsec, 1000.0 / m_heightScaleMsec);
+    sprintf(str, "%02.1f ms (%.1f FPS)", m_heightScaleMsec, 1000.0 / m_heightScaleMsec);
     x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
     dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
 
     x = xmin;
     y = ymax - h * 0.5;
-    sprintf_s(str, sizeof(str), "%02.1f ms (%.1f FPS)", m_heightScaleMsec * 0.5, 1000.0 / (m_heightScaleMsec * 0.5));
+    sprintf(str, "%02.1f ms (%.1f FPS)", m_heightScaleMsec * 0.5, 1000.0 / (m_heightScaleMsec * 0.5));
     x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
     dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
 
     x = xmin;
     y = ymax - h * 0.25;
-    sprintf_s(str, sizeof(str), "%02.1f ms (%.1f FPS)", m_heightScaleMsec * 0.25, 1000.0 / (m_heightScaleMsec * 0.25));
+    sprintf(str, "%02.1f ms (%.1f FPS)", m_heightScaleMsec * 0.25, 1000.0 / (m_heightScaleMsec * 0.25));
     x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
     dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
 
     if (m_showFrameTime90Percentile) {
         x = xmin;
         y = ymax - (threadInfo.frameTimePercentile90 / m_heightScaleMsec) * h;
-        sprintf_s(str, sizeof(str), "10%% %02.1f ms (%.1f FPS)", threadInfo.frameTimePercentile90, 1000.0 / threadInfo.frameTimePercentile90);
+        sprintf(str, "10%% %02.1f ms (%.1f FPS)", threadInfo.frameTimePercentile90, 1000.0 / threadInfo.frameTimePercentile90);
         x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
         dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
     }
@@ -452,7 +452,7 @@ void PerformanceGraphUI::drawFrameTimeOverlays(const uint64_t& threadId, const f
     if (m_showFrameTime99Percentile) {
         x = xmin;
         y = ymax - (threadInfo.frameTimePercentile99 / m_heightScaleMsec) * h;
-        sprintf_s(str, sizeof(str), "1%% %02.1f ms (%.1f FPS)", threadInfo.frameTimePercentile99, 1000.0 / threadInfo.frameTimePercentile99);
+        sprintf(str, "1%% %02.1f ms (%.1f FPS)", threadInfo.frameTimePercentile99, 1000.0 / threadInfo.frameTimePercentile99);
         x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
         dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
     }
@@ -460,14 +460,14 @@ void PerformanceGraphUI::drawFrameTimeOverlays(const uint64_t& threadId, const f
     if (m_showFrameTime999Percentile) {
         x = xmin;
         y = ymax - (threadInfo.frameTimePercentile999 / m_heightScaleMsec) * h;
-        sprintf_s(str, sizeof(str), "0.1%% %02.1f ms (%.1f FPS)", threadInfo.frameTimePercentile999, 1000.0 / threadInfo.frameTimePercentile999);
+        sprintf(str, "0.1%% %02.1f ms (%.1f FPS)", threadInfo.frameTimePercentile999, 1000.0 / threadInfo.frameTimePercentile999);
         x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
         dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
     }
 
     x = xmin;
     y = ymax - (threadInfo.frameTimeAvg / m_heightScaleMsec) * h;
-    sprintf_s(str, sizeof(str), "AVG %02.1f ms (%.1f FPS)", threadInfo.frameTimeAvg, 1000.0 / threadInfo.frameTimeAvg);
+    sprintf(str, "AVG %02.1f ms (%.1f FPS)", threadInfo.frameTimeAvg, 1000.0 / threadInfo.frameTimeAvg);
     x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
     dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
 
@@ -476,7 +476,7 @@ void PerformanceGraphUI::drawFrameTimeOverlays(const uint64_t& threadId, const f
         y = ImGui::GetMousePos().y;
         if (y > ymin && y < ymax) {
             float msec = (1.0F - ((y - ymin) / h)) * m_heightScaleMsec;
-            sprintf_s(str, sizeof(str), "POS %02.1f ms (%.1f FPS)", msec, 1000.0 / msec);
+            sprintf(str, "POS %02.1f ms (%.1f FPS)", msec, 1000.0 / msec);
             x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
             dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
         }

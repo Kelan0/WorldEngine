@@ -11,7 +11,7 @@
 #include "core/graphics/RenderPass.h"
 #include "core/thread/ThreadUtils.h"
 #include "core/util/PlatformUtils.h"
-#include "core/imgui/imgui_impl_sdl.h"
+#include "extern/imgui/imgui_impl_sdl.h"
 #include <chrono>
 
 Application* Application::s_instance = nullptr;
