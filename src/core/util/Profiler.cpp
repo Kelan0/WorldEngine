@@ -5,7 +5,7 @@
 #include <thread>
 
 thread_local Performance::moment_t Performance::s_lastTime = Performance::now();
-#if PROFILING_ENABLED
+#if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
 thread_local Profiler::ThreadContext Profiler::s_context;
 std::unordered_map<uint64_t, Profiler::ThreadContext*> Profiler::s_threadContexts;
 std::mutex Profiler::s_threadContextsMtx;
@@ -57,24 +57,38 @@ double Performance::milliseconds(const moment_t& startTime) {
 
 
 Profiler::ThreadContext::ThreadContext() {
-#if PROFILING_ENABLED
+#if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
+    uint64_t currentId = ThreadUtils::getCurrentThreadHashedId();
+    printf("Creating ThreadContext(0x%016x)\n", currentId);
+
     std::scoped_lock<std::mutex> lock(s_threadContextsMtx);
-    s_threadContexts.insert(std::make_pair(ThreadUtils::getCurrentThreadHashedId(), this));
+    s_threadContexts.insert(std::make_pair(currentId, this));
 #endif
 }
 
 Profiler::ThreadContext::~ThreadContext() {
-#if PROFILING_ENABLED
-    std::scoped_lock<std::mutex> lock(s_threadContextsMtx);
-    s_threadContexts.erase(ThreadUtils::getCurrentThreadHashedId()); // TODO: why does this cause an exception when closing the application?
+#if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
+    uint64_t currentId = ThreadUtils::getCurrentThreadHashedId();
+    printf("Deleting ThreadContext(0x%016x)\n", currentId);
+
+    if (Application::instance() != nullptr) {
+        std::scoped_lock<std::mutex> lock(s_threadContextsMtx);
+        s_threadContexts.erase(currentId); // TODO: why does this cause an exception when closing the application?
+    }
+
 #endif
 }
 
-Profiler::Profiler() {}
+Profiler::Profiler() {
 
-Profiler::~Profiler() {}
+}
+
+Profiler::~Profiler() {
+
+}
 
 profile_id Profiler::id(const char* name) {
+    printf("Creating profile ID: %s\n", name);
     return __itt_string_handle_createA(name);
 }
 
@@ -87,6 +101,7 @@ void Profiler::begin(profile_id const& id) {
 #if PROFILING_ENABLED
     __itt_task_begin(domain(), __itt_null, __itt_null, id);
 
+#if INTERNAL_PROFILING_ENABLED
     ThreadContext& ctx = s_context;
     if (!ctx.frameStarted)
         return; // Ignore constructing frame profiles if this is not part of a frame.
@@ -109,12 +124,14 @@ void Profiler::begin(profile_id const& id) {
 
     profile.startCPU = Performance::now();
 #endif
+#endif
 }
 
 void Profiler::end() {
 #if PROFILING_ENABLED
     __itt_task_end(domain());
 
+#if INTERNAL_PROFILING_ENABLED
     ThreadContext& ctx = s_context;
     if (!ctx.frameStarted)
         return; // Ignore constructing frame profiles if this is not part of a frame.
@@ -125,12 +142,14 @@ void Profiler::end() {
     profile.endCPU = Performance::now();
     ctx.currentIndex = profile.parentIndex;
 #endif
+#endif
 }
 
 void Profiler::beginFrame() {
 #if PROFILING_ENABLED
 //    printf("======== FRAME BEGIN thread 0x%016x\n", ThreadUtils::getCurrentThreadHashedId());
 
+#if INTERNAL_PROFILING_ENABLED
     ThreadContext& ctx = s_context;
     ctx.threadActive = true;
 
@@ -138,6 +157,8 @@ void Profiler::beginFrame() {
     ctx.frameProfiles.clear();
 
     ctx.frameStarted = true;
+#endif
+
     static profile_id id = Profiler::id("Frame");
     Profiler::begin(id);
 #endif
@@ -145,9 +166,10 @@ void Profiler::beginFrame() {
 
 void Profiler::endFrame() {
 #if PROFILING_ENABLED
-    ThreadContext& ctx = s_context;
-
     Profiler::end();
+
+#if INTERNAL_PROFILING_ENABLED
+    ThreadContext& ctx = s_context;
     ctx.frameStarted = false;
 
     {
@@ -155,16 +177,17 @@ void Profiler::endFrame() {
         ctx.prevFrameProfiles.swap(ctx.frameProfiles);
     }
 #endif
+#endif
 }
 
 void Profiler::flushFrames() {
-#if PROFILING_ENABLED
+#if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
     // TODO: write performance log to file?
 #endif
 }
 
 void Profiler::getFrameProfile(std::unordered_map<uint64_t, std::vector<Profile>>& outThreadProfiles) {
-#if PROFILING_ENABLED
+#if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
     std::scoped_lock<std::mutex> lock(s_threadContextsMtx);
     for (auto it = s_threadContexts.begin(); it != s_threadContexts.end(); ++it) {
         uint64_t threadId = it->first;
