@@ -3,7 +3,7 @@ project(WorldEngine)
 
 set(CMAKE_CXX_STANDARD 20)
 
-#set(SDL2_PATH "D:/Code/Libraries/SDL2-2.0.20")
+#set(SDL2_DIR "C:/Users/Kelan/Library/SDL/SDL2-2.24.1/cmake")
 #set(VULKAN_PATH "D:/Code/VulkanSDK/1.2.198.1")
 #set(GLM_PATH "D:/Code/Libraries/glm-0.9.9.8")
 #set(STB_IMAGE_PATH "D:/Code/Libraries/stb")
@@ -12,14 +12,53 @@ set(CMAKE_CXX_STANDARD 20)
 
 #set(SDL2_INCLUDE_DIRS "${SDL2_PATH}/include")
 
+set(CREATE_RESOURCE_SYMLINK 1)
+
+set(VULKAN_DIR "C:\\VulkanSDK\\1.2.198.1")
+
+if ("$ENV{VULKAN_SDK}" STREQUAL "")
+    message(FATAL_ERROR "VULKAN_SDK environment variable is not defined. Please install the Vulkan SDK")
+elseif(NOT EXISTS "$ENV{VULKAN_SDK}")
+    message(FATAL_ERROR "VULKAN_SDK environment variable path does not exist: $ENV{VULKAN_SDK}")
+else()
+    message(STATUS "Found Vulkan SDK at: $ENV{VULKAN_SDK}")
+endif()
+
+if ("${SDL2_DIR}" STREQUAL "")
+    message(FATAL_ERROR "Please define the variable SDL2_DIR to point to the location of the folder containing FindSDL2.cmake or equivalent")
+elseif(NOT EXISTS "${SDL2_DIR}")
+    message(FATAL_ERROR "SDL2_DIR path does not exist: ${SDL2_DIR}")
+endif()
+
+if ("${glm_DIR}" STREQUAL "")
+    message(FATAL_ERROR "Please define the variable glm_DIR to point to the location of the folder containing Findglm.cmake or equivalent")
+elseif(NOT EXISTS "${glm_DIR}")
+    message(FATAL_ERROR "glm_DIR path does not exist: ${glm_DIR}")
+endif()
+
+if ("${VTUNE_DIR}" STREQUAL "")
+    message(WARNING "VTUNE_DIR variable is not defined. Intel Instrumentation and Tracing Technology API will be disabled, no profile data will be produced for VTune Profiler")
+elseif(NOT EXISTS "${VTUNE_DIR}")
+    message(FATAL_ERROR "VTUNE_DIR was defined but the file path '${VTUNE_DIR}' does not exist.")
+else()
+    message(STATUS "Found Intel VTune API at ${VTUNE_DIR}")
+endif()
+
 find_package(Vulkan REQUIRED FATAL_ERROR)
-find_package(SDL2 REQUIRED FATAL_ERROR)
+if ("${Vulkan_VERSION}" VERSION_GREATER_EQUAL "1.3")
+    add_compile_definitions(USE_VULKAN_HASH_HPP=1)
+else()
+    add_compile_definitions(USE_VULKAN_HASH_HPP=0)
+endif()
+
+find_package(SDL2 REQUIRED)
+if (${SDL2_SDL2_FOUND}) # Somebody messed up naming for MinGW SDL2. SDL2_FOUND is never set to true, instead, SDL2_SDL2_FOUND is, but find_package will not check this automatically
+    message(STATUS "The above error is fine, please ignore it")
+elseif(NOT ${SDL2_FOUND})
+    message(FATAL_ERROR "SDL2 not found")
+endif()
+
 find_package(glm REQUIRED FATAL_ERROR)
-
-# Vulkan hash definitions are in vulkan_hash.hpp on Linux, and in vulkan.hpp on Windows... Why??
-add_compile_definitions(USE_VULKAN_HASH_HPP=1)
-
-message(STATUS "======== TEST: ${VTUNE_DIR} -- ${GLM_LIBRARIES}")
 
 #IF(CMAKE_COMPILER_IS_GNUCC)
 #    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -O1")
@@ -36,57 +75,32 @@ endif ()
 
 # INIT SDL2 LIBRARY
 if (WIN32)
-    if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-        set(SDL2_LIB_DIR "${SDL2_PATH}/lib/x64")
-    else ()
-        set(SDL2_LIB_DIR "${SDL2_PATH}/lib/x86")
-    endif ()
-    list(APPEND COPY_BINARIES "${SDL2_LIB_DIR}/SDL2.dll")
-    set(SDL2_LIBRARIES SDL2main SDL2)
+    list(APPEND COPY_BINARIES "${SDL2_BINDIR}/SDL2.dll")
+#    set(SDL2_LIBRARIES SDL2main SDL2)
 endif()
-
-
-# INIT VULKAN LIBRARY
-set(ENV{VULKAN_SDK} ${VULKAN_PATH})
-find_package(Vulkan REQUIRED)
-
-
-# INIT GLM LIBRARY
-if (WIN32)
-    set(GLM_INCLUDE_DIRS "${GLM_PATH}")
-endif()
-
 
 set(ENTT_INCLUDE_DIRS "src/extern/entt/")
-
-# INIT IMGUI
-#set(IMGUI_INCLUDE_DIR, "${IMGUI_PATH}")
-
-
-# INIT STB_IMAGE LIBRARY
 set(STB_IMAGE_INCLUDE_DIRS "src/extern/stbi/")
 add_library(stb_image "src/extern/stbi/stb_image_impl.cpp")
 set(STB_IMAGE_LIBRARIES stb_image)
 
-
-## INIT VOLK LIBRARY
-#set(VOLK_INCLUDE_DIR "${VOLK_PATH}")
-#add_library(volk "src/core/volk_impl.cpp")
-#set(VOLK_LIBRARIES volk)
-
-
 # INIT ITT LIBRARY
-set(ITT_INCLUDE_DIRS "${VTUNE_DIR}/include")
-if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(ITT_LIB_DIR "${VTUNE_DIR}/lib64")
-else()
-    set(ITT_LIB_DIR "${VTUNE_DIR}/lib32")
-endif()
+if (EXISTS "${VTUNE_DIR}")
+    set(ITT_INCLUDE_DIRS "${VTUNE_DIR}/include")
+    if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(ITT_LIB_DIR "${VTUNE_DIR}/lib64")
+    else()
+        set(ITT_LIB_DIR "${VTUNE_DIR}/lib32")
+    endif()
 
-if (WIN32)
-    set(ITT_LIBRARIES libittnotify.lib)
+    if (WIN32)
+        set(ITT_LIBRARIES libittnotify.lib)
+    else()
+        set(ITT_LIBRARIES -littnotify)
+    endif()
+    add_compile_definitions(ITT_ENABLED=0)
 else()
-    set(ITT_LIBRARIES -littnotify)
+    add_compile_definitions(ITT_ENABLED=0)
 endif()
 
 include_directories(
@@ -95,20 +109,21 @@ include_directories(
         ${Vulkan_INCLUDE_DIRS}
         ${GLM_INCLUDE_DIRS}
         ${ENTT_INCLUDE_DIRS}
-#        ${IMGUI_INCLUDE_DIR}
+        #        ${IMGUI_INCLUDE_DIR}
         ${STB_IMAGE_INCLUDE_DIRS}
-#        ${VOLK_INCLUDE_DIR}
+        #        ${VOLK_INCLUDE_DIR}
         ${ITT_INCLUDE_DIRS})
 
+
 link_directories(
-        ${SDL2_LIB_DIR}
+        ${SDL2_LIBDIR}
         ${ITT_LIB_DIR})
 
-file(GLOB_RECURSE PROJECT_SOURCE_FILES
-        ${CMAKE_SOURCE_DIR}/src/*.cpp
-        ${CMAKE_SOURCE_DIR}/src/*.c
-        ${CMAKE_SOURCE_DIR}/src/*.hpp
-        ${CMAKE_SOURCE_DIR}/src/*.h)
+#file(GLOB_RECURSE PROJECT_SOURCE_FILES
+#        ${CMAKE_SOURCE_DIR}/src/*.cpp
+#        ${CMAKE_SOURCE_DIR}/src/*.c
+#        ${CMAKE_SOURCE_DIR}/src/*.hpp
+#        ${CMAKE_SOURCE_DIR}/src/*.h)
 
 add_executable(${PROJECT_NAME}
         src/main.cpp
@@ -254,7 +269,6 @@ target_link_libraries(${PROJECT_NAME}
         #        ${VOLK_LIBRARIES}
         ${ITT_LIBRARIES})
 
-
 if (WIN32)
     foreach (CPY_SRC ${COPY_BINARIES})
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
@@ -264,9 +278,33 @@ if (WIN32)
     #configure_file(${SDL2_LIBRARY_DLLS} ${CMAKE_BINARY_DIR})
 endif ()
 
+file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/res" srcResourceDir)
+file(TO_NATIVE_PATH "${PROJECT_BINARY_DIR}/res" dstResourceDir)
 
-add_custom_target(copy_resources ALL
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/res" "${PROJECT_BINARY_DIR}/res"
-        COMMENT Copying resources)
+if (WIN32) # Why doesn't TO_NATIVE_PATH work??? We have to manually replace with backslash for some annoying reason
+    string(REPLACE "/" "\\" srcResourceDir ${srcResourceDir})
+    string(REPLACE "/" "\\" dstResourceDir ${dstResourceDir})
+endif()
+
+if (${CREATE_RESOURCE_SYMLINK})
+    message(STATUS "Build will create a symbolic link to resources folder: ${srcResourceDir}")
+    if (UNIX)
+        add_custom_target(copy_resources ALL
+                COMMAND ${CMAKE_COMMAND} -E create_symlink "${srcResourceDir}" "${dstResourceDir}"
+                COMMENT Creating resources symlink)
+    elseif(WIN32)
+        add_custom_target(copy_resources ALL
+                COMMAND cmd.exe /c if exist \"${dstResourceDir}\" rmdir \"${dstResourceDir}\"
+                COMMAND cmd.exe /c mklink /J \"${dstResourceDir}\" \"${srcResourceDir}\"
+                COMMENT Creating resources symlink)
+    else()
+        message(FATAL_ERROR "Unable to create symbolic link to resources directory on this platform")
+    endif()
+else()
+    message(STATUS "Build will copy resources folder: ${srcResourceDir}")
+    add_custom_target(copy_resources ALL
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${srcResourceDir}" "${dstResourceDir}"
+            COMMENT Copying resources)
+endif()
 
 add_dependencies(${PROJECT_NAME} copy_resources)

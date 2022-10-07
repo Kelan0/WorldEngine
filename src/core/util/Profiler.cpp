@@ -89,17 +89,32 @@ Profiler::~Profiler() {
 
 profile_id Profiler::id(const char* name) {
     printf("Creating profile ID: %s\n", name);
-    return __itt_string_handle_create(name);
+#if ITT_ENABLED
+    return __itt_string_handle_createA(name);
+#else
+    static std::unordered_map<std::string, _profile_handle*> s_allHandles;
+    auto it = s_allHandles.find(name);
+    if (it == s_allHandles.end()) {
+        it = s_allHandles.insert(std::make_pair(std::string(name), new _profile_handle{})).first;
+        it->second->strA = name;
+        printf("Inserted new profile handle: %s\n", it->second->strA);
+    }
+    return it->second;
+#endif
 }
 
+#if ITT_ENABLED
 __itt_domain* Profiler::domain() {
-    static __itt_domain* s_domain = __itt_domain_create(PROFILE_DOMAIN_NAME);
+    static __itt_domain* s_domain = __itt_domain_createA(PROFILE_DOMAIN_NAME);
     return s_domain;
 }
+#endif
 
 void Profiler::begin(profile_id const& id) {
 #if PROFILING_ENABLED
+#if ITT_ENABLED
     __itt_task_begin(domain(), __itt_null, __itt_null, id);
+#endif
 
 #if INTERNAL_PROFILING_ENABLED
     ThreadContext& ctx = s_context;
@@ -129,7 +144,9 @@ void Profiler::begin(profile_id const& id) {
 
 void Profiler::end() {
 #if PROFILING_ENABLED
+#if ITT_ENABLED
     __itt_task_end(domain());
+#endif
 
 #if INTERNAL_PROFILING_ENABLED
     ThreadContext& ctx = s_context;

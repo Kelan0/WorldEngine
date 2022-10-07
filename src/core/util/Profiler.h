@@ -5,16 +5,28 @@
 #include "core/core.h"
 #include <chrono>
 #include <iostream>
+
+#if ITT_ENABLED
 #include <ittnotify.h>
+#endif
 
 #ifndef PROFILE_DOMAIN_NAME
 #define PROFILE_DOMAIN_NAME "WorldEngine"
 #endif
 
 #define PROFILING_ENABLED 1
-#define INTERNAL_PROFILING_ENABLED 0
+#define INTERNAL_PROFILING_ENABLED 1
 
+
+#if ITT_ENABLED
 typedef __itt_string_handle* profile_id;
+#else
+struct _profile_handle {
+    const char* strA;
+};
+typedef _profile_handle* profile_id;
+#endif
+
 
 namespace Performance {
     using duration_t = std::chrono::nanoseconds;
@@ -76,7 +88,9 @@ private:
 public:
     static profile_id id(const char* name);
 
+#if ITT_ENABLED
     static __itt_domain* domain();
+#endif
 
     static void beginFrame();
 
@@ -142,6 +156,5 @@ private:
 #define PROFILE_END_REGION(x)
 
 #endif
-
 
 #endif //WORLDENGINE_PROFILER_H

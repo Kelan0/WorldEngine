@@ -282,8 +282,8 @@ bool GraphicsManager::createDebugUtilsMessenger() {
             }
 
             if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-                // Abort erroneous method call
-                return true;
+                throw std::runtime_error(pCallbackData->pMessage);
+                return true; // Abort erroneous method call
             }
 
             return false;
@@ -837,10 +837,10 @@ bool GraphicsManager::createRenderPass() {
     vk::SubpassDependency subpassDependency;
     subpassDependency.setSrcSubpass(VK_SUBPASS_EXTERNAL);
     subpassDependency.setDstSubpass(0);
-    subpassDependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests);
-    subpassDependency.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests);
+    subpassDependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+    subpassDependency.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
     subpassDependency.setSrcAccessMask({});
-    subpassDependency.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+    subpassDependency.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
 
     RenderPassConfiguration renderPassConfig;
     renderPassConfig.device = m_device.device;
