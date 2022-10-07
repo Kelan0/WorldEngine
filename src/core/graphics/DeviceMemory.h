@@ -23,20 +23,20 @@ struct DeviceMemoryConfiguration {
 
 class DeviceMemoryManager {
 public:
-    DeviceMemoryManager(std::weak_ptr<vkr::Device> device);
+    DeviceMemoryManager(const std::weak_ptr<vkr::Device>& device);
 
     ~DeviceMemoryManager();
 
-    static bool selectMemoryType(uint32_t memoryTypeBits, vk::MemoryPropertyFlags memoryPropertyFlags, uint32_t& outMemoryType);
+    static bool selectMemoryType(const uint32_t& memoryTypeBits, const vk::MemoryPropertyFlags& memoryPropertyFlags, uint32_t& outMemoryType);
 
-    static vk::DeviceSize getAlignedOffset(vk::DeviceSize offset, vk::DeviceSize alignment);
+    static vk::DeviceSize getAlignedOffset(const vk::DeviceSize& offset, const vk::DeviceSize& alignment);
 
-    DeviceMemoryBlock* allocate(vk::MemoryRequirements requirements, vk::MemoryPropertyFlags memoryProperties);
+    DeviceMemoryBlock* allocate(const vk::MemoryRequirements& requirements, const vk::MemoryPropertyFlags& memoryProperties);
 
     void free(DeviceMemoryBlock* block) const;
 
 private:
-    DeviceMemoryHeap* getHeap(vk::MemoryRequirements requirements, vk::MemoryPropertyFlags memoryProperties);
+    DeviceMemoryHeap* getHeap(const vk::MemoryRequirements& requirements, const vk::MemoryPropertyFlags& memoryProperties);
 
 private:
     std::unordered_map<uint32_t, std::vector<DeviceMemoryHeap*>> m_memoryHeaps;
@@ -58,7 +58,7 @@ public:
     };
 
 private:
-    DeviceMemoryHeap(const std::weak_ptr<vkr::Device>& device, vk::DeviceMemory deviceMemory, vk::DeviceSize size);
+    DeviceMemoryHeap(const std::weak_ptr<vkr::Device>& device, const vk::DeviceMemory& deviceMemory, const vk::DeviceSize& size);
 
 public:
     ~DeviceMemoryHeap();
@@ -71,22 +71,22 @@ public:
 
     vk::DeviceSize getSize() const;
 
-    void bindBufferMemory(const vk::Buffer& buffer, vk::DeviceSize offset) const;
+    void bindBufferMemory(const vk::Buffer& buffer, const vk::DeviceSize& offset) const;
 
-    void bindBufferMemory(const Buffer* buffer, vk::DeviceSize offset) const;
+    void bindBufferMemory(const Buffer* buffer, const vk::DeviceSize& offset) const;
 
-    void bindImageMemory(const vk::Image& image, vk::DeviceSize offset) const;
+    void bindImageMemory(const vk::Image& image, const vk::DeviceSize& offset) const;
 
-    void bindImageMemory(const Image2D* image, vk::DeviceSize offset) const;
+    void bindImageMemory(const Image2D* image, const vk::DeviceSize& offset) const;
 
-    DeviceMemoryBlock* allocateBlock(vk::DeviceSize size, vk::DeviceSize alignment);
+    DeviceMemoryBlock* allocateBlock(const vk::DeviceSize& size, const vk::DeviceSize& alignment);
 
     bool freeBlock(DeviceMemoryBlock* block);
 
-    vk::DeviceSize getMaxAllocatableSize(vk::DeviceSize alignment = 0) const;
+    vk::DeviceSize getMaxAllocatableSize(const vk::DeviceSize& alignment = 0) const;
 
 private:
-    size_t findBlockIndex(vk::DeviceSize size, vk::DeviceSize alignment);
+    size_t findBlockIndex(const vk::DeviceSize& size, const vk::DeviceSize& alignment);
 
     size_t freeBlocksBeginIndex();
 
@@ -96,17 +96,17 @@ private:
 
     size_t allocatedBlocksEndIndex();
 
-    bool moveBlock(size_t srcBlockIndex, size_t dstBlockIndex);
+    bool moveBlock(const size_t& srcBlockIndex, const size_t& dstBlockIndex);
 
-    size_t updateBlock(size_t blockIndex, const BlockRange& newBlock);
+    size_t updateBlock(const size_t& blockIndex, const BlockRange& newBlock);
 
     void insertBlock(const BlockRange& block);
 
     size_t getBlockSequenceIndex(const BlockRange& block);
 
-    void eraseBlockSequence(size_t index);
+    void eraseBlockSequence(const size_t& index);
 
-    bool isContiguous(size_t firstIndex, size_t secondIndex);
+    bool isContiguous(const size_t& firstIndex, const size_t& secondIndex);
 
     bool equalBlocks(const BlockRange& lhs, const BlockRange& rhs);
 
@@ -135,7 +135,7 @@ private:
 class DeviceMemoryBlock {
     friend class DeviceMemoryHeap;
 private:
-    DeviceMemoryBlock(DeviceMemoryHeap* heap, vk::DeviceSize offset, vk::DeviceSize size, vk::DeviceSize alignment);
+    DeviceMemoryBlock(DeviceMemoryHeap* heap, const vk::DeviceSize& offset, const vk::DeviceSize& size, const vk::DeviceSize& alignment);
 
     ~DeviceMemoryBlock();
 public:
@@ -171,7 +171,7 @@ private:
 
 
 
-DeviceMemoryBlock* vmalloc(vk::MemoryRequirements requirements, vk::MemoryPropertyFlags memoryProperties);
+DeviceMemoryBlock* vmalloc(const vk::MemoryRequirements& requirements, const vk::MemoryPropertyFlags& memoryProperties);
 
 void vfree(DeviceMemoryBlock* memory);
 

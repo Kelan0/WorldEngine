@@ -251,6 +251,10 @@ bool GraphicsManager::selectValidationLayers(std::vector<const char*>& layerName
 
     std::vector<vk::LayerProperties> availableLayerProperties = m_context.enumerateInstanceLayerProperties();
 
+//    for (const vk::LayerProperties& layer : availableLayerProperties) {
+//        printf("%s\n", layer.layerName);
+//    }
+
     for (const char* layerName : validationLayers) {
         bool layerFound = false;
 

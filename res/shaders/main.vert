@@ -17,21 +17,17 @@ layout(location = 2) out vec3 fs_bitangent;
 layout(location = 3) out vec2 fs_texture;
 layout(location = 4) out flat uint fs_objectIndex;
 
-layout(set = 0, binding = 0) uniform UBO2 {
+layout(std140, set = 0, binding = 0) uniform UBO2 {
     mat4 viewMatrix;
     mat4 projectionMatrix;
     mat4 viewProjectionMatrix;
 };
 
-layout(set = 1, binding = 0) readonly buffer ObjectDataBuffer {
+layout(std140, set = 1, binding = 0) readonly buffer ObjectDataBuffer {
     ObjectData objects[];
 };
 
 void main() {
-//    mat4 viewMatrix = mat4(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,-1,-1,1);
-//    mat4 projectionMatrix = mat4(1.5,0,0,0, 0,2,0,0, 0,0,-1.00010002,-1, 0,0,-0.0500050001,0);
-//    mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
-
     mat4 modelMatrix = objects[gl_InstanceIndex].modelMatrix;
     mat3 normalMatrix = transpose(inverse(mat3(viewMatrix) * mat3(modelMatrix))); 
 
@@ -46,6 +42,6 @@ void main() {
     fs_bitangent = worldBitangent.xyz;
     fs_texture = texture;
     fs_objectIndex = gl_InstanceIndex;
-    
+
     gl_Position = viewProjectionMatrix * worldPos;
 }

@@ -19,7 +19,7 @@ Engine::Engine() {
     m_graphics = new GraphicsManager();
     m_eventDispatcher = new EventDispatcher();
     m_scene = new Scene();
-//    m_uiRenderer = new UIRenderer();
+    m_uiRenderer = new UIRenderer();
     m_sceneRenderer = new SceneRenderer();
     m_lightRenderer = new LightRenderer();
     m_immediateRenderer = new ImmediateRenderer();
@@ -32,7 +32,7 @@ Engine::Engine() {
 Engine::~Engine() {
 
     delete m_scene; // Scene is destroyed before SceneRenderer since destruction of components may interact with SceneRenderer. This might need to change.
-//    delete m_uiRenderer;
+    delete m_uiRenderer;
     delete m_sceneRenderer;
     delete m_lightRenderer;
     delete m_immediateRenderer;
@@ -45,7 +45,7 @@ Engine::~Engine() {
 }
 
 void Engine::processEvent(const SDL_Event* event) {
-//    m_uiRenderer->processEvent(event);
+    m_uiRenderer->processEvent(event);
 }
 
 GraphicsManager* Engine::getGraphics() const {
@@ -134,9 +134,9 @@ bool Engine::init(SDL_Window* windowHandle) {
         return false;
     }
 
-//    PROFILE_REGION("Init UIRenderer")
-//    if (!m_uiRenderer->init(windowHandle))
-//        return false;
+    PROFILE_REGION("Init UIRenderer")
+    if (!m_uiRenderer->init(windowHandle))
+        return false;
 
     PROFILE_REGION("Init Scene")
     m_scene->init();
@@ -169,7 +169,7 @@ bool Engine::init(SDL_Window* windowHandle) {
 void Engine::render(double dt) {
     const Entity& cameraEntity = Engine::scene()->getMainCameraEntity();
 
-//    m_uiRenderer->preRender(dt);
+    m_uiRenderer->preRender(dt);
 
     m_renderCamera->setProjection(cameraEntity.getComponent<Camera>());
     m_renderCamera->setTransform(cameraEntity.getComponent<Transform>());
@@ -192,7 +192,7 @@ void Engine::render(double dt) {
 
     m_deferredLightingPass->renderScreen(dt);
 
-//    m_uiRenderer->render(dt, commandBuffer);
+    m_uiRenderer->render(dt, commandBuffer);
 }
 
 void Engine::destroy() {

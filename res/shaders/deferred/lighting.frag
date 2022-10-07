@@ -299,5 +299,4 @@ void main() {
     // finalColour = vec3(surface.emission / 32.0);
 
     outColor = vec4(finalColour, 1.0);
-    //outColor = vec4(vec3(texture(shadowDepthTextures[0], fs_texture).r), 1.0);
 }
