@@ -215,13 +215,13 @@ class App : public Application {
 //        glowMaterialConfig.setEmission(glm::vec3(0.8, 32.0, 41.0));
 //        lightEntity5.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig)));
 
-        Entity lightEntity6 = EntityHierarchy::create(Engine::scene(), "lightEntity6");
-        lightEntity6.addComponent<Transform>().setRotation(glm::vec3(-1.0F, -1.3F, -1.0F), glm::vec3(0.0F, 1.0F, 0.0F), false);
-        lightEntity6.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(100.0, 100.0, 100.0).setShadowCaster(true);
-
-        Entity lightEntity7 = EntityHierarchy::create(Engine::scene(), "lightEntity7");
-        lightEntity7.addComponent<Transform>().setRotation(glm::vec3(-1.8F, -0.7F, 0.2F), glm::vec3(0.0F, 1.0F, 0.0F), false);
-        lightEntity7.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(100.0, 100.0, 100.0).setShadowCaster(true);
+//        Entity lightEntity6 = EntityHierarchy::create(Engine::scene(), "lightEntity6");
+//        lightEntity6.addComponent<Transform>().setRotation(glm::vec3(-1.0F, -1.3F, -1.0F), glm::vec3(0.0F, 1.0F, 0.0F), false);
+//        lightEntity6.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(100.0, 100.0, 100.0).setShadowCaster(true);
+//
+//        Entity lightEntity7 = EntityHierarchy::create(Engine::scene(), "lightEntity7");
+//        lightEntity7.addComponent<Transform>().setRotation(glm::vec3(-1.8F, -0.7F, 0.2F), glm::vec3(0.0F, 1.0F, 0.0F), false);
+//        lightEntity7.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(100.0, 100.0, 100.0).setShadowCaster(true);
 
         Engine::scene()->getMainCameraEntity().getComponent<Transform>().setTranslation(0.0F, 1.0F, 1.0F);
     }

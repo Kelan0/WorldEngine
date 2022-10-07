@@ -5,6 +5,7 @@
 #include "core/core.h"
 
 struct SDL_Window;
+union SDL_Event;
 class GraphicsManager;
 class Scene;
 class UIRenderer;
@@ -24,6 +25,8 @@ private:
     ~Engine();
 
 public:
+    void processEvent(const SDL_Event* event);
+
     [[nodiscard]] GraphicsManager* getGraphics() const;
 
     [[nodiscard]] Scene* getScene() const;

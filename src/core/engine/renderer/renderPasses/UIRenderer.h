@@ -7,6 +7,9 @@
 #include "core/graphics/RenderPass.h"
 #include "extern/imgui/imgui.h"
 
+struct SDL_Window;
+union SDL_Event;
+
 class UIRenderer {
 public:
     UIRenderer();
@@ -14,6 +17,8 @@ public:
     ~UIRenderer();
 
     bool init(SDL_Window* windowHandle);
+
+    void processEvent(const SDL_Event* event);
 
     void preRender(double dt);
 

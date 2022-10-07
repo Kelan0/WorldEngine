@@ -271,10 +271,14 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, Re
         m_visibleShadowMaps.emplace_back(shadowMap);
     }
 
-
+    // We must call these methods in order to initialize the descriptor set used by the lighting render pass.
     updateLightInfoBuffer(m_visibleShadowMaps.size());
-    updateCameraInfoBuffer(m_visibleShadowMaps.size());
     updateShadowMapInfoBuffer(m_visibleShadowMaps.size());
+
+    if (m_visibleShadowMaps.empty())
+        return; // Nothing more to do.
+
+    updateCameraInfoBuffer(m_visibleShadowMaps.size());
 
     m_shadowRenderPassResources->cameraInfoBuffer->upload(0, sizeof(GPUCamera) * m_shadowCameraInfoBufferData.size(), m_shadowCameraInfoBufferData.data());
     m_lightingRenderPassResources->shadowMapBuffer->upload(0, sizeof(GPUShadowMap) * m_shadowMapBufferData.size(), m_shadowMapBufferData.data());

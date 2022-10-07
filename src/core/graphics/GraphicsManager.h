@@ -6,7 +6,7 @@
 #include "core/graphics/Image2D.h"
 #include "core/graphics/FrameResource.h"
 #include "core/util/DebugUtils.h"
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #include <SDL_vulkan.h>
 
 #define QUEUE_GRAPHICS_MAIN "graphics_main"

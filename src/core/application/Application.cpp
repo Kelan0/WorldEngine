@@ -11,7 +11,6 @@
 #include "core/graphics/RenderPass.h"
 #include "core/thread/ThreadUtils.h"
 #include "core/util/PlatformUtils.h"
-#include "extern/imgui/imgui_impl_sdl.h"
 #include <chrono>
 
 Application* Application::s_instance = nullptr;
@@ -115,8 +114,8 @@ void Application::processEventsInternal() {
                 break;
         }
 
-        ImGui_ImplSDL2_ProcessEvent(&event);
-        m_inputHandler->processEvent(event);
+        Engine::instance()->processEvent(&event);
+        m_inputHandler->processEvent(&event);
     }
 
     if (Engine::graphics()->didResolutionChange()) {

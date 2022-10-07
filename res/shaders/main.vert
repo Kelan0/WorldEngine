@@ -28,6 +28,10 @@ layout(set = 1, binding = 0) readonly buffer ObjectDataBuffer {
 };
 
 void main() {
+//    mat4 viewMatrix = mat4(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,-1,-1,1);
+//    mat4 projectionMatrix = mat4(1.5,0,0,0, 0,2,0,0, 0,0,-1.00010002,-1, 0,0,-0.0500050001,0);
+//    mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
+
     mat4 modelMatrix = objects[gl_InstanceIndex].modelMatrix;
     mat3 normalMatrix = transpose(inverse(mat3(viewMatrix) * mat3(modelMatrix))); 
 

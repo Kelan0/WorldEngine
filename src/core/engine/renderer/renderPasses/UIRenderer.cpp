@@ -9,6 +9,9 @@
 #include "core/graphics/CommandPool.h"
 #include "core/engine/ui/PerformanceGraphUI.h"
 
+#include <SDL2/SDL.h>
+#include "extern/imgui/imgui_impl_sdl.h"
+
 void checkVulkanResult(VkResult result);
 
 UIRenderer::UIRenderer():
@@ -79,6 +82,10 @@ bool UIRenderer::init(SDL_Window* windowHandle) {
     m_createdFontsTexture = false;
 
     return true;
+}
+
+void UIRenderer::processEvent(const SDL_Event* event) {
+    ImGui_ImplSDL2_ProcessEvent(event);
 }
 
 void UIRenderer::preRender(double dt) {

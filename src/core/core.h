@@ -24,7 +24,7 @@
 
 
 #define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+//#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 //#define GLM_SWIZZLE
 #include <glm/glm.hpp>
 #include <glm/matrix.hpp>
@@ -68,7 +68,7 @@ namespace vkr = vk::raii;
 #define INT_DIV_CEIL(num, denom) (((num) + (denom) - 1) / (denom))
 #define ROUND_TO_MULTIPLE(value, multiple) (INT_DIV_CEIL(value, multiple) * multiple)
 
-constexpr uint32_t CONCURRENT_FRAMES = 3;
+constexpr uint32_t CONCURRENT_FRAMES = 1;
 
 typedef uint64_t GraphicsResource;
 

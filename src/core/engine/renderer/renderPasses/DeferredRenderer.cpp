@@ -248,6 +248,7 @@ bool DeferredGeometryRenderPass::createGraphicsPipeline() {
     pipelineConfig.addDescriptorSetLayout(m_globalDescriptorSetLayout->getDescriptorSetLayout());
     pipelineConfig.addDescriptorSetLayout(Engine::sceneRenderer()->getObjectDescriptorSetLayout()->getDescriptorSetLayout());
     pipelineConfig.addDescriptorSetLayout(Engine::sceneRenderer()->getMaterialDescriptorSetLayout()->getDescriptorSetLayout());
+    pipelineConfig.polygonMode = vk::PolygonMode::eLine;
     return m_graphicsPipeline->recreate(pipelineConfig);
 }
 

@@ -3,7 +3,7 @@
 #define WORLDENGINE_INPUTHANDLER_H
 
 #include "core/core.h"
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
 #define KEYBOARD_SIZE 256
 #define MOUSE_SIZE 16
@@ -16,7 +16,7 @@ public:
 
     void update();
 
-    void processEvent(SDL_Event event);
+    void processEvent(const SDL_Event* event);
 
     bool keyDown(uint32_t key);
 

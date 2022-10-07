@@ -5,7 +5,9 @@
 #include "core/application/Application.h"
 
 #ifndef GLSL_COMPILER_EXECUTABLE
-#define GLSL_COMPILER_EXECUTABLE "D:/Code/VulkanSDK/1.2.198.1/Bin/glslc.exe"
+// TODO: define this as a program argument, or define in CMakeLists.txt
+// Switching Vulkan version and forgetting to update this caused a real headache.
+#define GLSL_COMPILER_EXECUTABLE "C:/VulkanSDK/1.3.224.1/Bin/glslc.exe"
 #endif
 
 bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string filePath, std::vector<char>& bytecode) {

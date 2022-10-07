@@ -51,31 +51,31 @@ void InputHandler::update() {
     m_didWarpMouse = false;
 }
 
-void InputHandler::processEvent(SDL_Event event) {
-    switch (event.type) {
+void InputHandler::processEvent(const SDL_Event* event) {
+    switch (event->type) {
         case SDL_KEYDOWN:
-            m_keysDown[event.key.keysym.scancode] = true;
-            m_keysPressed[event.key.keysym.scancode] = true;
+            m_keysDown[event->key.keysym.scancode] = true;
+            m_keysPressed[event->key.keysym.scancode] = true;
             break;
         case SDL_KEYUP:
-            m_keysDown[event.key.keysym.scancode] = false;
-            m_keysReleased[event.key.keysym.scancode] = true;
+            m_keysDown[event->key.keysym.scancode] = false;
+            m_keysReleased[event->key.keysym.scancode] = true;
             break;
         case SDL_MOUSEBUTTONDOWN:
-            m_mouseDown[event.button.button] = true;
-            m_mousePressed[event.button.button] = true;
-            m_mousePressPixelCoord[event.button.button] = glm::ivec2(event.button.x, event.button.y);
-            m_mouseDragPixelOrigin[event.button.button] = glm::ivec2(event.button.x, event.button.y);
-            m_mouseDragged[event.button.button] = false;
+            m_mouseDown[event->button.button] = true;
+            m_mousePressed[event->button.button] = true;
+            m_mousePressPixelCoord[event->button.button] = glm::ivec2(event->button.x, event->button.y);
+            m_mouseDragPixelOrigin[event->button.button] = glm::ivec2(event->button.x, event->button.y);
+            m_mouseDragged[event->button.button] = false;
             break;
         case SDL_MOUSEBUTTONUP:
-            m_mouseDown[event.button.button] = false;
-            m_mouseReleased[event.button.button] = true;
-            m_mouseDragged[event.button.button] = false;
+            m_mouseDown[event->button.button] = false;
+            m_mouseReleased[event->button.button] = true;
+            m_mouseDragged[event->button.button] = false;
             break;
         case SDL_MOUSEMOTION:
-            m_currMousePixelCoord = glm::ivec2(event.motion.x, event.motion.y); // why is this not reset to zero?
-            m_currMousePixelMotion = glm::ivec2(event.motion.xrel, event.motion.yrel);
+            m_currMousePixelCoord = glm::ivec2(event->motion.x, event->motion.y); // why is this not reset to zero?
+            m_currMousePixelMotion = glm::ivec2(event->motion.xrel, event->motion.yrel);
             for (int i = 0; i < MOUSE_SIZE; i++)
                 m_mouseDragged[i] = m_mouseDown[i];
             break;

@@ -431,43 +431,43 @@ glm::dmat4 Transform::getMatrix() const {
 }
 
 glm::dmat4& Transform::fillMatrix(glm::dmat4& matrix) const {
-    glm::vec3 scale = m_scale;
-    matrix[0].x = m_rotation[0].x * scale.x;
-    matrix[0].y = m_rotation[0].y * scale.x;
-    matrix[0].z = m_rotation[0].z * scale.x;
+    glm::dvec3 scale = m_scale;
+    matrix[0].x = (double)(m_rotation[0].x * scale.x);
+    matrix[0].y = (double)(m_rotation[0].y * scale.x);
+    matrix[0].z = (double)(m_rotation[0].z * scale.x);
     matrix[0].w = 0.0;
-    matrix[1].x = m_rotation[1].x * scale.y;
-    matrix[1].y = m_rotation[1].y * scale.y;
-    matrix[1].z = m_rotation[1].z * scale.y;
+    matrix[1].x = (double)(m_rotation[1].x * scale.y);
+    matrix[1].y = (double)(m_rotation[1].y * scale.y);
+    matrix[1].z = (double)(m_rotation[1].z * scale.y);
     matrix[1].w = 0.0;
-    matrix[2].x = m_rotation[2].x * scale.z;
-    matrix[2].y = m_rotation[2].y * scale.z;
-    matrix[2].z = m_rotation[2].z * scale.z;
+    matrix[2].x = (double)(m_rotation[2].x * scale.z);
+    matrix[2].y = (double)(m_rotation[2].y * scale.z);
+    matrix[2].z = (double)(m_rotation[2].z * scale.z);
     matrix[2].w = 0.0;
-    matrix[3].x = m_translation.x;
-    matrix[3].y = m_translation.y;
-    matrix[3].z = m_translation.z;
+    matrix[3].x = (double)m_translation.x;
+    matrix[3].y = (double)m_translation.y;
+    matrix[3].z = (double)m_translation.z;
     matrix[3].w = 1.0;
     return matrix;
 }
 
 glm::mat4& Transform::fillMatrix(glm::mat4& matrix) const {
     glm::vec3 scale = m_scale;
-    matrix[0].x = m_rotation[0].x * scale.x;
-    matrix[0].y = m_rotation[0].y * scale.x;
-    matrix[0].z = m_rotation[0].z * scale.x;
+    matrix[0].x = (float)(m_rotation[0].x * scale.x);
+    matrix[0].y = (float)(m_rotation[0].y * scale.x);
+    matrix[0].z = (float)(m_rotation[0].z * scale.x);
     matrix[0].w = 0.0F;
-    matrix[1].x = m_rotation[1].x * scale.y;
-    matrix[1].y = m_rotation[1].y * scale.y;
-    matrix[1].z = m_rotation[1].z * scale.y;
+    matrix[1].x = (float)(m_rotation[1].x * scale.y);
+    matrix[1].y = (float)(m_rotation[1].y * scale.y);
+    matrix[1].z = (float)(m_rotation[1].z * scale.y);
     matrix[1].w = 0.0F;
-    matrix[2].x = m_rotation[2].x * scale.z;
-    matrix[2].y = m_rotation[2].y * scale.z;
-    matrix[2].z = m_rotation[2].z * scale.z;
+    matrix[2].x = (float)(m_rotation[2].x * scale.z);
+    matrix[2].y = (float)(m_rotation[2].y * scale.z);
+    matrix[2].z = (float)(m_rotation[2].z * scale.z);
     matrix[2].w = 0.0F;
-    matrix[3].x = m_translation.x;
-    matrix[3].y = m_translation.y;
-    matrix[3].z = m_translation.z;
+    matrix[3].x = (float)m_translation.x;
+    matrix[3].y = (float)m_translation.y;
+    matrix[3].z = (float)m_translation.z;
     matrix[3].w = 1.0F;
     return matrix;
 }
