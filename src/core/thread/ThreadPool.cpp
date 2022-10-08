@@ -123,7 +123,7 @@ BaseTask* ThreadPool::nextTask(Thread* currentThread) {
 void ThreadPool::executor() {
     PROFILE_SCOPE("ThreadPool::executor");
 
-    printf("Starting thread pool executor for thread 0x%016x\n", ThreadUtils::getCurrentThreadHashedId());
+    printf("Starting thread pool executor for thread 0x%016llx\n", ThreadUtils::getCurrentThreadHashedId());
 
     // Wait for all threads to be allocated.
     while (true) {
@@ -189,11 +189,11 @@ ThreadPool::Thread* ThreadPool::getCurrentThread() {
 
 std::default_random_engine& ThreadPool::random() {
     struct Seed {
-        static size_t get() {
+        static uint32_t get() {
             size_t s = std::chrono::high_resolution_clock::now().time_since_epoch().count();
             std::hash_combine(s, std::this_thread::get_id());
 //            printf("RNG seed for thread %llu = %llu\n", std::this_thread::get_id(), s);
-            return s;
+            return (uint32_t)s;
         }
     };
     static thread_local std::default_random_engine random(Seed::get());

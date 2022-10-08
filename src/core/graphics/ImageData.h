@@ -26,6 +26,24 @@ enum class ImagePixelFormat {
     Float32 = 8,
 };
 
+struct ImageRegion {
+    typedef uint32_t size_type;
+    typedef uint32_t offset_type;
+    static constexpr size_type WHOLE_SIZE = (size_type)(-1);
+
+    offset_type x = 0;
+    offset_type y = 0;
+    offset_type z = 0;
+    size_type baseLayer = 0;
+    size_type baseMipLevel = 0;
+
+    size_type width = WHOLE_SIZE;
+    size_type height = WHOLE_SIZE;
+    size_type depth = WHOLE_SIZE;
+    size_type layerCount = WHOLE_SIZE;
+    size_type mipLevelCount = WHOLE_SIZE;
+};
+
 class ComputePipeline;
 class Buffer;
 
@@ -44,7 +62,7 @@ public:
         ImageTransform() = default;
         ImageTransform(const ImageTransform& copy) = default;
 
-        virtual ImageData* apply(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout layout, ImagePixelFormat format) const;
+        virtual ImageData* apply(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& layout, const ImagePixelFormat& format) const;
 
         virtual bool isNoOp() const;
 
@@ -61,7 +79,7 @@ public:
         Flip(bool x, bool y);
         Flip(const Flip& copy);
 
-        virtual ImageData* apply(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout layout, ImagePixelFormat format) const override;
+        virtual ImageData* apply(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& layout, const ImagePixelFormat& format) const override;
 
         virtual bool isNoOp() const override;
 
@@ -69,14 +87,14 @@ public:
     };
 
 private:
-    ImageData(uint8_t* data, const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const AllocationType& allocationType);
+    ImageData(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const AllocationType& allocationType);
 
 public:
-//    ImageData(const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat);
+//    ImageData(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat);
 
-    ImageData(uint8_t* data, const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat);
+    ImageData(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat);
 
-    ImageData(const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat);
+    ImageData(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat);
 
     ~ImageData();
 
@@ -86,23 +104,23 @@ public:
 
     static void clearCache();
 
-    static ImageData* mutate(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout srcLayout, ImagePixelFormat srcFormat, ImagePixelLayout dstLayout, ImagePixelFormat dstFormat);
+    static ImageData* mutate(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& srcLayout, const ImagePixelFormat& srcFormat, const ImagePixelLayout& dstLayout, const ImagePixelFormat& dstFormat);
 
     static ImageData* transform(const ImageData* imageData, const ImageTransform& transformation);
 
-    static ImageData* transform(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout layout, ImagePixelFormat format, const ImageTransform& transformation);
+    static ImageData* transform(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& layout, const ImagePixelFormat& format, const ImageTransform& transformation);
 
-    int64_t getChannel(const size_t& x, const size_t& y, const size_t& channelIndex);
-    void setChannel(const size_t& x, const size_t& y, const size_t& channelIndex, const int64_t& value);
+    int64_t getChannel(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const size_t& channelIndex);
+    void setChannel(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const size_t& channelIndex, const int64_t& value);
 
-    void setPixel(const size_t& x, const size_t& y, const int64_t& r, const int64_t& g, const int64_t& b, const int64_t& a);
-    void setPixelf(const size_t& x, const size_t& y, const float& r, const float& g, const float& b, const float& a);
+    void setPixel(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const int64_t& r, const int64_t& g, const int64_t& b, const int64_t& a);
+    void setPixelf(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const float& r, const float& g, const float& b, const float& a);
 
     uint8_t* getData() const;
 
-    uint32_t getWidth() const;
+    ImageRegion::size_type getWidth() const;
 
-    uint32_t getHeight() const;
+    ImageRegion::size_type getHeight() const;
 
     ImagePixelLayout getPixelLayout() const;
 
@@ -117,12 +135,12 @@ public:
     static bool getPixelLayoutAndFormat(vk::Format format, ImagePixelLayout& outLayout, ImagePixelFormat& outFormat);
 
 private:
-    static size_t getChannelOffset(const size_t& x, const size_t& y, const size_t& channelIndex, const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat);
+    static size_t getChannelOffset(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const size_t& channelIndex, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat);
 
 private:
     uint8_t* m_data;
-    uint32_t m_width;
-    uint32_t m_height;
+    ImageRegion::size_type m_width;
+    ImageRegion::size_type m_height;
     ImagePixelLayout m_pixelLayout;
     ImagePixelFormat m_pixelFormat;
     AllocationType m_allocationType;
@@ -153,21 +171,6 @@ namespace ImageTransition {
 };
 
 
-struct ImageRegion {
-    size_t x = 0;
-    size_t y = 0;
-    size_t z = 0;
-    size_t baseLayer = 0;
-    size_t baseMipLevel = 0;
-
-    size_t width = VK_WHOLE_SIZE;
-    size_t height = VK_WHOLE_SIZE;
-    size_t depth = VK_WHOLE_SIZE;
-    size_t layerCount = VK_WHOLE_SIZE;
-    size_t mipLevelCount = VK_WHOLE_SIZE;
-};
-
-
 namespace ImageUtil {
     bool isDepthAttachment(const vk::Format& format);
 
@@ -189,11 +192,11 @@ namespace ImageUtil {
 
     bool transferBuffer(const vk::CommandBuffer& commandBuffer, const vk::Image& dstImage, const vk::Buffer& srcBuffer, const vk::BufferImageCopy& imageCopy, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
 
-    bool generateMipmap(const vk::Image& image, const vk::Format& format, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const uint32_t& width, const uint32_t& height, const uint32_t& depth, const uint32_t& mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
+    bool generateMipmap(const vk::Image& image, const vk::Format& format, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth, const uint32_t& mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
 
-    bool generateMipmap(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::Format& format, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const uint32_t& width, const uint32_t& height, const uint32_t& depth, const uint32_t& mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
+    bool generateMipmap(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::Format& format, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth, const uint32_t& mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
 
-    uint32_t getMaxMipLevels(const uint32_t& width, const uint32_t& height, const uint32_t& depth);
+    uint32_t getMaxMipLevels(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth);
 
     bool checkAllImageFormatFeatures(const vk::Format& format, const vk::ImageTiling& tiling, const vk::FormatFeatureFlags& formatFeatureFlags);
 
@@ -211,11 +214,11 @@ namespace ImageUtil {
 
     vk::DeviceSize getImageSizeBytes(const ImageRegion& imageRegion, const uint32_t& bytesPerPixel);
 
-    vk::DeviceSize getImageSizeBytes(const uint32_t& width, const uint32_t& height, const uint32_t& depth, const uint32_t& bytesPerPixel);
+    vk::DeviceSize getImageSizeBytes(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth, const uint32_t& bytesPerPixel);
 
     Buffer* getImageStagingBuffer(const ImageRegion& imageRegion, const uint32_t& bytesPerPixel);
 
-    Buffer* getImageStagingBuffer(const uint32_t& width, const uint32_t& height, const uint32_t& depth, const uint32_t& bytesPerPixel);
+    Buffer* getImageStagingBuffer(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth, const uint32_t& bytesPerPixel);
 }
 
 

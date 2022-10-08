@@ -345,8 +345,8 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
     }
 
     uint32_t mipLevel = glm::min((uint32_t)imageRegion.baseMipLevel, dstImage->getMipLevelCount());
-    const uint32_t& equirectangularWidth = imageRegion.width;
-    const uint32_t& equirectangularHeight = imageRegion.height;
+    const ImageRegion::size_type& equirectangularWidth = imageRegion.width;
+    const ImageRegion::size_type& equirectangularHeight = imageRegion.height;
     uint32_t cubeImageWidth = glm::max(1u, dstImage->getWidth() >> mipLevel);
     uint32_t cubeImageHeight = glm::max(1u, dstImage->getWidth() >> mipLevel);
 
@@ -370,12 +370,12 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
 
     const vk::Device& device = **Engine::graphics()->getDevice();
 
-    EquirectangularComputeUBO uniformBufferData;
+    EquirectangularComputeUBO uniformBufferData{};
 
-    uniformBufferData.faceSize.x = dstImage->getSize();
-    uniformBufferData.faceSize.y = dstImage->getSize();
-    uniformBufferData.sourceSize.x = equirectangularWidth;
-    uniformBufferData.sourceSize.y = equirectangularHeight;
+    uniformBufferData.faceSize.x = (int32_t)dstImage->getSize();
+    uniformBufferData.faceSize.y = (int32_t)dstImage->getSize();
+    uniformBufferData.sourceSize.x = (int32_t)equirectangularWidth;
+    uniformBufferData.sourceSize.y = (int32_t)equirectangularHeight;
     uniformBufferData.sampleCount = glm::ivec2(8);
 
     BufferConfiguration tempBufferConfig;
@@ -456,7 +456,8 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
     vk::SubmitInfo queueSubmitInfo;
     queueSubmitInfo.setCommandBufferCount(1);
     queueSubmitInfo.setPCommandBuffers(&commandBuffer);
-    computeQueue.submit(1, &queueSubmitInfo, VK_NULL_HANDLE);
+    vk::Result result = computeQueue.submit(1, &queueSubmitInfo, VK_NULL_HANDLE);
+    assert(result == vk::Result::eSuccess);
     computeQueue.waitIdle();
 
     vk::BufferImageCopy imageCopy{};
@@ -599,9 +600,9 @@ bool ImageCube::validateFaceImageRegion(const ImageCube* image, const ImageCubeF
         return false;
     }
 
-    if (imageRegion.width == VK_WHOLE_SIZE) imageRegion.width = image->getWidth() - imageRegion.x;
-    if (imageRegion.height == VK_WHOLE_SIZE) imageRegion.height = image->getHeight() - imageRegion.y;
-    if (imageRegion.mipLevelCount == VK_WHOLE_SIZE) imageRegion.mipLevelCount = 1;
+    if (imageRegion.width == ImageRegion::WHOLE_SIZE) imageRegion.width = image->getWidth() - imageRegion.x;
+    if (imageRegion.height == ImageRegion::WHOLE_SIZE) imageRegion.height = image->getHeight() - imageRegion.y;
+    if (imageRegion.mipLevelCount == ImageRegion::WHOLE_SIZE) imageRegion.mipLevelCount = 1;
     imageRegion.z = 0;
     imageRegion.depth = 1;
     imageRegion.baseLayer = (size_t)face;
@@ -620,13 +621,13 @@ bool ImageCube::validateEquirectangularImageRegion(const ImageCube* image, Image
         return false;
     }
 
-    if (imageRegion.width == VK_WHOLE_SIZE || imageRegion.height == VK_WHOLE_SIZE || imageRegion.width == 0 || imageRegion.height == 0) {
+    if (imageRegion.width == ImageRegion::WHOLE_SIZE || imageRegion.height == ImageRegion::WHOLE_SIZE || imageRegion.width == 0 || imageRegion.height == 0) {
         printf("Equirectangular image region must have width and height supplied\n");
         return false;
     }
 
 //    imageRegion.baseMipLevel = 0;
-    if (imageRegion.mipLevelCount == VK_WHOLE_SIZE) imageRegion.mipLevelCount = image->getMipLevelCount() - imageRegion.baseMipLevel;
+    if (imageRegion.mipLevelCount == ImageRegion::WHOLE_SIZE) imageRegion.mipLevelCount = image->getMipLevelCount() - imageRegion.baseMipLevel;
     imageRegion.x = 0;
     imageRegion.y = 0;
     imageRegion.z = 0;

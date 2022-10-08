@@ -146,7 +146,7 @@ private:
         DenseFlagArray changedObjectMaterials;
         std::vector<ObjectDataUBO> objectBuffer;
         std::vector<GPUMaterial> materialBuffer;
-        size_t uploadedMaterialBufferTextures;
+        uint32_t uploadedMaterialBufferTextures;
         std::set<uint32_t> modifiedEntities;
     };
 

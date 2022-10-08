@@ -211,7 +211,7 @@ bool LightRenderer::init() {
 void LightRenderer::preRender(double dt) {
     PROFILE_SCOPE("LightRenderer::preRender")
     const auto& lightEntities = Engine::scene()->registry()->group<LightComponent>(entt::get<Transform>);
-    m_numLightEntities = lightEntities.size();
+    m_numLightEntities = (uint32_t)lightEntities.size();
 
     m_blurElementArrayIndex = 0;
 
@@ -265,7 +265,7 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, Re
         shadowRenderCamera.copyCameraData(&m_shadowCameraInfoBufferData.emplace_back());
         GPUShadowMap& gpuShadowMap = m_shadowMapBufferData.emplace_back();
         gpuShadowMap.viewProjectionMatrix = shadowRenderCamera.getViewProjectionMatrix();
-        shadowMap->m_index = m_visibleShadowMaps.size();
+        shadowMap->m_index = (uint32_t)m_visibleShadowMaps.size();
 
         visibleShadowRenderCameras.emplace_back(shadowRenderCamera);
         m_visibleShadowMaps.emplace_back(shadowMap);
@@ -320,7 +320,7 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, Re
     vsmBlurActiveShadowMaps(commandBuffer);
 
     DescriptorSetWriter(m_lightingRenderPassResources->descriptorSet)
-            .writeImage(LIGHTING_RENDER_PASS_SHADOW_DEPTH_TEXTURES_BINDING, m_vsmShadowMapSampler.get(), shadowMapImages.data(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, shadowMapImages.size())
+            .writeImage(LIGHTING_RENDER_PASS_SHADOW_DEPTH_TEXTURES_BINDING, m_vsmShadowMapSampler.get(), shadowMapImages.data(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, (uint32_t)shadowMapImages.size())
             .write();
 }
 
@@ -378,7 +378,7 @@ void LightRenderer::updateActiveShadowMaps() {
     for (auto& entry: m_activeShadowMaps)
         entry.second = false;
 
-    size_t numInactiveShadowMaps = m_inactiveShadowMaps.size();
+    uint32_t numInactiveShadowMaps = (uint32_t)m_inactiveShadowMaps.size();
 
     m_shadowCameraInfoBufferData.clear();
 
@@ -432,10 +432,12 @@ void LightRenderer::updateActiveShadowMaps() {
         m_activeShadowMaps[shadowMap] = true;
     }
 
-    if (numInactiveShadowMaps > m_inactiveShadowMaps.size())
-        printf("%d shadow maps became active\n", numInactiveShadowMaps - m_inactiveShadowMaps.size());
+    uint32_t newNumInactiveShadowMaps = (uint32_t)m_inactiveShadowMaps.size();
 
-    numInactiveShadowMaps = m_inactiveShadowMaps.size();
+    if (numInactiveShadowMaps > newNumInactiveShadowMaps)
+        printf("%u shadow maps became active\n", numInactiveShadowMaps - newNumInactiveShadowMaps);
+
+    numInactiveShadowMaps = newNumInactiveShadowMaps;
 
     // All shadow maps that remained inactive are moved from the active pool to the inactive pool.
     for (auto it = m_activeShadowMaps.begin(); it != m_activeShadowMaps.end(); ++it) {
@@ -445,8 +447,8 @@ void LightRenderer::updateActiveShadowMaps() {
         }
     }
 
-    if (numInactiveShadowMaps < m_inactiveShadowMaps.size())
-        printf("%d shadow maps became inactive\n", m_inactiveShadowMaps.size() - numInactiveShadowMaps);
+    if (numInactiveShadowMaps < newNumInactiveShadowMaps)
+        printf("%u shadow maps became inactive\n", newNumInactiveShadowMaps - numInactiveShadowMaps);
 }
 
 void LightRenderer::updateCameraInfoBuffer(size_t maxShadowLights) {
@@ -618,13 +620,13 @@ void LightRenderer::vsmBlurActiveShadowMaps(const vk::CommandBuffer& commandBuff
     }
 
     DescriptorSetWriter(m_vsmBlurResources->descriptorSet)
-            .writeImage(0, m_vsmShadowMapSampler.get(), shadowMapImageViews.data(), vk::ImageLayout::eGeneral, 0, shadowMapImageViews.size())
+            .writeImage(0, m_vsmShadowMapSampler.get(), shadowMapImageViews.data(), vk::ImageLayout::eGeneral, 0, (uint32_t)shadowMapImageViews.size())
             .write();
 
 
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineLayout, 0, 1, &m_vsmBlurResources->descriptorSet->getDescriptorSet(), 0, nullptr);
 
-    for (size_t i = 0; i < m_visibleShadowMaps.size(); ++i) {
+    for (uint32_t i = 0; i < (uint32_t)m_visibleShadowMaps.size(); ++i) {
         pushConstantData.srcSize = m_visibleShadowMaps[i]->getResolution();
         pushConstantData.dstSize = m_visibleShadowMaps[i]->getResolution();
         uint32_t workgroupCountX = INT_DIV_CEIL(pushConstantData.dstSize.x, 8);
@@ -646,7 +648,7 @@ void LightRenderer::vsmBlurActiveShadowMaps(const vk::CommandBuffer& commandBuff
         m_vsmBlurComputePipeline->dispatch(commandBuffer, workgroupCountX, workgroupCountY, 1);
     }
 
-    for (size_t i = 0; i < m_visibleShadowMaps.size(); ++i) {
+    for (uint32_t i = 0; i < (uint32_t)m_visibleShadowMaps.size(); ++i) {
         const ImageView* shadowMapImageView = m_visibleShadowMaps[i]->getShadowVarianceImageView();
         ImageUtil::transitionLayout(commandBuffer, shadowMapImageView->getImage(), subresourceRange,
                                     ImageTransition::ShaderReadWrite(vk::PipelineStageFlagBits::eComputeShader),

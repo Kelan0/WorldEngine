@@ -21,8 +21,8 @@
 
 struct DrawCommand {
     Mesh* mesh = nullptr;
-    size_t instanceCount = 0;
-    size_t firstInstance = 0;
+    uint32_t instanceCount = 0;
+    uint32_t firstInstance = 0;
 };
 
 
@@ -183,9 +183,9 @@ void SceneRenderer::recordRenderCommands(double dt, const vk::CommandBuffer& com
         std::vector<DrawCommand> drawCommands;
 
         DrawCommand currDrawCommand;
-        currDrawCommand.firstInstance = rangeStart;
+        currDrawCommand.firstInstance = (uint32_t)rangeStart;
 
-        auto it = renderEntities.begin() + rangeStart;
+        auto it = renderEntities.begin() + (uint32_t)rangeStart;
         for (size_t index = rangeStart; index != rangeEnd; ++index, ++it) {
             const RenderComponent& renderComponent = renderEntities.get<RenderComponent>(*it);
 
@@ -589,7 +589,7 @@ void SceneRenderer::updateMaterialsBuffer() {
 
             assert(regionStart >= itOffset);
 
-            it += (regionStart - itOffset);
+            it += (int64_t)regionStart - (int64_t)itOffset;
             itOffset = regionEnd;
 
             for (size_t index = regionStart; index != regionEnd; ++index, ++it) {
@@ -615,21 +615,21 @@ void SceneRenderer::updateMaterialsBuffer() {
     auto futures = ThreadUtils::parallel_range(m_numRenderEntities, DenseFlagArray::pack_bits, ThreadUtils::getThreadCount() * 5, thread_exec);
     ThreadUtils::wait(futures);
 
-    size_t firstNewTextureIndex = m_resources->uploadedMaterialBufferTextures;
-    size_t lastNewTextureIndex = m_materialBufferTextures.size();
+    uint32_t firstNewTextureIndex = m_resources->uploadedMaterialBufferTextures;
+    uint32_t lastNewTextureIndex = (uint32_t)m_materialBufferTextures.size();
 
-    size_t descriptorCount = m_resources->materialDescriptorSet->getLayout()->findBinding(0).descriptorCount;
-    size_t arrayCount = glm::min(lastNewTextureIndex - firstNewTextureIndex, descriptorCount);
+    uint32_t descriptorCount = m_resources->materialDescriptorSet->getLayout()->findBinding(0).descriptorCount;
+    uint32_t arrayCount = glm::min((uint32_t)(lastNewTextureIndex - firstNewTextureIndex), descriptorCount);
     if (arrayCount > 0) {
         PROFILE_SCOPE("Write texture descriptors");
 
-        printf("Writing textures [%d to %d]\n", firstNewTextureIndex, lastNewTextureIndex);
+        printf("Writing textures [%llu to %llu]\n", (size_t)firstNewTextureIndex, (size_t)lastNewTextureIndex);
         DescriptorSetWriter(m_resources->materialDescriptorSet)
                 .writeImage(0, &m_materialBufferTextures[firstNewTextureIndex], &m_materialBufferImageLayouts[firstNewTextureIndex], firstNewTextureIndex, arrayCount)
                 .write();
     }
 
-    m_resources->uploadedMaterialBufferTextures = m_materialBufferTextures.size();
+    m_resources->uploadedMaterialBufferTextures = (uint32_t)m_materialBufferTextures.size();
 }
 
 void SceneRenderer::streamObjectData() {
@@ -681,7 +681,7 @@ uint32_t SceneRenderer::registerTexture(Texture* texture) {
 
     auto it = m_textureDescriptorIndices.find(texture);
     if (it == m_textureDescriptorIndices.end()) {
-        textureIndex = m_materialBufferTextures.size();
+        textureIndex = (uint32_t)m_materialBufferTextures.size();
         m_materialBufferTextures.emplace_back(texture);
         m_materialBufferImageLayouts.emplace_back(vk::ImageLayout::eShaderReadOnlyOptimal);
 
@@ -706,7 +706,7 @@ uint32_t SceneRenderer::registerMaterial(Material* material) {
 
     auto it = m_materialIndices.find(material);
     if (it == m_materialIndices.end()) {
-        materialIndex = m_materials.size();
+        materialIndex = (uint32_t)m_materials.size();
 
         GPUMaterial gpuMaterial{};
         gpuMaterial.hasAlbedoTexture = material->hasAlbedoMap();

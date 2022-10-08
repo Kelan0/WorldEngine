@@ -84,7 +84,7 @@ Framebuffer* Framebuffer::create(const FramebufferConfiguration& framebufferConf
 
     vk::FramebufferCreateInfo framebufferCreateInfo;
     framebufferCreateInfo.setRenderPass(framebufferConfiguration.renderPass);
-    framebufferCreateInfo.setAttachmentCount(framebufferConfiguration.attachments.size());
+    framebufferCreateInfo.setAttachmentCount((uint32_t)framebufferConfiguration.attachments.size());
     framebufferCreateInfo.setPAttachments(framebufferConfiguration.attachments.data());
     framebufferCreateInfo.setWidth(framebufferConfiguration.width);
     framebufferCreateInfo.setHeight(framebufferConfiguration.height);

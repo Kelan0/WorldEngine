@@ -149,7 +149,7 @@ RenderPass* RenderPass::create(const RenderPassConfiguration& renderPassConfigur
             for (const auto &colourAttachmentIndex: subpassConfig.colourAttachments)
                 allSubpassAttachmentRefs.emplace_back(subpassConfig.attachmentReferences[colourAttachmentIndex]);
             subpassDescription.setPColorAttachments(&allSubpassAttachmentRefs[offset]);
-            subpassDescription.setColorAttachmentCount(subpassConfig.colourAttachments.size());
+            subpassDescription.setColorAttachmentCount((uint32_t)subpassConfig.colourAttachments.size());
         }
 
         if (subpassConfig.depthStencilAttachment != (size_t)(-1)) {

@@ -32,17 +32,17 @@ namespace Util {
 
     template<size_t strLen>
     double getMemorySizeMagnitude(uint64_t bytes, char(&sizeLabel)[strLen]) {
-        strcpy(sizeLabel, strLen >= 5 ? "bytes" : "B");
-        double size = bytes;
+        strcpy_s(sizeLabel, strLen, strLen >= 5 ? "bytes" : "B");
+        double size = (double)bytes;
         if (size >= 1024) {
             size /= 1024;
-            strcpy(sizeLabel, strLen >= 3 ? "KiB" : strLen >= 2 ? "KB" : "K");
+            strcpy_s(sizeLabel, strLen, strLen >= 3 ? "KiB" : strLen >= 2 ? "KB" : "K");
             if (size >= 1024) {
                 size /= 1024;
-                strcpy(sizeLabel, strLen >= 3 ? "MiB" : strLen >= 2 ? "MB" : "M");
+                strcpy_s(sizeLabel, strLen, strLen >= 3 ? "MiB" : strLen >= 2 ? "MB" : "M");
                 if (size >= 1024) {
                     size /= 1024;
-                    strcpy(sizeLabel, strLen >= 3 ? "GiB" : strLen >= 2 ? "GB" : "G");
+                    strcpy_s(sizeLabel, strLen, strLen >= 3 ? "GiB" : strLen >= 2 ? "GB" : "G");
                 }
             }
         }

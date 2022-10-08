@@ -146,7 +146,7 @@ private:
     static profile_id PFID_NAME(__pf_reg_id_) = Profiler::id(name); \
     PF_NAME.beginRegion(PFID_NAME(__pf_reg_id_)); }
 
-#define PROFILE_END_REGION(x) { \
+#define PROFILE_END_REGION() { \
     PF_NAME.endRegion(); }
 
 #define PROFILE_CATEGORY(name)

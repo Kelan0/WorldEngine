@@ -304,7 +304,7 @@ void PerformanceGraphUI::drawFrameGraph() {
     ImVec2 bbminOuter = ImVec2(bbmin.x - margin, bbmin.y - margin);
     ImVec2 bbmaxOuter = ImVec2(bbmax.x + margin, bbmax.y + margin);
 
-    m_maxFrameProfiles = INT_DIV_CEIL(bbmaxInner.x - bbminInner.x, 100) * 100 + 200;
+    m_maxFrameProfiles = INT_DIV_CEIL((size_t)(bbmaxInner.x - bbminInner.x), 100) * 100 + 200;
     float desiredSegmentWidth = (bbmaxInner.x - bbminInner.x) / (float)allFrames.size();
     float minSegmentWidth = glm::max(1.0F, desiredSegmentWidth);
 
@@ -365,7 +365,7 @@ void PerformanceGraphUI::drawFrameGraph() {
     ImGui::EndChild();
 
     float newHeightScaleMsec = glm::ceil(maxFrameTime / 2.0F) * 2.0F;
-    float adjustmentFactor = 0.05;
+    float adjustmentFactor = 0.05F;
     m_heightScaleMsec = m_heightScaleMsec * (1.0F - adjustmentFactor) + newHeightScaleMsec * adjustmentFactor;
 }
 
@@ -424,26 +424,26 @@ void PerformanceGraphUI::drawFrameTimeOverlays(const uint64_t& threadId, const f
 
     x = xmin;
     y = ymin;
-    sprintf(str, "%02.1f ms (%.1f FPS)", m_heightScaleMsec, 1000.0 / m_heightScaleMsec);
+    sprintf_s(str, sizeof(str), "%02.1f ms (%.1f FPS)", m_heightScaleMsec, 1000.0 / m_heightScaleMsec);
     x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
     dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
 
     x = xmin;
     y = ymax - h * 0.5F;
-    sprintf(str, "%02.1f ms (%.1f FPS)", m_heightScaleMsec * 0.5, 1000.0 / (m_heightScaleMsec * 0.5));
+    sprintf_s(str, sizeof(str), "%02.1f ms (%.1f FPS)", m_heightScaleMsec * 0.5, 1000.0 / (m_heightScaleMsec * 0.5));
     x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
     dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
 
     x = xmin;
     y = ymax - h * 0.25F;
-    sprintf(str, "%02.1f ms (%.1f FPS)", m_heightScaleMsec * 0.25, 1000.0 / (m_heightScaleMsec * 0.25));
+    sprintf_s(str, sizeof(str), "%02.1f ms (%.1f FPS)", m_heightScaleMsec * 0.25, 1000.0 / (m_heightScaleMsec * 0.25));
     x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
     dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
 
     if (m_showFrameTime90Percentile) {
         x = xmin;
         y = ymax - (float)(threadInfo.frameTimePercentile90 / m_heightScaleMsec) * h;
-        sprintf(str, "10%% %02.1f ms (%.1f FPS)", threadInfo.frameTimePercentile90, 1000.0 / threadInfo.frameTimePercentile90);
+        sprintf_s(str, sizeof(str), "10%% %02.1f ms (%.1f FPS)", threadInfo.frameTimePercentile90, 1000.0 / threadInfo.frameTimePercentile90);
         x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
         dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
     }
@@ -451,7 +451,7 @@ void PerformanceGraphUI::drawFrameTimeOverlays(const uint64_t& threadId, const f
     if (m_showFrameTime99Percentile) {
         x = xmin;
         y = ymax - (float)(threadInfo.frameTimePercentile99 / m_heightScaleMsec) * h;
-        sprintf(str, "1%% %02.1f ms (%.1f FPS)", threadInfo.frameTimePercentile99, 1000.0 / threadInfo.frameTimePercentile99);
+        sprintf_s(str, sizeof(str), "1%% %02.1f ms (%.1f FPS)", threadInfo.frameTimePercentile99, 1000.0 / threadInfo.frameTimePercentile99);
         x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
         dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
     }
@@ -459,14 +459,14 @@ void PerformanceGraphUI::drawFrameTimeOverlays(const uint64_t& threadId, const f
     if (m_showFrameTime999Percentile) {
         x = xmin;
         y = ymax - (float)(threadInfo.frameTimePercentile999 / m_heightScaleMsec) * h;
-        sprintf(str, "0.1%% %02.1f ms (%.1f FPS)", threadInfo.frameTimePercentile999, 1000.0 / threadInfo.frameTimePercentile999);
+        sprintf_s(str, sizeof(str), "0.1%% %02.1f ms (%.1f FPS)", threadInfo.frameTimePercentile999, 1000.0 / threadInfo.frameTimePercentile999);
         x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
         dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
     }
 
     x = xmin;
     y = ymax - (float)(threadInfo.frameTimeAvg / m_heightScaleMsec) * h;
-    sprintf(str, "AVG %02.1f ms (%.1f FPS)", threadInfo.frameTimeAvg, 1000.0 / threadInfo.frameTimeAvg);
+    sprintf_s(str, sizeof(str), "AVG %02.1f ms (%.1f FPS)", threadInfo.frameTimeAvg, 1000.0 / threadInfo.frameTimeAvg);
     x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
     dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
 
@@ -475,7 +475,7 @@ void PerformanceGraphUI::drawFrameTimeOverlays(const uint64_t& threadId, const f
         y = ImGui::GetMousePos().y;
         if (y > ymin && y < ymax) {
             float msec = (1.0F - ((y - ymin) / h)) * m_heightScaleMsec;
-            sprintf(str, "POS %02.1f ms (%.1f FPS)", msec, 1000.0 / msec);
+            sprintf_s(str, sizeof(str), "POS %02.1f ms (%.1f FPS)", msec, 1000.0 / msec);
             x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
             dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
         }
@@ -612,7 +612,7 @@ double PerformanceGraphUI::calculateFrameTimePercentile(const std::vector<double
 const uint32_t& PerformanceGraphUI::getUniqueLayerIndex(const std::string& layerName) {
     auto it = m_uniqueLayerIndexMap.find(layerName);
     if (it == m_uniqueLayerIndexMap.end()) {
-        uint32_t index = m_layers.size();
+        uint32_t index = (uint32_t)m_layers.size();
         ProfileLayer& layer = m_layers.emplace_back();
         layer.colour[0] = (float)rand() / RAND_MAX;
         layer.colour[1] = (float)rand() / RAND_MAX;
@@ -628,7 +628,7 @@ const uint32_t& PerformanceGraphUI::getUniqueLayerIndex(const std::string& layer
 const uint32_t& PerformanceGraphUI::getPathLayerIndex(const std::vector<uint32_t>& layerPath) {
     auto it = m_pathLayerIndexMap.find(layerPath);
     if (it == m_pathLayerIndexMap.end()) {
-        uint32_t index = m_layers.size();
+        uint32_t index = (uint32_t)m_layers.size();
         ProfileLayer& layer = m_layers.emplace_back();
         layer.colour[0] = (float)rand() / RAND_MAX;
         layer.colour[1] = (float)rand() / RAND_MAX;

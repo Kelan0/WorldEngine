@@ -84,13 +84,13 @@ bool Frustum::containsPoint(const double& x, const double& y, const double& z) {
     return true; // Point is on the positive side of all 6 frustum planes.
 }
 
-const Plane& Frustum::getPlane(const uint32_t& planeIndex) const {
+const Plane& Frustum::getPlane(const size_t& planeIndex) const {
     assert(planeIndex < NumPlanes);
 
     return m_planes[planeIndex];
 }
 
-const glm::dvec3& Frustum::getCorner(const uint32_t& cornerIndex) const {
+const glm::dvec3& Frustum::getCorner(const size_t& cornerIndex) const {
     assert(cornerIndex < NumCorners);
 
     if (glm::isnan(m_corners[cornerIndex].x)) {

@@ -1,3 +1,5 @@
+#include <utility>
+
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Buffer.h"
 #include "core/graphics/BufferView.h"
@@ -9,10 +11,10 @@
 DescriptorSetLayout::Cache DescriptorSetLayout::s_descriptorSetLayoutCache;
 
 
-DescriptorSetLayout::DescriptorSetLayout(std::weak_ptr<vkr::Device> device, vk::DescriptorSetLayout descriptorSetLayout, Key key):
+DescriptorSetLayout::DescriptorSetLayout(const std::weak_ptr<vkr::Device>& device, const vk::DescriptorSetLayout& descriptorSetLayout, Key key):
         m_device(device),
         m_descriptorSetLayout(descriptorSetLayout),
-        m_key(key),
+        m_key(std::move(key)),
         m_resourceId(GraphicsManager::nextResourceId()) {
     //printf("Create DescriptorSetLayout\n");
 }
@@ -22,7 +24,7 @@ DescriptorSetLayout::~DescriptorSetLayout() {
     (**m_device).destroyDescriptorSetLayout(m_descriptorSetLayout);
 }
 
-std::shared_ptr<DescriptorSetLayout> DescriptorSetLayout::get(std::weak_ptr<vkr::Device> device, const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo) {
+std::shared_ptr<DescriptorSetLayout> DescriptorSetLayout::get(const std::weak_ptr<vkr::Device>& device, const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo) {
     Key key(descriptorSetLayoutCreateInfo);
 
 #if _DEBUG
@@ -33,7 +35,7 @@ std::shared_ptr<DescriptorSetLayout> DescriptorSetLayout::get(std::weak_ptr<vkr:
 		if (binding == lastBinding) {
 			printf("Descriptor set layout has duplicated bindings\n");
 			assert(false);
-			return NULL;
+			return nullptr;
 		}
 	}
 #endif
@@ -41,10 +43,10 @@ std::shared_ptr<DescriptorSetLayout> DescriptorSetLayout::get(std::weak_ptr<vkr:
     auto it = s_descriptorSetLayoutCache.find(key);
     if (it == s_descriptorSetLayoutCache.end() || it->second.expired()) {
         vk::DescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-        vk::Result result = (**device.lock()).createDescriptorSetLayout(&descriptorSetLayoutCreateInfo, NULL, &descriptorSetLayout);
+        vk::Result result = (**device.lock()).createDescriptorSetLayout(&descriptorSetLayoutCreateInfo, nullptr, &descriptorSetLayout);
         if (result != vk::Result::eSuccess) {
             printf("Failed to create descriptor set layout: %s\n", vk::to_string(result).c_str());
-            return NULL;
+            return nullptr;
         }
 
         std::shared_ptr<DescriptorSetLayout> retDescriptorSetLayout(new DescriptorSetLayout(device, descriptorSetLayout, key));
@@ -75,25 +77,25 @@ void DescriptorSetLayout::clearCache() {
     s_descriptorSetLayoutCache.clear();
 }
 
-DescriptorSet* DescriptorSetLayout::createDescriptorSet(std::shared_ptr<DescriptorPool> descriptorPool) {
-    DescriptorSet* descriptorSet = NULL;
+DescriptorSet* DescriptorSetLayout::createDescriptorSet(const std::shared_ptr<DescriptorPool>& descriptorPool) {
+    DescriptorSet* descriptorSet = nullptr;
     if (!createDescriptorSets(descriptorPool, 1, &descriptorSet))
-        return NULL;
+        return nullptr;
     return descriptorSet;
 }
 
-bool DescriptorSetLayout::createDescriptorSets(std::shared_ptr<DescriptorPool> descriptorPool, uint32_t count, DescriptorSet** outDescriptorSets) {
+bool DescriptorSetLayout::createDescriptorSets(const std::shared_ptr<DescriptorPool>& descriptorPool, const uint32_t& count, DescriptorSet** outDescriptorSets) {
     assert(descriptorPool->getDevice() == m_device);
 
     std::shared_ptr<DescriptorSetLayout> selfPointer = get(m_device, m_key); // shared_ptr from this
     assert(selfPointer.get() == this); // Sanity check
 
-    for (int i = 0; i < count; ++i) {
+    for (uint32_t i = 0; i < count; ++i) {
         outDescriptorSets[i] = DescriptorSet::create(selfPointer, descriptorPool);
-        if (outDescriptorSets[i] == NULL) {
+        if (outDescriptorSets[i] == nullptr) {
             for (; i >= 0; --i) {
                 delete outDescriptorSets[i];
-                outDescriptorSets[i] = NULL;
+                outDescriptorSets[i] = nullptr;
             }
             return false;
         }
@@ -102,7 +104,7 @@ bool DescriptorSetLayout::createDescriptorSets(std::shared_ptr<DescriptorPool> d
     return true;
 }
 
-bool DescriptorSetLayout::createDescriptorSets(std::shared_ptr<DescriptorPool> descriptorPool, uint32_t count, std::shared_ptr<DescriptorSet>* outDescriptorSets) {
+bool DescriptorSetLayout::createDescriptorSets(const std::shared_ptr<DescriptorPool>& descriptorPool, const uint32_t& count, std::shared_ptr<DescriptorSet>* outDescriptorSets) {
     DescriptorSet** tempDescriptorSets = new DescriptorSet*[count];
 
     if (!createDescriptorSets(descriptorPool, count, tempDescriptorSets)) {
@@ -110,14 +112,14 @@ bool DescriptorSetLayout::createDescriptorSets(std::shared_ptr<DescriptorPool> d
         return false;
     }
 
-    for (int i = 0; i < count; ++i) {
+    for (uint32_t i = 0; i < count; ++i) {
         outDescriptorSets[i] = std::shared_ptr<DescriptorSet>(tempDescriptorSets[i]);
     }
     delete[] tempDescriptorSets;
     return true;
 }
 
-std::shared_ptr<vkr::Device> DescriptorSetLayout::getDevice() const {
+const std::shared_ptr<vkr::Device>& DescriptorSetLayout::getDevice() const {
     return m_device;
 }
 
@@ -129,11 +131,11 @@ std::vector<vk::DescriptorSetLayoutBinding> DescriptorSetLayout::getBindings() c
     return std::vector<vk::DescriptorSetLayoutBinding>(m_key.pBindings, m_key.pBindings + m_key.bindingCount);
 }
 
-bool DescriptorSetLayout::hasBinding(uint32_t binding) const {
+bool DescriptorSetLayout::hasBinding(const uint32_t& binding) const {
     return findBindingIndex(binding) >= 0;
 }
 
-int DescriptorSetLayout::findBindingIndex(uint32_t binding) const {
+int32_t DescriptorSetLayout::findBindingIndex(const uint32_t& binding) const {
     for (uint32_t i = 0; i < m_key.bindingCount; ++i) {
         if (m_key.pBindings[i].binding == binding) {
             return i;
@@ -143,19 +145,19 @@ int DescriptorSetLayout::findBindingIndex(uint32_t binding) const {
     return -1;
 }
 
-const vk::DescriptorSetLayoutBinding& DescriptorSetLayout::findBinding(uint32_t binding) const {
+const vk::DescriptorSetLayoutBinding& DescriptorSetLayout::findBinding(const uint32_t& binding) const {
     int index = findBindingIndex(binding);
     if (index < 0)
-        return {};
+        return {}; // TODO: Reference to local variable, assert(false) ?
     return getBinding(index);
 }
 
-const vk::DescriptorSetLayoutBinding& DescriptorSetLayout::getBinding(int index) const {
-    assert(index >= 0 && index < m_key.bindingCount);
+const vk::DescriptorSetLayoutBinding& DescriptorSetLayout::getBinding(const int32_t& index) const {
+    assert(index >= 0 && (uint32_t)index < m_key.bindingCount);
     return m_key.pBindings[index];
 }
 
-uint32_t DescriptorSetLayout::getBindingCount() const {
+const uint32_t& DescriptorSetLayout::getBindingCount() const {
     return m_key.bindingCount;
 }
 
@@ -176,7 +178,7 @@ const GraphicsResource& DescriptorSetLayout::getResourceId() const {
 
 
 
-DescriptorPool::DescriptorPool(std::weak_ptr<vkr::Device> device, vk::DescriptorPool descriptorPool, bool canFreeDescriptorSets):
+DescriptorPool::DescriptorPool(const std::weak_ptr<vkr::Device>& device, vk::DescriptorPool descriptorPool, bool canFreeDescriptorSets):
         m_device(device),
         m_descriptorPool(descriptorPool),
         m_canFreeDescriptorSets(canFreeDescriptorSets),
@@ -196,13 +198,13 @@ DescriptorPool::~DescriptorPool() {
 DescriptorPool* DescriptorPool::create(const DescriptorPoolConfiguration& descriptorPoolConfiguration) {
     std::vector<vk::DescriptorPoolSize> poolSizes;
 
-    for (auto it = descriptorPoolConfiguration.poolSizes.begin(); it != descriptorPoolConfiguration.poolSizes.end(); ++it) {
-        if (it->second == 0)
+    for (const auto& entry : descriptorPoolConfiguration.poolSizes) {
+        if (entry.second == 0)
             continue; // Skip zero-size pools
 
         vk::DescriptorPoolSize& poolSize = poolSizes.emplace_back();
-        poolSize.setType(it->first);
-        poolSize.setDescriptorCount(it->second);
+        poolSize.setType(entry.first);
+        poolSize.setDescriptorCount(entry.second);
     }
 
     vk::DescriptorPoolCreateInfo createInfo;
@@ -217,7 +219,7 @@ DescriptorPool* DescriptorPool::create(const DescriptorPoolConfiguration& descri
 
 }
 
-std::shared_ptr<vkr::Device> DescriptorPool::getDevice() const {
+const std::shared_ptr<vkr::Device>& DescriptorPool::getDevice() const {
     return m_device;
 }
 
@@ -240,7 +242,7 @@ void DescriptorPool::free(const vk::DescriptorSet& descriptorSet) {
     (**m_device).freeDescriptorSets(m_descriptorPool, 1, &descriptorSet);
 }
 
-bool DescriptorPool::canFreeDescriptorSets() const {
+const bool& DescriptorPool::canFreeDescriptorSets() const {
     return m_canFreeDescriptorSets;
 }
 
@@ -250,7 +252,7 @@ const GraphicsResource& DescriptorPool::getResourceId() const {
 
 
 
-DescriptorSet::DescriptorSet(std::weak_ptr<vkr::Device> device, std::weak_ptr<DescriptorPool> pool, std::weak_ptr<DescriptorSetLayout> layout, vk::DescriptorSet descriptorSet):
+DescriptorSet::DescriptorSet(const std::weak_ptr<vkr::Device>& device, const std::weak_ptr<DescriptorPool>& pool, const std::weak_ptr<DescriptorSetLayout>& layout, const vk::DescriptorSet& descriptorSet):
         m_device(device),
         m_pool(pool),
         m_layout(layout),
@@ -266,13 +268,13 @@ DescriptorSet::~DescriptorSet() {
     }
 }
 
-DescriptorSet* DescriptorSet::create(const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, std::weak_ptr<DescriptorPool> descriptorPool) {
+DescriptorSet* DescriptorSet::create(const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, const std::weak_ptr<DescriptorPool>& descriptorPool) {
     assert(!descriptorPool.expired());
     std::shared_ptr<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayout::get(descriptorPool.lock()->getDevice(), descriptorSetLayoutCreateInfo);
     return DescriptorSet::create(descriptorSetLayout, descriptorPool);
 }
 
-DescriptorSet* DescriptorSet::create(std::weak_ptr<DescriptorSetLayout> descriptorSetLayout, std::weak_ptr<DescriptorPool> descriptorPool) {
+DescriptorSet* DescriptorSet::create(const std::weak_ptr<DescriptorSetLayout>& descriptorSetLayout, const std::weak_ptr<DescriptorPool>& descriptorPool) {
     assert(!descriptorSetLayout.expired() && !descriptorPool.expired());
     std::shared_ptr<DescriptorSetLayout> descriptorSetLayoutPtr = descriptorSetLayout.lock();
     std::shared_ptr<DescriptorPool> descriptorPoolPtr = descriptorPool.lock();
@@ -291,15 +293,15 @@ const vk::DescriptorSet& DescriptorSet::getDescriptorSet() const {
     return m_descriptorSet;
 }
 
-std::shared_ptr<vkr::Device> DescriptorSet::getDevice() const {
+const std::shared_ptr<vkr::Device>& DescriptorSet::getDevice() const {
     return m_device;
 }
 
-std::shared_ptr<DescriptorPool> DescriptorSet::getPool() const {
+const std::shared_ptr<DescriptorPool>& DescriptorSet::getPool() const {
     return m_pool;
 }
 
-std::shared_ptr<DescriptorSetLayout> DescriptorSet::getLayout() const {
+const std::shared_ptr<DescriptorSetLayout>& DescriptorSet::getLayout() const {
     return m_layout;
 }
 
@@ -313,17 +315,15 @@ DescriptorSetWriter::DescriptorSetWriter(DescriptorSet* descriptorSet) :
         m_descriptorSet(descriptorSet) {
 }
 
-DescriptorSetWriter::DescriptorSetWriter(std::shared_ptr<DescriptorSet> descriptorSet) :
+DescriptorSetWriter::DescriptorSetWriter(const std::shared_ptr<DescriptorSet>& descriptorSet) :
         m_descriptorSet(descriptorSet.get()) {
 }
 
-DescriptorSetWriter::DescriptorSetWriter(std::weak_ptr<DescriptorSet> descriptorSet):
+DescriptorSetWriter::DescriptorSetWriter(const std::weak_ptr<DescriptorSet>& descriptorSet):
         m_descriptorSet(descriptorSet.lock().get()) {
 }
 
-DescriptorSetWriter::~DescriptorSetWriter() {
-
-}
+DescriptorSetWriter::~DescriptorSetWriter() = default;
 
 DescriptorSetWriter& DescriptorSetWriter::writeBuffer(const uint32_t& binding, const vk::DescriptorBufferInfo& bufferInfo) {
     int bindingIndex = m_descriptorSet->getLayout()->findBindingIndex(binding);
@@ -556,23 +556,23 @@ DescriptorSetLayout::Key::Key(const vk::DescriptorSetLayoutCreateInfo& rhs) {
 
     vk::DescriptorSetLayoutBinding* bindings = const_cast<vk::DescriptorSetLayoutBinding*>(pBindings);
 
-    vk::DescriptorSetLayoutBinding* sortStart = NULL;
+    vk::DescriptorSetLayoutBinding* sortStart = nullptr;
 
     // Ensure bindings array is sorted
-    int prevBinding = -1;
-    for (int i = 0; i < bindingCount; ++i) {
+    int64_t prevBinding = -1;
+    for (uint32_t i = 0; i < bindingCount; ++i) {
         bindings[i] = rhs.pBindings[i];
 
         if ((int)bindings[i].binding > prevBinding) {
             prevBinding = bindings[i].binding;
 
-        } else if (sortStart == NULL) {
+        } else if (sortStart == nullptr) {
             // Bindings need to be sorted starting from the previous one.
             sortStart = &bindings[i - 1];
         }
     }
 
-    if (sortStart != NULL) {
+    if (sortStart != nullptr) {
         std::sort(sortStart, bindings + bindingCount, [](vk::DescriptorSetLayoutBinding lhs, vk::DescriptorSetLayoutBinding rhs) {
             return lhs.binding < rhs.binding;
         });
@@ -583,14 +583,14 @@ DescriptorSetLayout::Key::Key(const Key& copy):
         Key(static_cast<vk::DescriptorSetLayoutCreateInfo>(copy)){
 }
 
-DescriptorSetLayout::Key::Key(Key&& move) {
+DescriptorSetLayout::Key::Key(Key&& move) noexcept {
     bindingCount = std::exchange(move.bindingCount, 0);
     pBindings = std::exchange(move.pBindings, nullptr);
 }
 
 DescriptorSetLayout::Key::~Key() {
     delete[] pBindings;
-    pBindings = NULL;
+    pBindings = nullptr;
 }
 
 bool DescriptorSetLayout::Key::operator==(const DescriptorSetLayout::Key& rhs) const {
@@ -598,7 +598,7 @@ bool DescriptorSetLayout::Key::operator==(const DescriptorSetLayout::Key& rhs) c
         return false;
     if (bindingCount != rhs.bindingCount)
         return false;
-    for (int i = 0; i < bindingCount; ++i)
+    for (uint32_t i = 0; i < bindingCount; ++i)
         if (pBindings[i] != rhs.pBindings[i]) // vk::DescriptorSetLayoutBinding has a valid operator== definition
             return false;
 
@@ -608,7 +608,7 @@ bool DescriptorSetLayout::Key::operator==(const DescriptorSetLayout::Key& rhs) c
 size_t DescriptorSetLayout::KeyHasher::operator()(const DescriptorSetLayout::Key& descriptorSetLayoutKey) const {
     size_t s = 0;
     std::hash_combine(s, (uint32_t)descriptorSetLayoutKey.flags);
-    for (int i = 0; i < descriptorSetLayoutKey.bindingCount; ++i) {
+    for (uint32_t i = 0; i < descriptorSetLayoutKey.bindingCount; ++i) {
         std::hash_combine(s, descriptorSetLayoutKey.pBindings[i].binding);
         std::hash_combine(s, descriptorSetLayoutKey.pBindings[i].descriptorType);
         std::hash_combine(s, descriptorSetLayoutKey.pBindings[i].descriptorCount);
@@ -618,18 +618,17 @@ size_t DescriptorSetLayout::KeyHasher::operator()(const DescriptorSetLayout::Key
     return s;
 }
 
-DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(std::weak_ptr<vkr::Device> device, vk::DescriptorSetLayoutCreateFlags flags):
+DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(const std::weak_ptr<vkr::Device>& device, const vk::DescriptorSetLayoutCreateFlags& flags):
         m_device(device),
         m_flags(flags) {
 }
 
-DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(vk::DescriptorSetLayoutCreateFlags flags):
+DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(const vk::DescriptorSetLayoutCreateFlags& flags):
         m_device(Engine::graphics()->getDevice()),
         m_flags(flags) {
 }
 
-DescriptorSetLayoutBuilder::~DescriptorSetLayoutBuilder() {
-}
+DescriptorSetLayoutBuilder::~DescriptorSetLayoutBuilder() = default;
 
 DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const bool& dynamic) {
 #if _DEBUG
@@ -643,7 +642,7 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBuffer(const u
     bindingInfo.setDescriptorType(dynamic ? vk::DescriptorType::eUniformBufferDynamic : vk::DescriptorType::eUniformBuffer);
     bindingInfo.setDescriptorCount(1);
     bindingInfo.setStageFlags(shaderStages);
-    bindingInfo.setPImmutableSamplers(NULL);
+    bindingInfo.setPImmutableSamplers(nullptr);
     m_bindings.insert(std::make_pair(binding, bindingInfo));
     return *this;
 }
@@ -660,7 +659,7 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageBuffer(const u
     bindingInfo.setDescriptorType(dynamic ? vk::DescriptorType::eStorageBufferDynamic : vk::DescriptorType::eStorageBuffer);
     bindingInfo.setDescriptorCount(1);
     bindingInfo.setStageFlags(shaderStages);
-    bindingInfo.setPImmutableSamplers(NULL);
+    bindingInfo.setPImmutableSamplers(nullptr);
     m_bindings.insert(std::make_pair(binding, bindingInfo));
     return *this;
 }
@@ -678,12 +677,12 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageTexelBuffer(co
     bindingInfo.setDescriptorType(vk::DescriptorType::eStorageTexelBuffer);
     bindingInfo.setDescriptorCount(1);
     bindingInfo.setStageFlags(shaderStages);
-    bindingInfo.setPImmutableSamplers(NULL);
+    bindingInfo.setPImmutableSamplers(nullptr);
     m_bindings.insert(std::make_pair(binding, bindingInfo));
     return *this;
 }
 
-DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampler(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& arraySize) {
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampler(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const uint32_t& arraySize) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
 		printf("Unable to add DescriptorSetLayout Sampler binding %d - The binding is already added\n", binding);
@@ -699,12 +698,12 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampler(const uint32_
     bindingInfo.setDescriptorType(vk::DescriptorType::eSampler);
     bindingInfo.setDescriptorCount(arraySize);
     bindingInfo.setStageFlags(shaderStages);
-    bindingInfo.setPImmutableSamplers(NULL);
+    bindingInfo.setPImmutableSamplers(nullptr);
     m_bindings.insert(std::make_pair(binding, bindingInfo));
     return *this;
 }
 
-DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampledImage(const uint32_t &binding, const vk::ShaderStageFlags &shaderStages, const size_t &arraySize) {
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampledImage(const uint32_t &binding, const vk::ShaderStageFlags &shaderStages, const uint32_t &arraySize) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
 		printf("Unable to add DescriptorSetLayout SampledImage binding %d - The binding is already added\n", binding);
@@ -720,12 +719,12 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampledImage(const ui
     bindingInfo.setDescriptorType(vk::DescriptorType::eSampledImage);
     bindingInfo.setDescriptorCount(arraySize);
     bindingInfo.setStageFlags(shaderStages);
-    bindingInfo.setPImmutableSamplers(NULL);
+    bindingInfo.setPImmutableSamplers(nullptr);
     m_bindings.insert(std::make_pair(binding, bindingInfo));
     return *this;
 }
 
-DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addCombinedImageSampler(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& arraySize) {
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addCombinedImageSampler(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const uint32_t& arraySize) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
 		printf("Unable to add DescriptorSetLayout CombinedImageSampler binding %d - The binding is already added\n", binding);
@@ -741,12 +740,12 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addCombinedImageSampler(
     bindingInfo.setDescriptorType(vk::DescriptorType::eCombinedImageSampler);
     bindingInfo.setDescriptorCount(arraySize);
     bindingInfo.setStageFlags(shaderStages);
-    bindingInfo.setPImmutableSamplers(NULL);
+    bindingInfo.setPImmutableSamplers(nullptr);
     m_bindings.insert(std::make_pair(binding, bindingInfo));
     return *this;
 }
 
-DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageImage(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const size_t& arraySize) {
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageImage(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const uint32_t& arraySize) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
         printf("Unable to add DescriptorSetLayout StorageImage binding %d - The binding is already added\n", binding);
@@ -762,7 +761,7 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageImage(const ui
     bindingInfo.setDescriptorType(vk::DescriptorType::eStorageImage);
     bindingInfo.setDescriptorCount(arraySize);
     bindingInfo.setStageFlags(shaderStages);
-    bindingInfo.setPImmutableSamplers(NULL);
+    bindingInfo.setPImmutableSamplers(nullptr);
     m_bindings.insert(std::make_pair(binding, bindingInfo));
     return *this;
 }
@@ -772,8 +771,8 @@ std::shared_ptr<DescriptorSetLayout> DescriptorSetLayoutBuilder::build() {
 
     std::vector<vk::DescriptorSetLayoutBinding> bindings;
     bindings.reserve(m_bindings.size());
-    for (auto it = m_bindings.begin(); it != m_bindings.end(); ++it) {
-        bindings.emplace_back(it->second);
+    for (auto& binding : m_bindings) {
+        bindings.emplace_back(binding.second);
     }
 
     vk::DescriptorSetLayoutCreateInfo createInfo;

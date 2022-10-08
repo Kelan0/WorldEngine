@@ -102,7 +102,7 @@ public:
 public:
     MeshData();
 
-    MeshData(const MeshPrimitiveType& primitiveType);
+    explicit MeshData(const MeshPrimitiveType& primitiveType);
 
     ~MeshData();
 
@@ -114,7 +114,7 @@ public:
 
     void translate(const float& x, const float& y, const float& z);
 
-    void rotate(glm::quat q);
+    void rotate(const glm::quat& q);
 
     void rotate(const float& angle, const glm::vec3& axis);
 
@@ -126,11 +126,11 @@ public:
 
     void scale(const glm::vec3& s);
 
-    void scale(float x, float y, float z);
+    void scale(const float& x, const float& y, const float& z);
 
-    void scale(float scale);
+    void scale(const float& scale);
 
-    void applyTransform(bool currentStateOnly = true);
+    void applyTransform(const bool& currentStateOnly = true);
 
     void pushState();
 
@@ -180,11 +180,11 @@ public:
 
     std::vector<Index>& indices();
 
-    glm::vec3 calculateCenterOffset(bool currentStateOnly = true) const;
+    glm::vec3 calculateCenterOffset(const bool& currentStateOnly = true) const;
 
     // Transforming a vector where any component is 0 or 1 by this matrix will result in a point on the bounding box.
     // e.g. (-1,-1,-1) will be BB min, (+1,+1,+1) will be BB max, (0,+1,0) will be center top etc.
-    glm::mat4 calculateBoundingBox(bool currentStateOnly = true) const;
+    glm::mat4 calculateBoundingBox(const bool& currentStateOnly = true) const;
 
     size_t getVertexCount() const;
 
@@ -299,7 +299,7 @@ template<typename Vertex_t>
 typename MeshData<Vertex_t>::Vertex& MeshData<Vertex_t>::Triangle::getVertex(std::vector<Vertex>& vertices, Index index) const {
 #if _DEBUG
     if (index < 0 || index >= 3) {
-		printf("Get triangle vertex: internal triangle index %d is out of range [0..3]\n", index);
+            printf("Get triangle vertex: internal triangle index %llu is out of range [0..3]\n", (uint64_t)index);
 		assert(false);
 	}
 #endif
@@ -308,7 +308,7 @@ typename MeshData<Vertex_t>::Vertex& MeshData<Vertex_t>::Triangle::getVertex(std
 
 #if _DEBUG
     if (vertexIndex < 0 || vertexIndex >= vertices.size()) {
-		printf("Triangle vertex index %d is out of range [0..%d]\n", vertexIndex, vertices.size());
+		printf("Triangle vertex index %llu is out of range [0..%llu]\n", (uint64_t)vertexIndex, (uint64_t)vertices.size());
 		assert(false);
 	}
 #endif
@@ -325,7 +325,7 @@ template<typename Vertex_t>
 const typename MeshData<Vertex_t>::Vertex& MeshData<Vertex_t>::Triangle::getVertex(const std::vector<MeshData::Vertex>& vertices, MeshData::Index index) const {
 #if _DEBUG
     if (index < 0 || index >= 3) {
-		printf("Get triangle vertex: internal triangle index %d is out of range [0..3]\n", index);
+		printf("Get triangle vertex: internal triangle index %llu is out of range [0..3]\n", (uint64_t)index);
 		assert(false);
 	}
 #endif
@@ -334,7 +334,7 @@ const typename MeshData<Vertex_t>::Vertex& MeshData<Vertex_t>::Triangle::getVert
 
 #if _DEBUG
     if (vertexIndex < 0 || vertexIndex >= vertices.size()) {
-		printf("Triangle vertex index %d is out of range [0..%d]\n", vertexIndex, vertices.size());
+		printf("Triangle vertex index %llu is out of range [0..%llu]\n", (uint64_t)vertexIndex, (uint64_t)vertices.size());
 		assert(false);
 	}
 #endif
@@ -384,8 +384,7 @@ MeshData<Vertex_t>::MeshData(const MeshPrimitiveType& primitiveType) :
 }
 
 template<typename Vertex_t>
-MeshData<Vertex_t>::~MeshData() {
-}
+MeshData<Vertex_t>::~MeshData() = default;
 
 template<typename Vertex_t>
 void MeshData<Vertex_t>::pushTransform() {
@@ -416,7 +415,7 @@ void MeshData<Vertex_t>::translate(const float& x, const float& y, const float& 
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::rotate(glm::quat q) {
+void MeshData<Vertex_t>::rotate(const glm::quat& q) {
     m_currentTransform = glm::mat4_cast(q) * m_currentTransform;
 }
 
@@ -446,19 +445,19 @@ void MeshData<Vertex_t>::scale(const glm::vec3& s) {
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::scale(float x, float y, float z) {
+void MeshData<Vertex_t>::scale(const float& x, const float& y, const float& z) {
     scale(glm::vec3(x, y, z));
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::scale(float s) {
+void MeshData<Vertex_t>::scale(const float& s) {
     scale(glm::vec3(s));
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::applyTransform(bool currentStateOnly) {
+void MeshData<Vertex_t>::applyTransform(const bool& currentStateOnly) {
     size_t firstVertex = currentStateOnly ? m_currentState.baseVertex : 0;
-    for (int i = firstVertex; i < m_vertices.size(); ++i) {
+    for (size_t i = firstVertex; i < m_vertices.size(); ++i) {
         m_vertices[i] *= m_currentTransform;
     }
 }
@@ -466,8 +465,8 @@ void MeshData<Vertex_t>::applyTransform(bool currentStateOnly) {
 template<typename Vertex_t>
 void MeshData<Vertex_t>::pushState() {
     m_stateStack.push(m_currentState);
-    m_currentState.baseVertex = m_vertices.size();
-    m_currentState.baseIndex = m_indices.size();
+    m_currentState.baseVertex = (Index)m_vertices.size();
+    m_currentState.baseIndex = (Index)m_indices.size();
 }
 
 template<typename Vertex_t>
@@ -628,15 +627,16 @@ void MeshData<Vertex_t>::createUVSphere(const glm::vec3& center, const float& ra
     glm::vec3 pos;
     glm::vec3 norm;
     glm::vec2 tex;
-
-    for (int i = 0; i <= stacks; ++i) {
-        tex.y = (float)(i) / stacks;
+    float fstacks = (float)stacks;
+    float fslices = (float)slices;
+    for (size_t i = 0; i <= stacks; ++i) {
+        tex.y = (float)(i) / fstacks;
         float phi = glm::pi<float>() * (tex.y - 0.5F); // -90 to +90 degrees
         norm.y = glm::sin(phi);
         pos.y = center.y + norm.y * radius;
 
-        for (int j = 0; j <= slices; ++j) {
-            tex.x = (float)(j) / slices;
+        for (size_t j = 0; j <= slices; ++j) {
+            tex.x = (float)(j) / fslices;
             float theta = glm::two_pi<float>() * tex.x; // 0 to 360 degrees
 
             norm.x = glm::cos(phi) * glm::sin(theta);
@@ -649,30 +649,30 @@ void MeshData<Vertex_t>::createUVSphere(const glm::vec3& center, const float& ra
         }
     }
 
-    for (int i0 = 0; i0 < stacks; ++i0) {
-        int i1 = (i0 + 1);
+    for (size_t i0 = 0; i0 < stacks; ++i0) {
+        size_t i1 = (i0 + 1);
 
-        for (int j0 = 0; j0 < slices; ++j0) {
-            int j1 = (j0 + 1);
+        for (size_t j0 = 0; j0 < slices; ++j0) {
+            size_t j1 = (j0 + 1);
 
-            Index i00 = i0 * (slices + 1) + j0;
-            Index i10 = i0 * (slices + 1) + j1;
-            Index i01 = i1 * (slices + 1) + j0;
-            Index i11 = i1 * (slices + 1) + j1;
+            Index i00 = (Index)(i0 * (slices + 1) + j0);
+            Index i10 = (Index)(i0 * (slices + 1) + j1);
+            Index i01 = (Index)(i1 * (slices + 1) + j0);
+            Index i11 = (Index)(i1 * (slices + 1) + j1);
 
             addQuad(i00, i10, i11, i01);
         }
     }
 
-    //for (int i = 0; i <= stacks; ++i) {
-    //	for (int j = 0; j <= slices; ++j) {
+    //for (size_t i = 0; i <= stacks; ++i) {
+    //	for (size_t j = 0; j <= slices; ++j) {
     //		if (i > 0) {
-    //			int j1 = (j + 1) % slices;
-    //			int i0 = (i - 1);
-    //			Index i00 = i0 * (slices + 1) + j;
-    //			Index i10 = i0 * (slices + 1) + j1;
-    //			Index i01 = i * (slices + 1) + j;
-    //			Index i11 = i * (slices + 1) + j1;
+    //			size_t j1 = (j + 1) % slices;
+    //			size_t i0 = (i - 1);
+    //			Index i00 = (Index)(i0 * (slices + 1) + j);
+    //			Index i10 = (Index)(i0 * (slices + 1) + j1);
+    //			Index i01 = (Index)(i * (slices + 1) + j);
+    //			Index i11 = (Index)(i * (slices + 1) + j1);
     //
     //			addQuad(i00, i10, i11, i01);
     //		}
@@ -778,7 +778,7 @@ std::vector<typename MeshData<Vertex_t>::Index>& MeshData<Vertex_t>::indices() {
 }
 
 template<typename Vertex_t>
-glm::vec3 MeshData<Vertex_t>::calculateCenterOffset(bool currentStateOnly) const {
+glm::vec3 MeshData<Vertex_t>::calculateCenterOffset(const bool& currentStateOnly) const {
     glm::dvec3 center(0.0F);
 
     uint32_t bucketCount = 0;
@@ -788,11 +788,11 @@ glm::vec3 MeshData<Vertex_t>::calculateCenterOffset(bool currentStateOnly) const
 
     const uint32_t maxBucketSize = 1000;
     uint32_t bucketSize = 0;
-    glm::dvec3 bucketCenter = glm::dvec3(0.0F);
+    glm::dvec3 bucketCenter(0.0F);
 
     const size_t firstIndex = currentStateOnly ? m_currentState.baseIndex : 0;
 
-    for (int i = firstIndex; i < m_indices.size(); ++i) {
+    for (size_t i = firstIndex; i < m_indices.size(); ++i) {
         bucketCenter += m_vertices[m_indices[i]].position;
         ++bucketSize;
         if (bucketSize == maxBucketSize) {
@@ -818,14 +818,14 @@ glm::vec3 MeshData<Vertex_t>::calculateCenterOffset(bool currentStateOnly) const
 }
 
 template<typename Vertex_t>
-glm::mat4 MeshData<Vertex_t>::calculateBoundingBox(bool currentStateOnly) const {
-    glm::vec3 minExtent = glm::vec3(+INFINITY);
-    glm::vec3 maxExtent = glm::vec3(-INFINITY);
+glm::mat4 MeshData<Vertex_t>::calculateBoundingBox(const bool& currentStateOnly) const {
+    glm::vec3 minExtent(+INFINITY);
+    glm::vec3 maxExtent(-INFINITY);
 
     const size_t firstPrimitive = currentStateOnly ? m_currentState.baseIndex : 0;
 
-    for (int i = firstPrimitive; i < m_indices.size(); ++i) {
-        for (int j = 0; j < 3; ++j) {
+    for (size_t i = firstPrimitive; i < m_indices.size(); ++i) {
+        for (size_t j = 0; j < 3; ++j) {
             const glm::vec3& pos = m_vertices[m_indices[i]].position;
 //            const glm::vec3& pos = m_triangles[i].getVertex(m_vertices, 0).position;
 
@@ -872,8 +872,7 @@ void MeshData<Vertex_t>::computeTangents() {
 
 template<typename Vertex_t>
 void MeshData<Vertex_t>::computeTangents(std::vector<Vertex_t>& vertices, const std::vector<uint32_t>& indices, const MeshPrimitiveType& primitiveType) {
-    using Vertex = MeshData<Vertex_t>::Vertex;
-    using Index = MeshData<Vertex_t>::Index;
+    using index_t = MeshData<Vertex_t>::Index;
 
     if (primitiveType != MeshPrimitiveType::PrimitiveType_Triangle) {
         printf("Unable to compute mesh tangents. Mesh primitive type must be triangles\n");
@@ -893,9 +892,9 @@ void MeshData<Vertex_t>::computeTangents(std::vector<Vertex_t>& vertices, const 
         uint32_t i1 = indices[i + 1];
         uint32_t i2 = indices[i + 2];
 
-        Vertex& v0 = vertices[i0];
-        Vertex& v1 = vertices[i1];
-        Vertex& v2 = vertices[i2];
+        Vertex_t& v0 = vertices[i0];
+        Vertex_t& v1 = vertices[i1];
+        Vertex_t& v2 = vertices[i2];
 
         glm::vec3 e0 = v1.position - v0.position;
         glm::vec3 e1 = v2.position - v0.position;
@@ -905,7 +904,7 @@ void MeshData<Vertex_t>::computeTangents(std::vector<Vertex_t>& vertices, const 
         float r = (dUV0.x * dUV1.y) - (dUV0.y * dUV1.x);
 
         if (abs(r) > 1e-9) {
-            r = 1.0 / r;
+            r = 1.0F / r;
             glm::vec3 tangent = (e0 * dUV1.y - e1 * dUV0.y) * r;
 //            tangent = normalize(tangent);
             tangents[i + 0] = tangent;

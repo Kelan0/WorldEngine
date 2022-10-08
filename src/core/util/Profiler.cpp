@@ -59,7 +59,7 @@ double Performance::milliseconds(const moment_t& startTime) {
 Profiler::ThreadContext::ThreadContext() {
 #if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
     uint64_t currentId = ThreadUtils::getCurrentThreadHashedId();
-    printf("Creating ThreadContext(0x%016x)\n", currentId);
+//    printf("Creating ThreadContext(0x%016llx)\n", currentId);
 
     std::scoped_lock<std::mutex> lock(s_threadContextsMtx);
     s_threadContexts.insert(std::make_pair(currentId, this));
@@ -69,7 +69,7 @@ Profiler::ThreadContext::ThreadContext() {
 Profiler::ThreadContext::~ThreadContext() {
 #if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
     uint64_t currentId = ThreadUtils::getCurrentThreadHashedId();
-    printf("Deleting ThreadContext(0x%016x)\n", currentId);
+//    printf("Deleting ThreadContext(0x%016llx)\n", currentId);
 
     if (Application::instance() != nullptr) {
         std::scoped_lock<std::mutex> lock(s_threadContextsMtx);
@@ -161,7 +161,7 @@ void Profiler::end() {
 
 void Profiler::beginFrame() {
 #if PROFILING_ENABLED
-//    printf("======== FRAME BEGIN thread 0x%016x\n", ThreadUtils::getCurrentThreadHashedId());
+//    printf("======== FRAME BEGIN thread 0x%016llx\n", ThreadUtils::getCurrentThreadHashedId());
 
 #if INTERNAL_PROFILING_ENABLED
     ThreadContext& ctx = s_context;

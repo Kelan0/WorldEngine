@@ -392,8 +392,8 @@ bool DeferredLightingRenderPass::init() {
     }
 
     ImageData* defaultEnvironmentCubeMap = new ImageData(1, 1, ImagePixelLayout::RGBA, ImagePixelFormat::Float32);
-    for (size_t y = 0; y < defaultEnvironmentCubeMap->getHeight(); ++y) {
-        for (size_t x = 0; x < defaultEnvironmentCubeMap->getWidth(); ++x) {
+    for (auto y = 0; y < defaultEnvironmentCubeMap->getHeight(); ++y) {
+        for (auto x = 0; x < defaultEnvironmentCubeMap->getWidth(); ++x) {
             defaultEnvironmentCubeMap->setPixelf(x, y, 0.4F, 0.53F, 0.74F, 1.0F);
         }
     }

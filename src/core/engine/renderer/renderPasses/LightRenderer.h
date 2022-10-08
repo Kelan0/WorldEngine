@@ -112,7 +112,7 @@ private:
     std::vector<GPUShadowMap> m_shadowMapBufferData;
     std::vector<GPUCamera> m_shadowCameraInfoBufferData;
 
-    size_t m_numLightEntities;
+    uint32_t m_numLightEntities;
 };
 
 

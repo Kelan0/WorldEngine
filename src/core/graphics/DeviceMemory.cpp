@@ -162,8 +162,8 @@ DeviceMemoryHeap::~DeviceMemoryHeap() {
 DeviceMemoryHeap* DeviceMemoryHeap::create(const DeviceMemoryConfiguration& deviceMemoryConfiguration) {
     assert(!deviceMemoryConfiguration.device.expired());
 
-    char sizeLebel[6] = "";
-    printf("Allocating device memory heap: %.3f %s\n", Util::getMemorySizeMagnitude(deviceMemoryConfiguration.size, sizeLebel), sizeLebel);
+    char sizeLabel[6] = "";
+    printf("Allocating device memory heap: %.3f %s\n", Util::getMemorySizeMagnitude(deviceMemoryConfiguration.size, sizeLabel), sizeLabel);
 
     const vk::Device& device = **deviceMemoryConfiguration.device.lock();
 

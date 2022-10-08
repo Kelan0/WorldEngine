@@ -72,10 +72,10 @@ private:
     struct RenderCommand {
         MeshPrimitiveType primitiveType;
         RenderState state;
-        size_t vertexOffset;
-        size_t indexOffset;
-        size_t vertexCount;
-        size_t indexCount;
+        uint32_t vertexOffset;
+        uint32_t indexOffset;
+        uint32_t vertexCount;
+        uint32_t indexCount;
     };
 
 public:
@@ -163,10 +163,10 @@ private:
 private:
     std::vector<ColouredVertex> m_vertices;
     std::vector<uint32_t> m_indices;
-    size_t m_vertexCount;
-    size_t m_indexCount;
-    size_t m_firstChangedVertex;
-    size_t m_firstChangedIndex;
+    uint32_t m_vertexCount;
+    uint32_t m_indexCount;
+    uint32_t m_firstChangedVertex;
+    uint32_t m_firstChangedIndex;
 
     std::vector<RenderCommand> m_renderCommands;
     std::vector<UniformBufferData> m_uniformBufferData;

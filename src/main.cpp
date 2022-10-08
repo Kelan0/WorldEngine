@@ -251,7 +251,7 @@ class App : public Application {
             if (cameraPitch > +M_PI * 0.5) cameraPitch = +M_PI * 0.5;
             if (cameraPitch < -M_PI * 0.5) cameraPitch = -M_PI * 0.5;
 
-            cameraTransform.setRotation(cameraPitch, cameraYaw);
+            cameraTransform.setRotation((float)cameraPitch, (float)cameraYaw);
 
             double movementSpeed = 1.0;
             glm::dvec3 movementDir(0.0);

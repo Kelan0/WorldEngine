@@ -51,7 +51,7 @@ Mesh* Mesh::create(const MeshConfiguration& meshConfiguration) {
     return mesh;
 }
 
-bool Mesh::uploadVertices(const void* vertices, size_t vertexSize, size_t vertexCount) {
+bool Mesh::uploadVertices(const void* vertices, const vk::DeviceSize& vertexSize, const size_t& vertexCount) {
     PROFILE_SCOPE("Mesh::uploadVertices")
     delete m_vertexBuffer;
 
@@ -65,7 +65,7 @@ bool Mesh::uploadVertices(const void* vertices, size_t vertexSize, size_t vertex
 
     BufferConfiguration vertexBufferConfig;
     vertexBufferConfig.device = m_device;
-    vertexBufferConfig.size = vertexCount * vertexSize;
+    vertexBufferConfig.size = (vk::DeviceSize)(vertexCount) * vertexSize;
     vertexBufferConfig.data = (void*)vertices;
     vertexBufferConfig.usage = vk::BufferUsageFlagBits::eVertexBuffer;
     vertexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
@@ -80,7 +80,7 @@ bool Mesh::uploadVertices(const void* vertices, size_t vertexSize, size_t vertex
     return true;
 }
 
-bool Mesh::uploadIndices(const void* indices, size_t indexSize, size_t indexCount) {
+bool Mesh::uploadIndices(const void* indices, const vk::DeviceSize& indexSize, const size_t& indexCount) {
     PROFILE_SCOPE("Mesh::uploadIndices")
     delete m_indexBuffer;
 
@@ -94,7 +94,7 @@ bool Mesh::uploadIndices(const void* indices, size_t indexSize, size_t indexCoun
 
     BufferConfiguration indexBufferConfig;
     indexBufferConfig.device = m_device;
-    indexBufferConfig.size = indexCount * indexSize;
+    indexBufferConfig.size = (vk::DeviceSize)indexCount * indexSize;
     indexBufferConfig.data = (void*)indices;
     indexBufferConfig.usage = vk::BufferUsageFlagBits::eIndexBuffer;
     indexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
@@ -113,25 +113,26 @@ void Mesh::setPrimitiveType(const MeshPrimitiveType& primitiveType) {
     m_primitiveType = primitiveType;
 }
 
-void Mesh::draw(const vk::CommandBuffer& commandBuffer, uint32_t instanceCount, uint32_t firstInstance) {
+void Mesh::draw(const vk::CommandBuffer& commandBuffer, const uint32_t& instanceCount, const uint32_t& firstInstance) {
     PROFILE_SCOPE("Mesh::draw")
 
     const vk::Buffer& vertexBuffer = m_vertexBuffer->getBuffer();
-    vk::DeviceSize offset = 0;
+    const vk::DeviceSize offset = 0;
 
     commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer, &offset);
     commandBuffer.bindIndexBuffer(m_indexBuffer->getBuffer(), 0, vk::IndexType::eUint32);
 
     auto start = std::chrono::high_resolution_clock::now();
-    //printf("Drawing mesh 0x%p with %d instances\n", this, instanceCount);
+
     commandBuffer.drawIndexed(getIndexCount(), instanceCount, 0, 0, firstInstance);
+
     auto end = std::chrono::high_resolution_clock::now();
 
     uint64_t elapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 
     // if debug
-    size_t numIndices = m_indexBuffer->getSize() / m_indexSize;
-    size_t numVertices = m_vertexBuffer->getSize() / m_vertexSize;
+    size_t numIndices = (size_t)(m_indexBuffer->getSize() / m_indexSize);
+    size_t numVertices = (size_t)(m_vertexBuffer->getSize() / m_vertexSize);
     Engine::graphics()->debugInfo().renderedPolygons += MeshUtils::getPolygonCount(numIndices, m_primitiveType);
     Engine::graphics()->debugInfo().renderedIndices += numIndices * instanceCount;
     Engine::graphics()->debugInfo().renderedVertices += numVertices * instanceCount;
@@ -141,11 +142,11 @@ void Mesh::draw(const vk::CommandBuffer& commandBuffer, uint32_t instanceCount, 
 }
 
 uint32_t Mesh::getVertexCount() const {
-    return m_vertexBuffer->getSize() / m_vertexSize;
+    return (uint32_t)(m_vertexBuffer->getSize() / m_vertexSize);
 }
 
 uint32_t Mesh::getIndexCount() const {
-    return m_indexBuffer->getSize() / m_indexSize;
+    return (uint32_t)(m_indexBuffer->getSize() / m_indexSize);
 }
 
 const MeshPrimitiveType& Mesh::getPrimitiveType() const {

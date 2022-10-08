@@ -402,37 +402,37 @@ bool GraphicsPipeline::isStateDynamic(const vk::DynamicState& dynamicState) cons
 }
 
 
-void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, const size_t& firstViewport, const size_t& viewportCount, const vk::Viewport* viewports) {
+void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const uint32_t& viewportCount, const vk::Viewport* viewports) {
     validateDynamicState(vk::DynamicState::eViewport);
     commandBuffer.setViewport(firstViewport, viewportCount, viewports);
 }
 
-void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, const size_t& firstViewport, const std::vector<vk::Viewport>& viewports) {
-    setViewport(commandBuffer, firstViewport, viewports.size(), viewports.data());
+void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const std::vector<vk::Viewport>& viewports) {
+    setViewport(commandBuffer, firstViewport, (uint32_t)viewports.size(), viewports.data());
 }
 
-void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, const size_t& firstViewport, const vk::Viewport& viewport) {
+void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const vk::Viewport& viewport) {
     setViewport(commandBuffer, firstViewport, 1, &viewport);
 }
 
-void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, const size_t& firstViewport, const float& x, const float& y, const float& width, const float& height, const float& minDepth, const float& maxDepth) {
+void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const float& x, const float& y, const float& width, const float& height, const float& minDepth, const float& maxDepth) {
     setViewport(commandBuffer, firstViewport, vk::Viewport(x, y, width, height, minDepth, maxDepth));
 }
 
-void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, const size_t& firstScissor, const size_t& scissorCount, const vk::Rect2D* scissorRects) {
+void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const uint32_t& scissorCount, const vk::Rect2D* scissorRects) {
     validateDynamicState(vk::DynamicState::eScissor);
     commandBuffer.setScissor(firstScissor, scissorCount, scissorRects);
 }
 
-void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, const size_t& firstScissor, const std::vector<vk::Rect2D>& scissorRects) {
-    setScissor(commandBuffer, firstScissor, scissorRects.size(), scissorRects.data());
+void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const std::vector<vk::Rect2D>& scissorRects) {
+    setScissor(commandBuffer, firstScissor, (uint32_t)scissorRects.size(), scissorRects.data());
 }
 
-void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, const size_t& firstScissor, const vk::Rect2D& scissorRect) {
+void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const vk::Rect2D& scissorRect) {
     setScissor(commandBuffer, firstScissor, 1, &scissorRect);
 }
 
-void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, const size_t& firstScissor, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height) {
+void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height) {
     setScissor(commandBuffer, firstScissor, vk::Rect2D(vk::Offset2D(x, y), vk::Extent2D(width, height)));
 }
 
@@ -485,7 +485,7 @@ void GraphicsPipeline::setSampleLocations(const vk::CommandBuffer& commandBuffer
 }
 
 void GraphicsPipeline::setSampleLocations(const vk::CommandBuffer& commandBuffer, const vk::SampleCountFlagBits& samplesPerPixel, const vk::Extent2D& sampleGridSize, const std::vector<vk::SampleLocationEXT>& sampleLocations) {
-    setSampleLocations(commandBuffer, samplesPerPixel, sampleGridSize, sampleLocations.size(), sampleLocations.data());
+    setSampleLocations(commandBuffer, samplesPerPixel, sampleGridSize, (uint32_t)sampleLocations.size(), sampleLocations.data());
 }
 
 void GraphicsPipeline::setLineStipple(const vk::CommandBuffer& commandBuffer, const uint32_t& lineStippleFactor, const uint16_t& lineStipplePattern) {
@@ -513,7 +513,7 @@ void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer,
 }
 
 void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const std::vector<vk::Buffer>& buffers, const std::vector<vk::DeviceSize>& offsets) {
-    bindVertexBuffers(commandBuffer, firstBinding, buffers.size(), buffers.data(), offsets.data());
+    bindVertexBuffers(commandBuffer, firstBinding, (uint32_t)buffers.size(), buffers.data(), offsets.data());
 }
 
 void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const uint32_t& bindingCount, const vk::Buffer* buffers, const vk::DeviceSize* offsets, const vk::DeviceSize* sizes, const vk::DeviceSize* strides) {
@@ -522,29 +522,29 @@ void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer,
 }
 
 void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const std::vector<vk::Buffer>& buffers, const std::vector<vk::DeviceSize>& offsets, const std::vector<vk::DeviceSize>& sizes, const std::vector<vk::DeviceSize>& strides) {
-    bindVertexBuffers(commandBuffer, firstBinding, buffers.size(), buffers.data(), offsets.data(), sizes.empty() ? nullptr : sizes.data(), strides.empty() ? nullptr : strides.data());
+    bindVertexBuffers(commandBuffer, firstBinding, (uint32_t)buffers.size(), buffers.data(), offsets.data(), sizes.empty() ? nullptr : sizes.data(), strides.empty() ? nullptr : strides.data());
 }
 
 void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const uint32_t& bindingCount, Buffer* const* buffers, const vk::DeviceSize* offsets) {
     std::vector<vk::Buffer> vkBuffers(bindingCount, VK_NULL_HANDLE);
-    for (size_t i = 0; i < bindingCount; ++i)
+    for (uint32_t i = 0; i < bindingCount; ++i)
         if (buffers[i] != nullptr) vkBuffers[i] = buffers[i]->getBuffer();
-    bindVertexBuffers(commandBuffer, firstBinding, vkBuffers.size(), vkBuffers.data(), offsets);
+    bindVertexBuffers(commandBuffer, firstBinding, (uint32_t)vkBuffers.size(), vkBuffers.data(), offsets);
 }
 
 void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const std::vector<Buffer*>& buffers, const std::vector<vk::DeviceSize>& offsets) {
-    bindVertexBuffers(commandBuffer, firstBinding, buffers.size(), buffers.data(), offsets.data());
+    bindVertexBuffers(commandBuffer, firstBinding, (uint32_t)buffers.size(), buffers.data(), offsets.data());
 }
 
 void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const uint32_t& bindingCount, Buffer* const* buffers, const vk::DeviceSize* offsets, const vk::DeviceSize* sizes, const vk::DeviceSize* strides) {
     std::vector<vk::Buffer> vkBuffers(bindingCount, VK_NULL_HANDLE);
-    for (size_t i = 0; i < bindingCount; ++i)
+    for (uint32_t i = 0; i < bindingCount; ++i)
         if (buffers[i] != nullptr) vkBuffers[i] = buffers[i]->getBuffer();
-    bindVertexBuffers(commandBuffer, firstBinding, vkBuffers.size(), vkBuffers.data(), offsets, sizes, strides);
+    bindVertexBuffers(commandBuffer, firstBinding, (uint32_t)vkBuffers.size(), vkBuffers.data(), offsets, sizes, strides);
 }
 
 void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const std::vector<Buffer*>& buffers, const std::vector<vk::DeviceSize>& offsets, const std::vector<vk::DeviceSize>& sizes, const std::vector<vk::DeviceSize>& strides) {
-    bindVertexBuffers(commandBuffer, firstBinding, buffers.size(), buffers.data(), offsets.data(), sizes.empty() ? nullptr : sizes.data(), strides.empty() ? nullptr : strides.data());
+    bindVertexBuffers(commandBuffer, firstBinding, (uint32_t)buffers.size(), buffers.data(), offsets.data(), sizes.empty() ? nullptr : sizes.data(), strides.empty() ? nullptr : strides.data());
 }
 
 
@@ -579,7 +579,7 @@ void GraphicsPipeline::setStencilOp(const vk::CommandBuffer& commandBuffer, cons
     commandBuffer.setStencilOpEXT(faceMask, failOp, passOp, depthFailOp, compareOp);
 }
 
-void GraphicsPipeline::setVertexInput(const vk::CommandBuffer& commandBuffer, const size_t vertexBindingCount, const vk::VertexInputBindingDescription2EXT* vertexBindings, const size_t& vertexAttribCount, const vk::VertexInputAttributeDescription2EXT* vertexAttribs) {
+void GraphicsPipeline::setVertexInput(const vk::CommandBuffer& commandBuffer, const uint32_t& vertexBindingCount, const vk::VertexInputBindingDescription2EXT* vertexBindings, const uint32_t& vertexAttribCount, const vk::VertexInputAttributeDescription2EXT* vertexAttribs) {
     validateDynamicState(vk::DynamicState::eVertexInputEXT);
     commandBuffer.setVertexInputEXT(vertexBindingCount, vertexBindings, vertexAttribCount, vertexAttribs);
 }

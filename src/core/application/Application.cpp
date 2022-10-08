@@ -39,7 +39,7 @@ bool Application::initInternal() {
     PROFILE_SCOPE("Application::initInternal")
 
     m_mainThreadId = std::this_thread::get_id();
-    printf("Initializing application on main thread 0x%016x\n", ThreadUtils::getThreadHashedId(m_mainThreadId));
+    printf("Initializing application on main thread 0x%016llx\n", ThreadUtils::getThreadHashedId(m_mainThreadId));
     m_executionDirectory = PlatformUtils::findExecutionDirectory();
 
     PROFILE_REGION("Init SDL")

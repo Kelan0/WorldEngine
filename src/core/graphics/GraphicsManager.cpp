@@ -366,11 +366,11 @@ bool GraphicsManager::comparePhysicalDevices(const vkr::PhysicalDevice& physical
     uint64_t vram1 = 0;
     uint64_t vram2 = 0;
 
-    for (int i = 0; i < mem1.memoryHeapCount; ++i)
+    for (size_t i = 0; i < mem1.memoryHeapCount; ++i)
         if ((mem1.memoryHeaps[i].flags & vk::MemoryHeapFlagBits::eDeviceLocal))
             vram1 += mem1.memoryHeaps[i].size;
 
-    for (int i = 0; i < mem2.memoryHeapCount; ++i)
+    for (size_t i = 0; i < mem2.memoryHeapCount; ++i)
         if ((mem2.memoryHeaps[i].flags & vk::MemoryHeapFlagBits::eDeviceLocal))
             vram2 += mem2.memoryHeaps[i].size;
 
@@ -408,7 +408,7 @@ bool GraphicsManager::isPhysicalDeviceSuitable(const vkr::PhysicalDevice& physic
         deviceProperties.deviceType != vk::PhysicalDeviceType::eIntegratedGpu &&
         deviceProperties.deviceType != vk::PhysicalDeviceType::eVirtualGpu) {
 
-        printf("Device \"%s\" is not a supported type\n", deviceProperties.deviceName);
+        printf("Device \"%s\" is not a supported type\n", deviceProperties.deviceName.data());
         return false;
     }
 
@@ -470,7 +470,7 @@ bool GraphicsManager::selectQueueFamilies(const vkr::PhysicalDevice& physicalDev
                 requiredQueueTypes += ", ";
         }
 
-        printf("Device \"%s\" does not support the required queue types: [%s]\n", deviceProperties.deviceName, requiredQueueTypes.c_str());
+        printf("Device \"%s\" does not support the required queue types: [%s]\n", deviceProperties.deviceName.data(), requiredQueueTypes.c_str());
         return false;
     }
 
@@ -528,9 +528,9 @@ bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enable
     printf("Creating logical device\n");
 
     std::set<uint32_t> uniqueQueueFamilyIndices;
-    for (int i = 0; i < m_queues.indices.size(); ++i) {
-        if (m_queues.indices[i].has_value())
-            uniqueQueueFamilyIndices.insert(m_queues.indices[i].value());
+    for (auto& index : m_queues.indices) {
+        if (index.has_value())
+            uniqueQueueFamilyIndices.insert(index.value());
     }
 
     std::vector<vk::QueueFamilyProperties> queueFamilyProperties = m_device.physicalDevice->getQueueFamilyProperties();
@@ -542,7 +542,7 @@ bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enable
 
     std::unordered_map<uint32_t, std::vector<std::string>> queueIndexMap;
 
-    for (auto it = uniqueQueueFamilyIndices.begin(); it != uniqueQueueFamilyIndices.end() && queueLayout.size() > 0; ++it) {
+    for (auto it = uniqueQueueFamilyIndices.begin(); it != uniqueQueueFamilyIndices.end() && !queueLayout.empty(); ++it) {
         uint32_t queueFamilyIndex = *it;
 
         std::vector<std::string>& queueIds = queueIndexMap[queueFamilyIndex];
@@ -565,19 +565,19 @@ bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enable
             }
         }
 
-        if (queueIds.size() == 0) {
+        if (queueIds.empty()) {
             printf("Could not initialize the desired queue layout for queue family %d\n", queueFamilyIndex);
             continue;
         }
 
         vk::DeviceQueueCreateInfo deviceQueueCreateInfo;
         deviceQueueCreateInfo.queueFamilyIndex = queueFamilyIndex;
-        deviceQueueCreateInfo.queueCount = queueIds.size();
+        deviceQueueCreateInfo.queueCount = (uint32_t)queueIds.size();
         deviceQueueCreateInfo.pQueuePriorities = queuePriorities.data();
         deviceQueueCreateInfos.push_back(deviceQueueCreateInfo);
     }
 
-    if (queueLayout.size() > 0) {
+    if (!queueLayout.empty()) {
         // Some required queues are left over...
         printf("Could not initialize logical device with all required queues\n");
         return false;
@@ -880,7 +880,8 @@ bool GraphicsManager::beginFrame() {
     const vk::Fence& frameFence = **m_swapchain.inFlightFences[m_swapchain.currentFrameIndex];
     const vk::SwapchainKHR& swapchain = **m_swapchain.swapchain;
 
-    m_device.device->waitForFences({ frameFence }, true, UINT64_MAX);
+    vk::Result result = m_device.device->waitForFences({ frameFence }, true, UINT64_MAX);
+    assert(result == vk::Result::eSuccess);
 
 //    PROFILE_REGION("Reset frame fence")
 //    m_device.device->resetFences({ frameFence });
@@ -939,8 +940,10 @@ void GraphicsManager::endFrame() {
 
     PROFILE_REGION("Wait for image fence")
 
-    if (m_swapchain.imagesInFlight[m_swapchain.currentImageIndex])
-        device.waitForFences({ m_swapchain.imagesInFlight[m_swapchain.currentImageIndex] }, true, UINT64_MAX);
+    if (m_swapchain.imagesInFlight[m_swapchain.currentImageIndex]) {
+        vk::Result result = device.waitForFences({m_swapchain.imagesInFlight[m_swapchain.currentImageIndex]}, true, UINT64_MAX);
+        assert(result == vk::Result::eSuccess);
+    }
     m_swapchain.imagesInFlight[m_swapchain.currentImageIndex] = frameFence;
 
     PROFILE_REGION("Reset frame fence")
@@ -1057,10 +1060,11 @@ const vk::CommandBuffer& GraphicsManager::beginOneTimeCommandBuffer() {
 void GraphicsManager::endOneTimeCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Queue& queue) {
     commandBuffer.end();
 
-    vk::SubmitInfo queueSumbitInfo;
-    queueSumbitInfo.setCommandBufferCount(1);
-    queueSumbitInfo.setPCommandBuffers(&commandBuffer);
-    queue.submit(1, &queueSumbitInfo, VK_NULL_HANDLE);
+    vk::SubmitInfo queueSubmitInfo{};
+    queueSubmitInfo.setCommandBufferCount(1);
+    queueSubmitInfo.setPCommandBuffers(&commandBuffer);
+    vk::Result result = queue.submit(1, &queueSubmitInfo, VK_NULL_HANDLE);
+    assert(result == vk::Result::eSuccess);
 }
 
 

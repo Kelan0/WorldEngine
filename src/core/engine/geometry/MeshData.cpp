@@ -122,12 +122,13 @@ inline std::vector<std::string> split(const std::string& string, const char deli
 
 
 
+typedef uint32_t obj_index_t;
 
 struct Index {
     union {
-        struct { uint32_t p, t, n; };
-        glm::uvec3 k;
-        uint32_t i[3];
+        struct { obj_index_t p, t, n; };
+        glm::vec<3, obj_index_t> k;
+        obj_index_t i[3];
     };
 };
 
@@ -141,8 +142,8 @@ struct object {
     std::string objectName;
     std::string groupName;
     std::string materialName;
-    uint32_t triangleBeginIndex;
-    uint32_t triangleEndIndex;
+    obj_index_t triangleBeginIndex;
+    obj_index_t triangleEndIndex;
 };
 
 
@@ -154,17 +155,13 @@ void compileOBJObject(
         std::vector<glm::vec3>& positions,
         std::vector<glm::vec2>& textures,
         std::vector<glm::vec3>& normals,
-        std::unordered_map<glm::uvec3, uint32_t>& mappedIndices) {
+        std::unordered_map<glm::uvec3, obj_index_t>& mappedIndices) {
 
-    constexpr uint32_t npos = uint32_t(-1);
+    constexpr obj_index_t npos = obj_index_t(-1);
 
-    currentObject.triangleBeginIndex = triangles.size();
+    currentObject.triangleBeginIndex = (obj_index_t)triangles.size();
 
-    size_t numPositions = positions.size();
-    size_t numTriangles = triangles.size();
-
-    for (int i = 0; i < faces.size(); ++i) {
-        const Face& face = faces[i];
+    for (const Face& face : faces) {
         MeshUtils::OBJMeshData::Triangle tri;
 
         bool useFaceNormal = false;
@@ -172,13 +169,13 @@ void compileOBJObject(
         for (int j = 0; j < 3; ++j) {
             const Index& index = face.v[j];
 
-            uint32_t mappedIndex = mappedIndices[index.k];
+            obj_index_t mappedIndex = mappedIndices[index.k];
 
             if (mappedIndex == npos) {
                 glm::vec3 position = index.p != npos ? positions[index.p] : glm::vec3(0.0F);
                 glm::vec3 normal = index.n != npos ? normals[index.n] : glm::vec3(NAN);
                 glm::vec2 texture = index.t != npos ? textures[index.t] : glm::vec2(0.0F);
-                mappedIndex = vertices.size();
+                mappedIndex = (obj_index_t)vertices.size();
                 mappedIndices[index.k] = mappedIndex;
                 vertices.emplace_back(position, normal, texture);
             }
@@ -201,7 +198,7 @@ void compileOBJObject(
         triangles.emplace_back(tri);
     }
 
-    currentObject.triangleEndIndex = triangles.size();
+    currentObject.triangleEndIndex = (obj_index_t)triangles.size();
 }
 
 bool MeshUtils::loadOBJFile(const std::string& filePath, MeshUtils::OBJMeshData& meshData) {
@@ -215,10 +212,7 @@ bool MeshUtils::loadOBJFile(const std::string& filePath, MeshUtils::OBJMeshData&
         return false;
     }
 
-    constexpr uint32_t npos = uint32_t(-1);
-
-
-    uint32_t nextMaterialId = 0;
+    constexpr obj_index_t npos = obj_index_t(-1);
 
     std::vector<glm::vec3> positions;
     std::vector<glm::vec2> textures;
@@ -227,7 +221,7 @@ bool MeshUtils::loadOBJFile(const std::string& filePath, MeshUtils::OBJMeshData&
 
     std::vector<MeshUtils::OBJMeshData::Vertex> vertices;
     std::vector<MeshUtils::OBJMeshData::Triangle> triangles;
-    std::unordered_map<glm::uvec3, uint32_t> mappedIndices;
+    std::unordered_map<glm::uvec3, obj_index_t> mappedIndices;
     //std::unordered_map<std::string, MaterialSet*> loadedMaterialSets;
 
     std::string currentObjectName = "default";
@@ -271,7 +265,7 @@ bool MeshUtils::loadOBJFile(const std::string& filePath, MeshUtils::OBJMeshData&
             } else if (line.rfind("f ", 0) == 0) { // line is a face definition
                 std::vector<std::string> faceComps = split(line, ' ');
 
-                uint32_t faceSize = faceComps.size() - 1;
+                size_t faceSize = faceComps.size() - 1;
 
                 if (faceSize < 3) {
                     printf("Warning: Loading OBJ file \"%s\", skipping invalid face on line %d\n", filePath.c_str(), lineNumber);
@@ -279,7 +273,7 @@ bool MeshUtils::loadOBJFile(const std::string& filePath, MeshUtils::OBJMeshData&
                 }
 
                 Index* indices = new Index[faceSize];
-                for (int i = 0; i < faceSize; i++) {
+                for (size_t i = 0; i < faceSize; i++) {
                     std::vector<std::string> vertComps = split(faceComps[i + 1], '/');
 
                     indices[i].p = npos;
@@ -310,8 +304,8 @@ bool MeshUtils::loadOBJFile(const std::string& filePath, MeshUtils::OBJMeshData&
                 }
 
                 // triangle fan
-                for (int i = 1; i < faceSize - 1; i++) {
-                    Face f;
+                for (size_t i = 1; i < faceSize - 1; i++) {
+                    Face f{};
                     f.v[0] = indices[0];
                     f.v[1] = indices[i];
                     f.v[2] = indices[i + 1];
@@ -437,7 +431,7 @@ bool readMeshCache(const std::filesystem::path& path, MeshUtils::OBJMeshData& me
 
     std::ifstream file(path, std::ios::binary);
     if (!file.is_open()) {
-        printf("Failed to open cached mesh file \"%s\"\n", path.c_str());
+        printf("Failed to open cached mesh file \"%s\"\n", path.string().c_str());
         return false;
     }
 
@@ -463,11 +457,11 @@ bool readMeshCache(const std::filesystem::path& path, MeshUtils::OBJMeshData& me
 bool writeMeshCache(const std::filesystem::path& path, MeshUtils::OBJMeshData& meshData) {
     std::ofstream file(path, std::ios::binary);
     if (!file.is_open()) {
-        printf("Failed to create mesh cache file \"%s\"\n", path.c_str());
+        printf("Failed to create mesh cache file \"%s\"\n", path.string().c_str());
         return false;
     }
 
-    printf("Writing mesh cache file \"%s\"\n", path.c_str());
+    printf("Writing mesh cache file \"%s\"\n", path.string().c_str());
 
     uint64_t vertexCount = meshData.vertices().size();
     uint64_t indexCount = meshData.indices().size();

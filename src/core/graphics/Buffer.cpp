@@ -123,7 +123,10 @@ bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk:
     vk::SubmitInfo queueSumbitInfo;
     queueSumbitInfo.setCommandBufferCount(1);
     queueSumbitInfo.setPCommandBuffers(&transferCommandBuffer);
-    transferQueue.submit(1, &queueSumbitInfo, VK_NULL_HANDLE);
+    vk::Result result = transferQueue.submit(1, &queueSumbitInfo, VK_NULL_HANDLE);
+#if _DEBUG
+    assert(result == vk::Result::eSuccess);
+#endif
     transferQueue.waitIdle();
 
     return true;

@@ -109,7 +109,7 @@ void EnvironmentMap::update() {
                 m_specularReflectionMapTextureMipLevels.clear();
                 m_specularReflectionMapTextureMipLevels.resize(m_specularMapMipLevels, nullptr);
 
-                for (size_t i = 0; i < m_specularMapMipLevels; ++i) {
+                for (uint32_t i = 0; i < m_specularMapMipLevels; ++i) {
                     m_specularReflectionMapTextureMipLevels[i] = createTexture(m_specularReflectionImage, i, 1);
                 }
             }
@@ -151,7 +151,8 @@ void EnvironmentMap::update() {
         vk::SubmitInfo queueSubmitInfo;
         queueSubmitInfo.setCommandBufferCount(1);
         queueSubmitInfo.setPCommandBuffers(&commandBuffer);
-        computeQueue.submit(1, &queueSubmitInfo, VK_NULL_HANDLE);
+        vk::Result result = computeQueue.submit(1, &queueSubmitInfo, VK_NULL_HANDLE);
+        assert(result == vk::Result::eSuccess);
         computeQueue.waitIdle();
 
         printf("======== Updating environment map took %.2f msec\n", Performance::milliseconds(t0));
@@ -254,7 +255,7 @@ void EnvironmentMap::calculateSpecularReflection(const vk::CommandBuffer& comman
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute,computePipeline->getPipelineLayout(), 0, 1, &descriptorSet->getDescriptorSet(), 0, nullptr);
 
     uint32_t specularMapSize = m_specularMapSize;
-    for (size_t i = 0; i < m_specularMapMipLevels; ++i) {
+    for (uint32_t i = 0; i < m_specularMapMipLevels; ++i) {
         pushConstantData.dstSize = specularMapSize;
         pushConstantData.mipLevel = i;
 
@@ -459,7 +460,7 @@ std::shared_ptr<Texture> EnvironmentMap::createTexture(const std::shared_ptr<Ima
     samplerConfig.magFilter = vk::Filter::eLinear;
     samplerConfig.mipmapMode = vk::SamplerMipmapMode::eLinear;
     samplerConfig.minLod = 0.0F;
-    samplerConfig.maxLod = image->getMipLevelCount();
+    samplerConfig.maxLod = (float)image->getMipLevelCount();
     samplerConfig.mipLodBias = 0.0F;
     return std::shared_ptr<Texture>(Texture::create(imageViewConfig, samplerConfig));
 }

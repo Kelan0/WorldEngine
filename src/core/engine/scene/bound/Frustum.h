@@ -50,9 +50,9 @@ public:
 
     bool containsPoint(const double& x, const double& y, const double& z);
 
-    const Plane& getPlane(const uint32_t& planeIndex) const;
+    const Plane& getPlane(const size_t& planeIndex) const;
 
-    const glm::dvec3& getCorner(const uint32_t& cornerIndex) const;
+    const glm::dvec3& getCorner(const size_t& cornerIndex) const;
 
     static std::array<glm::dvec3, NumCorners> getCornersNDC();
 

@@ -266,14 +266,14 @@ bool Image2D::validateImageRegion(const Image2D* image, ImageRegion& imageRegion
         return false;
     }
 
-    if (imageRegion.x >= image->getWidth() || imageRegion.y >= image->getHeight()) {
+    if ((ImageRegion::size_type)imageRegion.x >= image->getWidth() || (ImageRegion::size_type)imageRegion.y >= image->getHeight()) {
         printf("Image region out of range\n");
         return false;
     }
 
-    if (imageRegion.width == VK_WHOLE_SIZE) imageRegion.width = image->getWidth() - imageRegion.x;
-    if (imageRegion.height == VK_WHOLE_SIZE) imageRegion.height = image->getHeight() - imageRegion.y;
-    if (imageRegion.mipLevelCount == VK_WHOLE_SIZE) imageRegion.mipLevelCount = 1;
+    if (imageRegion.width == ImageRegion::WHOLE_SIZE) imageRegion.width = image->getWidth() - imageRegion.x;
+    if (imageRegion.height == ImageRegion::WHOLE_SIZE) imageRegion.height = image->getHeight() - imageRegion.y;
+    if (imageRegion.mipLevelCount == ImageRegion::WHOLE_SIZE) imageRegion.mipLevelCount = 1;
     imageRegion.z = 0;
     imageRegion.depth = 1;
     imageRegion.baseLayer = 0;

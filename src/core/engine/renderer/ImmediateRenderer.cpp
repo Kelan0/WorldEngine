@@ -134,7 +134,7 @@ void ImmediateRenderer::render(double dt) {
         vk::DeviceSize vertexBufferOffset = command.vertexOffset * sizeof(ColouredVertex);
         vk::DeviceSize indexBufferOffset = command.indexOffset * sizeof(uint32_t);
 
-        uint32_t dynamicOffset = index * sizeof(UniformBufferData);
+        uint32_t dynamicOffset = (uint32_t)(index * sizeof(UniformBufferData));
 
         commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->getPipelineLayout(), 0, 1, &descriptorSet, 1, &dynamicOffset);
         commandBuffer.bindVertexBuffers(0, 1, &m_vertexBuffer->getBuffer(), &vertexBufferOffset);
@@ -149,8 +149,8 @@ void ImmediateRenderer::render(double dt) {
     m_uniformBufferData.clear();
     m_vertexCount = 0;
     m_indexCount = 0;
-    m_firstChangedVertex = SIZE_MAX;
-    m_firstChangedIndex = SIZE_MAX;
+    m_firstChangedVertex = (uint32_t)(-1);
+    m_firstChangedIndex = (uint32_t)(-1);
 
     colour(glm::u8vec4(255, 255, 255, 255));
     normal(glm::vec3(0.0F, 0.0F, 0.0F));
@@ -202,7 +202,7 @@ void ImmediateRenderer::end() {
 void ImmediateRenderer::vertex(const glm::vec3& position) {
     ColouredVertex v(position, m_normal, m_texture, m_colour);
 
-    size_t index = m_vertexCount - m_currentCommand->vertexOffset;
+    uint32_t index = m_vertexCount - m_currentCommand->vertexOffset;
 
     addVertex(v);
     addIndex(index);
@@ -265,17 +265,17 @@ void ImmediateRenderer::colour(const glm::vec3& colour) {
 }
 
 void ImmediateRenderer::colour(const float& r, const float& g, const float& b, const float& a) {
-    m_colour.r = glm::clamp(r, 0.0F, 1.0F) * 255.0F;
-    m_colour.g = glm::clamp(g, 0.0F, 1.0F) * 255.0F;
-    m_colour.b = glm::clamp(b, 0.0F, 1.0F) * 255.0F;
-    m_colour.a = glm::clamp(a, 0.0F, 1.0F) * 255.0F;
+    m_colour.r = (uint8_t)(glm::clamp(r, 0.0F, 1.0F) * 255.0F);
+    m_colour.g = (uint8_t)(glm::clamp(g, 0.0F, 1.0F) * 255.0F);
+    m_colour.b = (uint8_t)(glm::clamp(b, 0.0F, 1.0F) * 255.0F);
+    m_colour.a = (uint8_t)(glm::clamp(a, 0.0F, 1.0F) * 255.0F);
 }
 
 void ImmediateRenderer::colour(const float& r, const float& g, const float& b) {
-    m_colour.r = glm::clamp(r, 0.0F, 1.0F) * 255.0F;
-    m_colour.g = glm::clamp(g, 0.0F, 1.0F) * 255.0F;
-    m_colour.b = glm::clamp(b, 0.0F, 1.0F) * 255.0F;
-    m_colour.a = 255;
+    m_colour.r = (uint8_t)(glm::clamp(r, 0.0F, 1.0F) * 255.0F);
+    m_colour.g = (uint8_t)(glm::clamp(g, 0.0F, 1.0F) * 255.0F);
+    m_colour.b = (uint8_t)(glm::clamp(b, 0.0F, 1.0F) * 255.0F);
+    m_colour.a = (uint8_t)(255);
 }
 
 void ImmediateRenderer::pushMatrix(const MatrixMode& matrixMode) {
@@ -410,7 +410,7 @@ void ImmediateRenderer::addVertex(const ColouredVertex& vertex) {
 
     constexpr float eps = std::numeric_limits<float>::epsilon();
 
-    if (m_firstChangedVertex == SIZE_MAX)
+    if (m_firstChangedVertex == (uint32_t)(-1))
         if (m_vertexCount >= m_vertices.size() || !vertex.equalsEpsilon(m_vertices[m_vertexCount], eps))
             m_firstChangedVertex = m_vertexCount;
 
@@ -426,7 +426,7 @@ void ImmediateRenderer::addVertex(const ColouredVertex& vertex) {
 void ImmediateRenderer::addIndex(const uint32_t& index) {
     PROFILE_SCOPE("ImmediateRenderer::addIndex");
 
-    if (m_firstChangedIndex == SIZE_MAX)
+    if (m_firstChangedIndex == (uint32_t)(-1))
         if (m_indexCount >= m_indices.size() || index != m_indices[m_indexCount])
             m_firstChangedIndex = m_indexCount;
 
@@ -513,7 +513,7 @@ void ImmediateRenderer::uploadBuffers() {
     PROFILE_REGION("Upload vertices");
     if (!m_vertices.empty()) {
 //        m_vertexBuffer->upload(0, m_vertices.size() * sizeof(ColouredVertex), m_vertices.data());
-        if (m_firstChangedVertex != SIZE_MAX) {
+        if (m_firstChangedVertex != (uint32_t)(-1)) {
             m_vertexBuffer->upload(m_firstChangedVertex * sizeof(ColouredVertex),(m_vertices.size() - m_firstChangedVertex) * sizeof(ColouredVertex),&m_vertices[m_firstChangedVertex]);
         }
     }
@@ -521,7 +521,7 @@ void ImmediateRenderer::uploadBuffers() {
     PROFILE_REGION("Upload indices");
     if (!m_indices.empty()) {
 //        m_indexBuffer->upload(0, m_indices.size() * sizeof(uint32_t), m_indices.data());
-        if (m_firstChangedIndex != SIZE_MAX) {
+        if (m_firstChangedIndex != (uint32_t)(-1)) {
             m_indexBuffer->upload(m_firstChangedIndex * sizeof(uint32_t),(m_indices.size() - m_firstChangedIndex) * sizeof(uint32_t),&m_indices[m_firstChangedIndex]);
         }
     }

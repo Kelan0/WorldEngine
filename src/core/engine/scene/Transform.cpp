@@ -167,20 +167,20 @@ Transform& Transform::setRotation(const glm::mat4& rotation) {
 }
 
 Transform& Transform::setRotation(const glm::vec3& forward, const glm::vec3& up, const bool& normalized) {
-    constexpr float eps = 1e-4;
-    constexpr float epsSq = eps * eps;
-    if (glm::dot(forward, forward) < epsSq) {
-        m_rotation = glm::mat3(1.0); // zero-length forward vector, set rotation to identity
+    constexpr double eps = 1e-4;
+    constexpr double epsSq = eps * eps;
+    if ((double)glm::dot(forward, forward) < epsSq) {
+        m_rotation = glm::mat3(1.0F); // zero-length forward vector, set rotation to identity
         return *this;
     }
-    if (glm::dot(up, up) < epsSq) {
-        m_rotation = glm::mat3(1.0); // zero-length up vector, set rotation to identity
+    if ((double)glm::dot(up, up) < epsSq) {
+        m_rotation = glm::mat3(1.0F); // zero-length up vector, set rotation to identity
         return *this;
     }
 
     m_rotation[2] = -1.0F * (normalized ? forward : glm::normalize(forward));
     glm::vec3 const& right = glm::cross(up, m_rotation[2]); // cross(Y, Z)
-    m_rotation[0] = right * glm::inversesqrt(glm::max(eps, glm::dot(right, right)));
+    m_rotation[0] = right * (float)glm::inversesqrt(glm::max(eps, (double)glm::dot(right, right)));
     m_rotation[1] = glm::cross(m_rotation[2], m_rotation[0]); // cross(Z, X)
     change();
     return *this;

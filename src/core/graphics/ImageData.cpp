@@ -14,7 +14,7 @@ std::unordered_map<std::string, ComputePipeline*> ImageData::ImageTransform::s_t
 
 Buffer* g_imageStagingBuffer = nullptr;
 
-ImageData::ImageData(uint8_t* data, const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const AllocationType& allocationType):
+ImageData::ImageData(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const AllocationType& allocationType):
         m_data(data),
         m_width(width),
         m_height(height),
@@ -23,17 +23,17 @@ ImageData::ImageData(uint8_t* data, const uint32_t& width, const uint32_t& heigh
         m_allocationType(allocationType) {
 }
 
-//ImageData::ImageData(const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat):
+//ImageData::ImageData(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat):
 //        ImageData(nullptr, width, height, pixelLayout, pixelFormat, AllocationType_Internal) {
 //        size_t allocSize = (size_t)width * (size_t)height * (size_t)ImageData::getChannels(pixelLayout) * (size_t)ImageData::getChannelSize(pixelFormat);
 //        m_data = static_cast<uint8_t*>(malloc(allocSize));
 //}
 
-ImageData::ImageData(uint8_t* data, const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat):
+ImageData::ImageData(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat):
     ImageData(data, width, height, pixelLayout, pixelFormat, AllocationType_External) {
 }
 
-ImageData::ImageData(const uint32_t &width, const uint32_t &height, const ImagePixelLayout &pixelLayout, const ImagePixelFormat &pixelFormat):
+ImageData::ImageData(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout &pixelLayout, const ImagePixelFormat &pixelFormat):
     ImageData(nullptr, width, height, pixelLayout, pixelFormat, AllocationType_Internal) {
 
     size_t pixelSize = ImageData::getChannels(pixelLayout) * ImageData::getChannelSize(pixelFormat);
@@ -139,7 +139,7 @@ void ImageData::clearCache() {
     s_imageCache.clear();
 }
 
-ImageData* ImageData::mutate(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout srcLayout, ImagePixelFormat srcFormat, ImagePixelLayout dstLayout, ImagePixelFormat dstFormat) {
+ImageData* ImageData::mutate(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& srcLayout, const ImagePixelFormat& srcFormat, const ImagePixelLayout& dstLayout, const ImagePixelFormat& dstFormat) {
     uint8_t* mutatedPixels;
 
     if (srcLayout == ImagePixelLayout::Invalid || dstLayout == ImagePixelLayout::Invalid) {
@@ -192,9 +192,9 @@ ImageData* ImageData::mutate(uint8_t* data, uint32_t width, uint32_t height, Ima
         int swizzleTransform[4] = { 0, 1, 2, 3 };
 
 
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                for (int i = 0; i < srcChannels; ++i) {
+        for (size_t y = 0; y < height; ++y) {
+            for (size_t x = 0; x < width; ++x) {
+                for (glm::length_t i = 0; i < srcChannels; ++i) {
                     switch (srcFormat) {
                         case ImagePixelFormat::UInt8: channels[swizzleTransform[i]] = reinterpret_cast<uint8_t*>(srcPixel)[i]; break;
                         case ImagePixelFormat::SInt8: channels[swizzleTransform[i]] = reinterpret_cast<int8_t*>(srcPixel)[i]; break;
@@ -204,9 +204,11 @@ ImageData* ImageData::mutate(uint8_t* data, uint32_t width, uint32_t height, Ima
                         case ImagePixelFormat::SInt32: channels[swizzleTransform[i]] = reinterpret_cast<int32_t*>(srcPixel)[i]; break;
                         case ImagePixelFormat::Float16: channels[swizzleTransform[i]] = reinterpret_cast<uint16_t*>(srcPixel)[i]; break;
                         case ImagePixelFormat::Float32: channels[swizzleTransform[i]] = reinterpret_cast<uint32_t*>(srcPixel)[i]; break;
+                        case ImagePixelFormat::Invalid: assert(false);
                     }
                 }
-                for (int i = 0; i < dstChannels; ++i) {
+
+                for (glm::length_t i = 0; i < dstChannels; ++i) {
                     switch (dstFormat) {
                         case ImagePixelFormat::UInt8: reinterpret_cast<uint8_t*>(dstPixel)[i] = channels[i]; break;
                         case ImagePixelFormat::SInt8: reinterpret_cast<int8_t*>(dstPixel)[i] = channels[i]; break;
@@ -216,6 +218,7 @@ ImageData* ImageData::mutate(uint8_t* data, uint32_t width, uint32_t height, Ima
                         case ImagePixelFormat::SInt32: reinterpret_cast<int32_t*>(dstPixel)[i] = channels[i]; break;
                         case ImagePixelFormat::Float16: reinterpret_cast<uint16_t*>(dstPixel)[i] = channels[i]; break;
                         case ImagePixelFormat::Float32: reinterpret_cast<uint32_t*>(dstPixel)[i] = channels[i]; break;
+                        case ImagePixelFormat::Invalid: assert(false);
                     }
                 }
 
@@ -232,11 +235,11 @@ ImageData* ImageData::transform(const ImageData* imageData, const ImageTransform
     return transform(imageData->getData(), imageData->getWidth(), imageData->getHeight(), imageData->getPixelLayout(), imageData->getPixelFormat(), transformation);
 }
 
-ImageData* ImageData::transform(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout layout, ImagePixelFormat format, const ImageTransform& transformation) {
+ImageData* ImageData::transform(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& layout, const ImagePixelFormat& format, const ImageTransform& transformation) {
     return transformation.apply(data, width, height, layout, format);
 }
 
-int64_t ImageData::getChannel(const size_t& x, const size_t& y, const size_t& channelIndex) {
+int64_t ImageData::getChannel(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const size_t& channelIndex) {
     size_t channelOffset = ImageData::getChannelOffset(x, y, channelIndex, m_width, m_height, m_pixelLayout, m_pixelFormat);
     uint8_t* data = &m_data[channelOffset];
 
@@ -249,11 +252,11 @@ int64_t ImageData::getChannel(const size_t& x, const size_t& y, const size_t& ch
         case ImagePixelFormat::SInt32: return (int64_t)(*(int32_t*)(data));
         case ImagePixelFormat::Float16: return (int64_t)(*(uint16_t*)(data)); // No c++ representation
         case ImagePixelFormat::Float32: return (int64_t)(*(float*)(data));
-        default: assert(false);
+        default: assert(false); return 0;
     }
 }
 
-void ImageData::setChannel(const size_t& x, const size_t& y, const size_t& channelIndex, const int64_t& value) {
+void ImageData::setChannel(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const size_t& channelIndex, const int64_t& value) {
     size_t channelOffset = ImageData::getChannelOffset(x, y, channelIndex, m_width, m_height, m_pixelLayout, m_pixelFormat);
     uint8_t* data = &m_data[channelOffset];
 
@@ -276,7 +279,7 @@ void ImageData::setChannel(const size_t& x, const size_t& y, const size_t& chann
     }
 }
 
-void ImageData::setPixel(const size_t& x, const size_t& y, const int64_t& r, const int64_t& g, const int64_t& b, const int64_t& a) {
+void ImageData::setPixel(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const int64_t& r, const int64_t& g, const int64_t& b, const int64_t& a) {
     size_t numChannels = ImageData::getChannels(m_pixelLayout);
     vk::ComponentSwizzle swizzle[4];
     ImageData::getPixelSwizzle(m_pixelLayout, swizzle);
@@ -296,7 +299,7 @@ void ImageData::setPixel(const size_t& x, const size_t& y, const int64_t& r, con
         }
     }
 }
-void ImageData::setPixelf(const size_t& x, const size_t& y, const float& r, const float& g, const float& b, const float& a) {
+void ImageData::setPixelf(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const float& r, const float& g, const float& b, const float& a) {
     assert(m_pixelFormat == ImagePixelFormat::Float32);
 
     size_t numChannels = ImageData::getChannels(m_pixelLayout);
@@ -325,11 +328,11 @@ uint8_t* ImageData::getData() const {
     return m_data;
 }
 
-uint32_t ImageData::getWidth() const {
+ImageRegion::size_type ImageData::getWidth() const {
     return m_width;
 }
 
-uint32_t ImageData::getHeight() const {
+ImageRegion::size_type ImageData::getHeight() const {
     return m_height;
 }
 
@@ -617,7 +620,7 @@ bool ImageData::getPixelLayoutAndFormat(vk::Format format, ImagePixelLayout& out
     }
 }
 
-size_t ImageData::getChannelOffset(const size_t& x, const size_t& y, const size_t& channelIndex, const uint32_t& width, const uint32_t& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat) {
+size_t ImageData::getChannelOffset(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const size_t& channelIndex, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat) {
     assert(x < width && y < height);
     size_t numChannels = ImageData::getChannels(pixelLayout);
     assert(channelIndex < numChannels);
@@ -628,7 +631,7 @@ size_t ImageData::getChannelOffset(const size_t& x, const size_t& y, const size_
 }
 
 
-ImageData* ImageData::ImageTransform::apply(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout layout, ImagePixelFormat format) const {
+ImageData* ImageData::ImageTransform::apply(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& layout, const ImagePixelFormat& format) const {
     // No-op implementation - The image just gets copied.
 
     size_t pixelStride = ImageData::getChannels(layout) * ImageData::getChannelSize(format);
@@ -665,7 +668,7 @@ ImageData::Flip::Flip(const Flip& copy):
     flip_y(copy.flip_y) {
 }
 
-ImageData* ImageData::Flip::apply(uint8_t* data, uint32_t width, uint32_t height, ImagePixelLayout layout, ImagePixelFormat format) const {
+ImageData* ImageData::Flip::apply(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& layout, const ImagePixelFormat& format) const {
     // TODO: use compute shader for this
 
     if (isNoOp())
@@ -760,7 +763,7 @@ bool ImageUtil::isStencilAttachment(const vk::Format& format) {
 }
 
 vk::Format ImageUtil::selectSupportedFormat(const vk::PhysicalDevice& physicalDevice, const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features) {
-    for (int i = 0; i < candidates.size(); ++i) {
+    for (size_t i = 0; i < candidates.size(); ++i) {
         const vk::Format& format = candidates[i];
         vk::FormatProperties props = physicalDevice.getFormatProperties(format);
 
@@ -874,10 +877,10 @@ bool ImageUtil::upload(const vk::CommandBuffer& commandBuffer, const vk::Image& 
         return false;
     }
 
-    if (imageRegion.width == VK_WHOLE_SIZE
-        || imageRegion.height == VK_WHOLE_SIZE
-        || imageRegion.depth == VK_WHOLE_SIZE
-        || imageRegion.layerCount == VK_WHOLE_SIZE) {
+    if (imageRegion.width >= ImageRegion::WHOLE_SIZE
+        || imageRegion.height >= ImageRegion::WHOLE_SIZE
+        || imageRegion.depth >= ImageRegion::WHOLE_SIZE
+        || imageRegion.layerCount >= ImageRegion::WHOLE_SIZE) {
         printf("Unable to upload Image: Image region is out of bounds\n");
         return false;
     }
@@ -936,7 +939,7 @@ bool ImageUtil::transferBuffer(const vk::CommandBuffer& commandBuffer, const vk:
     return true;
 }
 
-bool ImageUtil::generateMipmap(const vk::Image& image, const vk::Format& format, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const uint32_t& width, const uint32_t& height, const uint32_t& depth, const uint32_t& mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
+bool ImageUtil::generateMipmap(const vk::Image& image, const vk::Format& format, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth, const uint32_t& mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
 
     const vk::CommandBuffer& commandBuffer = ImageUtil::beginTransferCommands();
 
@@ -946,7 +949,7 @@ bool ImageUtil::generateMipmap(const vk::Image& image, const vk::Format& format,
     return success;
 }
 
-bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::Format& format, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const uint32_t& width, const uint32_t& height, const uint32_t& depth, const uint32_t& mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
+bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::Format& format, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth, const uint32_t& mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
 
     vk::ImageTiling tiling = vk::ImageTiling::eOptimal;
     vk::FormatFeatureFlags testFormatFeatureFlags{};
@@ -959,9 +962,9 @@ bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk:
         return false;
     }
 
-    int32_t levelWidth = glm::max(width, 1u);
-    int32_t levelHeight = glm::max(height, 1u);
-    int32_t levelDepth = glm::max(depth, 1u);
+    int32_t levelWidth = glm::max((int32_t)width, 1);
+    int32_t levelHeight = glm::max((int32_t)height, 1);
+    int32_t levelDepth = glm::max((int32_t)depth, 1);
     uint32_t mipLevelCount = glm::clamp(mipLevels, 1u, ImageUtil::getMaxMipLevels(levelWidth, levelHeight, levelDepth));
 
     if (mipLevelCount == 1)
@@ -986,7 +989,7 @@ bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk:
 
     ImageTransitionState prevLevelState = srcState;
 
-    for (size_t i = 1; i < mipLevelCount; ++i) {
+    for (uint32_t i = 1; i < mipLevelCount; ++i) {
 
         subresourceRange.setBaseMipLevel(i - 1);
         ImageUtil::transitionLayout(commandBuffer, image, subresourceRange, prevLevelState, ImageTransition::TransferSrc());
@@ -1018,7 +1021,7 @@ bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk:
     return true;
 }
 
-uint32_t ImageUtil::getMaxMipLevels(const uint32_t& width, const uint32_t& height, const uint32_t& depth) {
+uint32_t ImageUtil::getMaxMipLevels(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth) {
     return static_cast<uint32_t>(glm::floor(glm::log2((float)glm::max(glm::max(width, height), depth)))) + 1;
 }
 
@@ -1069,7 +1072,8 @@ void ImageUtil::endTransferCommands(const vk::Queue& queue, const bool& waitComp
     queueSumbitInfo.setCommandBufferCount(1);
     queueSumbitInfo.setPCommandBuffers(&transferCommandBuffer);
     const vk::Queue& graphicsTransferQueue = **Engine::graphics()->getQueue(QUEUE_GRAPHICS_TRANSFER_MAIN);
-    queue.submit(1, &queueSumbitInfo, VK_NULL_HANDLE);
+    vk::Result result = queue.submit(1, &queueSumbitInfo, VK_NULL_HANDLE);
+    assert(result == vk::Result::eSuccess);
     if (waitComplete)
         queue.waitIdle();
 }
@@ -1096,7 +1100,7 @@ vk::DeviceSize ImageUtil::getImageSizeBytes(const ImageRegion& imageRegion, cons
     return ImageUtil::getImageSizeBytes(imageRegion.width, imageRegion.height, imageRegion.depth, bytesPerPixel);
 }
 
-vk::DeviceSize ImageUtil::getImageSizeBytes(const uint32_t& width, const uint32_t& height, const uint32_t& depth, const uint32_t& bytesPerPixel) {
+vk::DeviceSize ImageUtil::getImageSizeBytes(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth, const uint32_t& bytesPerPixel) {
     return (vk::DeviceSize)width * (vk::DeviceSize)height * (vk::DeviceSize)depth * (vk::DeviceSize)bytesPerPixel;
 }
 
@@ -1109,7 +1113,7 @@ void _ImageUtil_onCleanupGraphics(const ShutdownGraphicsEvent& event) {
     delete g_imageStagingBuffer;
 }
 
-Buffer* ImageUtil::getImageStagingBuffer(const uint32_t& width, const uint32_t& height, const uint32_t& depth, const uint32_t& bytesPerPixel) {
+Buffer* ImageUtil::getImageStagingBuffer(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth, const uint32_t& bytesPerPixel) {
     constexpr uint32_t maxImageDimension = 32768;
     if (width > maxImageDimension || height > maxImageDimension || depth > maxImageDimension || bytesPerPixel > 64) {
         printf("Unable to get image data staging buffer: Requested dimensions too large\n");

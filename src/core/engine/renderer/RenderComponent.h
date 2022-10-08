@@ -49,7 +49,7 @@ public:
     [[nodiscard]] UpdateType meshUpdateType() const;
 
 private:
-    static void reindex(RenderComponent& renderComponent, const size_t& newEntityIndex);
+    static void reindex(RenderComponent& renderComponent, const EntityChangeTracker::entity_index& newEntityIndex);
 
 private:
     std::shared_ptr<Mesh> m_mesh;

@@ -58,7 +58,7 @@ RenderComponent::UpdateType RenderComponent::meshUpdateType() const {
     return m_meshUpdateType;
 }
 
-void RenderComponent::reindex(RenderComponent& renderComponent, const size_t& newEntityIndex) {
+void RenderComponent::reindex(RenderComponent& renderComponent, const EntityChangeTracker::entity_index& newEntityIndex) {
     if (newEntityIndex == renderComponent.m_entityIndex)
         return;
     renderComponent.m_entityIndex = newEntityIndex;

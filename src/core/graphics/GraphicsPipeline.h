@@ -123,15 +123,15 @@ public:
 
     bool isStateDynamic(const vk::DynamicState& dynamicState) const;
 
-    void setViewport(const vk::CommandBuffer& commandBuffer, const size_t& firstViewport, const size_t& viewportCount, const vk::Viewport* viewports);
-    void setViewport(const vk::CommandBuffer& commandBuffer, const size_t& firstViewport, const std::vector<vk::Viewport>& viewports);
-    void setViewport(const vk::CommandBuffer& commandBuffer, const size_t& firstViewport, const vk::Viewport& viewport);
-    void setViewport(const vk::CommandBuffer& commandBuffer, const size_t& firstViewport, const float& x, const float& y, const float& width, const float& height, const float& minDepth, const float& maxDepth);
+    void setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const uint32_t& viewportCount, const vk::Viewport* viewports);
+    void setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const std::vector<vk::Viewport>& viewports);
+    void setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const vk::Viewport& viewport);
+    void setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const float& x, const float& y, const float& width, const float& height, const float& minDepth, const float& maxDepth);
 
-    void setScissor(const vk::CommandBuffer& commandBuffer, const size_t& firstScissor, const size_t& scissorCount, const vk::Rect2D* scissorRects);
-    void setScissor(const vk::CommandBuffer& commandBuffer, const size_t& firstScissor, const std::vector<vk::Rect2D>& scissorRects);
-    void setScissor(const vk::CommandBuffer& commandBuffer, const size_t& firstScissor, const vk::Rect2D& scissorRect);
-    void setScissor(const vk::CommandBuffer& commandBuffer, const size_t& firstScissor, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height);
+    void setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const uint32_t& scissorCount, const vk::Rect2D* scissorRects);
+    void setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const std::vector<vk::Rect2D>& scissorRects);
+    void setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const vk::Rect2D& scissorRect);
+    void setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height);
 
     void setLineWidth(const vk::CommandBuffer& commandBuffer, const float& lineWidth);
 
@@ -181,7 +181,7 @@ public:
 
     void setStencilOp(const vk::CommandBuffer& commandBuffer, const vk::StencilFaceFlags& faceMask, const vk::StencilOp& failOp, const vk::StencilOp& passOp, const vk::StencilOp& depthFailOp, const vk::CompareOp& compareOp);
 
-    void setVertexInput(const vk::CommandBuffer& commandBuffer, const size_t vertexBindingCount, const vk::VertexInputBindingDescription2EXT* vertexBindings, const size_t& vertexAttribCount, const vk::VertexInputAttributeDescription2EXT* vertexAttribs);
+    void setVertexInput(const vk::CommandBuffer& commandBuffer, const uint32_t& vertexBindingCount, const vk::VertexInputBindingDescription2EXT* vertexBindings, const uint32_t& vertexAttribCount, const vk::VertexInputAttributeDescription2EXT* vertexAttribs);
 
     void setRasterizerDiscardEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled);
 
