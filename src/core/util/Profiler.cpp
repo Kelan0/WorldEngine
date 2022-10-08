@@ -88,19 +88,16 @@ Profiler::~Profiler() {
 }
 
 profile_id Profiler::id(const char* name) {
-    printf("Creating profile ID: %s\n", name);
-#if ITT_ENABLED
-    return __itt_string_handle_createA(name);
-#else
     static std::unordered_map<std::string, _profile_handle*> s_allHandles;
     auto it = s_allHandles.find(name);
     if (it == s_allHandles.end()) {
         it = s_allHandles.insert(std::make_pair(std::string(name), new _profile_handle{})).first;
-        it->second->strA = name;
-        printf("Inserted new profile handle: %s\n", it->second->strA);
+        it->second->name = it->first.c_str();
+#if ITT_ENABLED
+        it->second->itt_handle = __itt_string_handle_createA(it->second->name);
+#endif
     }
     return it->second;
-#endif
 }
 
 #if ITT_ENABLED
@@ -113,7 +110,7 @@ __itt_domain* Profiler::domain() {
 void Profiler::begin(profile_id const& id) {
 #if PROFILING_ENABLED
 #if ITT_ENABLED
-    __itt_task_begin(domain(), __itt_null, __itt_null, id);
+    __itt_task_begin(domain(), __itt_null, __itt_null, id->itt_handle);
 #endif
 
 #if INTERNAL_PROFILING_ENABLED

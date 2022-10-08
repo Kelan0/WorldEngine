@@ -47,50 +47,50 @@ public:
     Transform& setTranslation(const glm::dvec4& translation);
     Transform& setTranslation(const glm::dvec3& translation);
     Transform& setTranslation(const glm::dvec2& translation);
-    Transform& setTranslation(double x, double y, double z);
-    Transform& setTranslation(double x, double y);
+    Transform& setTranslation(const double& x, const double& y, const double& z);
+    Transform& setTranslation(const double& x, const double& y);
 
     Transform& setRotation(const glm::mat3& rotation);
     Transform& setRotation(const glm::mat4& rotation);
-    Transform& setRotation(const glm::vec3& forward, const glm::vec3& up, bool normalized = true);
-    Transform& setRotation(const glm::quat& rotation, bool normalized = true);
+    Transform& setRotation(const glm::vec3& forward, const glm::vec3& up, const bool& normalized = true);
+    Transform& setRotation(const glm::quat& rotation, const bool& normalized = true);
     Transform& setRotation(const glm::vec3& eulerAngles);
-    Transform& setRotation(float pitch, float yaw, float roll);
-    Transform& setRotation(float pitch, float yaw);
+    Transform& setRotation(const float& pitch, const float& yaw, const float& roll);
+    Transform& setRotation(const float& pitch, const float& yaw);
 
     Transform& setScale(const glm::dvec3& scale);
-    Transform& setScale(double x, double y, double z);
-    Transform& setScale(double scale);
+    Transform& setScale(const double& x, const double& y, const double& z);
+    Transform& setScale(const double& scale);
 
     Transform& translate(const glm::dvec4& translation);
     Transform& translate(const glm::dvec3& translation);
     Transform& translate(const glm::dvec2& translation);
-    Transform& translate(double x, double y, double z);
-    Transform& translate(double x, double y);
+    Transform& translate(const double& x, const double& y, const double& z);
+    Transform& translate(const double& x, const double& y);
 
-    Transform& rotate(const glm::quat& rotation, bool normalized = true);
-    Transform& rotate(const glm::mat3& rotation, bool normalized = true);
-    Transform& rotate(const glm::mat4& rotation, bool normalized = true);
-    Transform& rotate(const glm::vec3& axis, float angle);
+    Transform& rotate(const glm::quat& rotation, const bool& normalized = true);
+    Transform& rotate(const glm::mat3& rotation, const bool& normalized = true);
+    Transform& rotate(const glm::mat4& rotation, const bool& normalized = true);
+    Transform& rotate(const glm::vec3& axis, const float& angle);
     Transform& rotate(const glm::vec4& axisAngle);
-    Transform& rotate(float x, float y, float z, float angle);
+    Transform& rotate(const float& x, const float& y, const float& z, const float& angle);
     Transform& rotate(const glm::vec3& eulerAngles);
-    Transform& rotate(float pitch, float yaw, float roll);
+    Transform& rotate(const float& pitch, const float& yaw, const float& roll);
 
     Transform& scale(const glm::dvec3& scale);
-    Transform& scale(double x, double y, double z);
-    Transform& scale(double scale);
+    Transform& scale(const double& x, const double& y, const double& z);
+    Transform& scale(const double& scale);
 
 
     Transform operator*(const glm::dmat4& other) const;
     Transform operator*(const Transform& other) const;
 
-    Transform& operator=(glm::dmat4 other);
+    Transform& operator=(const glm::dmat4& other);
     Transform& operator=(const Transform& other);
 
-    bool equalsTranslation(const Transform& other, double epsilon) const;
-    bool equalsRotation(const Transform& other, double epsilon) const;
-    bool equalsScale(const Transform& other, double epsilon) const;
+    bool equalsTranslation(const Transform& other, const double& epsilon) const;
+    bool equalsRotation(const Transform& other, const double& epsilon) const;
+    bool equalsScale(const Transform& other, const double& epsilon) const;
 
     bool equalsTranslation(const Transform& other) const;
     bool equalsRotation(const Transform& other) const;

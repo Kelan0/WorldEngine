@@ -18,14 +18,13 @@
 #define INTERNAL_PROFILING_ENABLED 1
 
 
-#if ITT_ENABLED
-typedef __itt_string_handle* profile_id;
-#else
 struct _profile_handle {
-    const char* strA;
+    const char* name = nullptr;
+#if ITT_ENABLED
+    __itt_string_handle* itt_handle = nullptr;
+#endif
 };
 typedef _profile_handle* profile_id;
-#endif
 
 
 namespace Performance {
@@ -138,6 +137,7 @@ private:
 #define CONCAT(a,b) CONCAT1(a,b) // Why two???? :(
 #define PFID_NAME(name) CONCAT(name, __LINE__)
 #define PF_NAME __current_scope_profiler
+
 #define PROFILE_SCOPE(name) \
     static profile_id PFID_NAME(__pf_scp_id_) = Profiler::id(name); \
     ScopeProfiler PF_NAME(PFID_NAME(__pf_scp_id_));
@@ -148,6 +148,8 @@ private:
 
 #define PROFILE_END_REGION(x) { \
     PF_NAME.endRegion(); }
+
+#define PROFILE_CATEGORY(name)
 
 #else
 

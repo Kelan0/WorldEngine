@@ -19,8 +19,7 @@ PerformanceGraphUI::PerformanceGraphUI():
     m_frameGraphRootIndex(0) {
 }
 
-PerformanceGraphUI::~PerformanceGraphUI() {
-}
+PerformanceGraphUI::~PerformanceGraphUI() = default;
 
 void PerformanceGraphUI::update(double dt) {
     PROFILE_SCOPE("PerformanceGraphUI::update");
@@ -66,7 +65,7 @@ void PerformanceGraphUI::update(double dt) {
             const Profiler::Profile& profile = threadProfile[i];
             bool hasChildren = profile.lastChildIndex != SIZE_MAX;
 
-            const uint32_t& layerIndex = getUniqueLayerIndex(profile.id->strA);
+            const uint32_t& layerIndex = getUniqueLayerIndex(profile.id->name);
 
             popCount = 0;
             while (parentIndex != SIZE_MAX && profile.parentIndex <= parentIndex) {
@@ -82,7 +81,7 @@ void PerformanceGraphUI::update(double dt) {
             ProfileData& profileData = currentFrame.profileData.emplace_back();
             profileData.layerIndex = layerIndex;
             profileData.pathIndex = pathIndex;
-            profileData.elapsedCPU = Performance::milliseconds(profile.startCPU, profile.endCPU);
+            profileData.elapsedCPU = (float)Performance::milliseconds(profile.startCPU, profile.endCPU);
             profileData.parentIndex = profile.parentIndex;
             profileData.nextSiblingIndex = profile.nextSiblingIndex;
             profileData.hasChildren = hasChildren;
@@ -93,7 +92,7 @@ void PerformanceGraphUI::update(double dt) {
         float rootElapsed = (float)Performance::milliseconds(threadProfile[0].startCPU, threadProfile[0].endCPU);
         threadInfo.frameTimes.emplace_back(rootElapsed);
 
-        auto insertPos = std::upper_bound(threadInfo.sortedFrameTimes.begin(), threadInfo.sortedFrameTimes.end(), rootElapsed, std::greater<double>());
+        auto insertPos = std::upper_bound(threadInfo.sortedFrameTimes.begin(), threadInfo.sortedFrameTimes.end(), rootElapsed, std::greater<>());
         threadInfo.sortedFrameTimes.insert(insertPos, rootElapsed);
 
         size_t count999 = glm::max((size_t)1, threadInfo.frameTimes.size() / 1000);
@@ -102,7 +101,7 @@ void PerformanceGraphUI::update(double dt) {
 
         size_t maxSortedFrameTimes = count90 * 2;
         if (threadInfo.sortedFrameTimes.size() > maxSortedFrameTimes) {
-            int64_t eraseCount = threadInfo.sortedFrameTimes.size() - maxSortedFrameTimes;
+            int64_t eraseCount = (int64_t)threadInfo.sortedFrameTimes.size() - (int64_t)maxSortedFrameTimes;
             threadInfo.sortedFrameTimes.erase(threadInfo.sortedFrameTimes.begin(), threadInfo.sortedFrameTimes.begin() + eraseCount);
         }
 
@@ -113,14 +112,14 @@ void PerformanceGraphUI::update(double dt) {
             if (i < count90) threadInfo.frameTimePercentile90 += threadInfo.sortedFrameTimes[i];
         }
 
-        threadInfo.frameTimePercentile999 /= count999;
-        threadInfo.frameTimePercentile99 /= count99;
-        threadInfo.frameTimePercentile90 /= count90;
+        threadInfo.frameTimePercentile999 /= (double)count999;
+        threadInfo.frameTimePercentile99 /= (double)count99;
+        threadInfo.frameTimePercentile90 /= (double)count90;
 
         threadInfo.frameTimeAvg = 0.0;
         for (size_t i = 0; i < threadInfo.frameTimes.size(); ++i)
             threadInfo.frameTimeAvg += threadInfo.frameTimes[i];
-        threadInfo.frameTimeAvg /= threadInfo.frameTimes.size();
+        threadInfo.frameTimeAvg /= (double)threadInfo.frameTimes.size();
     }
 
     flushOldFrames();
@@ -306,7 +305,7 @@ void PerformanceGraphUI::drawFrameGraph() {
     ImVec2 bbmaxOuter = ImVec2(bbmax.x + margin, bbmax.y + margin);
 
     m_maxFrameProfiles = INT_DIV_CEIL(bbmaxInner.x - bbminInner.x, 100) * 100 + 200;
-    float desiredSegmentWidth = (bbmaxInner.x - bbminInner.x) / allFrames.size();
+    float desiredSegmentWidth = (bbmaxInner.x - bbminInner.x) / (float)allFrames.size();
     float minSegmentWidth = glm::max(1.0F, desiredSegmentWidth);
 
     float maxSegmentWidth = 10.0F;
@@ -336,7 +335,7 @@ void PerformanceGraphUI::drawFrameGraph() {
         if (index < 0)
             continue;
     
-        x1 = bbmax.x - (index * (segmentWidth + segmentSpacing) + padding);
+        x1 = bbmax.x - ((float)index * (segmentWidth + segmentSpacing) + padding);
         x0 = x1 - segmentWidth;
     
         if (x1 < bbmin.x)
@@ -365,7 +364,7 @@ void PerformanceGraphUI::drawFrameGraph() {
 
     ImGui::EndChild();
 
-    float newHeightScaleMsec = glm::ceil(maxFrameTime / 2.0) * 2.0;
+    float newHeightScaleMsec = glm::ceil(maxFrameTime / 2.0F) * 2.0F;
     float adjustmentFactor = 0.05;
     m_heightScaleMsec = m_heightScaleMsec * (1.0F - adjustmentFactor) + newHeightScaleMsec * adjustmentFactor;
 }
@@ -430,20 +429,20 @@ void PerformanceGraphUI::drawFrameTimeOverlays(const uint64_t& threadId, const f
     dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
 
     x = xmin;
-    y = ymax - h * 0.5;
+    y = ymax - h * 0.5F;
     sprintf(str, "%02.1f ms (%.1f FPS)", m_heightScaleMsec * 0.5, 1000.0 / (m_heightScaleMsec * 0.5));
     x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
     dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
 
     x = xmin;
-    y = ymax - h * 0.25;
+    y = ymax - h * 0.25F;
     sprintf(str, "%02.1f ms (%.1f FPS)", m_heightScaleMsec * 0.25, 1000.0 / (m_heightScaleMsec * 0.25));
     x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
     dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
 
     if (m_showFrameTime90Percentile) {
         x = xmin;
-        y = ymax - (threadInfo.frameTimePercentile90 / m_heightScaleMsec) * h;
+        y = ymax - (float)(threadInfo.frameTimePercentile90 / m_heightScaleMsec) * h;
         sprintf(str, "10%% %02.1f ms (%.1f FPS)", threadInfo.frameTimePercentile90, 1000.0 / threadInfo.frameTimePercentile90);
         x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
         dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
@@ -451,7 +450,7 @@ void PerformanceGraphUI::drawFrameTimeOverlays(const uint64_t& threadId, const f
 
     if (m_showFrameTime99Percentile) {
         x = xmin;
-        y = ymax - (threadInfo.frameTimePercentile99 / m_heightScaleMsec) * h;
+        y = ymax - (float)(threadInfo.frameTimePercentile99 / m_heightScaleMsec) * h;
         sprintf(str, "1%% %02.1f ms (%.1f FPS)", threadInfo.frameTimePercentile99, 1000.0 / threadInfo.frameTimePercentile99);
         x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
         dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
@@ -459,14 +458,14 @@ void PerformanceGraphUI::drawFrameTimeOverlays(const uint64_t& threadId, const f
 
     if (m_showFrameTime999Percentile) {
         x = xmin;
-        y = ymax - (threadInfo.frameTimePercentile999 / m_heightScaleMsec) * h;
+        y = ymax - (float)(threadInfo.frameTimePercentile999 / m_heightScaleMsec) * h;
         sprintf(str, "0.1%% %02.1f ms (%.1f FPS)", threadInfo.frameTimePercentile999, 1000.0 / threadInfo.frameTimePercentile999);
         x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
         dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
     }
 
     x = xmin;
-    y = ymax - (threadInfo.frameTimeAvg / m_heightScaleMsec) * h;
+    y = ymax - (float)(threadInfo.frameTimeAvg / m_heightScaleMsec) * h;
     sprintf(str, "AVG %02.1f ms (%.1f FPS)", threadInfo.frameTimeAvg, 1000.0 / threadInfo.frameTimeAvg);
     x += drawFrameTimeOverlayText(str, x, y, xmin, ymin, xmax, ymax);
     dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
@@ -561,8 +560,8 @@ void PerformanceGraphUI::buildProfileTree(const std::vector<ProfileData>& profil
                     });
                 }
 
-                for (const size_t& index : tempReorderBuffer) {
-                    buildProfileTree(profiles, index, sortOrder, tempReorderBuffer);
+                for (const size_t& sequenceIndex : tempReorderBuffer) {
+                    buildProfileTree(profiles, sequenceIndex, sortOrder, tempReorderBuffer);
                 }
             }
         }
@@ -592,7 +591,7 @@ double PerformanceGraphUI::calculateFrameTimePercentile(const std::vector<double
     const size_t frameCount = glm::max((size_t)1, (size_t)((double)frameTimes.size() * percentile));
 
     for (const double& frameTime : frameTimes) {
-        auto insertPos = std::upper_bound(tempContainer.begin(), tempContainer.end(), frameTime, std::greater<double>());
+        auto insertPos = std::upper_bound(tempContainer.begin(), tempContainer.end(), frameTime, std::greater<>());
 
         if (insertPos != tempContainer.begin() || tempContainer.size() < frameCount)
             tempContainer.insert(insertPos, frameTime);
