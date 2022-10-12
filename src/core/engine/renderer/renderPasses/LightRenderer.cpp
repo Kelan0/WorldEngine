@@ -14,6 +14,7 @@
 #include "core/engine/geometry/MeshData.h"
 #include "core/engine/renderer/RenderCamera.h"
 #include "core/engine/renderer/LightComponent.h"
+#include "core/util/Profiler.h"
 
 #define GAUSSIAN_BLUE_DIRECTION_X 0
 #define GAUSSIAN_BLUE_DIRECTION_Y 1

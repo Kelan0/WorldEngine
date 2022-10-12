@@ -3,6 +3,7 @@
 #define WORLDENGINE_THREADUTILS_H
 
 #include "core/thread/ThreadPool.h"
+#include "core/util/Profiler.h"
 
 namespace ThreadUtils {
 

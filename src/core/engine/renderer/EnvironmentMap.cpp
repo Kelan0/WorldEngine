@@ -13,6 +13,7 @@
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Buffer.h"
 #include "core/graphics/CommandPool.h"
+#include "core/util/Profiler.h"
 
 
 #define MAX_SPECULAR_MIP_LEVELS 8

@@ -1,5 +1,6 @@
 
-#include "DenseFlagArray.h"
+#include "core/util/DenseFlagArray.h"
+#include "core/util/Profiler.h"
 
 #define BIT(bitIndex) (1 << (bitIndex))
 #define SET_BIT(val, bitIndex, isSet) if (isSet) val |= BIT(bitIndex); else val &= ~BIT(bitIndex);

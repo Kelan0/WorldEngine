@@ -1,5 +1,6 @@
 
-#include "EntityChangeTracker.h"
+#include "core/util/EntityChangeTracker.h"
+#include "core/util/Profiler.h"
 
 void EntityChangeTracker::ensureCapacity(const entity_index& maxEntities) {
     m_changedFlags.ensureSize(maxEntities, true);

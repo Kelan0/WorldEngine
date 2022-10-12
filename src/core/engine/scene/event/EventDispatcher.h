@@ -3,6 +3,7 @@
 #define WORLDENGINE_EVENTDISPATCHER_H
 
 #include "core/core.h"
+#include "core/util/Profiler.h"
 #include <entt/signal/dispatcher.hpp>
 
 class EventDispatcher;

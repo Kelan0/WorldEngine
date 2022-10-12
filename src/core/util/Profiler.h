@@ -5,6 +5,8 @@
 #include "core/core.h"
 #include <chrono>
 #include <iostream>
+#include "core/graphics/FrameResource.h"
+#include "core/engine/scene/event/Events.h"
 
 #if ITT_ENABLED
 #include <ittnotify.h>
@@ -18,13 +20,13 @@
 #define INTERNAL_PROFILING_ENABLED 1
 
 
-struct _profile_handle {
+struct __profile_handle {
     const char* name = nullptr;
 #if ITT_ENABLED
     __itt_string_handle* itt_handle = nullptr;
 #endif
 };
-typedef _profile_handle* profile_id;
+typedef __profile_handle* profile_id;
 
 
 namespace Performance {
@@ -56,27 +58,68 @@ namespace Performance {
 
 
 class Profiler {
+private:
+    struct GPUQueryPool {
+        vk::QueryPool pool = VK_NULL_HANDLE;
+        uint32_t capacity = 0;
+        uint32_t size = 0;
+    };
+
+    struct GPUQuery {
+        uint32_t queryIndex = 0;
+        GPUQueryPool* queryPool = nullptr;
+    };
+
+    struct GPUQueryFrameData {
+        std::vector<GPUQueryPool> queryPools;
+        uint32_t queryCount = 0;
+    };
+
 public:
     struct Profile {
         profile_id id = nullptr;
-        Performance::moment_t startCPU;
-        Performance::moment_t endCPU;
         size_t parentIndex = SIZE_MAX;
         size_t lastChildIndex = SIZE_MAX;
         size_t nextSiblingIndex = SIZE_MAX;
     };
 
-    struct ThreadContext {
-        bool threadActive = false;
+    struct CPUProfile : public Profile {
+        Performance::moment_t startTime;
+        Performance::moment_t endTime;
+    };
+
+    struct GPUProfile : public Profile {
+        Performance::moment_t startTime;
+        Performance::moment_t endTime;
+        GPUQuery startQuery;
+        GPUQuery endQuery;
+    };
+
+    struct ProfileContext {
         bool frameStarted = false;
-        size_t currentIndex;
-        std::vector<Profile> frameProfiles;
-        std::vector<Profile> prevFrameProfiles;
+        size_t currentIndex = SIZE_MAX;
         std::mutex mtx;
+    };
+
+    struct ThreadContext : public ProfileContext {
+        bool threadActive = false;
+        bool hasGpuProfiles = false;
+        std::vector<CPUProfile> frameProfiles;
+        std::vector<CPUProfile> prevFrameProfiles;
 
         ThreadContext();
 
         ~ThreadContext();
+    };
+
+    struct GPUContext : public ProfileContext {
+        std::vector<GPUProfile> frameProfiles;
+        std::vector<GPUProfile> prevFrameProfiles;
+        FrameResource<GPUQueryFrameData> queryData;
+
+        GPUContext();
+
+        ~GPUContext();
     };
 
 private:
@@ -95,18 +138,35 @@ public:
 
     static void endFrame();
 
-    static void begin(const profile_id& id);
+    static void beginCPU(const profile_id& id);
 
-    static void end();
+    static void endCPU();
 
-    static void getFrameProfile(std::unordered_map<uint64_t, std::vector<Profile>>& outThreadProfiles);
+    static void beginGPU(const profile_id& id);
+
+    static void endGPU();
+
+    static void getFrameProfile(std::unordered_map<uint64_t, std::vector<CPUProfile>>& outThreadProfiles);
+
+    static bool isGpuProfilingEnabled();
+
+    static float getGpuProfilingResolutionNanoseconds();
 
 private:
-    void flushFrames();
+    static bool writeTimestamp(const vk::CommandBuffer& commandBuffer, const vk::PipelineStageFlagBits& pipelineStage, GPUQuery* outQuery);
+
+    static bool getGpuQueryPool(const uint32_t& maxQueries, GPUQueryPool** queryPool);
+
+    static bool createGpuTimestampQueryPool(const uint32_t& capacity, vk::QueryPool* queryPool);
+
+    static void onCleanupGraphics(const ShutdownGraphicsEvent& event);
+
+    static ThreadContext& threadContext();
+
+    static GPUContext& gpuContext();
 
 private:
 #if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
-    static thread_local ThreadContext s_context;
     static std::unordered_map<uint64_t, ThreadContext*> s_threadContexts;
     static std::mutex s_threadContextsMtx;
 #endif
@@ -119,7 +179,7 @@ private:
 
 class ScopeProfiler {
 public:
-    ScopeProfiler(const profile_id& id);
+    explicit ScopeProfiler(const profile_id& id);
 
     ~ScopeProfiler();
 

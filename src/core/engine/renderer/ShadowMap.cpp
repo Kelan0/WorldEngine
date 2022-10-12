@@ -9,6 +9,7 @@
 #include "core/graphics/RenderPass.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Buffer.h"
+#include "core/util/Profiler.h"
 
 
 ShadowMap::ShadowMap(const uint32_t& width, const uint32_t& height):

@@ -1,6 +1,7 @@
 #include "core/graphics/Mesh.h"
 #include "core/graphics/DeviceMemory.h"
 #include "core/application/Engine.h"
+#include "core/util/Profiler.h"
 #include <chrono>
 
 

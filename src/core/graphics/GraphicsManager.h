@@ -53,6 +53,7 @@ struct DeviceDetails {
     std::unique_ptr<vkr::PhysicalDevice> physicalDevice;
     std::shared_ptr<vkr::Device> device;
     vk::PhysicalDeviceMemoryProperties memoryProperties;
+    vk::PhysicalDeviceProperties physicalDeviceProperties;
 };
 
 struct SurfaceDetails {
@@ -130,6 +131,10 @@ public:
     const vk::PhysicalDevice& getPhysicalDevice() const;
 
     const vk::PhysicalDeviceMemoryProperties& getDeviceMemoryProperties() const;
+
+    const vk::PhysicalDeviceProperties& getPhysicalDeviceProperties() const;
+
+    const vk::PhysicalDeviceLimits& getPhysicalDeviceLimits() const;
 
     const uint32_t& getCurrentFrameIndex() const;
 

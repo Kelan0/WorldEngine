@@ -3,7 +3,7 @@
 #define WORLDENGINE_CORE_H
 
 #include <iostream>
-#include <assert.h>
+#include <cassert>
 #include <vector>
 #include <array>
 #include <stack>
@@ -54,7 +54,6 @@
 
 #include "hash.h"
 #include "util/Exception.h"
-#include "util/Profiler.h"
 
 namespace vkr = vk::raii;
 

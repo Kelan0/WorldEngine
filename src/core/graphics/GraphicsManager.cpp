@@ -11,6 +11,7 @@
 #include "core/application/Application.h"
 #include "core/engine/scene/event/EventDispatcher.h"
 #include "core/engine/scene/event/Events.h"
+#include "core/util/Profiler.h"
 
 uint64_t GraphicsManager::s_nextResourceID = 0;
 
@@ -23,17 +24,17 @@ uint64_t GraphicsManager::s_nextResourceID = 0;
 QueueDetails::QueueDetails() {}
 
 GraphicsManager::GraphicsManager() {
-    m_instance = NULL;
-    m_device.device = NULL;
-    m_device.physicalDevice = NULL;
-    m_surface.surface = NULL;
-    m_swapchain.swapchain = NULL;
+    m_instance = nullptr;
+    m_device.device = nullptr;
+    m_device.physicalDevice = nullptr;
+    m_surface.surface = nullptr;
+    m_swapchain.swapchain = nullptr;
     m_swapchain.currentFrameIndex = 0;
-    m_renderPass = NULL;
-    m_commandPool = NULL;
-    m_descriptorPool = NULL;
-    m_memory = NULL;
-    m_debugMessenger = NULL;
+    m_renderPass = nullptr;
+    m_commandPool = nullptr;
+    m_descriptorPool = nullptr;
+    m_memory = nullptr;
+    m_debugMessenger = nullptr;
     m_preferredPresentMode = vk::PresentModeKHR::eMailbox;
     m_isInitialized = false;
     m_recreateSwapchain = false;
@@ -55,10 +56,10 @@ GraphicsManager::~GraphicsManager() {
     m_swapchain.imageViews.clear();
 
     if (m_descriptorPool.use_count() > 1)
-        printf("Destroyed GraphicsManager but DescriptorPool has %d external references\n", m_descriptorPool.use_count() - 1);
+        printf("Destroyed GraphicsManager but DescriptorPool has %llu external references\n", (uint64_t)m_descriptorPool.use_count() - 1);
 
     if (m_commandPool.use_count() > 1)
-        printf("Destroyed GraphicsManager but CommandPool has %d external references\n", m_commandPool.use_count() - 1);
+        printf("Destroyed GraphicsManager but CommandPool has %llu external references\n", (uint64_t)m_commandPool.use_count() - 1);
 
     delete m_memory;
     m_descriptorPool.reset();
@@ -66,7 +67,7 @@ GraphicsManager::~GraphicsManager() {
     //delete m_pipeline;
 
     if (m_device.device.use_count() > 1) {
-        printf("Destroyed GraphicsManager but the logical device still has %d external references\n", m_device.device.use_count() - 1);
+        printf("Destroyed GraphicsManager but the logical device still has %llu external references\n", (uint64_t)m_device.device.use_count() - 1);
     }
 }
 
@@ -149,7 +150,7 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
     //	memoryConfig.memoryTypeBits |= (1 << i); // Enable all memory types
     //
     //m_gpuMemory = GPUMemory::create(memoryConfig);
-    //if (m_gpuMemory == NULL) {
+    //if (m_gpuMemory == nullptr) {
     //	return false;
     //}
 
@@ -203,7 +204,7 @@ bool GraphicsManager::createVulkanInstance(SDL_Window* windowHandle, const char*
     }
 
     uint32_t instanceExtensionCount;
-    SDL_Vulkan_GetInstanceExtensions(windowHandle, &instanceExtensionCount, NULL);
+    SDL_Vulkan_GetInstanceExtensions(windowHandle, &instanceExtensionCount, nullptr);
 
     std::vector<const char*> instanceExtensions;
     instanceExtensions.resize(instanceExtensionCount);
@@ -487,35 +488,35 @@ bool GraphicsManager::selectPhysicalDevice() {
         return comparePhysicalDevices(first, second);
     });
 
-    m_device.physicalDevice = NULL;
-    std::vector<int> queueFamilyIndices;
+    m_device.physicalDevice = nullptr;
 
     // Filter out physical devices missing required features
-    for (int i = 0; i < physicalDevices.size(); ++i) {
-        if (!isPhysicalDeviceSuitable(physicalDevices[i])) {
+    for (auto& physicalDevice : physicalDevices) {
+        if (!isPhysicalDeviceSuitable(physicalDevice)) {
             continue;
         }
 
-        std::vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevices[i].getQueueFamilyProperties();
+        std::vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
 
         QueueDetails queueFamilyIndices = {};
         uint32_t requiredQueueFlags = QUEUE_TYPE_GRAPHICS_BIT | QUEUE_TYPE_COMPUTE_BIT | QUEUE_TYPE_TRANSFER_BIT | QUEUE_TYPE_PRESENT_BIT;
-        if (!selectQueueFamilies(physicalDevices[i], queueFamilyProperties, requiredQueueFlags, queueFamilyIndices)) {
+        if (!selectQueueFamilies(physicalDevice, queueFamilyProperties, requiredQueueFlags, queueFamilyIndices)) {
             continue;
         }
 
-        m_device.physicalDevice = std::make_unique<vkr::PhysicalDevice>(std::move(physicalDevices[i]));
+        m_device.physicalDevice = std::make_unique<vkr::PhysicalDevice>(std::move(physicalDevice));
         m_queues = queueFamilyIndices;
 
         break;
     }
 
-    if (m_device.physicalDevice == NULL) {
+    if (m_device.physicalDevice == nullptr) {
         printf("No physical devices were suitable for rendering\n");
         return false;
     }
 
     m_device.memoryProperties = m_device.physicalDevice->getMemoryProperties();
+    m_device.physicalDeviceProperties = m_device.physicalDevice->getProperties();
 
     printf("Graphics engine selected physical device \"%s\"\n", m_device.physicalDevice->getProperties().deviceName.data());
 
@@ -643,7 +644,7 @@ bool GraphicsManager::initSurfaceDetails() {
 
     std::vector<vk::PresentModeKHR> presentModes = m_device.physicalDevice->getSurfacePresentModesKHR(**m_surface.surface);
 
-    if (presentModes.size() == 0) {
+    if (presentModes.empty()) {
         printf("Device \"%s\" supports no present modes\n", m_device.physicalDevice->getProperties().deviceName.data());
         return false;
     }
@@ -715,7 +716,7 @@ bool GraphicsManager::recreateSwapchain() {
     createInfo.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque);
     createInfo.setPresentMode(m_surface.presentMode);
     createInfo.setClipped(true);
-    //createInfo.setOldSwapchain(NULL);
+    //createInfo.setOldSwapchain(nullptr);
 
     m_swapchain.swapchain = std::make_unique<vkr::SwapchainKHR>(*m_device.device, createInfo);
 
@@ -1000,6 +1001,14 @@ const vk::PhysicalDevice& GraphicsManager::getPhysicalDevice() const {
 
 const vk::PhysicalDeviceMemoryProperties& GraphicsManager::getDeviceMemoryProperties() const {
     return m_device.memoryProperties;
+}
+
+const vk::PhysicalDeviceProperties& GraphicsManager::getPhysicalDeviceProperties() const {
+    return m_device.physicalDeviceProperties;
+}
+
+const vk::PhysicalDeviceLimits& GraphicsManager::getPhysicalDeviceLimits() const {
+    return m_device.physicalDeviceProperties.limits;
 }
 
 const uint32_t& GraphicsManager::getCurrentFrameIndex() const {

@@ -3,6 +3,7 @@
 #define WORLDENGINE_TASK_H
 
 #include "core/core.h"
+#include "core/util/Profiler.h"
 
 
 class BaseTask {

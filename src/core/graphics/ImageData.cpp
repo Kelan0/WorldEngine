@@ -210,14 +210,14 @@ ImageData* ImageData::mutate(uint8_t* data, const ImageRegion::size_type& width,
 
                 for (glm::length_t i = 0; i < dstChannels; ++i) {
                     switch (dstFormat) {
-                        case ImagePixelFormat::UInt8: reinterpret_cast<uint8_t*>(dstPixel)[i] = channels[i]; break;
-                        case ImagePixelFormat::SInt8: reinterpret_cast<int8_t*>(dstPixel)[i] = channels[i]; break;
-                        case ImagePixelFormat::UInt16: reinterpret_cast<uint16_t*>(dstPixel)[i] = channels[i]; break;
-                        case ImagePixelFormat::SInt16: reinterpret_cast<int16_t*>(dstPixel)[i] = channels[i]; break;
-                        case ImagePixelFormat::UInt32: reinterpret_cast<uint32_t*>(dstPixel)[i] = channels[i]; break;
-                        case ImagePixelFormat::SInt32: reinterpret_cast<int32_t*>(dstPixel)[i] = channels[i]; break;
-                        case ImagePixelFormat::Float16: reinterpret_cast<uint16_t*>(dstPixel)[i] = channels[i]; break;
-                        case ImagePixelFormat::Float32: reinterpret_cast<uint32_t*>(dstPixel)[i] = channels[i]; break;
+                        case ImagePixelFormat::UInt8: reinterpret_cast<uint8_t*>(dstPixel)[i] = (uint8_t)channels[i]; break;
+                        case ImagePixelFormat::SInt8: reinterpret_cast<int8_t*>(dstPixel)[i] = (int8_t)channels[i]; break;
+                        case ImagePixelFormat::UInt16: reinterpret_cast<uint16_t*>(dstPixel)[i] = (uint16_t)channels[i]; break;
+                        case ImagePixelFormat::SInt16: reinterpret_cast<int16_t*>(dstPixel)[i] = (int16_t)channels[i]; break;
+                        case ImagePixelFormat::UInt32: reinterpret_cast<uint32_t*>(dstPixel)[i] = (uint32_t)channels[i]; break;
+                        case ImagePixelFormat::SInt32: reinterpret_cast<int32_t*>(dstPixel)[i] = (int32_t)channels[i]; break;
+                        case ImagePixelFormat::Float16: reinterpret_cast<uint16_t*>(dstPixel)[i] = (uint16_t)channels[i]; break;
+                        case ImagePixelFormat::Float32: reinterpret_cast<uint32_t*>(dstPixel)[i] = (uint32_t)channels[i]; break;
                         case ImagePixelFormat::Invalid: assert(false);
                     }
                 }
@@ -262,7 +262,7 @@ void ImageData::setChannel(const ImageRegion::offset_type& x, const ImageRegion:
 
     union {
         int64_t value;int8_t s8;uint8_t u8;int16_t s16;uint16_t u16;int32_t s32;uint32_t u32;uint16_t f16;float f32;
-    } channel;
+    } channel{};
 
     channel.value = value;
 
@@ -356,6 +356,8 @@ int ImageData::getChannels(ImagePixelLayout layout) {
         case ImagePixelLayout::RGBA:
         case ImagePixelLayout::ABGR:
             return 4;
+        case ImagePixelLayout::Invalid:
+            break;
     }
     return 0;
 }
@@ -373,6 +375,8 @@ int ImageData::getChannelSize(ImagePixelFormat format) {
         case ImagePixelFormat::SInt32:
         case ImagePixelFormat::Float32:
             return 4;
+        case ImagePixelFormat::Invalid:
+            break;
     }
     return 0;
 }

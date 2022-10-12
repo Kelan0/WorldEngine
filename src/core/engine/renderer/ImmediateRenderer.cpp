@@ -2,6 +2,7 @@
 #include "core/engine/renderer/ImmediateRenderer.h"
 #include "core/application/Engine.h"
 #include "core/graphics/DescriptorSet.h"
+#include "core/util/Profiler.h"
 #include "core/util/Util.h"
 
 

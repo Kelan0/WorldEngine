@@ -1,5 +1,6 @@
 #include "core/engine/scene/EntityHierarchy.h"
 #include "core/engine/scene/Scene.h"
+#include "core/util/Profiler.h"
 
 bool EntityHierarchy::hasParent(const Entity& entity) {
     return getParent(entity) != nullptr;

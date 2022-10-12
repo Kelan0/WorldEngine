@@ -1,6 +1,6 @@
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
+#include "core/engine/renderer/renderPasses/LightRenderer.h"
 #include "core/engine/renderer/SceneRenderer.h"
-#include "LightRenderer.h"
 #include "core/engine/renderer/ShadowMap.h"
 #include "core/engine/renderer/EnvironmentMap.h"
 #include "core/engine/geometry/MeshData.h"
@@ -14,6 +14,7 @@
 #include "core/graphics/ImageCube.h"
 #include "core/graphics/Texture.h"
 #include "core/graphics/Buffer.h"
+#include "core/util/Profiler.h"
 
 #define UNIFORM_BUFFER_BINDING 0
 #define ALBEDO_TEXTURE_BINDING 1
@@ -392,8 +393,8 @@ bool DeferredLightingRenderPass::init() {
     }
 
     ImageData* defaultEnvironmentCubeMap = new ImageData(1, 1, ImagePixelLayout::RGBA, ImagePixelFormat::Float32);
-    for (auto y = 0; y < defaultEnvironmentCubeMap->getHeight(); ++y) {
-        for (auto x = 0; x < defaultEnvironmentCubeMap->getWidth(); ++x) {
+    for (uint32_t y = 0; y < defaultEnvironmentCubeMap->getHeight(); ++y) {
+        for (uint32_t x = 0; x < defaultEnvironmentCubeMap->getWidth(); ++x) {
             defaultEnvironmentCubeMap->setPixelf(x, y, 0.4F, 0.53F, 0.74F, 1.0F);
         }
     }

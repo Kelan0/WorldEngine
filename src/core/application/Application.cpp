@@ -11,6 +11,7 @@
 #include "core/graphics/RenderPass.h"
 #include "core/thread/ThreadUtils.h"
 #include "core/util/PlatformUtils.h"
+#include "core/util/Profiler.h"
 #include <chrono>
 
 Application* Application::s_instance = nullptr;
