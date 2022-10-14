@@ -22,7 +22,7 @@ Buffer::~Buffer() {
     vfree(m_memory);
 }
 
-Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
+Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration, const char* name) {
     vk::BufferUsageFlags usage = bufferConfiguration.usage;
 
     const vk::Device& device = **bufferConfiguration.device.lock();
@@ -54,6 +54,8 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration) {
         printf("Failed to create buffer: %s\n", vk::to_string(result).c_str());
         return nullptr;
     }
+
+    Engine::graphics()->setObjectName(device, (uint64_t)(VkBuffer)buffer, vk::ObjectType::eBuffer, name);
 
     const vk::MemoryRequirements& memoryRequirements = device.getBufferMemoryRequirements(buffer);
     DeviceMemoryBlock* memory = vmalloc(memoryRequirements, bufferConfiguration.memoryProperties);
@@ -293,12 +295,12 @@ void Buffer::resizeStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSi
 
     printf("Resizing staging buffer from %s to %llu bytes\n", startSize.c_str(), size);
 
-    BufferConfiguration stagingBufferConfig;
+    BufferConfiguration stagingBufferConfig{};
     stagingBufferConfig.device = device;
     stagingBufferConfig.size = size;
     stagingBufferConfig.usage = vk::BufferUsageFlagBits::eTransferSrc;
     stagingBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-    FrameResource<Buffer>::create(s_stagingBuffer, stagingBufferConfig);
+    FrameResource<Buffer>::create(s_stagingBuffer, stagingBufferConfig, "Buffer-UploadStagingBuffer");
     //s_stagingBuffer = std::unique_ptr<Buffer>(Buffer::create(stagingBufferConfig));
     assert(!!s_stagingBuffer);
 }

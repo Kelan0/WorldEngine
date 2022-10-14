@@ -44,6 +44,19 @@ PFN_vkCmdSetVertexInputEXT ptr_vkCmdSetVertexInputEXT;
 PFN_vkCmdSetColorWriteEnableEXT ptr_vkCmdSetColorWriteEnableEXT;
 #endif /* defined(VK_EXT_color_write_enable) */
 
+#if defined(VK_EXT_debug_utils)
+PFN_vkSetDebugUtilsObjectNameEXT ptr_vkSetDebugUtilsObjectNameEXT;
+PFN_vkSetDebugUtilsObjectTagEXT ptr_vkSetDebugUtilsObjectTagEXT;
+PFN_vkQueueBeginDebugUtilsLabelEXT ptr_vkQueueBeginDebugUtilsLabelEXT;
+PFN_vkQueueEndDebugUtilsLabelEXT ptr_vkQueueEndDebugUtilsLabelEXT;
+PFN_vkQueueInsertDebugUtilsLabelEXT ptr_vkQueueInsertDebugUtilsLabelEXT;
+PFN_vkCmdBeginDebugUtilsLabelEXT ptr_vkCmdBeginDebugUtilsLabelEXT;
+PFN_vkCmdEndDebugUtilsLabelEXT ptr_vkCmdEndDebugUtilsLabelEXT;
+PFN_vkCmdInsertDebugUtilsLabelEXT ptr_vkCmdInsertDebugUtilsLabelEXT;
+PFN_vkCreateDebugUtilsMessengerEXT ptr_vkCreateDebugUtilsMessengerEXT;
+PFN_vkDestroyDebugUtilsMessengerEXT ptr_vkDestroyDebugUtilsMessengerEXT;
+PFN_vkSubmitDebugUtilsMessageEXT ptr_vkSubmitDebugUtilsMessageEXT;
+#endif /* defined(VK_EXT_debug_utils) */
 
 
 
@@ -92,6 +105,19 @@ void loadVulkanDeviceExtensions(VkDevice device) {
     ptr_vkCmdSetColorWriteEnableEXT = (PFN_vkCmdSetColorWriteEnableEXT) vkGetDeviceProcAddr(device, "vkCmdSetColorWriteEnableEXT");
 #endif /* defined(VK_EXT_color_write_enable) */
 
+#if defined(VK_EXT_debug_utils)
+    ptr_vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT) vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectNameEXT");
+    ptr_vkSetDebugUtilsObjectTagEXT = (PFN_vkSetDebugUtilsObjectTagEXT) vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectTagEXT");
+    ptr_vkQueueBeginDebugUtilsLabelEXT = (PFN_vkQueueBeginDebugUtilsLabelEXT) vkGetDeviceProcAddr(device, "vkQueueBeginDebugUtilsLabelEXT");
+    ptr_vkQueueEndDebugUtilsLabelEXT = (PFN_vkQueueEndDebugUtilsLabelEXT) vkGetDeviceProcAddr(device, "vkQueueEndDebugUtilsLabelEXT");
+    ptr_vkQueueInsertDebugUtilsLabelEXT = (PFN_vkQueueInsertDebugUtilsLabelEXT) vkGetDeviceProcAddr(device, "vkQueueInsertDebugUtilsLabelEXT");
+    ptr_vkCmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT) vkGetDeviceProcAddr(device, "vkCmdBeginDebugUtilsLabelEXT");
+    ptr_vkCmdEndDebugUtilsLabelEXT = (PFN_vkCmdEndDebugUtilsLabelEXT) vkGetDeviceProcAddr(device, "vkCmdEndDebugUtilsLabelEXT");
+    ptr_vkCmdInsertDebugUtilsLabelEXT = (PFN_vkCmdInsertDebugUtilsLabelEXT) vkGetDeviceProcAddr(device, "vkCmdInsertDebugUtilsLabelEXT");
+    ptr_vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetDeviceProcAddr(device, "vkCreateDebugUtilsMessengerEXT");
+    ptr_vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetDeviceProcAddr(device, "vkDestroyDebugUtilsMessengerEXT");
+    ptr_vkSubmitDebugUtilsMessageEXT = (PFN_vkSubmitDebugUtilsMessageEXT) vkGetDeviceProcAddr(device, "vkSubmitDebugUtilsMessageEXT");
+#endif /* defined(VK_EXT_debug_utils) */
 }
 
 void vkCmdSetCullModeEXT(VkCommandBuffer commandBuffer, VkCullModeFlags cullMode) { ptr_vkCmdSetCullModeEXT(commandBuffer, cullMode); }
@@ -121,3 +147,15 @@ void vkCmdSetLogicOpEXT(VkCommandBuffer commandBuffer, VkLogicOp logicOp) { ptr_
 void vkCmdSetPrimitiveRestartEnableEXT(VkCommandBuffer commandBuffer, VkBool32 primitiveRestartEnable) { ptr_vkCmdSetPrimitiveRestartEnableEXT(commandBuffer, primitiveRestartEnable); }
 
 void vkCmdSetColorWriteEnableEXT(VkCommandBuffer commandBuffer, uint32_t attachmentCount, const VkBool32* pColorWriteEnables) { ptr_vkCmdSetColorWriteEnableEXT(commandBuffer, attachmentCount, pColorWriteEnables); }
+
+VkResult vkSetDebugUtilsObjectNameEXT(VkDevice device, const VkDebugUtilsObjectNameInfoEXT* pNameInfo) { return ptr_vkSetDebugUtilsObjectNameEXT(device, pNameInfo); }
+VkResult vkSetDebugUtilsObjectTagEXT(VkDevice device, const VkDebugUtilsObjectTagInfoEXT* pTagInfo) { return ptr_vkSetDebugUtilsObjectTagEXT(device, pTagInfo); }
+void vkQueueBeginDebugUtilsLabelEXT(VkQueue queue, const VkDebugUtilsLabelEXT* pLabelInfo) { ptr_vkQueueBeginDebugUtilsLabelEXT(queue, pLabelInfo); }
+void vkQueueEndDebugUtilsLabelEXT(VkQueue queue) { ptr_vkQueueEndDebugUtilsLabelEXT(queue); }
+void vkQueueInsertDebugUtilsLabelEXT(VkQueue queue, const VkDebugUtilsLabelEXT* pLabelInfo) { ptr_vkQueueInsertDebugUtilsLabelEXT(queue, pLabelInfo); }
+void vkCmdBeginDebugUtilsLabelEXT(VkCommandBuffer commandBuffer, const VkDebugUtilsLabelEXT* pLabelInfo) { ptr_vkCmdBeginDebugUtilsLabelEXT(commandBuffer, pLabelInfo); }
+void vkCmdEndDebugUtilsLabelEXT(VkCommandBuffer commandBuffer) { ptr_vkCmdEndDebugUtilsLabelEXT(commandBuffer); }
+void vkCmdInsertDebugUtilsLabelEXT(VkCommandBuffer commandBuffer, const VkDebugUtilsLabelEXT* pLabelInfo) { ptr_vkCmdInsertDebugUtilsLabelEXT(commandBuffer, pLabelInfo); }
+VkResult vkCreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pMessenger) { return ptr_vkCreateDebugUtilsMessengerEXT(instance, pCreateInfo, pAllocator, pMessenger); }
+void vkDestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT messenger, const VkAllocationCallbacks* pAllocator) { ptr_vkDestroyDebugUtilsMessengerEXT(instance, messenger, pAllocator); }
+void vkSubmitDebugUtilsMessageEXT(VkInstance instance, VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData) { ptr_vkSubmitDebugUtilsMessageEXT(instance, messageSeverity, messageTypes, pCallbackData); }

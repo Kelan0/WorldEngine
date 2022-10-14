@@ -3,6 +3,7 @@
 #include <fstream>
 #include <filesystem>
 #include "core/application/Application.h"
+#include "core/graphics/GraphicsManager.h"
 
 #ifndef GLSL_COMPILER_EXECUTABLE
 // TODO: define this as a program argument, or define in CMakeLists.txt
@@ -88,7 +89,7 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
 
     bytecode.resize(file.tellg());
     file.seekg(0);
-    file.read(bytecode.data(), bytecode.size());
+    file.read(bytecode.data(), (std::streamsize)bytecode.size());
     file.close();
 
     return true;
@@ -108,6 +109,8 @@ bool ShaderUtils::loadShaderModule(const ShaderStage& shaderStage, const vk::Dev
         printf("Failed to load shader module (file %s): %s\n", filePath.c_str(), vk::to_string(result).c_str());
         return false;
     }
+    Engine::graphics()->setObjectName(device, (uint64_t)(VkShaderModule)(*outShaderModule), vk::ObjectType::eShaderModule, filePath.c_str());
+
     return true;
 }
 

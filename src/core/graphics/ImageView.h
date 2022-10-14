@@ -38,7 +38,7 @@ private:
 public:
     ~ImageView();
 
-    static ImageView* create(const ImageViewConfiguration& imageViewConfiguration);
+    static ImageView* create(const ImageViewConfiguration& imageViewConfiguration, const char* name);
 
     std::shared_ptr<vkr::Device> getDevice() const;
 

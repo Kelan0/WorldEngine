@@ -12,7 +12,7 @@ struct BufferConfiguration {
     vk::BufferUsageFlags usage;
     vk::MemoryPropertyFlags memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
     vk::DeviceSize size;
-    void* data = NULL;
+    void* data = nullptr;
 };
 
 
@@ -26,7 +26,7 @@ public:
 
     ~Buffer();
 
-    static Buffer* create(const BufferConfiguration& bufferConfiguration);
+    static Buffer* create(const BufferConfiguration& bufferConfiguration, const char* name);
 
     static bool copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset = 0, vk::DeviceSize dstOffset = 0);
 

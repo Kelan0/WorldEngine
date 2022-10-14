@@ -1,6 +1,10 @@
+#include <utility>
+
 #include "core/graphics/ComputePipeline.h"
-#include "core/graphics/ShaderUtils.h"
 #include "core/graphics/DescriptorSet.h"
+#include "core/graphics/GraphicsManager.h"
+#include "core/graphics/ShaderUtils.h"
+#include "core/application/Engine.h"
 
 
 std::unordered_map<size_t, ComputePipeline*> ComputePipeline::s_cachedComputePipelines;
@@ -36,44 +40,44 @@ void ComputePipelineConfiguration::addPushConstantRange(const vk::ShaderStageFla
     addPushConstantRange(vk::PushConstantRange(stageFlags, offset, size));
 }
 
-ComputePipeline::ComputePipeline(std::weak_ptr<vkr::Device> device):
+ComputePipeline::ComputePipeline(const std::weak_ptr<vkr::Device>& device):
     m_device(device) {
 }
 
-ComputePipeline::ComputePipeline(std::weak_ptr<vkr::Device> device,
+ComputePipeline::ComputePipeline(const std::weak_ptr<vkr::Device>& device,
                                    vk::Pipeline& pipeline,
                                    vk::PipelineLayout& pipelineLayout,
-                                   const ComputePipelineConfiguration& config):
-        m_device(std::move(device)),
-        m_pipeline(std::move(pipeline)),
-        m_pipelineLayout(std::move(pipelineLayout)),
-        m_config(config) {
+                                   ComputePipelineConfiguration config):
+        m_device(device),
+        m_pipeline(pipeline),
+        m_pipelineLayout(pipelineLayout),
+        m_config(std::move(config)) {
 }
 
 ComputePipeline::~ComputePipeline() {
     cleanup();
 }
 
-ComputePipeline* ComputePipeline::create(std::weak_ptr<vkr::Device> device) {
+ComputePipeline* ComputePipeline::create(const std::weak_ptr<vkr::Device>& device) {
     return new ComputePipeline(device.lock());
 }
 
-ComputePipeline* ComputePipeline::create(const ComputePipelineConfiguration& computePipelineConfiguration) {
+ComputePipeline* ComputePipeline::create(const ComputePipelineConfiguration& computePipelineConfiguration, const char* name) {
     ComputePipeline* computePipeline = create(computePipelineConfiguration.device);
 
-    if (!computePipeline->recreate(computePipelineConfiguration)) {
+    if (!computePipeline->recreate(computePipelineConfiguration, name)) {
         delete computePipeline;
-        return NULL;
+        return nullptr;
     }
 
     return computePipeline;
 }
 
-ComputePipeline* ComputePipeline::getComputePipeline(const ComputePipelineConfiguration& computePipelineConfiguration) {
+ComputePipeline* ComputePipeline::getComputePipeline(const ComputePipelineConfiguration& computePipelineConfiguration, const char* name) {
     size_t hash = std::hash<ComputePipelineConfiguration>()(computePipelineConfiguration);
     auto it = s_cachedComputePipelines.find(hash);
     if (it == s_cachedComputePipelines.end()) {
-        ComputePipeline* computePipeline = ComputePipeline::create(computePipelineConfiguration);
+        ComputePipeline* computePipeline = ComputePipeline::create(computePipelineConfiguration, name);
         if (computePipeline != nullptr)
             s_cachedComputePipelines.insert(std::make_pair(hash, computePipeline));
         return computePipeline;
@@ -82,8 +86,7 @@ ComputePipeline* ComputePipeline::getComputePipeline(const ComputePipelineConfig
     }
 }
 
-bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipelineConfiguration) {
-
+bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipelineConfiguration, const char* name) {
     const vk::Device& device = **m_device;
     vk::Result result;
 
@@ -99,7 +102,7 @@ bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipeli
     computeShaderStageCreateInfo.setStage(vk::ShaderStageFlagBits::eCompute);
     computeShaderStageCreateInfo.setModule(computeShaderModule);
     computeShaderStageCreateInfo.setPName(computePipelineConfiguration.computeStageEntryFunctionName.c_str());
-    computeShaderStageCreateInfo.setPSpecializationInfo(NULL); // TODO
+    computeShaderStageCreateInfo.setPSpecializationInfo(nullptr); // TODO
 
     vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
     pipelineLayoutCreateInfo.setSetLayouts(computePipelineConfiguration.descriptorSetLayouts);
@@ -124,10 +127,13 @@ bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipeli
         return false;
     }
 
+    const vk::Pipeline& computePipeline = createComputePipelineResult.value;
+    Engine::graphics()->setObjectName(device, (uint64_t)(VkPipeline)computePipeline, vk::ObjectType::ePipeline, name);
+
     device.destroyShaderModule(computeShaderModule);
 
-    m_pipeline = createComputePipelineResult.value;
-    m_config = std::move(computePipelineConfiguration);
+    m_pipeline = computePipeline;
+    m_config = computePipelineConfiguration;
     return true;
 }
 

@@ -140,18 +140,18 @@ GraphicsPipeline* GraphicsPipeline::create(std::weak_ptr<vkr::Device> device) {
     return new GraphicsPipeline(device.lock());
 }
 
-GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration) {
+GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration, const char* name) {
     GraphicsPipeline* graphicsPipeline = create(graphicsPipelineConfiguration.device);
 
-    if (!graphicsPipeline->recreate(graphicsPipelineConfiguration)) {
+    if (!graphicsPipeline->recreate(graphicsPipelineConfiguration, name)) {
         delete graphicsPipeline;
-        return NULL;
+        return nullptr;
     }
 
     return graphicsPipeline;
 }
 
-bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration) {
+bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration, const char* name) {
     assert(!graphicsPipelineConfiguration.device.expired() && graphicsPipelineConfiguration.device.lock() == m_device);
 
     const vk::Device& device = **m_device;
@@ -238,7 +238,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
         vertexShaderStageCreateInfo.setStage(vk::ShaderStageFlagBits::eVertex);
         vertexShaderStageCreateInfo.setModule(vertexShaderModule);
         vertexShaderStageCreateInfo.setPName("main");
-        vertexShaderStageCreateInfo.setPSpecializationInfo(NULL); // TODO
+        vertexShaderStageCreateInfo.setPSpecializationInfo(nullptr); // TODO
     }
 
     if (pipelineConfig.fragmentShader.has_value()) {
@@ -251,7 +251,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
         fragmentShaderStageCreateInfo.setStage(vk::ShaderStageFlagBits::eFragment);
         fragmentShaderStageCreateInfo.setModule(fragmentShaderModule);
         fragmentShaderStageCreateInfo.setPName("main");
-        fragmentShaderStageCreateInfo.setPSpecializationInfo(NULL); // TODO
+        fragmentShaderStageCreateInfo.setPSpecializationInfo(nullptr); // TODO
     }
 
     vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo;
@@ -288,7 +288,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     multisampleStateCreateInfo.setRasterizationSamples(vk::SampleCountFlagBits::e1);
     multisampleStateCreateInfo.setSampleShadingEnable(false);
     multisampleStateCreateInfo.setMinSampleShading(1.0F);
-    multisampleStateCreateInfo.setPSampleMask(NULL);
+    multisampleStateCreateInfo.setPSampleMask(nullptr);
     multisampleStateCreateInfo.setAlphaToCoverageEnable(false);
     multisampleStateCreateInfo.setAlphaToOneEnable(false);
 
@@ -344,7 +344,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     graphicsPipelineCreateInfo.setStages(pipelineShaderStages);
     graphicsPipelineCreateInfo.setPVertexInputState(&vertexInputStateCreateInfo);
     graphicsPipelineCreateInfo.setPInputAssemblyState(&inputAssemblyStateCreateInfo);
-    graphicsPipelineCreateInfo.setPTessellationState(NULL); // TODO
+    graphicsPipelineCreateInfo.setPTessellationState(nullptr); // TODO
     graphicsPipelineCreateInfo.setPViewportState(&viewportStateCreateInfo);
     graphicsPipelineCreateInfo.setPRasterizationState(&rasterizationStateCreateInfo);
     graphicsPipelineCreateInfo.setPMultisampleState(&multisampleStateCreateInfo);
@@ -365,9 +365,13 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
         return false;
     }
 
+    const vk::Pipeline& graphicsPipeline = createGraphicsPipelineResult.value;
+
+    Engine::graphics()->setObjectName(device, (uint64_t)(VkPipeline)graphicsPipeline, vk::ObjectType::ePipeline, name);
+
     cleanupShaderModules();
 
-    m_pipeline = createGraphicsPipelineResult.value;
+    m_pipeline = graphicsPipeline;
     m_config = std::move(pipelineConfig);
     return true;
 }

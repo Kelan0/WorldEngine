@@ -37,7 +37,7 @@ ImageView::~ImageView() {
     (**m_device).destroyImageView(m_imageView);
 }
 
-ImageView* ImageView::create(const ImageViewConfiguration& imageViewConfiguration) {
+ImageView* ImageView::create(const ImageViewConfiguration& imageViewConfiguration, const char* name) {
     const vk::Device& device = **imageViewConfiguration.device.lock();
 
     if (!imageViewConfiguration.image) {
@@ -69,6 +69,8 @@ ImageView* ImageView::create(const ImageViewConfiguration& imageViewConfiguratio
         printf("Failed to create %s ImageView: %s\n", vk::to_string(imageViewConfiguration.imageViewType).c_str(), vk::to_string(result).c_str());
         return nullptr;
     }
+
+    Engine::graphics()->setObjectName(device, (uint64_t)(VkImageView)imageView, vk::ObjectType::eImageView, name);
 
     return new ImageView(imageViewConfiguration.device, imageView, imageViewConfiguration.image, imageViewConfiguration.imageViewType);
 }

@@ -62,15 +62,15 @@ private:
 public:
     ~DescriptorSetLayout();
 
-    static std::shared_ptr<DescriptorSetLayout> get(const std::weak_ptr<vkr::Device>& device, const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo);
+    static std::shared_ptr<DescriptorSetLayout> get(const std::weak_ptr<vkr::Device>& device, const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, const char* name);
 
     static void clearCache();
 
-    DescriptorSet* createDescriptorSet(const std::shared_ptr<DescriptorPool>& descriptorPool);
+    DescriptorSet* createDescriptorSet(const std::shared_ptr<DescriptorPool>& descriptorPool, const char* name);
 
-    bool createDescriptorSets(const std::shared_ptr<DescriptorPool>& descriptorPool, const uint32_t& count, DescriptorSet** outDescriptorSets);
+    bool createDescriptorSets(const std::shared_ptr<DescriptorPool>& descriptorPool, const uint32_t& count, DescriptorSet** outDescriptorSets, const char* name);
 
-    bool createDescriptorSets(const std::shared_ptr<DescriptorPool>& descriptorPool, const uint32_t& count, std::shared_ptr<DescriptorSet>* outDescriptorSets);
+    bool createDescriptorSets(const std::shared_ptr<DescriptorPool>& descriptorPool, const uint32_t& count, std::shared_ptr<DescriptorSet>* outDescriptorSets, const char* name);
 
     const std::shared_ptr<vkr::Device>& getDevice() const;
 
@@ -129,7 +129,7 @@ public:
 
     DescriptorSetLayoutBuilder& addStorageImage(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const uint32_t& arraySize = 1);
 
-    std::shared_ptr<DescriptorSetLayout> build();
+    std::shared_ptr<DescriptorSetLayout> build(const char* name);
 
     DescriptorSetLayoutBuilder& reset(vk::DescriptorSetLayoutCreateFlags flags = {});
 
@@ -148,7 +148,7 @@ private:
 public:
     ~DescriptorPool();
 
-    static DescriptorPool* create(const DescriptorPoolConfiguration& descriptorPoolConfiguration);
+    static DescriptorPool* create(const DescriptorPoolConfiguration& descriptorPoolConfiguration, const char* name);
 
     const std::shared_ptr<vkr::Device>& getDevice() const;
 
@@ -180,9 +180,9 @@ private:
 public:
     ~DescriptorSet();
 
-    static DescriptorSet* create(const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, const std::weak_ptr<DescriptorPool>& descriptorPool);
+    static DescriptorSet* create(const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, const std::weak_ptr<DescriptorPool>& descriptorPool, const char* name, const char* layoutName);
 
-    static DescriptorSet* create(const std::weak_ptr<DescriptorSetLayout>& descriptorSetLayout, const std::weak_ptr<DescriptorPool>& descriptorPool);
+    static DescriptorSet* create(const std::weak_ptr<DescriptorSetLayout>& descriptorSetLayout, const std::weak_ptr<DescriptorPool>& descriptorPool, const char* name);
 
     const vk::DescriptorSet& getDescriptorSet() const;
 

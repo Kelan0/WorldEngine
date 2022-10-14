@@ -43,7 +43,7 @@ void ShadowMap::update() {
         delete m_shadowDepthImage;
         delete m_shadowVarianceImage;
 
-        Image2DConfiguration imageConfig;
+        Image2DConfiguration imageConfig{};
         imageConfig.device = Engine::graphics()->getDevice();
         imageConfig.setSize(m_resolution);
         imageConfig.mipLevels = 1;
@@ -52,33 +52,33 @@ void ShadowMap::update() {
 
         imageConfig.format = vk::Format::eR32G32B32A32Sfloat;
         imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eStorage;
-        m_shadowVarianceImage = Image2D::create(imageConfig);
+        m_shadowVarianceImage = Image2D::create(imageConfig, "ShadowMap-ShadowVarianceImage");
         assert(m_shadowVarianceImage != nullptr);
 
         imageConfig.format = vk::Format::eD32Sfloat;
         imageConfig.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
-        m_shadowDepthImage = Image2D::create(imageConfig);
+        m_shadowDepthImage = Image2D::create(imageConfig, "ShadowMap-ShadowDepthImage");
         assert(m_shadowDepthImage != nullptr);
 
-        ImageViewConfiguration imageViewConfig;
+        ImageViewConfiguration imageViewConfig{};
         imageViewConfig.device = Engine::graphics()->getDevice();
 
         imageViewConfig.setImage(m_shadowVarianceImage);
         imageViewConfig.format = vk::Format::eR32G32B32A32Sfloat;
         imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
-        m_shadowVarianceImageView = ImageView::create(imageViewConfig);
+        m_shadowVarianceImageView = ImageView::create(imageViewConfig, "ShadowMap-ShadowVarianceImageView");
         assert(m_shadowVarianceImageView != nullptr);
 
         imageViewConfig.setImage(m_shadowDepthImage);
         imageViewConfig.format = vk::Format::eD32Sfloat;
         imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eDepth;
-        m_shadowDepthImageView = ImageView::create(imageViewConfig);
+        m_shadowDepthImageView = ImageView::create(imageViewConfig, "ShadowMap-ShadowDepthImageView");
         assert(m_shadowDepthImageView != nullptr);
 
     }
 
     if (m_shadowMapFramebuffer == nullptr || m_shadowMapFramebuffer->getWidth() != m_resolution.x || m_shadowMapFramebuffer->getHeight() != m_resolution.y) {
-        FramebufferConfiguration framebufferConfig;
+        FramebufferConfiguration framebufferConfig{};
         framebufferConfig.device = Engine::graphics()->getDevice();
         framebufferConfig.setSize(m_resolution);
         framebufferConfig.setRenderPass(Engine::lightRenderer()->getRenderPass().get());
@@ -86,7 +86,7 @@ void ShadowMap::update() {
         framebufferConfig.addAttachment(m_shadowDepthImageView);
 
         delete m_shadowMapFramebuffer;
-        m_shadowMapFramebuffer = Framebuffer::create(framebufferConfig);
+        m_shadowMapFramebuffer = Framebuffer::create(framebufferConfig, "ShadowMap-ShadowMapFramebuffer");
         assert(!!m_shadowMapFramebuffer);
     }
 }

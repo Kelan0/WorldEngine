@@ -16,7 +16,7 @@ class Buffer;
 
 class EnvironmentMap {
 public:
-    EnvironmentMap(const uint32_t& irradianceMapSize = 32, const uint32_t& specularMapSize = 256);
+    explicit EnvironmentMap(const uint32_t& irradianceMapSize = 32, const uint32_t& specularMapSize = 256);
 
     ~EnvironmentMap();
 

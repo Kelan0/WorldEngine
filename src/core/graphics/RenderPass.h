@@ -54,7 +54,7 @@ private:
 public:
     ~RenderPass();
 
-    static RenderPass* create(const RenderPassConfiguration& renderPassConfiguration);
+    static RenderPass* create(const RenderPassConfiguration& renderPassConfiguration, const char* name);
 
     void begin(const vk::CommandBuffer& commandBuffer, const vk::Framebuffer& framebuffer, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height, const vk::SubpassContents& subpassContents) const;
     void begin(const vk::CommandBuffer& commandBuffer, const Framebuffer* framebuffer, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height, const vk::SubpassContents& subpassContents) const;

@@ -10,7 +10,7 @@ class DeviceMemoryBlock;
 
 struct Image2DConfiguration {
     std::weak_ptr<vkr::Device> device;
-    const ImageData* imageData = NULL;
+    const ImageData* imageData = nullptr;
     std::string filePath = "";
     uint32_t width = 0;
     uint32_t height = 0;
@@ -40,7 +40,7 @@ private:
 public:
     ~Image2D();
 
-    static Image2D* create(const Image2DConfiguration& image2DConfiguration);
+    static Image2D* create(const Image2DConfiguration& image2DConfiguration, const char* name);
 
     static bool upload(Image2D* dstImage, void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
 

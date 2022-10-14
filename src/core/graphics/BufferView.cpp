@@ -31,7 +31,7 @@ BufferView::~BufferView() {
     (**m_device).destroyBufferView(m_bufferView);
 }
 
-BufferView* BufferView::create(const BufferViewConfiguration& bufferViewConfiguration) {
+BufferView* BufferView::create(const BufferViewConfiguration& bufferViewConfiguration, const char* name) {
     vk::BufferViewCreateInfo bufferViewCreateInfo;
     bufferViewCreateInfo.buffer = bufferViewConfiguration.buffer;
     bufferViewCreateInfo.format = bufferViewConfiguration.format;
@@ -46,6 +46,8 @@ BufferView* BufferView::create(const BufferViewConfiguration& bufferViewConfigur
         printf("Failed to create BufferView: %s\n", vk::to_string(result).c_str());
         return nullptr;
     }
+
+    Engine::graphics()->setObjectName(device, (uint64_t)(VkBufferView)bufferView, vk::ObjectType::eBufferView, name);
 
     return new BufferView(bufferViewConfiguration.device, bufferView, bufferViewConfiguration.format, bufferViewConfiguration.offset, bufferViewConfiguration.range);
 }

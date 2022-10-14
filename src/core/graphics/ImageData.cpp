@@ -730,7 +730,7 @@ ComputePipeline* ImageData::Flip::getComputePipeline() {
         ComputePipelineConfiguration pipelineConfig{};
         pipelineConfig.device = Engine::graphics()->getDevice();
         pipelineConfig.computeShader = "res/shaders/util/imageTransform/compute_flip.glsl";
-        ComputePipeline* pipeline = ComputePipeline::create(pipelineConfig);
+        ComputePipeline* pipeline = ComputePipeline::create(pipelineConfig, "ImageDataFlip-TransformComputePipelines");
         s_transformComputePipelines.insert(std::make_pair(key, pipeline));
         return pipeline;
     } else {
@@ -1147,7 +1147,7 @@ Buffer* ImageUtil::getImageStagingBuffer(const ImageRegion::size_type& width, co
         bufferConfig.size = requiredSize;
         bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         bufferConfig.usage = vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;
-        g_imageStagingBuffer = Buffer::create(bufferConfig);
+        g_imageStagingBuffer = Buffer::create(bufferConfig, "ImageUtil-ImageStagingBuffer");
         if (g_imageStagingBuffer == nullptr) {
             printf("Failed to create image data staging buffer\n");
             return nullptr;

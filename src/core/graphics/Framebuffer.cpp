@@ -2,6 +2,8 @@
 #include "core/graphics/RenderPass.h"
 #include "core/graphics/ImageView.h"
 #include "core/graphics/Image2D.h"
+#include "core/graphics/GraphicsManager.h"
+#include "core/application/Engine.h"
 
 
 void FramebufferConfiguration::setRenderPass(const vk::RenderPass& renderPass) {
@@ -62,7 +64,7 @@ Framebuffer::~Framebuffer() {
     m_framebuffer = VK_NULL_HANDLE;
 }
 
-Framebuffer* Framebuffer::create(const FramebufferConfiguration& framebufferConfiguration) {
+Framebuffer* Framebuffer::create(const FramebufferConfiguration& framebufferConfiguration, const char* name) {
     const vk::Device& device = **framebufferConfiguration.device.lock();
 
     if (!framebufferConfiguration.renderPass) {
@@ -96,6 +98,8 @@ Framebuffer* Framebuffer::create(const FramebufferConfiguration& framebufferConf
         printf("Failed to create Vulkan Framebuffer: %s\n", vk::to_string(result).c_str());
         return nullptr;
     }
+
+    Engine::graphics()->setObjectName(device, (uint64_t)(VkFramebuffer)framebuffer, vk::ObjectType::eFramebuffer, name);
 
     return new Framebuffer(framebufferConfiguration.device, framebuffer, glm::uvec2(framebufferConfiguration.width, framebufferConfiguration.height));
 }

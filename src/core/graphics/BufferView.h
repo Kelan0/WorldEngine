@@ -30,7 +30,7 @@ private:
 public:
     ~BufferView();
 
-    static BufferView* create(const BufferViewConfiguration& bufferViewConfiguration);
+    static BufferView* create(const BufferViewConfiguration& bufferViewConfiguration, const char* name);
 
     const std::shared_ptr<vkr::Device>& getDevice() const;
 

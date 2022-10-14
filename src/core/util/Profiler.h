@@ -209,6 +209,12 @@ private:
 #define PROFILE_END_REGION() { \
     PF_NAME.endRegion(); }
 
+#define PROFILE_BEGIN_GPU_TIMESTAMP(name) \
+    Profiler::beginGPU(Profiler::id(name));
+
+#define PROFILE_END_GPU_TIMESTAMP(name) \
+    Profiler::endGPU(Profiler::id(name));
+
 #define PROFILE_CATEGORY(name)
 
 #else

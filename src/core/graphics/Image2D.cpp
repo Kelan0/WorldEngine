@@ -49,7 +49,7 @@ Image2D::~Image2D() {
     vfree(m_memory);
 }
 
-Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration) {
+Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration, const char* name) {
     const vk::Device& device = **image2DConfiguration.device.lock();
 
     vk::Result result;
@@ -125,6 +125,8 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration) {
         printf("Failed to create image: %s\n", vk::to_string(result).c_str());
         return nullptr;
     }
+
+    Engine::graphics()->setObjectName(device, (uint64_t)(VkImage)image, vk::ObjectType::eImage, name);
 
     const vk::MemoryRequirements& memoryRequirements = device.getImageMemoryRequirements(image);
     DeviceMemoryBlock* memory = vmalloc(memoryRequirements, image2DConfiguration.memoryProperties);

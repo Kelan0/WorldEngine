@@ -167,6 +167,8 @@ bool Engine::init(SDL_Window* windowHandle) {
 }
 
 void Engine::render(double dt) {
+    PROFILE_SCOPE("Engine::render");
+//    PROFILE_BEGIN_GPU_TIMESTAMP("Engine::render");
     const Entity& cameraEntity = Engine::scene()->getMainCameraEntity();
 
     m_uiRenderer->preRender(dt);
@@ -193,6 +195,7 @@ void Engine::render(double dt) {
     m_deferredLightingPass->renderScreen(dt);
 
     m_uiRenderer->render(dt, commandBuffer);
+//    PROFILE_END_GPU_TIMESTAMP("Engine::render");
 }
 
 void Engine::destroy() {

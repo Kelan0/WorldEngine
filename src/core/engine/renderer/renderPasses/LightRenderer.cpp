@@ -71,14 +71,14 @@ bool LightRenderer::init() {
 
     m_shadowRenderPassDescriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
             .addUniformBuffer(0, vk::ShaderStageFlagBits::eVertex, true)
-            .build();
+            .build("LightRenderer-ShadowRenderPassDescriptorSetLayout");
 
     m_lightingRenderPassDescriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
             .addUniformBuffer(LIGHTING_RENDER_PASS_UNIFORM_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addStorageBuffer(LIGHTING_RENDER_PASS_LIGHT_INFO_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addStorageBuffer(LIGHTING_RENDER_PASS_SHADOW_MAP_INFO_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(LIGHTING_RENDER_PASS_SHADOW_DEPTH_TEXTURES_BINDING, vk::ShaderStageFlagBits::eFragment, MAX_SHADOW_MAPS)
-            .build();
+            .build("LightRenderer-LightingRenderPassDescriptorSetLayout");
 
 
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
@@ -89,24 +89,24 @@ bool LightRenderer::init() {
         m_lightingRenderPassResources[i]->shadowMapBuffer = nullptr;
         m_lightingRenderPassResources[i]->uniformBuffer = nullptr;
 
-        m_shadowRenderPassResources[i]->descriptorSet = DescriptorSet::create(m_shadowRenderPassDescriptorSetLayout, Engine::graphics()->descriptorPool());
+        m_shadowRenderPassResources[i]->descriptorSet = DescriptorSet::create(m_shadowRenderPassDescriptorSetLayout, Engine::graphics()->descriptorPool(), "LightRenderer-ShadowRenderPassDescriptorSet");
         if (m_shadowRenderPassResources[i]->descriptorSet == nullptr) {
             printf("LightRenderer::init - Failed to create camera info descriptor set\n");
             return false;
         }
 
-        m_lightingRenderPassResources[i]->descriptorSet = DescriptorSet::create(m_lightingRenderPassDescriptorSetLayout, Engine::graphics()->descriptorPool());
+        m_lightingRenderPassResources[i]->descriptorSet = DescriptorSet::create(m_lightingRenderPassDescriptorSetLayout, Engine::graphics()->descriptorPool(), "LightRenderer-LightingRenderPassDescriptorSet");
         if (m_lightingRenderPassResources[i]->descriptorSet == nullptr) {
             printf("LightRenderer::init - Failed to create camera info descriptor set\n");
             return false;
         }
 
-        BufferConfiguration bufferConfig;
+        BufferConfiguration bufferConfig{};
         bufferConfig.device = Engine::graphics()->getDevice();
         bufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer;
         bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         bufferConfig.size = sizeof(LightingRenderPassUBO);
-        m_lightingRenderPassResources[i]->uniformBuffer = Buffer::create(bufferConfig);
+        m_lightingRenderPassResources[i]->uniformBuffer = Buffer::create(bufferConfig, "LightRenderer-LightingRenderPass-UniformBuffer");
 
         std::vector<Texture*> emptyShadowMapTextures(MAX_SHADOW_MAPS, m_emptyShadowMap.get());
         DescriptorSetWriter(m_lightingRenderPassResources[i]->descriptorSet)
@@ -137,24 +137,24 @@ bool LightRenderer::init() {
     attachments[1].setInitialLayout(vk::ImageLayout::eUndefined);
     attachments[1].setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
-    SubpassConfiguration subpassConfiguration;
+    SubpassConfiguration subpassConfiguration{};
     subpassConfiguration.addColourAttachment(0, vk::ImageLayout::eColorAttachmentOptimal);
     subpassConfiguration.setDepthStencilAttachment(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
-    RenderPassConfiguration renderPassConfig;
+    RenderPassConfiguration renderPassConfig{};
     renderPassConfig.device = Engine::graphics()->getDevice();
     renderPassConfig.setAttachments(attachments);
     renderPassConfig.addSubpass(subpassConfiguration);
     renderPassConfig.setClearColour(0, glm::vec4(1.0F));
     renderPassConfig.setClearDepth(1, 1.0F);
 
-    m_shadowRenderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig));
+    m_shadowRenderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig, "LightRenderer-ShadowRenderPass"));
     if (!m_shadowRenderPass) {
         printf("LightRenderer::init - Failed to create render pass\n");
         return false;
     }
 
-    GraphicsPipelineConfiguration pipelineConfig;
+    GraphicsPipelineConfiguration pipelineConfig{};
     pipelineConfig.device = Engine::graphics()->getDevice();
     pipelineConfig.renderPass = m_shadowRenderPass;
     pipelineConfig.setViewport(512, 512);
@@ -172,7 +172,7 @@ bool LightRenderer::init() {
 //    pipelineConfig.depthBias.constant = 200.0F;
 //    pipelineConfig.depthBias.slope = 1.5F;
 
-    m_shadowGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(pipelineConfig));
+    m_shadowGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(pipelineConfig, "LightRenderer-ShadowGraphicsPipeline"));
     if (!m_shadowGraphicsPipeline) {
         printf("LightRenderer::init - Failed to create graphics pipeline\n");
         return false;
@@ -180,31 +180,31 @@ bool LightRenderer::init() {
 
     m_vsmBlurComputeDescriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
             .addStorageImage(0, vk::ShaderStageFlagBits::eCompute, MAX_SHADOW_MAPS)
-            .build();
+            .build("LightRenderer-VsmBlurComputeDescriptorSetLayout");
 
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_vsmBlurResources.set(i, new VSMBlurResources());
-        m_vsmBlurResources[i]->descriptorSet = DescriptorSet::create(m_vsmBlurComputeDescriptorSetLayout, Engine::graphics()->descriptorPool());;
+        m_vsmBlurResources[i]->descriptorSet = DescriptorSet::create(m_vsmBlurComputeDescriptorSetLayout, Engine::graphics()->descriptorPool(), "LightRenderer-VsmBlurComputeDescriptorSet");
 
         DescriptorSetWriter(m_vsmBlurResources[i]->descriptorSet)
             .writeImage(0, m_emptyShadowMap.get(), vk::ImageLayout::eGeneral, 0, MAX_SHADOW_MAPS)
             .write();
     }
 
-    ComputePipelineConfiguration computePipelineConfig;
+    ComputePipelineConfiguration computePipelineConfig{};
     computePipelineConfig.device = Engine::graphics()->getDevice();
     computePipelineConfig.computeShader = "res/shaders/compute/compute_gaussianBlur.glsl";
     computePipelineConfig.addDescriptorSetLayout(m_vsmBlurComputeDescriptorSetLayout.get());
     computePipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(GaussianBlurPushConstants));
-    m_vsmBlurComputePipeline = std::shared_ptr<ComputePipeline>(ComputePipeline::create(computePipelineConfig));
+    m_vsmBlurComputePipeline = std::shared_ptr<ComputePipeline>(ComputePipeline::create(computePipelineConfig, "LightRenderer-VsmBlurComputePipeline"));
 
-    SamplerConfiguration samplerConfig;
+    SamplerConfiguration samplerConfig{};
     samplerConfig.device = Engine::graphics()->getDevice();
     samplerConfig.minFilter = vk::Filter::eLinear;
     samplerConfig.magFilter = vk::Filter::eLinear;
     samplerConfig.wrapU = vk::SamplerAddressMode::eClampToEdge;
     samplerConfig.wrapV = vk::SamplerAddressMode::eClampToEdge;
-    m_vsmShadowMapSampler = std::shared_ptr<Sampler>(Sampler::create(samplerConfig));
+    m_vsmShadowMapSampler = std::shared_ptr<Sampler>(Sampler::create(samplerConfig, "LightRenderer-VsmShadowMapSampler"));
 
     return true;
 }
@@ -349,27 +349,27 @@ void LightRenderer::initEmptyShadowMap() {
     depth = 1.0F;
     ImageData imageData(pixelData, 1, 1, ImagePixelLayout::R, ImagePixelFormat::Float32);
 
-    Image2DConfiguration imageConfig;
+    Image2DConfiguration imageConfig{};
     imageConfig.device = Engine::graphics()->getDevice();
     imageConfig.format = vk::Format::eR32Sfloat;
     imageConfig.setSize(1, 1);
     imageConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
     imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage;
     imageConfig.imageData = &imageData;
-    m_emptyShadowMapImage = std::shared_ptr<Image2D>(Image2D::create(imageConfig));
+    m_emptyShadowMapImage = std::shared_ptr<Image2D>(Image2D::create(imageConfig, "LightRenderer-EmptyShadowMapImage"));
 
-    ImageViewConfiguration emptyShadowMapImageViewConfig;
+    ImageViewConfiguration emptyShadowMapImageViewConfig{};
     emptyShadowMapImageViewConfig.device = Engine::graphics()->getDevice();
     emptyShadowMapImageViewConfig.format = vk::Format::eR32Sfloat;
     emptyShadowMapImageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
     emptyShadowMapImageViewConfig.setImage(m_emptyShadowMapImage.get());
 
-    SamplerConfiguration samplerConfig;
+    SamplerConfiguration samplerConfig{};
     samplerConfig.device = Engine::graphics()->getDevice();
     samplerConfig.minFilter = vk::Filter::eNearest;
     samplerConfig.magFilter = vk::Filter::eNearest;
 
-    m_emptyShadowMap = std::shared_ptr<Texture>(Texture::create(emptyShadowMapImageViewConfig, samplerConfig));
+    m_emptyShadowMap = std::shared_ptr<Texture>(Texture::create(emptyShadowMapImageViewConfig, samplerConfig, "LightRenderer-EmptyShadowMapTexture"));
 }
 
 void LightRenderer::updateActiveShadowMaps() {
@@ -466,7 +466,7 @@ void LightRenderer::updateCameraInfoBuffer(size_t maxShadowLights) {
 
         printf("Allocating CameraInfoBuffer - %llu objects\n", maxShadowLights);
 
-        BufferConfiguration bufferConfig;
+        BufferConfiguration bufferConfig{};
         bufferConfig.device = Engine::graphics()->getDevice();
         bufferConfig.size = newBufferSize;
         bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
@@ -474,7 +474,7 @@ void LightRenderer::updateCameraInfoBuffer(size_t maxShadowLights) {
         bufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer;// | vk::BufferUsageFlagBits::eTransferDst;
 
         delete m_shadowRenderPassResources->cameraInfoBuffer;
-        m_shadowRenderPassResources->cameraInfoBuffer = Buffer::create(bufferConfig);
+        m_shadowRenderPassResources->cameraInfoBuffer = Buffer::create(bufferConfig, "LightRenderer-ShadowRenderPass-CameraInfoUniformBuffer");
 
         DescriptorSetWriter(m_shadowRenderPassResources->descriptorSet)
                 .writeBuffer(0, m_shadowRenderPassResources->cameraInfoBuffer, 0, sizeof(GPUCamera))
@@ -497,7 +497,7 @@ void LightRenderer::updateLightInfoBuffer(size_t maxLights) {
 
             printf("Allocating LightInfoBuffer - %llu lights\n", maxLights);
 
-            BufferConfiguration bufferConfig;
+            BufferConfiguration bufferConfig{};
             bufferConfig.device = Engine::graphics()->getDevice();
             bufferConfig.size = newBufferSize;
             bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
@@ -505,7 +505,7 @@ void LightRenderer::updateLightInfoBuffer(size_t maxLights) {
             bufferConfig.usage = vk::BufferUsageFlagBits::eStorageBuffer;// | vk::BufferUsageFlagBits::eTransferDst;
 
             delete m_lightingRenderPassResources->lightInfoBuffer;
-            m_lightingRenderPassResources->lightInfoBuffer = Buffer::create(bufferConfig);
+            m_lightingRenderPassResources->lightInfoBuffer = Buffer::create(bufferConfig, "LightRenderer-LightingRenderPass-LightingInfoStorageBuffer");
 
             DescriptorSetWriter(m_lightingRenderPassResources->descriptorSet)
                     .writeBuffer(LIGHTING_RENDER_PASS_LIGHT_INFO_BUFFER_BINDING, m_lightingRenderPassResources->lightInfoBuffer, 0, newBufferSize)
@@ -569,7 +569,7 @@ void LightRenderer::updateShadowMapInfoBuffer(size_t maxShadowLights) {
 
             printf("Allocating ShadowMapInfoBuffer - %llu lights\n", maxShadowLights);
 
-            BufferConfiguration bufferConfig;
+            BufferConfiguration bufferConfig{};
             bufferConfig.device = Engine::graphics()->getDevice();
             bufferConfig.size = newBufferSize;
             bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
@@ -577,7 +577,7 @@ void LightRenderer::updateShadowMapInfoBuffer(size_t maxShadowLights) {
             bufferConfig.usage = vk::BufferUsageFlagBits::eStorageBuffer;// | vk::BufferUsageFlagBits::eTransferDst;
 
             delete m_lightingRenderPassResources->shadowMapBuffer;
-            m_lightingRenderPassResources->shadowMapBuffer = Buffer::create(bufferConfig);
+            m_lightingRenderPassResources->shadowMapBuffer = Buffer::create(bufferConfig, "LightRenderer-LightingRenderPass-ShadowMapStorageBuffer");
 
             DescriptorSetWriter(m_lightingRenderPassResources->descriptorSet)
                     .writeBuffer(LIGHTING_RENDER_PASS_SHADOW_MAP_INFO_BUFFER_BINDING, m_lightingRenderPassResources->shadowMapBuffer, 0, newBufferSize)

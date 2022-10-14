@@ -19,14 +19,14 @@ struct CommandBufferConfiguration {
 class CommandPool {
     NO_COPY(CommandPool);
 private:
-    CommandPool(std::weak_ptr<vkr::Device> device, std::unique_ptr<vkr::CommandPool> commandPool);
+    CommandPool(const std::weak_ptr<vkr::Device>& device, const vk::CommandPool& commandPool);
 
 public:
     ~CommandPool();
 
-    static CommandPool* create(const CommandPoolConfiguration& commandPoolConfiguration);
+    static CommandPool* create(const CommandPoolConfiguration& commandPoolConfiguration, const char* name);
 
-    const vkr::CommandPool& get() const;
+    const vk::CommandPool& getCommandPool() const;
 
     std::shared_ptr<vkr::CommandBuffer> allocateCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration);
 
@@ -34,7 +34,7 @@ public:
 
     std::shared_ptr<vkr::CommandBuffer> getCommandBuffer(const std::string& name);
 
-    void freeCommandBuffer(const std::string name);
+    void freeCommandBuffer(const std::string& name);
 
     bool hasCommandBuffer(const std::string& name) const;
 
@@ -42,7 +42,7 @@ public:
 
 private:
     std::shared_ptr<vkr::Device> m_device;
-    std::unique_ptr<vkr::CommandPool> m_commandPool;
+    vk::CommandPool m_commandPool;
     std::unordered_map<std::string, std::shared_ptr<vkr::CommandBuffer>> m_commandBuffers;
 
     GraphicsResource m_resourceId;

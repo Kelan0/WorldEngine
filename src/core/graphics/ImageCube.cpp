@@ -99,7 +99,7 @@ ImageCube::~ImageCube() {
     vfree(m_memory);
 }
 
-ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguration) {
+ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguration, const char* name) {
     const vk::Device& device = **imageCubeConfiguration.device.lock();
 
     vk::Result result;
@@ -218,6 +218,8 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         for (const auto& imageData : allocatedImageData) delete imageData;
         return nullptr;
     }
+
+    Engine::graphics()->setObjectName(device, (uint64_t)(VkImage)image, vk::ObjectType::eImage, name);
 
     const vk::MemoryRequirements& memoryRequirements = device.getImageMemoryRequirements(image);
     DeviceMemoryBlock* memory = vmalloc(memoryRequirements, imageCubeConfiguration.memoryProperties);
@@ -378,7 +380,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
     uniformBufferData.sourceSize.y = (int32_t)equirectangularHeight;
     uniformBufferData.sampleCount = glm::ivec2(8);
 
-    BufferConfiguration tempBufferConfig;
+    BufferConfiguration tempBufferConfig{};
     tempBufferConfig.device = Engine::graphics()->getDevice();
     tempBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 //    tempBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
@@ -390,7 +392,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
     vk::DeviceSize cubemapBufferOffsetBytes = INT_DIV_CEIL(equirectangularBufferOffsetBytes + equirectangularImageSizeBytes, 256) * 256;
     tempBufferConfig.size = INT_DIV_CEIL(cubemapBufferOffsetBytes + cubemapImageSizeBytes, 256) * 256;
 
-    Buffer* tempBuffer = Buffer::create(tempBufferConfig);
+    Buffer* tempBuffer = Buffer::create(tempBufferConfig, "ImageCube-EquirectangularComputeUniformBuffer");
 
     if (tempBuffer == nullptr) {
         printf("Unable to upload equirectangular CubeMap image data: Failed to create staging buffer\n");
@@ -413,7 +415,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
     imageBufferViewConfig.setFormat(dstImage->getFormat());
 
     imageBufferViewConfig.setOffsetRange(cubemapBufferOffsetBytes, cubemapImageSizeBytes);
-    BufferView* cubemapImageBufferView = BufferView::create(imageBufferViewConfig);
+    BufferView* cubemapImageBufferView = BufferView::create(imageBufferViewConfig, "ImageCube-CubemapImageBufferView");
     if (cubemapImageBufferView == nullptr) {
         printf("Unable to upload cube map image data: Failed to create texel staging buffer\n");
         delete tempBuffer;
@@ -421,7 +423,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
     }
 
     imageBufferViewConfig.setOffsetRange(equirectangularBufferOffsetBytes, equirectangularImageSizeBytes);
-    BufferView* equirectangularImageBufferView = BufferView::create(imageBufferViewConfig);
+    BufferView* equirectangularImageBufferView = BufferView::create(imageBufferViewConfig, "ImageCube-EquirectangularImageBufferView");
     if (equirectangularImageBufferView == nullptr) {
         printf("Unable to upload cube map image data: Failed to create texel staging buffer\n");
         delete cubemapImageBufferView;
@@ -434,7 +436,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
     ComputePipeline* equirectangularComputePipeline = getEquirectangularComputePipeline();
     DescriptorSet* equirectangularComputeDescriptorSet = getEquirectangularComputeDescriptorSet();
 
-    vk::CommandBufferBeginInfo commandBeginInfo;
+    vk::CommandBufferBeginInfo commandBeginInfo{};
     commandBeginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
     commandBuffer.begin(commandBeginInfo);
 
@@ -643,11 +645,11 @@ bool ImageCube::validateEquirectangularImageRegion(const ImageCube* image, Image
 ComputePipeline* ImageCube::getEquirectangularComputePipeline() {
     if (s_computeEquirectangularPipeline == nullptr) {
 
-        ComputePipelineConfiguration pipelineConfig;
+        ComputePipelineConfiguration pipelineConfig{};
         pipelineConfig.device = Engine::graphics()->getDevice();
         pipelineConfig.computeShader = "res/shaders/compute/compute_equirectangular.glsl";
         pipelineConfig.addDescriptorSetLayout(getEquirectangularComputeDescriptorSet()->getLayout().get());
-        s_computeEquirectangularPipeline = ComputePipeline::create(pipelineConfig);
+        s_computeEquirectangularPipeline = ComputePipeline::create(pipelineConfig, "ComputeEquirectangularPipeline");
 
         Engine::eventDispatcher()->connect(&ImageCube::onCleanupGraphics);
     }
@@ -662,9 +664,9 @@ DescriptorSet* ImageCube::getEquirectangularComputeDescriptorSet() {
                 .addUniformBuffer(0, vk::ShaderStageFlagBits::eCompute)
                 .addStorageTexelBuffer(1, vk::ShaderStageFlagBits::eCompute)
                 .addStorageTexelBuffer(2, vk::ShaderStageFlagBits::eCompute)
-                .build();
+                .build("ImageCube-EquirectangularComputeDescriptorSetLayout");
 
-        s_computeEquirectangularDescriptorSet = DescriptorSet::create(descriptorSetLayout, Engine::graphics()->descriptorPool());
+        s_computeEquirectangularDescriptorSet = DescriptorSet::create(descriptorSetLayout, Engine::graphics()->descriptorPool(), "ImageCube-EquirectangularComputeDescriptorSet");
 
         Engine::eventDispatcher()->connect(&ImageCube::onCleanupGraphics);
     }

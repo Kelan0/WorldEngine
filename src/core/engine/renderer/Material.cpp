@@ -10,25 +10,25 @@ void MaterialConfiguration::setAlbedo(const glm::vec3& albedo) {
     setAlbedo(glm::uvec3(albedo * 255.0F));
 }
 
-void MaterialConfiguration::setAlbedoMap(std::weak_ptr<Texture> albedoMap) {
+void MaterialConfiguration::setAlbedoMap(const std::weak_ptr<Texture>& albedoMap) {
     this->albedoMap = albedoMap.lock();
     this->albedo = glm::u8vec3(255, 255, 255);
 }
 
-void MaterialConfiguration::setAlbedoMap(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler) {
-    setAlbedoMap(std::shared_ptr<Texture>(Texture::create(image, sampler)));
+void MaterialConfiguration::setAlbedoMap(const std::weak_ptr<ImageView>& image, const std::weak_ptr<Sampler>& sampler, const char* name) {
+    setAlbedoMap(std::shared_ptr<Texture>(Texture::create(image, sampler, name)));
 }
 
-void MaterialConfiguration::setAlbedoMap(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration) {
-    setAlbedoMap(std::shared_ptr<Texture>(Texture::create(image, samplerConfiguration)));
+void MaterialConfiguration::setAlbedoMap(const std::weak_ptr<ImageView>& image, const SamplerConfiguration& samplerConfiguration, const char* name) {
+    setAlbedoMap(std::shared_ptr<Texture>(Texture::create(image, samplerConfiguration, name)));
 }
 
-void MaterialConfiguration::setAlbedoMap(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler) {
-    setAlbedoMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, sampler)));
+void MaterialConfiguration::setAlbedoMap(const ImageViewConfiguration& imageViewConfiguration, const std::weak_ptr<Sampler>& sampler, const char* name) {
+    setAlbedoMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, sampler, name)));
 }
 
-void MaterialConfiguration::setAlbedoMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration) {
-    setAlbedoMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, samplerConfiguration)));
+void MaterialConfiguration::setAlbedoMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration, const char* name) {
+    setAlbedoMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, samplerConfiguration, name)));
 }
 
 void MaterialConfiguration::setEmission(const glm::uvec3& emission) {
@@ -40,25 +40,25 @@ void MaterialConfiguration::setEmission(const glm::vec3& emission) {
     setEmission(glm::uvec3(emission * 255.0F));
 }
 
-void MaterialConfiguration::setEmissionMap(std::weak_ptr<Texture> emissionMap) {
+void MaterialConfiguration::setEmissionMap(const std::weak_ptr<Texture>& emissionMap) {
     this->emissionMap = emissionMap.lock();
     this->emission = glm::vec3(0.0F, 0.0F, 0.0F);
 }
 
-void MaterialConfiguration::setEmissionMap(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler) {
-    setEmissionMap(std::shared_ptr<Texture>(Texture::create(image, sampler)));
+void MaterialConfiguration::setEmissionMap(const std::weak_ptr<ImageView>& image, const std::weak_ptr<Sampler>& sampler, const char* name) {
+    setEmissionMap(std::shared_ptr<Texture>(Texture::create(image, sampler, name)));
 }
 
-void MaterialConfiguration::setEmissionMap(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration) {
-    setEmissionMap(std::shared_ptr<Texture>(Texture::create(image, samplerConfiguration)));
+void MaterialConfiguration::setEmissionMap(const std::weak_ptr<ImageView>& image, const SamplerConfiguration& samplerConfiguration, const char* name) {
+    setEmissionMap(std::shared_ptr<Texture>(Texture::create(image, samplerConfiguration, name)));
 }
 
-void MaterialConfiguration::setEmissionMap(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler) {
-    setEmissionMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, sampler)));
+void MaterialConfiguration::setEmissionMap(const ImageViewConfiguration& imageViewConfiguration, const std::weak_ptr<Sampler>& sampler, const char* name) {
+    setEmissionMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, sampler, name)));
 }
 
-void MaterialConfiguration::setEmissionMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration) {
-    setEmissionMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, samplerConfiguration)));
+void MaterialConfiguration::setEmissionMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration, const char* name) {
+    setEmissionMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, samplerConfiguration, name)));
 }
 
 void MaterialConfiguration::setRoughness(const uint32_t& roughness) {
@@ -70,25 +70,25 @@ void MaterialConfiguration::setRoughness(const float& roughness) {
     setRoughness((uint32_t)(roughness * 255.0F));
 }
 
-void MaterialConfiguration::setRoughnessMap(std::weak_ptr<Texture> roughnessMap) {
+void MaterialConfiguration::setRoughnessMap(const std::weak_ptr<Texture>& roughnessMap) {
     this->roughnessMap = roughnessMap.lock();
     this->roughness = 255;
 }
 
-void MaterialConfiguration::setRoughnessMap(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler) {
-    setRoughnessMap(std::shared_ptr<Texture>(Texture::create(image, sampler)));
+void MaterialConfiguration::setRoughnessMap(const std::weak_ptr<ImageView>& image, const std::weak_ptr<Sampler>& sampler, const char* name) {
+    setRoughnessMap(std::shared_ptr<Texture>(Texture::create(image, sampler, name)));
 }
 
-void MaterialConfiguration::setRoughnessMap(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration) {
-    setRoughnessMap(std::shared_ptr<Texture>(Texture::create(image, samplerConfiguration)));
+void MaterialConfiguration::setRoughnessMap(const std::weak_ptr<ImageView>& image, const SamplerConfiguration& samplerConfiguration, const char* name) {
+    setRoughnessMap(std::shared_ptr<Texture>(Texture::create(image, samplerConfiguration, name)));
 }
 
-void MaterialConfiguration::setRoughnessMap(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler) {
-    setRoughnessMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, sampler)));
+void MaterialConfiguration::setRoughnessMap(const ImageViewConfiguration& imageViewConfiguration, const std::weak_ptr<Sampler>& sampler, const char* name) {
+    setRoughnessMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, sampler, name)));
 }
 
-void MaterialConfiguration::setRoughnessMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration) {
-    setRoughnessMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, samplerConfiguration)));
+void MaterialConfiguration::setRoughnessMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration, const char* name) {
+    setRoughnessMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, samplerConfiguration, name)));
 }
 
 void MaterialConfiguration::setMetallic(const uint32_t& metallic) {
@@ -100,57 +100,58 @@ void MaterialConfiguration::setMetallic(const float& metallic) {
     setMetallic((uint32_t)(metallic * 255.0F));
 }
 
-void MaterialConfiguration::setMetallicMap(std::weak_ptr<Texture> metallicMap) {
+void MaterialConfiguration::setMetallicMap(const std::weak_ptr<Texture>& metallicMap) {
     this->metallicMap = metallicMap.lock();
     this->metallic = 0;
 }
 
-void MaterialConfiguration::setMetallicMap(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler) {
-    setMetallicMap(std::shared_ptr<Texture>(Texture::create(image, sampler)));
+void MaterialConfiguration::setMetallicMap(const std::weak_ptr<ImageView>& image, const std::weak_ptr<Sampler>& sampler, const char* name) {
+    setMetallicMap(std::shared_ptr<Texture>(Texture::create(image, sampler, name)));
 }
 
-void MaterialConfiguration::setMetallicMap(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration) {
-    setMetallicMap(std::shared_ptr<Texture>(Texture::create(image, samplerConfiguration)));
+void MaterialConfiguration::setMetallicMap(const std::weak_ptr<ImageView>& image, const SamplerConfiguration& samplerConfiguration, const char* name) {
+    setMetallicMap(std::shared_ptr<Texture>(Texture::create(image, samplerConfiguration, name)));
 }
 
-void MaterialConfiguration::setMetallicMap(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler) {
-    setMetallicMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, sampler)));
+void MaterialConfiguration::setMetallicMap(const ImageViewConfiguration& imageViewConfiguration, const std::weak_ptr<Sampler>& sampler, const char* name) {
+    setMetallicMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, sampler, name)));
 }
 
-void MaterialConfiguration::setMetallicMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration) {
-    setMetallicMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, samplerConfiguration)));
+void MaterialConfiguration::setMetallicMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration, const char* name) {
+    setMetallicMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, samplerConfiguration, name)));
 }
 
-void MaterialConfiguration::setNormalMap(std::weak_ptr<Texture> normalMap) {
+void MaterialConfiguration::setNormalMap(const std::weak_ptr<Texture>& normalMap) {
     this->normalMap = normalMap.lock();
 }
 
-void MaterialConfiguration::setNormalMap(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler) {
-    setNormalMap(std::shared_ptr<Texture>(Texture::create(image, sampler)));
+void MaterialConfiguration::setNormalMap(const std::weak_ptr<ImageView>& image, const std::weak_ptr<Sampler>& sampler, const char* name) {
+    setNormalMap(std::shared_ptr<Texture>(Texture::create(image, sampler, name)));
 }
 
-void MaterialConfiguration::setNormalMap(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration) {
-    setNormalMap(std::shared_ptr<Texture>(Texture::create(image, samplerConfiguration)));
+void MaterialConfiguration::setNormalMap(const std::weak_ptr<ImageView>& image, const SamplerConfiguration& samplerConfiguration, const char* name) {
+    setNormalMap(std::shared_ptr<Texture>(Texture::create(image, samplerConfiguration, name)));
 }
 
-void MaterialConfiguration::setNormalMap(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler) {
-    setNormalMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, sampler)));
+void MaterialConfiguration::setNormalMap(const ImageViewConfiguration& imageViewConfiguration, const std::weak_ptr<Sampler>& sampler, const char* name) {
+    setNormalMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, sampler, name)));
 }
 
-void MaterialConfiguration::setNormalMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration) {
-    setNormalMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, samplerConfiguration)));
+void MaterialConfiguration::setNormalMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration, const char* name) {
+    setNormalMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, samplerConfiguration, name)));
 }
 
 
 
 
-Material::Material() {
-
+Material::Material():
+    m_albedo(0.0F),
+    m_emission(0.0F),
+    m_roughness(0.0F),
+    m_metallic(0.0F) {
 }
 
-Material::~Material() {
-
-}
+Material::~Material() = default;
 
 Material* Material::create(const MaterialConfiguration& materialConfiguration) {
     Material* material = new Material();

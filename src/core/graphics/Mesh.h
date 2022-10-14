@@ -37,7 +37,7 @@ struct MeshConfiguration {
 class Mesh {
     NO_COPY(Mesh);
 private:
-    Mesh(std::weak_ptr<vkr::Device> device);
+    explicit Mesh(const std::weak_ptr<vkr::Device> &device);
 
 public:
     ~Mesh();

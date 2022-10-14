@@ -1,32 +1,49 @@
 #include "core/graphics/CommandPool.h"
 
-CommandPool::CommandPool(std::weak_ptr<vkr::Device> device, std::unique_ptr<vkr::CommandPool> commandPool):
+CommandPool::CommandPool(const std::weak_ptr<vkr::Device>& device, const vk::CommandPool& commandPool):
         m_device(device),
-        m_commandPool(std::move(commandPool)),
+        m_commandPool(commandPool),
         m_resourceId(GraphicsManager::nextResourceId()) {
 }
 
 CommandPool::~CommandPool() {
-    for (auto it = m_commandBuffers.begin(); it != m_commandBuffers.end(); ++it) {
-        if (it->second.use_count() > 1) {
-            printf("Command buffer \"%s\" has %d external references when command pool was destroyed\n", it->first.c_str(), it->second.use_count() - 1);
+    for (auto & commandBuffer : m_commandBuffers) {
+        if (commandBuffer.second.use_count() > 1) {
+            printf("Command buffer \"%s\" has %llu external references when command pool was destroyed\n", commandBuffer.first.c_str(), (uint64_t)(commandBuffer.second.use_count() - 1));
         }
     }
+    m_commandBuffers.clear();
+    (**m_device).destroyCommandPool(m_commandPool);
 }
 
-CommandPool* CommandPool::create(const CommandPoolConfiguration& commandPoolConfiguration) {
+CommandPool* CommandPool::create(const CommandPoolConfiguration& commandPoolConfiguration, const char* name) {
     vk::CommandPoolCreateInfo commandPoolCreateInfo;
     commandPoolCreateInfo.setQueueFamilyIndex(commandPoolConfiguration.queueFamilyIndex);
     if (commandPoolConfiguration.transient)
         commandPoolCreateInfo.flags |= vk::CommandPoolCreateFlagBits::eTransient;
     if (commandPoolConfiguration.resetCommandBuffer)
         commandPoolCreateInfo.flags |= vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-    std::unique_ptr<vkr::CommandPool> commandPool = std::make_unique<vkr::CommandPool>(*commandPoolConfiguration.device.lock(), commandPoolCreateInfo);
-    return new CommandPool(commandPoolConfiguration.device, std::move(commandPool));
+
+//    const std::shared_ptr<vkr::Device> device = commandPoolConfiguration.device.lock();
+//    std::unique_ptr<vkr::CommandPool> commandPool = std::make_unique<vkr::CommandPool>(*device, commandPoolCreateInfo);
+
+    const vk::Device& device = **commandPoolConfiguration.device.lock();
+    vk::CommandPool commandPool = VK_NULL_HANDLE;
+    vk::Result result = device.createCommandPool(&commandPoolCreateInfo, nullptr, &commandPool);
+
+    if (result != vk::Result::eSuccess) {
+        printf("Failed to create command pool: %s\n", vk::to_string(result).c_str());
+        return nullptr;
+    }
+
+    Engine::graphics()->setObjectName(device, (uint64_t)(VkCommandPool)commandPool, vk::ObjectType::eCommandPool, name);
+
+    return new CommandPool(commandPoolConfiguration.device, commandPool);
 }
 
-const vkr::CommandPool& CommandPool::get() const {
-    return *m_commandPool;
+
+const vk::CommandPool& CommandPool::getCommandPool() const {
+    return m_commandPool;
 }
 
 std::shared_ptr<vkr::CommandBuffer> CommandPool::allocateCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration) {
@@ -34,17 +51,19 @@ std::shared_ptr<vkr::CommandBuffer> CommandPool::allocateCommandBuffer(const std
     if (m_commandBuffers.find(name) != m_commandBuffers.end()) {
 		printf("Unable to create command buffer \"%s\", it already exists\n", name.c_str());
 		assert(false);
-		return NULL;
+		return nullptr;
 	}
 #endif
 
     vk::CommandBufferAllocateInfo commandBufferAllocInfo;
-    commandBufferAllocInfo.setCommandPool(**m_commandPool);
+    commandBufferAllocInfo.setCommandPool(m_commandPool);
     commandBufferAllocInfo.setCommandBufferCount(1);
     commandBufferAllocInfo.setLevel(commandBufferConfiguration.level);
     std::vector<vkr::CommandBuffer> commandBuffers = m_device->allocateCommandBuffers(commandBufferAllocInfo);
 
     std::shared_ptr<vkr::CommandBuffer> commandBuffer = std::make_shared<vkr::CommandBuffer>(std::move(commandBuffers[0]));
+
+    Engine::graphics()->setObjectName(**m_device, (uint64_t)(VkCommandBuffer)(**commandBuffer), vk::ObjectType::eCommandBuffer, name.c_str());
 
     m_commandBuffers.insert(std::make_pair(name, commandBuffer));
 
@@ -66,7 +85,7 @@ std::shared_ptr<vkr::CommandBuffer> CommandPool::getCommandBuffer(const std::str
     return m_commandBuffers.at(name);
 }
 
-void CommandPool::freeCommandBuffer(const std::string name) {
+void CommandPool::freeCommandBuffer(const std::string& name) {
 #if _DEBUG
     auto it = m_commandBuffers.find(name);
 	if (it == m_commandBuffers.end()) {
@@ -75,7 +94,7 @@ void CommandPool::freeCommandBuffer(const std::string name) {
 	}
 
 	if (it->second.use_count() > 1) {
-		printf("Unable to free command buffer \"%s\" because it still has %d references\n", name.c_str(), it->second.use_count() - 1);
+		printf("Unable to free command buffer \"%s\" because it still has %llu references\n", name.c_str(), (uint64_t)(it->second.use_count() - 1));
 		assert(false);
 		return;
 	}

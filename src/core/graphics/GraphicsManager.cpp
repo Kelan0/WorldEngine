@@ -21,7 +21,7 @@ uint64_t GraphicsManager::s_nextResourceID = 0;
 #define VK_FUNC(funcName) ((VK_PFN(funcName))m_instance->getProcAddr(#funcName))
 
 
-QueueDetails::QueueDetails() {}
+QueueDetails::QueueDetails() {};
 
 GraphicsManager::GraphicsManager() {
     m_instance = nullptr;
@@ -93,6 +93,7 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
             VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME,
             VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME,
+            VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
     };
 
     std::unordered_map<std::string, uint32_t> queueLayout;
@@ -154,17 +155,17 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
     //	return false;
     //}
 
-    CommandPoolConfiguration commandPoolConfig;
+    CommandPoolConfiguration commandPoolConfig{};
     commandPoolConfig.device = m_device.device;
     commandPoolConfig.queueFamilyIndex = m_queues.queueFamilies.graphicsQueueFamilyIndex.value();
     commandPoolConfig.resetCommandBuffer = true;
     commandPoolConfig.transient = false;
-    m_commandPool = std::shared_ptr<CommandPool>(CommandPool::create(commandPoolConfig));
+    m_commandPool = std::shared_ptr<CommandPool>(CommandPool::create(commandPoolConfig, "GraphicsManager-DefaultCommandPool"));
 
-    DescriptorPoolConfiguration descriptorPoolConfig;
+    DescriptorPoolConfiguration descriptorPoolConfig{};
     descriptorPoolConfig.device = m_device.device;
     //descriptorPoolConfig.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
-    m_descriptorPool = std::shared_ptr<DescriptorPool>(DescriptorPool::create(descriptorPoolConfig));
+    m_descriptorPool = std::shared_ptr<DescriptorPool>(DescriptorPool::create(descriptorPoolConfig, "GraphicsManager-DefaultDescriptorPool"));
 
     m_commandPool->allocateCommandBuffer("transfer_buffer", { vk::CommandBufferLevel::ePrimary });
 
@@ -592,9 +593,9 @@ bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enable
     createInfo.setPEnabledFeatures(enabledFeatures);
     m_device.device = std::make_shared<vkr::Device>(*m_device.physicalDevice, createInfo);
 
-    for (auto it = queueIndexMap.begin(); it != queueIndexMap.end(); ++it) {
-        uint32_t queueFamilyIndex = it->first;
-        const std::vector<std::string>& ids = it->second;
+    for (auto& entry : queueIndexMap) {
+        uint32_t queueFamilyIndex = entry.first;
+        const std::vector<std::string>& ids = entry.second;
 
         for (uint32_t queueIndex = 0; queueIndex < ids.size(); ++queueIndex) {
             m_queues.queues.insert(std::make_pair(ids[queueIndex], std::make_shared<vkr::Queue>(*m_device.device, queueFamilyIndex, queueIndex)));
@@ -617,7 +618,7 @@ bool GraphicsManager::initSurfaceDetails() {
 
     std::vector<vk::SurfaceFormatKHR> formats = m_device.physicalDevice->getSurfaceFormatsKHR(**m_surface.surface);
 
-    if (formats.size() == 0) {
+    if (formats.empty()) {
         printf("Device \"%s\" supports no surface formats\n", m_device.physicalDevice->getProperties().deviceName.data());
         return false;
     }
@@ -764,11 +765,11 @@ bool GraphicsManager::createSwapchainImages() {
     m_swapchain.imageViews.resize(images.size());
 
     for (int i = 0; i < images.size(); ++i) {
-        ImageViewConfiguration imageViewConfig;
+        ImageViewConfiguration imageViewConfig{};
         imageViewConfig.device = m_device.device;
         imageViewConfig.image = vk::Image(images[i]);
         imageViewConfig.format = m_surface.surfaceFormat.format;
-        m_swapchain.imageViews[i] = std::shared_ptr<ImageView>(ImageView::create(imageViewConfig));
+        m_swapchain.imageViews[i] = std::shared_ptr<ImageView>(ImageView::create(imageViewConfig, "SwapchainPresentImage"));
     }
 
 //    m_swapchain.depthImageView.reset();
@@ -811,7 +812,7 @@ bool GraphicsManager::createSwapchainImages() {
 bool GraphicsManager::createSwapchainFramebuffers() {
     m_swapchain.framebuffers.resize(m_swapchain.imageViews.size(), nullptr);
 
-    FramebufferConfiguration framebufferConfig;
+    FramebufferConfiguration framebufferConfig{};
     framebufferConfig.device = m_device.device;
     framebufferConfig.setRenderPass(m_renderPass.get());
     framebufferConfig.setSize(m_swapchain.imageExtent);
@@ -821,7 +822,7 @@ bool GraphicsManager::createSwapchainFramebuffers() {
                 m_swapchain.imageViews[i]->getImageView(),
         };
 
-        m_swapchain.framebuffers[i] = std::shared_ptr<Framebuffer>(Framebuffer::create(framebufferConfig));
+        m_swapchain.framebuffers[i] = std::shared_ptr<Framebuffer>(Framebuffer::create(framebufferConfig, "SwapchainPresentFramebuffer"));
     }
     return true;
 }
@@ -847,13 +848,13 @@ bool GraphicsManager::createRenderPass() {
     subpassDependency.setSrcAccessMask({});
     subpassDependency.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
 
-    RenderPassConfiguration renderPassConfig;
+    RenderPassConfiguration renderPassConfig{};
     renderPassConfig.device = m_device.device;
     renderPassConfig.addAttachment(colourAttachment);
     renderPassConfig.addSubpass(subpassConfiguration);
     renderPassConfig.addSubpassDependency(subpassDependency);
 
-    m_renderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig));
+    m_renderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig, "PresentRenderPass"));
     return m_renderPass != nullptr;
 }
 
@@ -1138,4 +1139,16 @@ DeviceMemoryManager& GraphicsManager::memory() {
 
 vk::ColorSpaceKHR GraphicsManager::getColourSpace() const {
     return m_surface.surfaceFormat.colorSpace;
+}
+
+void GraphicsManager::setObjectName(const vk::Device& device, const uint64_t& objectHandle, const vk::ObjectType& objectType, const char* objectName) {
+    if (objectName != nullptr) {
+        vk::DebugUtilsObjectNameInfoEXT objectNameInfo{};
+        objectNameInfo.objectHandle = objectHandle;
+        objectNameInfo.objectType = objectType;
+        objectNameInfo.pObjectName = objectName;
+        device.setDebugUtilsObjectNameEXT(objectNameInfo);
+    } else {
+        printf("");
+    }
 }

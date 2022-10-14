@@ -105,9 +105,9 @@ public:
 
     static GraphicsPipeline* create(std::weak_ptr<vkr::Device> device);
 
-    static GraphicsPipeline* create(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration);
+    static GraphicsPipeline* create(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration, const char* name);
 
-    bool recreate(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration);
+    bool recreate(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration, const char* name);
 
     void bind(const vk::CommandBuffer& commandBuffer) const;
 

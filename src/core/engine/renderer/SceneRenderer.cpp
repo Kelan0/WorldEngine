@@ -92,17 +92,17 @@ bool SceneRenderer::init() {
 
     m_objectDescriptorSetLayout = builder
             .addStorageBuffer(0, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-            .build();
+            .build("SceneRenderer-ObjectDescriptorSetLayout");
 
     m_materialDescriptorSetLayout = builder
             .addCombinedImageSampler(0, vk::ShaderStageFlagBits::eFragment, maxTextures)
             .addStorageBuffer(1, vk::ShaderStageFlagBits::eFragment)
-            .build();
+            .build("SceneRenderer-MaterialDescriptorSetLayout");
 
     for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_resources.set(i, new RenderResources());
-        m_resources[i]->objectDescriptorSet = DescriptorSet::create(m_objectDescriptorSetLayout, descriptorPool);
-        m_resources[i]->materialDescriptorSet = DescriptorSet::create(m_materialDescriptorSetLayout, descriptorPool);
+        m_resources[i]->objectDescriptorSet = DescriptorSet::create(m_objectDescriptorSetLayout, descriptorPool, "SceneRenderer-ObjectDescriptorSet");
+        m_resources[i]->materialDescriptorSet = DescriptorSet::create(m_materialDescriptorSetLayout, descriptorPool, "SceneRenderer-MaterialDescriptorSet");
 
         m_resources[i]->worldTransformBuffer = nullptr;
         m_resources[i]->materialDataBuffer = nullptr;
@@ -235,24 +235,24 @@ void SceneRenderer::initMissingTextureMaterial() {
 
     ImageData imageData(pixelBytes, 2, 2, ImagePixelLayout::RGBA, ImagePixelFormat::UInt8);
 
-    Image2DConfiguration missingTextureImageConfig;
+    Image2DConfiguration missingTextureImageConfig{};
     missingTextureImageConfig.device = Engine::graphics()->getDevice();
     missingTextureImageConfig.format = vk::Format::eR8G8B8A8Unorm;
     missingTextureImageConfig.imageData = &imageData;
-    m_missingTextureImage = std::shared_ptr<Image2D>(Image2D::create(missingTextureImageConfig));
+    m_missingTextureImage = std::shared_ptr<Image2D>(Image2D::create(missingTextureImageConfig, "SceneRenderer-MissingTextureImage"));
 
-    ImageViewConfiguration missingTextureImageViewConfig;
+    ImageViewConfiguration missingTextureImageViewConfig{};
     missingTextureImageViewConfig.device = missingTextureImageConfig.device;
     missingTextureImageViewConfig.format = missingTextureImageConfig.format;
     missingTextureImageViewConfig.setImage(m_missingTextureImage.get());
 
-    SamplerConfiguration missingTextureSamplerConfig;
+    SamplerConfiguration missingTextureSamplerConfig{};
     missingTextureSamplerConfig.device = missingTextureImageConfig.device;
     missingTextureSamplerConfig.minFilter = vk::Filter::eNearest;
     missingTextureSamplerConfig.magFilter = vk::Filter::eNearest;
 
     MaterialConfiguration materialConfig;
-    materialConfig.setAlbedoMap(missingTextureImageViewConfig, missingTextureSamplerConfig);
+    materialConfig.setAlbedoMap(missingTextureImageViewConfig, missingTextureSamplerConfig, "SceneRenderer-MissingTexture");
 
     m_missingTextureMaterial = std::shared_ptr<Material>(Material::create(materialConfig));
 
@@ -809,7 +809,7 @@ ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
         m_resources->objectBuffer.resize(maxObjects, defaultObjectData);
 
 
-        BufferConfiguration worldTransformBufferConfig;
+        BufferConfiguration worldTransformBufferConfig{};
         worldTransformBufferConfig.device = Engine::graphics()->getDevice();
         worldTransformBufferConfig.size = newBufferSize;
         worldTransformBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
@@ -817,7 +817,7 @@ ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
         worldTransformBufferConfig.usage = vk::BufferUsageFlagBits::eStorageBuffer;// | vk::BufferUsageFlagBits::eTransferDst;
 
         delete m_resources->worldTransformBuffer;
-        m_resources->worldTransformBuffer = Buffer::create(worldTransformBufferConfig);
+        m_resources->worldTransformBuffer = Buffer::create(worldTransformBufferConfig, "SceneRenderer-WorldTransformBuffer");
 
 
         DescriptorSetWriter(m_resources->objectDescriptorSet)
@@ -860,7 +860,7 @@ GPUMaterial* SceneRenderer::mappedMaterialDataBuffer(size_t maxObjects) {
         m_resources->materialBuffer.resize(maxObjects, defaultMaterial);
 
 
-        BufferConfiguration materialDataBufferConfig;
+        BufferConfiguration materialDataBufferConfig{};
         materialDataBufferConfig.device = Engine::graphics()->getDevice();
         materialDataBufferConfig.size = newBufferSize;
         materialDataBufferConfig.memoryProperties =
@@ -869,7 +869,7 @@ GPUMaterial* SceneRenderer::mappedMaterialDataBuffer(size_t maxObjects) {
         materialDataBufferConfig.usage = vk::BufferUsageFlagBits::eStorageBuffer;// | vk::BufferUsageFlagBits::eTransferDst;
 
         delete m_resources->materialDataBuffer;
-        m_resources->materialDataBuffer = Buffer::create(materialDataBufferConfig);
+        m_resources->materialDataBuffer = Buffer::create(materialDataBufferConfig, "SceneRenderer-MaterialDataBuffer");
 
 
         DescriptorSetWriter(m_resources->materialDescriptorSet)

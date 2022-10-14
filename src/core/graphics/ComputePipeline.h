@@ -33,23 +33,23 @@ class ComputePipeline {
     NO_COPY(ComputePipeline);
 
 private:
-    ComputePipeline(std::weak_ptr<vkr::Device> device);
+    explicit ComputePipeline(const std::weak_ptr<vkr::Device>& device);
 
-    ComputePipeline(std::weak_ptr<vkr::Device> device,
+    ComputePipeline(const std::weak_ptr<vkr::Device>& device,
                      vk::Pipeline& pipeline,
                      vk::PipelineLayout& pipelineLayout,
-                     const ComputePipelineConfiguration& config);
+                     ComputePipelineConfiguration  config);
 
 public:
     ~ComputePipeline();
 
-    static ComputePipeline* create(std::weak_ptr<vkr::Device> device);
+    static ComputePipeline* create(const std::weak_ptr<vkr::Device>& device);
 
-    static ComputePipeline* create(const ComputePipelineConfiguration& computePipelineConfiguration);
+    static ComputePipeline* create(const ComputePipelineConfiguration& computePipelineConfiguration, const char* name);
 
-    static ComputePipeline* getComputePipeline(const ComputePipelineConfiguration& computePipelineConfiguration);
+    static ComputePipeline* getComputePipeline(const ComputePipelineConfiguration& computePipelineConfiguration, const char* name);
 
-    bool recreate(const ComputePipelineConfiguration& computePipelineConfiguration);
+    bool recreate(const ComputePipelineConfiguration& computePipelineConfiguration, const char* name);
 
     void bind(const vk::CommandBuffer& commandBuffer) const;
 

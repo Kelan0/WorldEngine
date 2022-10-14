@@ -3,7 +3,7 @@
 
 std::unordered_map<Sampler::Key, std::weak_ptr<Sampler>, Sampler::KeyHasher> Sampler::s_cachedSamplers;
 
-Sampler::Sampler(std::weak_ptr<vkr::Device> device, vk::Sampler sampler):
+Sampler::Sampler(const std::weak_ptr<vkr::Device>& device, vk::Sampler sampler):
         m_device(device),
         m_sampler(sampler) {
     //printf("Create sampler\n");
@@ -14,7 +14,7 @@ Sampler::~Sampler() {
     (**m_device).destroySampler(m_sampler);
 }
 
-Sampler* Sampler::create(const SamplerConfiguration& samplerConfiguration) {
+Sampler* Sampler::create(const SamplerConfiguration& samplerConfiguration, const char* name) {
 
     const vk::Device& device = **samplerConfiguration.device.lock();
 
@@ -38,23 +38,25 @@ Sampler* Sampler::create(const SamplerConfiguration& samplerConfiguration) {
     vk::Sampler sampler = VK_NULL_HANDLE;
 
     vk::Result result;
-    result = device.createSampler(&samplerCreateInfo, NULL, &sampler);
+    result = device.createSampler(&samplerCreateInfo, nullptr, &sampler);
     if (result != vk::Result::eSuccess) {
         printf("Failed to create sampler: %s\n", vk::to_string(result).c_str());
-        return NULL;
+        return nullptr;
     }
+    Engine::graphics()->setObjectName(device, (uint64_t)(VkSampler)sampler, vk::ObjectType::eSampler, name);
+
 
     return new Sampler(samplerConfiguration.device, sampler);
 }
 
-std::shared_ptr<Sampler> Sampler::get(const SamplerConfiguration& samplerConfiguration) {
+std::shared_ptr<Sampler> Sampler::get(const SamplerConfiguration& samplerConfiguration, const char* name) {
     Key key(samplerConfiguration);
     auto it = s_cachedSamplers.find(key);
 
     if (it == s_cachedSamplers.end() || it->second.expired()) {
-        std::shared_ptr<Sampler> sampler(Sampler::create(samplerConfiguration));
-        if (sampler == NULL)
-            return NULL;
+        std::shared_ptr<Sampler> sampler(Sampler::create(samplerConfiguration, name));
+        if (sampler == nullptr)
+            return nullptr;
         s_cachedSamplers.insert(std::make_pair(key, std::weak_ptr<Sampler>(sampler)));
         return sampler;
     } else {
@@ -143,38 +145,38 @@ Texture::~Texture() {
     m_imageView.reset();
 }
 
-Texture* Texture::create(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler) {
+Texture* Texture::create(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler, const char* name) {
     return new Texture(std::move(image), std::move(sampler));
 }
 
-Texture* Texture::create(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration) {
-    std::shared_ptr<Sampler> sampler = Sampler::get(samplerConfiguration);
-    if (sampler == NULL)
-        return NULL;
+Texture* Texture::create(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration, const char* name) {
+    std::shared_ptr<Sampler> sampler = Sampler::get(samplerConfiguration, name);
+    if (sampler == nullptr)
+        return nullptr;
 
-    return new Texture(std::move(image), std::move(sampler));
+    return new Texture(std::move(image), sampler);
 }
 
-Texture* Texture::create(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler) {
-    ImageView* rawImageView = ImageView::create(imageViewConfiguration);
-    if (rawImageView == NULL)
-        return NULL;
+Texture* Texture::create(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler, const char* name) {
+    ImageView* rawImageView = ImageView::create(imageViewConfiguration, name);
+    if (rawImageView == nullptr)
+        return nullptr;
 
     return new Texture(std::shared_ptr<ImageView>(rawImageView), std::move(sampler));
 }
 
-Texture* Texture::create(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration) {
-    ImageView* rawImageView = ImageView::create(imageViewConfiguration);
-    if (rawImageView == NULL)
-        return NULL;
+Texture* Texture::create(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration, const char* name) {
+    ImageView* rawImageView = ImageView::create(imageViewConfiguration, name);
+    if (rawImageView == nullptr)
+        return nullptr;
     std::shared_ptr<ImageView> imageView = std::shared_ptr<ImageView>(rawImageView);
 
-    std::shared_ptr<Sampler> sampler = Sampler::get(samplerConfiguration);
-    if (sampler == NULL) {
-        return NULL;
+    std::shared_ptr<Sampler> sampler = Sampler::get(samplerConfiguration, name);
+    if (sampler == nullptr) {
+        return nullptr;
     }
 
-    return new Texture(std::move(imageView), std::move(sampler));
+    return new Texture(imageView, sampler);
 }
 
 const vk::ImageViewType& Texture::getType() const {

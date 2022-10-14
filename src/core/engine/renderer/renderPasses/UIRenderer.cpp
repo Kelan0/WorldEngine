@@ -36,7 +36,7 @@ bool UIRenderer::init(SDL_Window* windowHandle) {
         return false;
     }
 
-    vk::AttachmentDescription colourAttachment;
+    vk::AttachmentDescription colourAttachment{};
     colourAttachment.setFormat(Engine::graphics()->getColourFormat());
     colourAttachment.setSamples(vk::SampleCountFlagBits::e1);
     colourAttachment.setLoadOp(vk::AttachmentLoadOp::eDontCare); // eDontCare ?
@@ -46,10 +46,10 @@ bool UIRenderer::init(SDL_Window* windowHandle) {
     colourAttachment.setInitialLayout(vk::ImageLayout::eUndefined);
     colourAttachment.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 
-    SubpassConfiguration subpassConfiguration;
+    SubpassConfiguration subpassConfiguration{};
     subpassConfiguration.addColourAttachment(vk::AttachmentReference(0, vk::ImageLayout::eColorAttachmentOptimal));
 
-    vk::SubpassDependency subpassDependency;
+    vk::SubpassDependency subpassDependency{};
     subpassDependency.setSrcSubpass(VK_SUBPASS_EXTERNAL);
     subpassDependency.setDstSubpass(0);
     subpassDependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
@@ -57,13 +57,13 @@ bool UIRenderer::init(SDL_Window* windowHandle) {
     subpassDependency.setSrcAccessMask({});
     subpassDependency.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
 
-    RenderPassConfiguration renderPassConfig;
+    RenderPassConfiguration renderPassConfig{};
     renderPassConfig.device = Engine::graphics()->getDevice();
     renderPassConfig.addAttachment(colourAttachment);
     renderPassConfig.addSubpass(subpassConfiguration);
     renderPassConfig.addSubpassDependency(subpassDependency);
     renderPassConfig.setClearColour(0, glm::vec4(0.0F, 0.0F, 0.0F, 1.0F));
-    m_uiRenderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig));
+    m_uiRenderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig, "UIRenderer-RenderPass"));
 
     ImGui_ImplVulkan_InitInfo initInfo = {};
     initInfo.Instance = Engine::graphics()->getInstance();

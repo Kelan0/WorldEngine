@@ -16,9 +16,11 @@ void MeshConfiguration::setPrimitiveType(const MeshPrimitiveType& primitiveType)
 
 
 
-Mesh::Mesh(std::weak_ptr<vkr::Device> device):
+Mesh::Mesh(const std::weak_ptr<vkr::Device>& device):
         m_device(device),
         m_resourceId(GraphicsManager::nextResourceId()),
+        m_vertexSize(0),
+        m_indexSize(0),
         m_vertexBuffer(nullptr),
         m_indexBuffer(nullptr),
         m_primitiveType(PrimitiveType_Triangle) {
@@ -64,13 +66,13 @@ bool Mesh::uploadVertices(const void* vertices, const vk::DeviceSize& vertexSize
     assert(vertices != nullptr);
     assert(vertexSize != 0);
 
-    BufferConfiguration vertexBufferConfig;
+    BufferConfiguration vertexBufferConfig{};
     vertexBufferConfig.device = m_device;
     vertexBufferConfig.size = (vk::DeviceSize)(vertexCount) * vertexSize;
     vertexBufferConfig.data = (void*)vertices;
     vertexBufferConfig.usage = vk::BufferUsageFlagBits::eVertexBuffer;
     vertexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-    m_vertexBuffer = Buffer::create(vertexBufferConfig);
+    m_vertexBuffer = Buffer::create(vertexBufferConfig, "Mesh-VertexBuffer");
     m_vertexSize = vertexSize;
 
     if (m_vertexBuffer == nullptr) {
@@ -93,13 +95,13 @@ bool Mesh::uploadIndices(const void* indices, const vk::DeviceSize& indexSize, c
     assert(indices != nullptr);
     assert(indexSize != 0);
 
-    BufferConfiguration indexBufferConfig;
+    BufferConfiguration indexBufferConfig{};
     indexBufferConfig.device = m_device;
     indexBufferConfig.size = (vk::DeviceSize)indexCount * indexSize;
     indexBufferConfig.data = (void*)indices;
     indexBufferConfig.usage = vk::BufferUsageFlagBits::eIndexBuffer;
     indexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-    m_indexBuffer = Buffer::create(indexBufferConfig);
+    m_indexBuffer = Buffer::create(indexBufferConfig, "Mesh-IndexBuffer");
     m_indexSize = indexSize;
 
     if (m_indexBuffer == nullptr) {

@@ -127,7 +127,7 @@ RenderPass::~RenderPass() {
     (**m_device).destroyRenderPass(m_renderPass);
 }
 
-RenderPass* RenderPass::create(const RenderPassConfiguration& renderPassConfiguration) {
+RenderPass* RenderPass::create(const RenderPassConfiguration& renderPassConfiguration, const char* name) {
 
     const vk::Device& device = **renderPassConfiguration.device.lock();
 
@@ -167,11 +167,13 @@ RenderPass* RenderPass::create(const RenderPassConfiguration& renderPassConfigur
     renderPassCreateInfo.setSubpasses(subpasses);
 
     vk::RenderPass renderPass = VK_NULL_HANDLE;
-    vk::Result result = device.createRenderPass(&renderPassCreateInfo, NULL, &renderPass);
+    vk::Result result = device.createRenderPass(&renderPassCreateInfo, nullptr, &renderPass);
     if (result != vk::Result::eSuccess) {
         printf("Failed to create RenderPass: %s\n", vk::to_string(result).c_str());
-        return NULL;
+        return nullptr;
     }
+
+    Engine::graphics()->setObjectName(device, (uint64_t)(VkRenderPass)renderPass, vk::ObjectType::eRenderPass, name);
 
     return new RenderPass(renderPassConfiguration.device, renderPass, renderPassConfiguration);
 }

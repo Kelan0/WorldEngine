@@ -40,7 +40,7 @@ private:
 public:
     ~Framebuffer();
 
-    static Framebuffer* create(const FramebufferConfiguration& framebufferConfiguration);
+    static Framebuffer* create(const FramebufferConfiguration& framebufferConfiguration, const char* name);
 
     const vk::Framebuffer& getFramebuffer() const;
 

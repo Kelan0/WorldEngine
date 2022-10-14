@@ -29,14 +29,14 @@ struct SamplerConfiguration {
 class Sampler {
     NO_COPY(Sampler)
 private:
-    Sampler(std::weak_ptr<vkr::Device> device, vk::Sampler sampler);
+    Sampler(const std::weak_ptr<vkr::Device>& device, vk::Sampler sampler);
 
 public:
     ~Sampler();
 
-    static Sampler* create(const SamplerConfiguration& samplerConfiguration);
+    static Sampler* create(const SamplerConfiguration& samplerConfiguration, const char* name);
 
-    static std::shared_ptr<Sampler> get(const SamplerConfiguration& samplerConfiguration);
+    static std::shared_ptr<Sampler> get(const SamplerConfiguration& samplerConfiguration, const char* name);
 
     std::shared_ptr<vkr::Device> getDevice() const;
 
@@ -65,13 +65,13 @@ public:
 
     ~Texture();
 
-    static Texture* create(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler);
+    static Texture* create(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler, const char* name);
 
-    static Texture* create(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration);
+    static Texture* create(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration, const char* name);
 
-    static Texture* create(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler);
+    static Texture* create(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler, const char* name);
 
-    static Texture* create(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration);
+    static Texture* create(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration, const char* name);
 
     const vk::ImageViewType& getType() const;
 

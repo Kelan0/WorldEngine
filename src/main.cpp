@@ -43,46 +43,48 @@ class App : public Application {
     double cameraYaw = 0.0F;
 
     std::shared_ptr<Texture> loadTexture(const std::string& filePath, vk::Format format, std::weak_ptr<Sampler> sampler) {
-        Image2DConfiguration imageConfig;
+        std::string imageName = std::string("TestImage:") + filePath;
+        Image2DConfiguration imageConfig{};
         imageConfig.device = Engine::graphics()->getDevice();
         imageConfig.filePath = filePath;
         imageConfig.usage = vk::ImageUsageFlagBits::eSampled;
         imageConfig.format = format;
         imageConfig.mipLevels = 3;
         imageConfig.generateMipmap = true;
-        Image2D* image = Image2D::create(imageConfig);
+        Image2D* image = Image2D::create(imageConfig, imageName.c_str());
         images.emplace_back(image);
 
-        ImageViewConfiguration imageViewConfig;
+        std::string imageViewName = std::string("TestImageView:") + filePath;
+        ImageViewConfiguration imageViewConfig{};
         imageViewConfig.device = Engine::graphics()->getDevice();
         imageViewConfig.image = image->getImage();
         imageViewConfig.format = format;
         imageViewConfig.baseMipLevel = 0;
         imageViewConfig.mipLevelCount = image->getMipLevelCount();
 
-        return std::shared_ptr<Texture>(Texture::create(imageViewConfig, sampler));
+        return std::shared_ptr<Texture>(Texture::create(imageViewConfig, sampler, imageViewName.c_str()));
     }
 
     void init() override {
         //eventDispatcher()->connect<ScreenResizeEvent>(&App::onScreenResize, this);
 
-        SamplerConfiguration samplerConfig;
+        SamplerConfiguration samplerConfig{};
         samplerConfig.device = Engine::graphics()->getDevice();
         samplerConfig.minFilter = vk::Filter::eLinear;
         samplerConfig.magFilter = vk::Filter::eLinear;
         samplerConfig.minLod = 0.0F;
         samplerConfig.maxLod = 3.0F;
         samplerConfig.mipLodBias = 0.0F;
-        std::shared_ptr<Sampler> sampler = std::shared_ptr<Sampler>(Sampler::create(samplerConfig));
+        std::shared_ptr<Sampler> sampler = std::shared_ptr<Sampler>(Sampler::create(samplerConfig, "DemoMaterialSampler"));
 
-        MaterialConfiguration floorMaterialConfig;
+        MaterialConfiguration floorMaterialConfig{};
         floorMaterialConfig.setAlbedoMap(loadTexture("res/textures/blacktiles04/albedo.png", vk::Format::eR8G8B8A8Unorm, sampler));
         floorMaterialConfig.setRoughnessMap(loadTexture("res/textures/blacktiles04/roughness.png", vk::Format::eR8G8B8A8Unorm, sampler));
 //        floorMaterialConfig.setMetallicMap(loadTexture("res/textures/blacktiles04/metallic.png", vk::Format::eR8G8B8A8Unorm, sampler));
         floorMaterialConfig.setNormalMap(loadTexture("res/textures/blacktiles04/normal.png", vk::Format::eR8G8B8A8Unorm, sampler));
         std::shared_ptr<Material> floorMaterial = std::shared_ptr<Material>(Material::create(floorMaterialConfig));
 
-        MaterialConfiguration cubeMaterialConfig;
+        MaterialConfiguration cubeMaterialConfig{};
         cubeMaterialConfig.setAlbedoMap(loadTexture("res/textures/mossybark02/albedo.png", vk::Format::eR8G8B8A8Unorm, sampler));
         cubeMaterialConfig.setRoughnessMap(loadTexture("res/textures/mossybark02/roughness.png", vk::Format::eR8G8B8A8Unorm, sampler));
 //        cubeMaterialConfig.setMetallicMap(loadTexture("res/textures/mossybark02/metallic.png", vk::Format::eR8G8B8A8Unorm, sampler));

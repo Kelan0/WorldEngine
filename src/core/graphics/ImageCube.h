@@ -47,7 +47,6 @@ struct ImageCubeSource {
 
 struct ImageCubeConfiguration {
     std::weak_ptr<vkr::Device> device;
-
     ImageCubeSource imageSource = {};
     uint32_t size = 0;
     uint32_t mipLevels = 1;
@@ -68,7 +67,7 @@ private:
 public:
     ~ImageCube();
 
-    static ImageCube* create(const ImageCubeConfiguration& imageCubeConfiguration);
+    static ImageCube* create(const ImageCubeConfiguration& imageCubeConfiguration, const char* name);
 
     static bool uploadFace(ImageCube* dstImage, const ImageCubeFace& face, void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
 
