@@ -113,6 +113,7 @@ void UIRenderer::preRender(double dt) {
 }
 
 void UIRenderer::render(double dt, const vk::CommandBuffer& commandBuffer) {
+    BEGIN_CMD_LABEL(commandBuffer, "UIRenderer::render");
 
 //    ImGui::ShowDemoWindow();
 
@@ -128,6 +129,8 @@ void UIRenderer::render(double dt, const vk::CommandBuffer& commandBuffer) {
     ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
     commandBuffer.endRenderPass();
+
+    END_CMD_LABEL(commandBuffer);
 }
 
 

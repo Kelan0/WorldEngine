@@ -87,6 +87,7 @@ bool DeferredGeometryRenderPass::init() {
 
 void DeferredGeometryRenderPass::render(double dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera) {
     PROFILE_SCOPE("DeferredGeometryRenderPass::render");
+    BEGIN_CMD_LABEL(commandBuffer, "DeferredGeometryRenderPass::render");
 
     renderCamera->uploadCameraData(m_resources->cameraInfoBuffer, 0);
 
@@ -105,6 +106,7 @@ void DeferredGeometryRenderPass::render(double dt, const vk::CommandBuffer& comm
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
 
     Engine::sceneRenderer()->render(dt, commandBuffer, renderCamera);
+    END_CMD_LABEL(commandBuffer);
 }
 
 void DeferredGeometryRenderPass::beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents) {
@@ -445,6 +447,8 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
     const vk::CommandBuffer& commandBuffer = Engine::graphics()->getCurrentCommandBuffer();
     const Framebuffer* framebuffer = Engine::graphics()->getCurrentFramebuffer();
     const auto& renderPass = Engine::graphics()->renderPass();
+
+    BEGIN_CMD_LABEL(commandBuffer, "DeferredLightingRenderPass::renderScreen");
     renderPass->begin(commandBuffer, framebuffer, vk::SubpassContents::eInline);
 
     m_graphicsPipeline->bind(commandBuffer);
@@ -490,6 +494,8 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
     commandBuffer.draw(3, 1, 0, 0);
 
     commandBuffer.endRenderPass();
+
+    END_CMD_LABEL(commandBuffer);
 }
 
 GraphicsPipeline* DeferredLightingRenderPass::getGraphicsPipeline() const {

@@ -181,6 +181,7 @@ void Engine::render(double dt) {
     m_lightRenderer->preRender(dt);
 
     auto& commandBuffer = graphics()->getCurrentCommandBuffer();
+    BEGIN_CMD_LABEL(commandBuffer, "Engine::render");
 
     m_lightRenderer->render(dt, commandBuffer, m_renderCamera);
 
@@ -196,6 +197,7 @@ void Engine::render(double dt) {
 
     m_uiRenderer->render(dt, commandBuffer);
 //    PROFILE_END_GPU_TIMESTAMP("Engine::render");
+    END_CMD_LABEL(commandBuffer);
 }
 
 void Engine::destroy() {

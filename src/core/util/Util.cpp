@@ -11,3 +11,11 @@ uint64_t Util::nextPowerOf2(uint64_t v) {
     v++;
     return v;
 }
+
+
+
+
+std::mt19937& Util::rng() {
+    static std::mt19937 r(std::random_device{}());
+    return r;
+}

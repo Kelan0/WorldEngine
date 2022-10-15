@@ -12,6 +12,7 @@
 #include "core/engine/scene/event/EventDispatcher.h"
 #include "core/engine/scene/event/Events.h"
 #include "core/util/Profiler.h"
+#include "core/util/Util.h"
 
 uint64_t GraphicsManager::s_nextResourceID = 0;
 
@@ -93,7 +94,7 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
             VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME,
             VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME,
-            VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
+//            VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
     };
 
     std::unordered_map<std::string, uint32_t> queueLayout;
@@ -213,8 +214,8 @@ bool GraphicsManager::createVulkanInstance(SDL_Window* windowHandle, const char*
 
     if (enableValidationLayers) {
         instanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-        instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
+    instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
     std::vector<const char*> layerNames;
 
@@ -924,6 +925,7 @@ bool GraphicsManager::beginFrame() {
 
     PROFILE_REGION("Begin command buffer");
     commandBuffer.begin(beginInfo);
+    BEGIN_CMD_LABEL(commandBuffer, "Frame");
 
     return true;
 }
@@ -938,6 +940,7 @@ void GraphicsManager::endFrame() {
     const vk::CommandBuffer& commandBuffer = getCurrentCommandBuffer();
 
     PROFILE_REGION("End command buffer")
+    END_CMD_LABEL(commandBuffer);
     commandBuffer.end();
 
     PROFILE_REGION("Wait for image fence")
@@ -1151,4 +1154,64 @@ void GraphicsManager::setObjectName(const vk::Device& device, const uint64_t& ob
     } else {
         printf("");
     }
+}
+
+void GraphicsManager::insertQueueDebugLabel(const vk::Queue& queue, const char* name) {
+    if (name != nullptr) {
+        static std::unordered_map<std::string, std::array<float, 4>> s_colours;
+        auto colour = Util::mapComputeIfAbsent(s_colours, std::string(name), [](const std::string& key) {
+            return Util::randomArray<float, 4>(0.1F, 0.95F);
+        });
+        vk::DebugUtilsLabelEXT label{};
+        label.pLabelName = name;
+        label.setColor(colour);
+        queue.insertDebugUtilsLabelEXT(label);
+    }
+}
+
+void GraphicsManager::beginQueueDebugLabel(const vk::Queue& queue, const char* name) {
+    if (name != nullptr) {
+        static std::unordered_map<std::string, std::array<float, 4>> s_colours;
+        auto colour = Util::mapComputeIfAbsent(s_colours, std::string(name), [](const std::string& key) {
+            return Util::randomArray<float, 4>(0.1F, 0.95F);
+        });
+        vk::DebugUtilsLabelEXT label{};
+        label.pLabelName = name;
+        label.setColor(colour);
+        queue.beginDebugUtilsLabelEXT(label);
+    }
+}
+
+void GraphicsManager::endQueueDebugLabel(const vk::Queue& queue) {
+    queue.endDebugUtilsLabelEXT();
+}
+
+void GraphicsManager::insertCmdDebugLabel(const vk::CommandBuffer& commandBuffer, const char* name) {
+    if (name != nullptr) {
+        static std::unordered_map<std::string, std::array<float, 4>> s_colours;
+        auto colour = Util::mapComputeIfAbsent(s_colours, std::string(name), [](const std::string& key) {
+            return Util::randomArray<float, 4>(0.1F, 0.95F);
+        });
+        vk::DebugUtilsLabelEXT label{};
+        label.pLabelName = name;
+        label.setColor(colour);
+        commandBuffer.insertDebugUtilsLabelEXT(label);
+    }
+}
+
+void GraphicsManager::beginCmdDebugLabel(const vk::CommandBuffer& commandBuffer, const char* name) {
+    if (name != nullptr) {
+        static std::unordered_map<std::string, std::array<float, 4>> s_colours;
+        auto colour = Util::mapComputeIfAbsent(s_colours, std::string(name), [](const std::string& key) {
+            return Util::randomArray<float, 4>(0.1F, 0.95F);
+        });
+        vk::DebugUtilsLabelEXT label{};
+        label.pLabelName = name;
+        label.setColor(colour);
+        commandBuffer.beginDebugUtilsLabelEXT(label);
+    }
+}
+
+void GraphicsManager::endCmdDebugLabel(const vk::CommandBuffer& commandBuffer) {
+    commandBuffer.endDebugUtilsLabelEXT();
 }

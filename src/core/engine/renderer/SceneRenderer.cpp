@@ -141,11 +141,14 @@ void SceneRenderer::preRender(double dt) {
 
 void SceneRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera) {
     PROFILE_SCOPE("SceneRenderer::render")
+    BEGIN_CMD_LABEL(commandBuffer, "SceneRenderer::render");
 
     // TODO: add option for simplified rendering used for shadow maps/reflection probes.
     // TODO: frustum culling / occlusion culling based on provided camera
 
     recordRenderCommands(dt, commandBuffer);
+
+    END_CMD_LABEL(commandBuffer);
 }
 
 void SceneRenderer::setScene(Scene* scene) {
@@ -174,10 +177,11 @@ DescriptorSet* SceneRenderer::getMaterialDescriptorSet() const {
 
 
 void SceneRenderer::recordRenderCommands(double dt, const vk::CommandBuffer& commandBuffer) {
-    PROFILE_SCOPE("SceneRenderer::recordRenderCommands")
+    PROFILE_SCOPE("SceneRenderer::recordRenderCommands");
+    BEGIN_CMD_LABEL(commandBuffer, "SceneRenderer::recordRenderCommands");
 
     auto thread_exec = [this](size_t rangeStart, size_t rangeEnd) {
-        PROFILE_SCOPE("SceneRenderer::recordRenderCommands/thread_exec")
+        PROFILE_SCOPE("SceneRenderer::recordRenderCommands/thread_exec");
         const auto& renderEntities = m_scene->registry()->group<RenderComponent, Transform>();
 
         std::vector<DrawCommand> drawCommands;
@@ -220,6 +224,7 @@ void SceneRenderer::recordRenderCommands(double dt, const vk::CommandBuffer& com
 
 //    for (size_t i = 0; i < drawCommands.size(); ++i)
 //        drawCommands[i].mesh->draw(commandBuffer, drawCommands[i].instanceCount, drawCommands[i].firstInstance);
+    END_CMD_LABEL(commandBuffer);
 }
 
 void SceneRenderer::initMissingTextureMaterial() {

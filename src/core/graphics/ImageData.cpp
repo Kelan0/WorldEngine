@@ -834,6 +834,7 @@ bool ImageUtil::validateImageCreateInfo(const vk::ImageCreateInfo& imageCreateIn
 }
 
 bool ImageUtil::transitionLayout(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::ImageSubresourceRange& subresourceRange, const ImageTransitionState& srcState, const ImageTransitionState& dstState) {
+    BEGIN_CMD_LABEL(commandBuffer, "ImageUtil::transitionLayout");
 //    if (srcState == dstState)
 //        return true;
 
@@ -852,6 +853,7 @@ bool ImageUtil::transitionLayout(const vk::CommandBuffer& commandBuffer, const v
 
     commandBuffer.pipelineBarrier(srcStageFlags, dstStageFlags, {}, 0, nullptr, 0, nullptr, 1, &barrier);
 
+    END_CMD_LABEL(commandBuffer);
     return true;
 }
 
@@ -929,6 +931,8 @@ bool ImageUtil::transferBuffer(const vk::Image& dstImage, const vk::Buffer& srcB
 }
 
 bool ImageUtil::transferBuffer(const vk::CommandBuffer& commandBuffer, const vk::Image& dstImage, const vk::Buffer& srcBuffer, const vk::BufferImageCopy& imageCopy, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
+    BEGIN_CMD_LABEL(commandBuffer, "ImageUtil::transferBuffer");
+
     vk::ImageSubresourceRange subresourceRange{};
     subresourceRange.setAspectMask(imageCopy.imageSubresource.aspectMask);
     subresourceRange.setBaseArrayLayer(imageCopy.imageSubresource.baseArrayLayer);
@@ -940,6 +944,7 @@ bool ImageUtil::transferBuffer(const vk::CommandBuffer& commandBuffer, const vk:
     commandBuffer.copyBufferToImage(srcBuffer, dstImage, vk::ImageLayout::eTransferDstOptimal, 1, &imageCopy);
     ImageUtil::transitionLayout(commandBuffer, dstImage, subresourceRange, ImageTransition::TransferDst(), dstState);
 
+    END_CMD_LABEL(commandBuffer);
     return true;
 }
 
@@ -954,7 +959,7 @@ bool ImageUtil::generateMipmap(const vk::Image& image, const vk::Format& format,
 }
 
 bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::Format& format, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth, const uint32_t& mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
-
+    BEGIN_CMD_LABEL(commandBuffer, "ImageUtil::generateMipmap");
     vk::ImageTiling tiling = vk::ImageTiling::eOptimal;
     vk::FormatFeatureFlags testFormatFeatureFlags{};
     if (filter == vk::Filter::eLinear) testFormatFeatureFlags |= vk::FormatFeatureFlagBits::eSampledImageFilterLinear;
@@ -1022,6 +1027,7 @@ bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk:
     subresourceRange.setBaseMipLevel(mipLevelCount - 1);
     ImageUtil::transitionLayout(commandBuffer, image, subresourceRange, prevLevelState, dstState);
 
+    END_CMD_LABEL(commandBuffer);
     return true;
 }
 
@@ -1063,6 +1069,7 @@ const vk::CommandBuffer& ImageUtil::beginTransferCommands() {
     vk::CommandBufferBeginInfo commandBeginInfo;
     commandBeginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
     transferCommandBuffer.begin(commandBeginInfo);
+    BEGIN_CMD_LABEL(transferCommandBuffer, "ImageUtil::beginTransferCommands");
 
     return transferCommandBuffer;
 }
@@ -1070,6 +1077,7 @@ const vk::CommandBuffer& ImageUtil::beginTransferCommands() {
 void ImageUtil::endTransferCommands(const vk::Queue& queue, const bool& waitComplete) {
     const vk::CommandBuffer& transferCommandBuffer = ImageUtil::getTransferCommandBuffer();
 
+    END_CMD_LABEL(transferCommandBuffer);
     transferCommandBuffer.end();
 
     vk::SubmitInfo queueSumbitInfo;

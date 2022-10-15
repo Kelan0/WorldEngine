@@ -14,6 +14,22 @@
 #define QUEUE_TRANSFER_MAIN "transfer_main"
 #define QUEUE_GRAPHICS_TRANSFER_MAIN "graphics_transfer_main"
 
+#if 1
+#define INSERT_CMD_LABEL(commandBuffer, label) Engine::graphics()->insertCmdDebugLabel(commandBuffer, label);
+#define BEGIN_CMD_LABEL(commandBuffer, label) Engine::graphics()->beginCmdDebugLabel(commandBuffer, label);
+#define END_CMD_LABEL(commandBuffer) Engine::graphics()->endCmdDebugLabel(commandBuffer);
+#define INSERT_QUEUE_LABEL(queue, label) Engine::graphics()->insertQueueDebugLabel(queue, label);
+#define BEGIN_QUEUE_LABEL(queue, label) Engine::graphics()->beginQueueDebugLabel(queue, label);
+#define END_QUEUE_LABEL(queue) Engine::graphics()->endQueueDebugLabel(queue);
+#else
+#define INSERT_CMD_LABEL(commandBuffer, label)
+#define BEGIN_CMD_LABEL(commandBuffer, label)
+#define END_CMD_LABEL(commandBuffer)
+#define INSERT_QUEUE_LABEL(queue, label)
+#define BEGIN_QUEUE_LABEL(queue, label)
+#define END_QUEUE_LABEL(queue)
+#endif
+
 class RenderPass;
 class CommandPool;
 class DescriptorPool;
@@ -188,6 +204,14 @@ public:
     static GraphicsResource nextResourceId();
 
     void setObjectName(const vk::Device& device, const uint64_t& objectHandle, const vk::ObjectType& objectType, const char* objectName);
+
+    void insertQueueDebugLabel(const vk::Queue& queue, const char* name);
+    void beginQueueDebugLabel(const vk::Queue& queue, const char* name);
+    void endQueueDebugLabel(const vk::Queue& queue);
+
+    void insertCmdDebugLabel(const vk::CommandBuffer& commandBuffer, const char* name);
+    void beginCmdDebugLabel(const vk::CommandBuffer& commandBuffer, const char* name);
+    void endCmdDebugLabel(const vk::CommandBuffer& commandBuffer);
 
 private:
     vkr::Context m_context;

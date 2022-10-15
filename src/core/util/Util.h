@@ -3,6 +3,9 @@
 #define WORLDENGINE_UTIL_H
 
 #include "core/core.h"
+#include <random>
+#include <concepts>
+#include <array>
 
 namespace Util {
     template<class FwdIt1, class FwdIt2>
@@ -59,6 +62,53 @@ namespace Util {
         }
         return 0;
     }
+
+    template<class Map, class Key, typename Func>
+    typename Map::mapped_type & mapComputeIfAbsent(Map& map, Key const& key, Func computeFunc) {
+        typedef typename Map::mapped_type value_t;
+        std::pair<typename Map::iterator, bool> result = map.insert(typename Map::value_type(key, value_t{}));
+        value_t& val = result.first->second;
+        if (result.second)
+            val = computeFunc(key);
+        return val;
+    }
+
+    template<class Map, class Key, typename Func>
+    typename Map::mapped_type & mapInsertIfAbsent(Map& map, Key const& key, Func computeFunc) {
+        typedef typename Map::mapped_type value_t;
+        typename Map::iterator it = map.find(key);
+        if (it == map.end()) {
+            std::pair<typename Map::iterator, bool> result = map.insert(typename Map::value_type(key, computeFunc(key)));
+            assert(result.second);
+            it = result.first;
+        }
+        return it->second;
+    }
+
+    std::mt19937& rng();
+
+    template<typename T>
+    T random(const T& min, const T& max) {
+        static_assert(std::is_floating_point<T>::value || std::is_integral<T>::value);
+
+        if constexpr (std::is_floating_point<T>::value) {
+            return std::uniform_real_distribution<T>(min, max)(rng());
+        }
+        if constexpr(std::is_integral<T>::value) {
+            return std::uniform_int_distribution<T>(min, max)(rng());
+        }
+        return (T)0;
+    }
+
+    template<typename T, size_t C>
+    std::array<T, C> randomArray(const T& min, const T& max) {
+        std::array<T, C> array{};
+        for (size_t i = 0; i < C; ++i) {
+            array[i] = random<T>(min, max);
+        }
+        return array;
+    }
+
 }
 
 #endif //WORLDENGINE_UTIL_H
