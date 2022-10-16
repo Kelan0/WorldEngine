@@ -19,6 +19,7 @@ class Texture;
 class ImageView;
 
 #define MAX_SHADOW_MAPS 1024
+#define MAX_SIMULTANEOUS_VSM_BLUR 8
 
 
 struct LightingRenderPassUBO {
@@ -61,13 +62,19 @@ private:
 
     void blurImage(const vk::CommandBuffer& commandBuffer, const Sampler* sampler, const ImageView* srcImage, const glm::uvec2& srcSize, const ImageView* dstImage, const glm::uvec2& dstSize, const glm::vec2& blurRadius);
 
+    void prepareVsmBlurDescriptorSets();
+
+    void prepareVsmBlurIntermediateImage(const vk::CommandBuffer& commandBuffer, const uint32_t& maxWidth, const uint32_t& maxHeight);
+
     void vsmBlurActiveShadowMaps(const vk::CommandBuffer& commandBuffer);
 
-    void calculateDirectionalShadowRenderCamera(const RenderCamera* viewerRenderCamera, const glm::vec3& direction, const double& nearDistance, const double& farDistance, RenderCamera* outShadowRenderCamera);
+    void calculateDirectionalShadowRenderCamera(const RenderCamera* viewerRenderCamera, const Transform& lightTransform, const double& cascadeStartDist, const double& cascadeEndDist, const double& shadowNearPlane, const double shadowFarPlane, RenderCamera* outShadowRenderCamera);
 
 private:
     struct VSMBlurResources {
-        DescriptorSet* descriptorSet;
+//        DescriptorSet* descriptorSet;
+        std::vector<DescriptorSet*> descriptorSetsBlurX;
+        std::vector<DescriptorSet*> descriptorSetsBlurY;
     };
 
     struct ShadowRenderPassResources {
@@ -88,7 +95,8 @@ private:
     std::shared_ptr<DescriptorSetLayout> m_lightingRenderPassDescriptorSetLayout;
 
     std::shared_ptr<ComputePipeline> m_vsmBlurComputePipeline;
-    std::shared_ptr<DescriptorSetLayout> m_vsmBlurComputeDescriptorSetLayout;
+//    std::shared_ptr<DescriptorSetLayout> m_vsmBlurComputeDescriptorSetLayout;
+    std::shared_ptr<DescriptorSetLayout> m_vsmBlurXComputeDescriptorSetLayout;
     uint32_t m_blurElementArrayIndex;
 
     FrameResource<VSMBlurResources> m_vsmBlurResources;
@@ -101,8 +109,8 @@ private:
 
     std::shared_ptr<Sampler> m_vsmShadowMapSampler;
 
-//    Image2D* m_vsmBlurIntermediateImage;
-//    ImageView* m_vsmBlurIntermediateImageView;
+    Image2D* m_vsmBlurIntermediateImage;
+    ImageView* m_vsmBlurIntermediateImageView;
 
     std::vector<ShadowMap*> m_visibleShadowMaps;
     std::unordered_map<ShadowMap*, bool> m_activeShadowMaps;

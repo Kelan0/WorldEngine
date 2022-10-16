@@ -251,6 +251,10 @@ const uint32_t& Image2D::getHeight() const {
     return m_height;
 }
 
+glm::uvec2 Image2D::getResolution() const {
+    return glm::uvec2(m_width, m_height);
+}
+
 const uint32_t Image2D::getMipLevelCount() const {
     return m_mipLevelCount;
 }

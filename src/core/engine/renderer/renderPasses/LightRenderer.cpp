@@ -15,6 +15,7 @@
 #include "core/engine/renderer/RenderCamera.h"
 #include "core/engine/renderer/LightComponent.h"
 #include "core/util/Profiler.h"
+#include "core/util/Util.h"
 
 #define GAUSSIAN_BLUE_DIRECTION_X 0
 #define GAUSSIAN_BLUE_DIRECTION_Y 1
@@ -34,14 +35,17 @@ struct GaussianBlurPushConstants {
 };
 
 
-LightRenderer::LightRenderer()
-//:
-//    m_vsmBlurIntermediateImageView(nullptr),
-//    m_vsmBlurIntermediateImage(nullptr)
-{
+LightRenderer::LightRenderer():
+    m_blurElementArrayIndex(0),
+    m_vsmBlurIntermediateImageView(nullptr),
+    m_vsmBlurIntermediateImage(nullptr),
+    m_numLightEntities(0) {
 }
 
 LightRenderer::~LightRenderer() {
+    delete m_vsmBlurIntermediateImageView;
+    delete m_vsmBlurIntermediateImage;
+
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         delete m_shadowRenderPassResources[i]->descriptorSet;
         delete m_shadowRenderPassResources[i]->cameraInfoBuffer;
@@ -49,7 +53,12 @@ LightRenderer::~LightRenderer() {
         delete m_lightingRenderPassResources[i]->lightInfoBuffer;
         delete m_lightingRenderPassResources[i]->shadowMapBuffer;
         delete m_lightingRenderPassResources[i]->uniformBuffer;
-        delete m_vsmBlurResources[i]->descriptorSet;
+//        delete m_vsmBlurResources[i]->descriptorSet;
+
+        for (auto& descriptorSet : m_vsmBlurResources[i]->descriptorSetsBlurX)
+            delete descriptorSet;
+        for (auto& descriptorSet : m_vsmBlurResources[i]->descriptorSetsBlurY)
+            delete descriptorSet;
     }
 
     for (auto& shadowMap: m_inactiveShadowMaps)
@@ -178,23 +187,27 @@ bool LightRenderer::init() {
         return false;
     }
 
-    m_vsmBlurComputeDescriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
-            .addStorageImage(0, vk::ShaderStageFlagBits::eCompute, MAX_SHADOW_MAPS)
-            .build("LightRenderer-VsmBlurComputeDescriptorSetLayout");
+//    m_vsmBlurComputeDescriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
+//            .addStorageImage(0, vk::ShaderStageFlagBits::eCompute, MAX_SIMULTANEOUS_VSM_BLUR)
+//            .build("LightRenderer-VsmBlurComputeDescriptorSetLayout");
+    m_vsmBlurXComputeDescriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
+            .addCombinedImageSampler(0, vk::ShaderStageFlagBits::eCompute, 1)
+            .addStorageImage(1, vk::ShaderStageFlagBits::eCompute, 1)
+            .build("LightRenderer-VsmBlurXComputeDescriptorSetLayout");
 
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_vsmBlurResources.set(i, new VSMBlurResources());
-        m_vsmBlurResources[i]->descriptorSet = DescriptorSet::create(m_vsmBlurComputeDescriptorSetLayout, Engine::graphics()->descriptorPool(), "LightRenderer-VsmBlurComputeDescriptorSet");
+//        m_vsmBlurResources[i]->descriptorSet = DescriptorSet::create(m_vsmBlurComputeDescriptorSetLayout, Engine::graphics()->descriptorPool(), "LightRenderer-VsmBlurComputeDescriptorSet");
 
-        DescriptorSetWriter(m_vsmBlurResources[i]->descriptorSet)
-            .writeImage(0, m_emptyShadowMap.get(), vk::ImageLayout::eGeneral, 0, MAX_SHADOW_MAPS)
-            .write();
+//        DescriptorSetWriter(m_vsmBlurResources[i]->descriptorSet)
+//            .writeImage(0, m_emptyShadowMap.get(), vk::ImageLayout::eGeneral, 0, MAX_SIMULTANEOUS_VSM_BLUR)
+//            .write();
     }
 
     ComputePipelineConfiguration computePipelineConfig{};
     computePipelineConfig.device = Engine::graphics()->getDevice();
     computePipelineConfig.computeShader = "res/shaders/compute/compute_gaussianBlur.glsl";
-    computePipelineConfig.addDescriptorSetLayout(m_vsmBlurComputeDescriptorSetLayout.get());
+    computePipelineConfig.addDescriptorSetLayout(m_vsmBlurXComputeDescriptorSetLayout.get());
     computePipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(GaussianBlurPushConstants));
     m_vsmBlurComputePipeline = std::shared_ptr<ComputePipeline>(ComputePipeline::create(computePipelineConfig, "LightRenderer-VsmBlurComputePipeline"));
 
@@ -259,7 +272,7 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, Re
 
         RenderCamera shadowRenderCamera;
         if (lightComponent.getType() == LightType_Directional) {
-            calculateDirectionalShadowRenderCamera(renderCamera, transform.getForwardAxis(), 0.0F, 10.0F, &shadowRenderCamera);
+            calculateDirectionalShadowRenderCamera(renderCamera, transform, 0.0F, 5.0F, -64.0, +64.0, &shadowRenderCamera);
         } else {
             continue;
         }
@@ -594,6 +607,72 @@ void LightRenderer::updateShadowMapInfoBuffer(size_t maxShadowLights) {
 void LightRenderer::streamLightData() {
 }
 
+void LightRenderer::prepareVsmBlurDescriptorSets() {
+    PROFILE_SCOPE("LightRenderer::prepareVsmBlurDescriptorSets");
+
+    for (size_t i = 0; i < m_visibleShadowMaps.size(); ++i) {
+        const ImageView* shadowMapImageView = m_visibleShadowMaps[i]->getShadowVarianceImageView();
+        if (i >= m_vsmBlurResources->descriptorSetsBlurX.size()) {
+            DescriptorSet* descriptorSetBlurX = DescriptorSet::create(m_vsmBlurXComputeDescriptorSetLayout,Engine::graphics()->descriptorPool(),"LightRenderer-VsmBlurXComputeDescriptorSet");
+            m_vsmBlurResources->descriptorSetsBlurX.emplace_back(descriptorSetBlurX);
+
+            DescriptorSetWriter(m_vsmBlurResources->descriptorSetsBlurX[i])
+                    .writeImage(0, m_vsmShadowMapSampler.get(), shadowMapImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+                    .writeImage(1, m_vsmShadowMapSampler.get(), m_vsmBlurIntermediateImageView, vk::ImageLayout::eGeneral, 0, 1)
+                    .write();
+        }
+
+        if (i >= m_vsmBlurResources->descriptorSetsBlurY.size()) {
+            DescriptorSet* descriptorSetBlurY = DescriptorSet::create(m_vsmBlurXComputeDescriptorSetLayout,Engine::graphics()->descriptorPool(),"LightRenderer-VsmBlurYComputeDescriptorSet");
+            m_vsmBlurResources->descriptorSetsBlurY.emplace_back(descriptorSetBlurY);
+
+            DescriptorSetWriter(m_vsmBlurResources->descriptorSetsBlurY[i])
+                    .writeImage(0, m_vsmShadowMapSampler.get(), m_vsmBlurIntermediateImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+                    .writeImage(1, m_vsmShadowMapSampler.get(), shadowMapImageView, vk::ImageLayout::eGeneral, 0, 1)
+                    .write();
+        }
+    }
+}
+
+void LightRenderer::prepareVsmBlurIntermediateImage(const vk::CommandBuffer& commandBuffer, const uint32_t& maxWidth, const uint32_t& maxHeight) {
+    PROFILE_SCOPE("LightRenderer::prepareVsmBlurIntermediateImage");
+    BEGIN_CMD_LABEL(commandBuffer, "LightRenderer::prepareVsmBlurIntermediateImage");
+
+    vk::ImageSubresourceRange subresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+
+    if (m_vsmBlurIntermediateImage == nullptr || m_vsmBlurIntermediateImage->getWidth() < maxWidth || m_vsmBlurIntermediateImage->getHeight() < maxHeight) {
+        const uint32_t& w = (uint32_t)Util::nextPowerOf2(maxWidth);
+        const uint32_t& h = (uint32_t)Util::nextPowerOf2(maxHeight);
+        printf("Creating intermediate image for gaussian blur [%d x %d]\n", w, h);
+        delete m_vsmBlurIntermediateImageView;
+        delete m_vsmBlurIntermediateImage;
+
+        Image2DConfiguration imageConfig{};
+        imageConfig.device = Engine::graphics()->getDevice();
+        imageConfig.format = vk::Format::eR32G32B32A32Sfloat;
+        imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage;
+        imageConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+        imageConfig.setSize(w, h);
+        m_vsmBlurIntermediateImage = Image2D::create(imageConfig, "LightRenderer-VsmBlurIntermediateImage");
+
+        ImageViewConfiguration imageViewConfig{};
+        imageViewConfig.device = Engine::graphics()->getDevice();
+        imageViewConfig.format = vk::Format::eR32G32B32A32Sfloat;
+        imageViewConfig.setImage(m_vsmBlurIntermediateImage);
+        m_vsmBlurIntermediateImageView = ImageView::create(imageViewConfig, "LightRenderer-VsmBlurIntermediateImageView");
+
+        ImageUtil::transitionLayout(commandBuffer, m_vsmBlurIntermediateImage->getImage(), subresourceRange,
+                                    ImageTransition::FromAny(),
+                                    ImageTransition::ShaderWriteOnly(vk::PipelineStageFlagBits::eComputeShader));
+    } else {
+        ImageUtil::transitionLayout(commandBuffer, m_vsmBlurIntermediateImage->getImage(), subresourceRange,
+                                    ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eComputeShader),
+                                    ImageTransition::ShaderWriteOnly(vk::PipelineStageFlagBits::eComputeShader));
+    }
+
+    END_CMD_LABEL(commandBuffer);
+}
+
 void LightRenderer::vsmBlurActiveShadowMaps(const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("LightRenderer::vsmBlurActiveShadowMaps");
     BEGIN_CMD_LABEL(commandBuffer, "LightRenderer::vsmBlurActiveShadowMaps");
@@ -602,77 +681,223 @@ void LightRenderer::vsmBlurActiveShadowMaps(const vk::CommandBuffer& commandBuff
         return; // Nothing to do
     }
 
+    uint32_t maxWidth = 0;
+    uint32_t maxHeight = 0;
+    for (auto& shadowMap : m_visibleShadowMaps) {
+        maxWidth = glm::max(maxWidth, shadowMap->getResolution().x);
+        maxHeight = glm::max(maxHeight, shadowMap->getResolution().y);
+    }
+
     vk::ImageSubresourceRange subresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
 
+    prepareVsmBlurIntermediateImage(commandBuffer, maxWidth, maxHeight);
+
+    prepareVsmBlurDescriptorSets();
+
+    uint32_t workgroupCountX;
+    uint32_t workgroupCountY;
+
     const vk::PipelineLayout& pipelineLayout = m_vsmBlurComputePipeline->getPipelineLayout();
+
     m_vsmBlurComputePipeline->bind(commandBuffer);
 
     GaussianBlurPushConstants pushConstantData{};
     pushConstantData.blurRadius = 10.0F;
 
-    std::vector<const ImageView*> shadowMapImageViews;
-    shadowMapImageViews.reserve(MAX_SHADOW_MAPS);
-
-    BEGIN_CMD_LABEL(commandBuffer, "LightRenderer::vsmBlurActiveShadowMaps/TransitionLayoutsReadWrite");
-    for (auto& shadowMap : m_visibleShadowMaps) {
-
+    constexpr uint32_t workgroupSize = 4;
+    for (size_t i = 0; i < m_visibleShadowMaps.size(); ++i) {
+        const ShadowMap* shadowMap = m_visibleShadowMaps[i];
         const ImageView* shadowMapImageView = shadowMap->getShadowVarianceImageView();
-        shadowMapImageViews.emplace_back(shadowMapImageView);
+
+        pushConstantData.imageIndex = 0;
+        pushConstantData.srcSize = m_visibleShadowMaps[i]->getResolution();
+        pushConstantData.dstSize = m_visibleShadowMaps[i]->getResolution();
 
         ImageUtil::transitionLayout(commandBuffer, shadowMapImageView->getImage(), subresourceRange,
                                     ImageTransition::FromAny(),
-                                    ImageTransition::ShaderReadWrite(vk::PipelineStageFlagBits::eComputeShader));
-    }
-    END_CMD_LABEL(commandBuffer);
-
-    for (size_t i = shadowMapImageViews.size(); i < MAX_SHADOW_MAPS; ++i) {
-        shadowMapImageViews.emplace_back(shadowMapImageViews[0]);
-    }
-
-    DescriptorSetWriter(m_vsmBlurResources->descriptorSet)
-            .writeImage(0, m_vsmShadowMapSampler.get(), shadowMapImageViews.data(), vk::ImageLayout::eGeneral, 0, (uint32_t)shadowMapImageViews.size())
-            .write();
-
-
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineLayout, 0, 1, &m_vsmBlurResources->descriptorSet->getDescriptorSet(), 0, nullptr);
-
-    for (uint32_t i = 0; i < (uint32_t)m_visibleShadowMaps.size(); ++i) {
-        pushConstantData.srcSize = m_visibleShadowMaps[i]->getResolution();
-        pushConstantData.dstSize = m_visibleShadowMaps[i]->getResolution();
-        uint32_t workgroupCountX = INT_DIV_CEIL(pushConstantData.dstSize.x, 8);
-        uint32_t workgroupCountY = INT_DIV_CEIL(pushConstantData.dstSize.y, 8);
-
-        pushConstantData.imageIndex = i;
+                                    ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eComputeShader));
+        ImageUtil::transitionLayout(commandBuffer, m_vsmBlurIntermediateImageView->getImage(), subresourceRange,
+                                    ImageTransition::FromAny(),
+                                    ImageTransition::ShaderWriteOnly(vk::PipelineStageFlagBits::eComputeShader));
 
         BEGIN_CMD_LABEL(commandBuffer, "LightRenderer::vsmBlurActiveShadowMaps/ComputeBlur_X");
         pushConstantData.blurDirection = GAUSSIAN_BLUE_DIRECTION_X;
+        workgroupCountX = INT_DIV_CEIL(pushConstantData.dstSize.x, workgroupSize);
+        workgroupCountY = INT_DIV_CEIL(pushConstantData.dstSize.y, workgroupSize);
+        commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineLayout, 0, 1, &m_vsmBlurResources->descriptorSetsBlurX[i]->getDescriptorSet(), 0, nullptr);
         commandBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, sizeof(GaussianBlurPushConstants), &pushConstantData);
         m_vsmBlurComputePipeline->dispatch(commandBuffer, workgroupCountX, workgroupCountY, 1);
         END_CMD_LABEL(commandBuffer);
 
-        const ImageView* shadowMapImageView = m_visibleShadowMaps[i]->getShadowVarianceImageView();
         ImageUtil::transitionLayout(commandBuffer, shadowMapImageView->getImage(), subresourceRange,
-                                    ImageTransition::ShaderReadWrite(vk::PipelineStageFlagBits::eComputeShader),
-                                    ImageTransition::ShaderReadWrite(vk::PipelineStageFlagBits::eComputeShader));
+                                    ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eComputeShader),
+                                    ImageTransition::ShaderWriteOnly(vk::PipelineStageFlagBits::eComputeShader));
+        ImageUtil::transitionLayout(commandBuffer, m_vsmBlurIntermediateImageView->getImage(), subresourceRange,
+                                    ImageTransition::ShaderWriteOnly(vk::PipelineStageFlagBits::eComputeShader),
+                                    ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eComputeShader));
 
         BEGIN_CMD_LABEL(commandBuffer, "LightRenderer::vsmBlurActiveShadowMaps/ComputeBlur_Y");
         pushConstantData.blurDirection = GAUSSIAN_BLUE_DIRECTION_Y;
+        workgroupCountX = INT_DIV_CEIL(pushConstantData.dstSize.x, workgroupSize);
+        workgroupCountY = INT_DIV_CEIL(pushConstantData.dstSize.y, workgroupSize);
+        commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineLayout, 0, 1, &m_vsmBlurResources->descriptorSetsBlurY[i]->getDescriptorSet(), 0, nullptr);
         commandBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, sizeof(GaussianBlurPushConstants), &pushConstantData);
         m_vsmBlurComputePipeline->dispatch(commandBuffer, workgroupCountX, workgroupCountY, 1);
         END_CMD_LABEL(commandBuffer);
-    }
 
-    BEGIN_CMD_LABEL(commandBuffer, "LightRenderer::vsmBlurActiveShadowMaps/TransitionLayoutsReadOnly");
-    for (auto& shadowMap : m_visibleShadowMaps) {
-        const ImageView* shadowMapImageView = shadowMap->getShadowVarianceImageView();
         ImageUtil::transitionLayout(commandBuffer, shadowMapImageView->getImage(), subresourceRange,
-                                    ImageTransition::ShaderReadWrite(vk::PipelineStageFlagBits::eComputeShader),
+                                    ImageTransition::ShaderWriteOnly(vk::PipelineStageFlagBits::eComputeShader),
                                     ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eFragmentShader));
     }
-    END_CMD_LABEL(commandBuffer);
+
+
+
+
+
+
+//    BEGIN_CMD_LABEL(commandBuffer, "LightRenderer::vsmBlurActiveShadowMaps/TransitionLayoutsReadWrite");
+//    for (auto& shadowMap : m_visibleShadowMaps) {
+//
+//        const ImageView* shadowMapImageView = shadowMap->getShadowVarianceImageView();
+//        shadowMapImageViews.emplace_back(shadowMapImageView);
+//
+//        ImageUtil::transitionLayout(commandBuffer, shadowMapImageView->getImage(), subresourceRange,
+//                                    ImageTransition::FromAny(),
+//                                    ImageTransition::ShaderReadWrite(vk::PipelineStageFlagBits::eComputeShader));
+//    }
+//    END_CMD_LABEL(commandBuffer);
+//
+//    for (size_t i = shadowMapImageViews.size(); i < MAX_SHADOW_MAPS; ++i) {
+//        shadowMapImageViews.emplace_back(shadowMapImageViews[0]);
+//    }
+//
+//    DescriptorSetWriter(m_vsmBlurResources->descriptorSet)
+//            .writeImage(0, m_vsmShadowMapSampler.get(), shadowMapImageViews.data(), vk::ImageLayout::eGeneral, 0, (uint32_t)shadowMapImageViews.size())
+//            .write();
+//
+//
+//    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineLayout, 0, 1, &m_vsmBlurResources->descriptorSet->getDescriptorSet(), 0, nullptr);
+//
+//    for (uint32_t i = 0; i < (uint32_t)m_visibleShadowMaps.size(); ++i) {
+//        pushConstantData.srcSize = m_visibleShadowMaps[i]->getResolution();
+//        pushConstantData.dstSize = m_visibleShadowMaps[i]->getResolution();
+//        uint32_t workgroupCountX = INT_DIV_CEIL(pushConstantData.dstSize.x, 8);
+//        uint32_t workgroupCountY = INT_DIV_CEIL(pushConstantData.dstSize.y, 8);
+//
+//        pushConstantData.imageIndex = i;
+//
+//        BEGIN_CMD_LABEL(commandBuffer, "LightRenderer::vsmBlurActiveShadowMaps/ComputeBlur_X");
+//        pushConstantData.blurDirection = GAUSSIAN_BLUE_DIRECTION_X;
+//        commandBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, sizeof(GaussianBlurPushConstants), &pushConstantData);
+//        m_vsmBlurComputePipeline->dispatch(commandBuffer, workgroupCountX, workgroupCountY, 1);
+//        END_CMD_LABEL(commandBuffer);
+//
+//        const ImageView* shadowMapImageView = m_visibleShadowMaps[i]->getShadowVarianceImageView();
+//        ImageUtil::transitionLayout(commandBuffer, shadowMapImageView->getImage(), subresourceRange,
+//                                    ImageTransition::ShaderReadWrite(vk::PipelineStageFlagBits::eComputeShader),
+//                                    ImageTransition::ShaderReadWrite(vk::PipelineStageFlagBits::eComputeShader));
+//
+//        BEGIN_CMD_LABEL(commandBuffer, "LightRenderer::vsmBlurActiveShadowMaps/ComputeBlur_Y");
+//        pushConstantData.blurDirection = GAUSSIAN_BLUE_DIRECTION_Y;
+//        commandBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, sizeof(GaussianBlurPushConstants), &pushConstantData);
+//        m_vsmBlurComputePipeline->dispatch(commandBuffer, workgroupCountX, workgroupCountY, 1);
+//        END_CMD_LABEL(commandBuffer);
+//    }
+//
+//    BEGIN_CMD_LABEL(commandBuffer, "LightRenderer::vsmBlurActiveShadowMaps/TransitionLayoutsReadOnly");
+//    for (auto& shadowMap : m_visibleShadowMaps) {
+//        const ImageView* shadowMapImageView = shadowMap->getShadowVarianceImageView();
+//        ImageUtil::transitionLayout(commandBuffer, shadowMapImageView->getImage(), subresourceRange,
+//                                    ImageTransition::ShaderReadWrite(vk::PipelineStageFlagBits::eComputeShader),
+//                                    ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eFragmentShader));
+//    }
+//    END_CMD_LABEL(commandBuffer);
+
+
+
 
     END_CMD_LABEL(commandBuffer);
 }
+
+//void LightRenderer::vsmBlurActiveShadowMaps(const vk::CommandBuffer& commandBuffer) {
+//    PROFILE_SCOPE("LightRenderer::vsmBlurActiveShadowMaps");
+//    BEGIN_CMD_LABEL(commandBuffer, "LightRenderer::vsmBlurActiveShadowMaps");
+//
+//    if (m_visibleShadowMaps.empty()) {
+//        return; // Nothing to do
+//    }
+//
+//    vk::ImageSubresourceRange subresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+//
+//    const vk::PipelineLayout& pipelineLayout = m_vsmBlurComputePipeline->getPipelineLayout();
+//    m_vsmBlurComputePipeline->bind(commandBuffer);
+//
+//    GaussianBlurPushConstants pushConstantData{};
+//    pushConstantData.blurRadius = 10.0F;
+//
+//    std::vector<const ImageView*> shadowMapImageViews;
+//    shadowMapImageViews.reserve(MAX_SHADOW_MAPS);
+//
+//    BEGIN_CMD_LABEL(commandBuffer, "LightRenderer::vsmBlurActiveShadowMaps/TransitionLayoutsReadWrite");
+//    for (auto& shadowMap : m_visibleShadowMaps) {
+//
+//        const ImageView* shadowMapImageView = shadowMap->getShadowVarianceImageView();
+//        shadowMapImageViews.emplace_back(shadowMapImageView);
+//
+//        ImageUtil::transitionLayout(commandBuffer, shadowMapImageView->getImage(), subresourceRange,
+//                                    ImageTransition::FromAny(),
+//                                    ImageTransition::ShaderReadWrite(vk::PipelineStageFlagBits::eComputeShader));
+//    }
+//    END_CMD_LABEL(commandBuffer);
+//
+//    for (size_t i = shadowMapImageViews.size(); i < MAX_SHADOW_MAPS; ++i) {
+//        shadowMapImageViews.emplace_back(shadowMapImageViews[0]);
+//    }
+//
+//    DescriptorSetWriter(m_vsmBlurResources->descriptorSet)
+//            .writeImage(0, m_vsmShadowMapSampler.get(), shadowMapImageViews.data(), vk::ImageLayout::eGeneral, 0, (uint32_t)shadowMapImageViews.size())
+//            .write();
+//
+//
+//    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineLayout, 0, 1, &m_vsmBlurResources->descriptorSet->getDescriptorSet(), 0, nullptr);
+//
+//    for (uint32_t i = 0; i < (uint32_t)m_visibleShadowMaps.size(); ++i) {
+//        pushConstantData.srcSize = m_visibleShadowMaps[i]->getResolution();
+//        pushConstantData.dstSize = m_visibleShadowMaps[i]->getResolution();
+//        uint32_t workgroupCountX = INT_DIV_CEIL(pushConstantData.dstSize.x, 8);
+//        uint32_t workgroupCountY = INT_DIV_CEIL(pushConstantData.dstSize.y, 8);
+//
+//        pushConstantData.imageIndex = i;
+//
+//        BEGIN_CMD_LABEL(commandBuffer, "LightRenderer::vsmBlurActiveShadowMaps/ComputeBlur_X");
+//        pushConstantData.blurDirection = GAUSSIAN_BLUE_DIRECTION_X;
+//        commandBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, sizeof(GaussianBlurPushConstants), &pushConstantData);
+//        m_vsmBlurComputePipeline->dispatch(commandBuffer, workgroupCountX, workgroupCountY, 1);
+//        END_CMD_LABEL(commandBuffer);
+//
+//        const ImageView* shadowMapImageView = m_visibleShadowMaps[i]->getShadowVarianceImageView();
+//        ImageUtil::transitionLayout(commandBuffer, shadowMapImageView->getImage(), subresourceRange,
+//                                    ImageTransition::ShaderReadWrite(vk::PipelineStageFlagBits::eComputeShader),
+//                                    ImageTransition::ShaderReadWrite(vk::PipelineStageFlagBits::eComputeShader));
+//
+//        BEGIN_CMD_LABEL(commandBuffer, "LightRenderer::vsmBlurActiveShadowMaps/ComputeBlur_Y");
+//        pushConstantData.blurDirection = GAUSSIAN_BLUE_DIRECTION_Y;
+//        commandBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, sizeof(GaussianBlurPushConstants), &pushConstantData);
+//        m_vsmBlurComputePipeline->dispatch(commandBuffer, workgroupCountX, workgroupCountY, 1);
+//        END_CMD_LABEL(commandBuffer);
+//    }
+//
+//    BEGIN_CMD_LABEL(commandBuffer, "LightRenderer::vsmBlurActiveShadowMaps/TransitionLayoutsReadOnly");
+//    for (auto& shadowMap : m_visibleShadowMaps) {
+//        const ImageView* shadowMapImageView = shadowMap->getShadowVarianceImageView();
+//        ImageUtil::transitionLayout(commandBuffer, shadowMapImageView->getImage(), subresourceRange,
+//                                    ImageTransition::ShaderReadWrite(vk::PipelineStageFlagBits::eComputeShader),
+//                                    ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eFragmentShader));
+//    }
+//    END_CMD_LABEL(commandBuffer);
+//
+//    END_CMD_LABEL(commandBuffer);
+//}
 
 void LightRenderer::blurImage(const vk::CommandBuffer& commandBuffer, const Sampler* sampler, const ImageView* srcImage, const glm::uvec2& srcSize, const ImageView* dstImage, const glm::uvec2& dstSize, const glm::vec2& blurRadius) {
 //    PROFILE_SCOPE("LightRenderer::blurImage")
@@ -778,7 +1003,7 @@ void LightRenderer::blurImage(const vk::CommandBuffer& commandBuffer, const Samp
 }
 
 
-void LightRenderer::calculateDirectionalShadowRenderCamera(const RenderCamera* viewerRenderCamera, const glm::vec3& direction, const double& nearDistance, const double& farDistance, RenderCamera* outShadowRenderCamera) {
+void LightRenderer::calculateDirectionalShadowRenderCamera(const RenderCamera* viewerRenderCamera, const Transform& lightTransform, const double& cascadeStartDist, const double& cascadeEndDist, const double& shadowNearPlane, const double shadowFarPlane, RenderCamera* outShadowRenderCamera) {
     PROFILE_SCOPE("LightRenderer::calculateDirectionalShadowRenderCamera");
 
     std::array<glm::dvec3, Frustum::NumCorners> viewerFrustumCorners = Frustum::getCornersNDC();
@@ -800,31 +1025,31 @@ void LightRenderer::calculateDirectionalShadowRenderCamera(const RenderCamera* v
     double scaleTR = 1.0 / glm::dot(dTR, dC);
     double scaleBR = 1.0 / glm::dot(dBR, dC);
     double scaleBL = 1.0 / glm::dot(dBL, dC);
-    viewerFrustumCorners[Frustum::Corner_Left_Top_Far] = viewerFrustumCorners[Frustum::Corner_Left_Top_Near] + dTL * farDistance * scaleTL;
-    viewerFrustumCorners[Frustum::Corner_Right_Top_Far] = viewerFrustumCorners[Frustum::Corner_Right_Top_Near] + dTR * farDistance * scaleTR;
-    viewerFrustumCorners[Frustum::Corner_Right_Bottom_Far] = viewerFrustumCorners[Frustum::Corner_Right_Bottom_Near] + dBR * farDistance * scaleBR;
-    viewerFrustumCorners[Frustum::Corner_Left_Bottom_Far] = viewerFrustumCorners[Frustum::Corner_Left_Bottom_Near] + dBL * farDistance * scaleBL;
-    viewerFrustumCorners[Frustum::Corner_Left_Top_Near] = viewerFrustumCorners[Frustum::Corner_Left_Top_Near] + dTL * nearDistance * scaleTL;
-    viewerFrustumCorners[Frustum::Corner_Right_Top_Near] = viewerFrustumCorners[Frustum::Corner_Right_Top_Near] + dTR * nearDistance * scaleTR;
-    viewerFrustumCorners[Frustum::Corner_Right_Bottom_Near] = viewerFrustumCorners[Frustum::Corner_Right_Bottom_Near] + dBR * nearDistance * scaleBR;
-    viewerFrustumCorners[Frustum::Corner_Left_Bottom_Near] = viewerFrustumCorners[Frustum::Corner_Left_Bottom_Near] + dBL * nearDistance * scaleBL;
+    viewerFrustumCorners[Frustum::Corner_Left_Top_Far] = viewerFrustumCorners[Frustum::Corner_Left_Top_Near] + dTL * cascadeEndDist * scaleTL;
+    viewerFrustumCorners[Frustum::Corner_Right_Top_Far] = viewerFrustumCorners[Frustum::Corner_Right_Top_Near] + dTR * cascadeEndDist * scaleTR;
+    viewerFrustumCorners[Frustum::Corner_Right_Bottom_Far] = viewerFrustumCorners[Frustum::Corner_Right_Bottom_Near] + dBR * cascadeEndDist * scaleBR;
+    viewerFrustumCorners[Frustum::Corner_Left_Bottom_Far] = viewerFrustumCorners[Frustum::Corner_Left_Bottom_Near] + dBL * cascadeEndDist * scaleBL;
+    viewerFrustumCorners[Frustum::Corner_Left_Top_Near] = viewerFrustumCorners[Frustum::Corner_Left_Top_Near] + dTL * cascadeStartDist * scaleTL;
+    viewerFrustumCorners[Frustum::Corner_Right_Top_Near] = viewerFrustumCorners[Frustum::Corner_Right_Top_Near] + dTR * cascadeStartDist * scaleTR;
+    viewerFrustumCorners[Frustum::Corner_Right_Bottom_Near] = viewerFrustumCorners[Frustum::Corner_Right_Bottom_Near] + dBR * cascadeStartDist * scaleBR;
+    viewerFrustumCorners[Frustum::Corner_Left_Bottom_Near] = viewerFrustumCorners[Frustum::Corner_Left_Bottom_Near] + dBL * cascadeStartDist * scaleBL;
 
     // Calculate center of this subsection of the viewer frustum.
     glm::dvec3 worldSpaceFrustumCenter(0.0);
-    for (size_t i = 0; i < Frustum::NumCorners; ++i) {
+    for (size_t i = 0; i < Frustum::NumCorners; ++i)
         worldSpaceFrustumCenter += viewerFrustumCorners[i];
-    }
     worldSpaceFrustumCenter /= Frustum::NumCorners;
 
     Transform shadowCameraTransform;
     shadowCameraTransform.setTranslation(worldSpaceFrustumCenter);
-    shadowCameraTransform.setRotation(direction, glm::vec3(0.0F, 1.0F, 0.0F));
+//    shadowCameraTransform.setRotation(lightTransform.getForwardAxis(), glm::vec3(0.0F, 1.0F, 0.0F));
+    shadowCameraTransform.setRotation(lightTransform.getRotationMatrix());
     glm::dmat4 shadowViewMatrix = glm::inverse(shadowCameraTransform.getMatrix());
 
     glm::dvec2 shadowViewMin(std::numeric_limits<double>::max());
     glm::dvec2 shadowViewMax(std::numeric_limits<double>::min());
 
-    const bool useBoundingSphere = false;
+    constexpr bool useBoundingSphere = true;
     glm::dvec3 lightSpaceFrustumCenter;
 
     if (useBoundingSphere) {
@@ -833,12 +1058,17 @@ void LightRenderer::calculateDirectionalShadowRenderCamera(const RenderCamera* v
 
     double boundingSphereRadius = 0.0;
 
-    for (size_t i = 0; i < Frustum::NumCorners; ++i) {
-        temp = shadowViewMatrix * glm::dvec4(viewerFrustumCorners[i], 1.0F); // Light-space frustum corner
-        if (useBoundingSphere) {
-            glm::dvec3 dist = glm::dvec3(temp) - lightSpaceFrustumCenter;
-            boundingSphereRadius = glm::max(boundingSphereRadius, glm::dot(dist, dist)); // Use distance^2 until we found the largest, then sqrt it
-        } else {
+    if (useBoundingSphere) {
+        glm::dvec3 dir;
+        for (size_t i = 0; i < Frustum::NumCorners; ++i) {
+            temp = shadowViewMatrix * glm::dvec4(viewerFrustumCorners[i], 1.0F); // Light-space frustum corner
+            dir = glm::dvec3(temp) - lightSpaceFrustumCenter;
+            boundingSphereRadius = glm::max(boundingSphereRadius, glm::dot(dir, dir)); // Use distance^2 until we found the largest, then sqrt it
+        }
+        boundingSphereRadius = glm::length(dir) * 0.5;
+    } else {
+        for (size_t i = 0; i < Frustum::NumCorners; ++i) {
+            temp = shadowViewMatrix * glm::dvec4(viewerFrustumCorners[i], 1.0F); // Light-space frustum corner
             shadowViewMin.x = glm::min(shadowViewMin.x, temp.x);
             shadowViewMin.y = glm::min(shadowViewMin.y, temp.y);
             shadowViewMax.x = glm::max(shadowViewMax.x, temp.x);
@@ -847,12 +1077,11 @@ void LightRenderer::calculateDirectionalShadowRenderCamera(const RenderCamera* v
     }
 
     if (useBoundingSphere) {
-        boundingSphereRadius = glm::sqrt(boundingSphereRadius);
         shadowViewMin = glm::dvec2(lightSpaceFrustumCenter.x - boundingSphereRadius, lightSpaceFrustumCenter.y - boundingSphereRadius);
         shadowViewMax = glm::dvec2(lightSpaceFrustumCenter.x + boundingSphereRadius, lightSpaceFrustumCenter.y + boundingSphereRadius);
     }
 
-    Camera shadowCameraProjection(shadowViewMin.x, shadowViewMax.x, shadowViewMin.y, shadowViewMax.y, -64.0, +64.0, true);
+    Camera shadowCameraProjection(shadowViewMin.x, shadowViewMax.x, shadowViewMin.y, shadowViewMax.y, shadowNearPlane, shadowFarPlane, true);
 
     outShadowRenderCamera->setProjection(shadowCameraProjection);
     outShadowRenderCamera->setTransform(shadowCameraTransform);

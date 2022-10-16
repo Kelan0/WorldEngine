@@ -550,13 +550,15 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, co
 }
 
 bool DescriptorSetWriter::write() {
-    const auto& device = m_descriptorSet->getDevice();
-    for (auto& write : m_writes) {
-        if (write.pImageInfo != nullptr) write.pImageInfo = &m_tempImageInfo[(size_t)write.pImageInfo - 1];
-        if (write.pBufferInfo != nullptr) write.pBufferInfo = &m_tempBufferInfo[(size_t)write.pBufferInfo - 1];
-        if (write.pTexelBufferView != nullptr) write.pTexelBufferView = &m_tempBufferViews[(size_t)write.pTexelBufferView - 1];
+    if (!m_writes.empty()) {
+        const auto& device = m_descriptorSet->getDevice();
+        for (auto &write: m_writes) {
+            if (write.pImageInfo != nullptr) write.pImageInfo = &m_tempImageInfo[(size_t) write.pImageInfo - 1];
+            if (write.pBufferInfo != nullptr) write.pBufferInfo = &m_tempBufferInfo[(size_t) write.pBufferInfo - 1];
+            if (write.pTexelBufferView != nullptr) write.pTexelBufferView = &m_tempBufferViews[(size_t) write.pTexelBufferView - 1];
+        }
+        device->updateDescriptorSets(m_writes, {});
     }
-    device->updateDescriptorSets(m_writes, {});
     return true;
 }
 

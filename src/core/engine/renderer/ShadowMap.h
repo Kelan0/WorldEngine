@@ -58,5 +58,8 @@ private:
     glm::mat4 m_viewProjectionMatrix;
 };
 
+class CascadedShadowMap {
+
+};
 
 #endif //WORLDENGINE_SHADOWMAP_H

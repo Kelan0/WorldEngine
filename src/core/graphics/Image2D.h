@@ -58,6 +58,8 @@ public:
 
     const uint32_t& getHeight() const;
 
+    glm::uvec2 getResolution() const;
+
     const uint32_t getMipLevelCount() const;
 
     const vk::Format& getFormat() const;

@@ -142,11 +142,15 @@ void ComputePipeline::bind(const vk::CommandBuffer& commandBuffer) const {
 }
 
 void ComputePipeline::dispatch(const vk::CommandBuffer& commandBuffer, const uint32_t& workgroupCountX, const uint32_t& workgroupCountY, const uint32_t& workgroupCountZ) const {
+    BEGIN_CMD_LABEL(commandBuffer, "ComputePipeline::dispatch");
     commandBuffer.dispatch(workgroupCountX, workgroupCountY, workgroupCountZ);
+    END_CMD_LABEL(commandBuffer);
 }
 
 void ComputePipeline::dispatchBase(const vk::CommandBuffer& commandBuffer, const uint32_t& workgroupOffsetX, const uint32_t& workgroupOffsetY, const uint32_t& workgroupOffsetZ, const uint32_t& workgroupCountX, const uint32_t& workgroupCountY, const uint32_t& workgroupCountZ) const {
+    BEGIN_CMD_LABEL(commandBuffer, "ComputePipeline::dispatchBase");
     commandBuffer.dispatchBase(workgroupOffsetX, workgroupOffsetY, workgroupOffsetZ, workgroupCountX, workgroupCountY, workgroupCountZ);
+    END_CMD_LABEL(commandBuffer);
 }
 
 const vk::Pipeline& ComputePipeline::getPipeline() const {

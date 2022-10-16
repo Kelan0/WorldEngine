@@ -5,14 +5,12 @@
 LightComponent::LightComponent():
     m_type(LightType_Invalid),
     m_intensity(0.0F, 0.0F, 0.0F),
-    m_shadowResolution(4096, 4096),
+    m_shadowResolution(512, 512),
     m_shadowCaster(false),
     m_shadowMap(nullptr) {
 }
 
-LightComponent::~LightComponent() {
-
-}
+LightComponent::~LightComponent() = default;
 
 LightComponent& LightComponent::setType(const LightType& type) {
     m_type = type;
