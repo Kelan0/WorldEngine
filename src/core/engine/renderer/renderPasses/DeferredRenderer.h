@@ -94,6 +94,9 @@ private:
         glm::mat4 invProjectionMatrix;
         glm::mat4 invViewProjectionMatrix;
         glm::mat4 cameraRays;
+        bool showDebugShadowCascades;
+        uint32_t debugShadowCascadeLightIndex;
+        float debugShadowCascadeOpacity;
     };
 
     struct RenderResources {

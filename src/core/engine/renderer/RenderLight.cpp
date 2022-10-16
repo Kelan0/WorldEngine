@@ -60,4 +60,5 @@ void PointLight::copyLightData(GPULight* dst) const {
     dst->type = getType();
     dst->worldPosition = glm::vec4(m_position, 0.0F);
     dst->intensity = glm::vec4(m_intensity, 1.0F);
+    dst->flags = 0;
 }

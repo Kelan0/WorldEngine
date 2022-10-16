@@ -12,105 +12,217 @@
 #include "core/util/Profiler.h"
 
 
-ShadowMap::ShadowMap(const uint32_t& width, const uint32_t& height):
-        ShadowMap(glm::uvec2(width, height)) {
+ShadowMap::ShadowMap(const ShadowType& shadowType, const RenderType& renderType):
+        m_shadowType(shadowType),
+        m_renderType(renderType),
+        m_resolution(0, 0),
+        m_index(0) {
 }
 
-ShadowMap::ShadowMap(const glm::uvec2& resolution):
-        m_index(-1),
-        m_resolution(resolution),
-        m_shadowDepthImage(nullptr),
-        m_shadowVarianceImage(nullptr),
-        m_shadowDepthImageView(nullptr),
-        m_shadowVarianceImageView(nullptr),
-        m_shadowMapFramebuffer(nullptr) {
+const ShadowMap::ShadowType& ShadowMap::getShadowType() const {
+    return m_shadowType;
 }
 
-ShadowMap::~ShadowMap() {
-    delete m_shadowMapFramebuffer;
-    delete m_shadowDepthImageView;
-    delete m_shadowVarianceImageView;
-    delete m_shadowDepthImage;
-    delete m_shadowVarianceImage;
-}
-
-void ShadowMap::update() {
-    PROFILE_SCOPE("ShadowMap::update");
-
-    if (m_shadowVarianceImage == nullptr || m_shadowVarianceImage->getWidth() != m_resolution.x || m_shadowVarianceImage->getHeight() != m_resolution.y) {
-        delete m_shadowDepthImageView;
-        delete m_shadowVarianceImageView;
-        delete m_shadowDepthImage;
-        delete m_shadowVarianceImage;
-
-        Image2DConfiguration imageConfig{};
-        imageConfig.device = Engine::graphics()->getDevice();
-        imageConfig.setSize(m_resolution);
-        imageConfig.mipLevels = 1;
-        imageConfig.generateMipmap = false;
-        imageConfig.sampleCount = vk::SampleCountFlagBits::e1;
-
-        imageConfig.format = vk::Format::eR32G32B32A32Sfloat;
-        imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eStorage;
-        m_shadowVarianceImage = Image2D::create(imageConfig, "ShadowMap-ShadowVarianceImage");
-        assert(m_shadowVarianceImage != nullptr);
-
-        imageConfig.format = vk::Format::eD32Sfloat;
-        imageConfig.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
-        m_shadowDepthImage = Image2D::create(imageConfig, "ShadowMap-ShadowDepthImage");
-        assert(m_shadowDepthImage != nullptr);
-
-        ImageViewConfiguration imageViewConfig{};
-        imageViewConfig.device = Engine::graphics()->getDevice();
-
-        imageViewConfig.setImage(m_shadowVarianceImage);
-        imageViewConfig.format = vk::Format::eR32G32B32A32Sfloat;
-        imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
-        m_shadowVarianceImageView = ImageView::create(imageViewConfig, "ShadowMap-ShadowVarianceImageView");
-        assert(m_shadowVarianceImageView != nullptr);
-
-        imageViewConfig.setImage(m_shadowDepthImage);
-        imageViewConfig.format = vk::Format::eD32Sfloat;
-        imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eDepth;
-        m_shadowDepthImageView = ImageView::create(imageViewConfig, "ShadowMap-ShadowDepthImageView");
-        assert(m_shadowDepthImageView != nullptr);
-
-    }
-
-    if (m_shadowMapFramebuffer == nullptr || m_shadowMapFramebuffer->getWidth() != m_resolution.x || m_shadowMapFramebuffer->getHeight() != m_resolution.y) {
-        FramebufferConfiguration framebufferConfig{};
-        framebufferConfig.device = Engine::graphics()->getDevice();
-        framebufferConfig.setSize(m_resolution);
-        framebufferConfig.setRenderPass(Engine::lightRenderer()->getRenderPass().get());
-        framebufferConfig.addAttachment(m_shadowVarianceImageView);
-        framebufferConfig.addAttachment(m_shadowDepthImageView);
-
-        delete m_shadowMapFramebuffer;
-        m_shadowMapFramebuffer = Framebuffer::create(framebufferConfig, "ShadowMap-ShadowMapFramebuffer");
-        assert(!!m_shadowMapFramebuffer);
-    }
-}
-
-void ShadowMap::beginRenderPass(const vk::CommandBuffer& commandBuffer, const RenderPass* renderPass) {
-    renderPass->begin(commandBuffer, m_shadowMapFramebuffer, vk::SubpassContents::eInline);
-}
-
-const uint32_t &ShadowMap::getIndex() const {
-    return m_index;
-}
-
-void ShadowMap::setResolution(const glm::uvec2& resolution) {
-    m_resolution = resolution;
+const ShadowMap::RenderType& ShadowMap::getRenderType() const {
+    return m_renderType;
 }
 
 const glm::uvec2& ShadowMap::getResolution() const {
     return m_resolution;
 }
 
-const ImageView* ShadowMap::getShadowVarianceImageView() const {
-    return m_shadowVarianceImageView;
+void ShadowMap::setResolution(const uint32_t& width, const uint32_t& height) {
+    m_resolution.x = width;
+    m_resolution.y = height;
 }
 
-const glm::mat4& ShadowMap::getViewProjectionMatrix() const {
-    return m_viewProjectionMatrix;
+
+
+
+CascadedShadowMap::CascadedShadowMap(const RenderType& renderType):
+        ShadowMap(ShadowType_CascadedShadowMap, renderType),
+        m_numCascades(4) {
+}
+
+CascadedShadowMap::~CascadedShadowMap() {
+    for (size_t i = 0; i < m_cascades.size(); ++i) {
+        destroyCascade(m_cascades[i]);
+    }
+}
+
+void CascadedShadowMap::update() {
+    for (size_t i = 0; i < m_numCascades; ++i) {
+        updateCascade(m_cascades[i]);
+    }
+
+    if (m_cascades.size() > m_numCascades) {
+        for (size_t i = m_numCascades; i < m_cascades.size(); ++i) {
+            destroyCascade(m_cascades[i]);
+        }
+        m_cascades.resize(m_numCascades);
+    }
+}
+
+size_t CascadedShadowMap::getNumCascades() const {
+    return m_numCascades;
+}
+
+void CascadedShadowMap::setNumCascades(const size_t& numCascades) {
+    m_numCascades = numCascades;
+    if (m_cascades.size() <= numCascades) {
+        m_cascades.resize(numCascades);
+    }
+}
+
+const double& CascadedShadowMap::getCascadeSplitDistance(const size_t& cascadeIndex) {
+    assert(cascadeIndex < m_cascades.size());
+    return m_cascades[cascadeIndex].cascadeSplitDistance;
+}
+
+void CascadedShadowMap::setCascadeSplitDistance(const size_t& cascadeIndex, const double& distance) {
+    assert(cascadeIndex < m_cascades.size());
+    m_cascades[cascadeIndex].cascadeSplitDistance = distance;
+}
+
+const Framebuffer* CascadedShadowMap::getCascadeFramebuffer(const size_t& cascadeIndex) {
+    assert(cascadeIndex < m_cascades.size());
+    return m_cascades[cascadeIndex].shadowMapFramebuffer;
+}
+
+const ImageView* CascadedShadowMap::getCascadeShadowVarianceImageView(const size_t& cascadeIndex) {
+    assert(cascadeIndex < m_cascades.size());
+    return m_cascades[cascadeIndex].shadowVarianceImageView;
+}
+
+const ImageView* CascadedShadowMap::getCascadeVsmBlurIntermediateImageView(const size_t& cascadeIndex) {
+    assert(cascadeIndex < m_cascades.size());
+    return m_cascades[cascadeIndex].vsmBlurIntermediateImageView;
+}
+
+const DescriptorSet* CascadedShadowMap::getCascadeVsmBlurXDescriptorSet(const size_t& cascadeIndex) {
+    assert(cascadeIndex < m_cascades.size());
+    return m_cascades[cascadeIndex].vsmBlurDescriptorSetX.get();
+}
+
+const DescriptorSet* CascadedShadowMap::getCascadeVsmBlurYDescriptorSet(const size_t& cascadeIndex) {
+    assert(cascadeIndex < m_cascades.size());
+    return m_cascades[cascadeIndex].vsmBlurDescriptorSetY.get();
+}
+
+void CascadedShadowMap::updateCascade(Cascade& cascade) {
+    if (m_renderType == RenderType_VarianceShadowMap) {
+
+        if (cascade.vsmBlurDescriptorSetX == nullptr) {
+            cascade.vsmBlurDescriptorSetX = DescriptorSet::create(Engine::lightRenderer()->getVsmBlurComputeDescriptorSetLayout(), Engine::graphics()->descriptorPool(),"CascadedShadowMap-VsmBlurXComputeDescriptorSet");
+            cascade.vsmUpdateDescriptorSet++;
+        }
+
+        if (cascade.vsmBlurDescriptorSetY == nullptr) {
+            cascade.vsmBlurDescriptorSetY = DescriptorSet::create(Engine::lightRenderer()->getVsmBlurComputeDescriptorSetLayout(), Engine::graphics()->descriptorPool(),"CascadedShadowMap-VsmBlurYComputeDescriptorSet");
+            cascade.vsmUpdateDescriptorSet++;
+        }
+
+        bool recreatedImages = false;
+        if (cascade.shadowVarianceImage == nullptr || cascade.shadowVarianceImage->getWidth() != m_resolution.x || cascade.shadowVarianceImage->getHeight() != m_resolution.y) {
+            recreatedImages = true;
+
+            delete cascade.shadowDepthImageView;
+            delete cascade.shadowVarianceImageView;
+            delete cascade.vsmBlurIntermediateImageView;
+            delete cascade.shadowDepthImage;
+            delete cascade.shadowVarianceImage;
+            delete cascade.vsmBlurIntermediateImage;
+
+            Image2DConfiguration imageConfig{};
+            imageConfig.device = Engine::graphics()->getDevice();
+            imageConfig.setSize(m_resolution);
+            imageConfig.mipLevels = 1;
+            imageConfig.generateMipmap = false;
+            imageConfig.sampleCount = vk::SampleCountFlagBits::e1;
+            imageConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+
+            imageConfig.format = vk::Format::eR32G32B32A32Sfloat;
+            imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eStorage;
+            cascade.shadowVarianceImage = Image2D::create(imageConfig, "ShadowMap-ShadowVarianceImage");
+            assert(cascade.shadowVarianceImage != nullptr);
+
+            imageConfig.format = vk::Format::eD32Sfloat;
+            imageConfig.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
+            cascade.shadowDepthImage = Image2D::create(imageConfig, "ShadowMap-ShadowDepthImage");
+            assert(cascade.shadowDepthImage != nullptr);
+
+            imageConfig.format = vk::Format::eR32G32B32A32Sfloat;
+            imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage;
+            cascade.vsmBlurIntermediateImage = Image2D::create(imageConfig, "ShadowMap-VsmBlurIntermediateImage");
+            assert(cascade.vsmBlurIntermediateImage != nullptr);
+
+            ImageViewConfiguration imageViewConfig{};
+            imageViewConfig.device = Engine::graphics()->getDevice();
+
+            imageViewConfig.setImage(cascade.shadowVarianceImage);
+            imageViewConfig.format = vk::Format::eR32G32B32A32Sfloat;
+            imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
+            cascade.shadowVarianceImageView = ImageView::create(imageViewConfig, "ShadowMap-ShadowVarianceImageView");
+            assert(cascade.shadowVarianceImageView != nullptr);
+
+            imageViewConfig.setImage(cascade.shadowDepthImage);
+            imageViewConfig.format = vk::Format::eD32Sfloat;
+            imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eDepth;
+            cascade.shadowDepthImageView = ImageView::create(imageViewConfig, "ShadowMap-ShadowDepthImageView");
+            assert(cascade.shadowDepthImageView != nullptr);
+
+            imageViewConfig.setImage(cascade.vsmBlurIntermediateImage);
+            imageViewConfig.format = vk::Format::eR32G32B32A32Sfloat;
+            imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
+            cascade.vsmBlurIntermediateImageView = ImageView::create(imageViewConfig, "ShadowMap-VsmBlurIntermediateImageView");
+            assert(cascade.vsmBlurIntermediateImageView != nullptr);
+
+            cascade.vsmUpdateDescriptorSet = CONCURRENT_FRAMES;
+        }
+
+        if (cascade.vsmUpdateDescriptorSet > 0) {
+            cascade.vsmUpdateDescriptorSet--;
+
+            DescriptorSetWriter(cascade.vsmBlurDescriptorSetX.get())
+                    .writeImage(0, Engine::lightRenderer()->getVsmShadowMapSampler().get(), cascade.shadowVarianceImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+                    .writeImage(1, Engine::lightRenderer()->getVsmShadowMapSampler().get(), cascade.vsmBlurIntermediateImageView, vk::ImageLayout::eGeneral, 0, 1)
+                    .write();
+
+            DescriptorSetWriter(cascade.vsmBlurDescriptorSetY.get())
+                    .writeImage(0, Engine::lightRenderer()->getVsmShadowMapSampler().get(), cascade.vsmBlurIntermediateImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+                    .writeImage(1, Engine::lightRenderer()->getVsmShadowMapSampler().get(), cascade.shadowVarianceImageView, vk::ImageLayout::eGeneral, 0, 1)
+                    .write();
+        }
+
+        if (cascade.shadowMapFramebuffer == nullptr || recreatedImages || cascade.shadowMapFramebuffer->getWidth() != m_resolution.x || cascade.shadowMapFramebuffer->getHeight() != m_resolution.y) {
+            delete cascade.shadowMapFramebuffer;
+
+            FramebufferConfiguration framebufferConfig{};
+            framebufferConfig.device = Engine::graphics()->getDevice();
+            framebufferConfig.setSize(m_resolution);
+            framebufferConfig.setRenderPass(Engine::lightRenderer()->getRenderPass().get());
+            framebufferConfig.addAttachment(cascade.shadowVarianceImageView);
+            framebufferConfig.addAttachment(cascade.shadowDepthImageView);
+
+            cascade.shadowMapFramebuffer = Framebuffer::create(framebufferConfig, "ShadowMap-ShadowMapFramebuffer");
+            assert(cascade.shadowMapFramebuffer != nullptr);
+        }
+    }
+}
+
+void CascadedShadowMap::destroyCascade(Cascade& cascade) {
+    delete cascade.shadowDepthImageView;
+    delete cascade.shadowVarianceImageView;
+    delete cascade.shadowDepthImage;
+    delete cascade.shadowVarianceImage;
+    delete cascade.shadowMapFramebuffer;
+    delete cascade.vsmBlurIntermediateImage;
+    delete cascade.vsmBlurIntermediateImageView;
+    cascade.shadowDepthImageView = nullptr;
+    cascade.shadowVarianceImageView = nullptr;
+    cascade.shadowDepthImage = nullptr;
+    cascade.shadowVarianceImage = nullptr;
+    cascade.shadowMapFramebuffer = nullptr;
+    cascade.vsmBlurIntermediateImage = nullptr;
+    cascade.vsmBlurIntermediateImageView = nullptr;
 }

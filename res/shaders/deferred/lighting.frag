@@ -12,6 +12,8 @@
 #define LIGHT_TYPE_SPOT 3
 #define LIGHT_TYPE_AREA 4
 
+#define LIGHT_FLAG_CSM_USE_MAP_BASED_SELECTION uint(1 << 0)
+
 struct SurfacePoint {
     bool exists;
     float depth;
@@ -47,11 +49,15 @@ struct LightInfo {
     uint shadowMapIndex;
     uint shadowMapCount;
     uint type;
-    uint _pad2;
+    uint flags;
 };
 
 struct ShadowMapInfo {
     mat4 viewProjectionMatrix;
+    float cascadeStartZ;
+    float cascadeEndZ;
+    float _pad0;
+    float _pad1;
 };
 
 
@@ -67,6 +73,9 @@ layout(set = 0, binding = 0) uniform UBO1 {
     mat4 invProjectionMatrix;
     mat4 invViewProjectionMatrix;
     mat4 cameraRays;
+    bool showDebugShadowCascades;
+    uint debugShadowCascadeLightIndex;
+    float debugShadowCascadeOpacity;
 };
 
 const float MAX_REFLECTION_LOD = 4.0;
@@ -166,6 +175,44 @@ float sampleShadowVSM(in sampler2D shadowMap, in vec2 coord, in float compareDep
     return min(max(p, pMax), 1.0);
 }
 
+vec3 calculateShadowMapCoord(in SurfacePoint surface, in uint shadowMapIndex) {
+    mat4 lightViewProjectionMatrix = shadowMaps[shadowMapIndex].viewProjectionMatrix;
+    // TODO: define a common origin CPU-side, and a matrix/inverse-matrix to move to/from that origin. The origin will always be near the camera to avoid precision errors in planet-scale scenes.
+    vec4 lightProjectedPosition = lightViewProjectionMatrix * invViewMatrix * vec4(surface.viewPosition, 1.0); // This conversion to world-space will loose precision in large scenes
+    lightProjectedPosition.xyz /= lightProjectedPosition.w;
+    lightProjectedPosition.xy = lightProjectedPosition.xy * 0.5 + 0.5;
+    return lightProjectedPosition.xyz;
+}
+
+uint calculateShadowCascade(in SurfacePoint surface, in LightInfo lightInfo, inout vec3 shadowMapCoord) {
+    uint cascadeIndex = lightInfo.shadowMapCount;
+
+    if (bool(lightInfo.flags & LIGHT_FLAG_CSM_USE_MAP_BASED_SELECTION)) {
+        // Select the highest resolution shadow map that this pixel lands on (slightly more expensive)
+        for (uint i = 0; i < lightInfo.shadowMapCount; ++i) {
+            shadowMapCoord = calculateShadowMapCoord(surface, lightInfo.shadowMapIndex + i);
+            if (shadowMapCoord.x >= 0 && shadowMapCoord.x <= 1 && shadowMapCoord.y >= 0 && shadowMapCoord.y <= 1) {
+                cascadeIndex = i;
+                break;
+            }
+        }
+    } else {
+        // Directly select the shadow map corresponding to the depth of this pixel
+        float viewZ = -surface.viewPosition.z;
+
+        for (uint i = 0; i < lightInfo.shadowMapCount; ++i) {
+            if (viewZ >= shadowMaps[lightInfo.shadowMapIndex + i].cascadeStartZ && viewZ <= shadowMaps[lightInfo.shadowMapIndex + i].cascadeEndZ) {
+                cascadeIndex = i;
+                break;
+            }
+        }
+        shadowMapCoord = calculateShadowMapCoord(surface, lightInfo.shadowMapIndex + cascadeIndex);
+    }
+
+    return cascadeIndex;
+}
+
+
 float calculateShadow(in SurfacePoint surface, in LightInfo lightInfo) {
     if (lightInfo.shadowMapCount == 0)
         return 1.0; // No shadow map, fully lit.
@@ -174,16 +221,13 @@ float calculateShadow(in SurfacePoint surface, in LightInfo lightInfo) {
     if (NdotL <= 1e-5)
         return 0.0;
 
-    mat4 lightViewProjectionMatrix = shadowMaps[lightInfo.shadowMapIndex].viewProjectionMatrix;
-    vec4 lightProjectedPosition = lightViewProjectionMatrix * invViewMatrix * vec4(surface.viewPosition, 1.0); // This conversion to world-space will loose precision in large scenes
-    lightProjectedPosition.xyz /= lightProjectedPosition.w;
-    lightProjectedPosition.xy = lightProjectedPosition.xy * 0.5 + 0.5;
+    vec3 shadowMapCoord;
+    uint cascadeIndex = calculateShadowCascade(surface, lightInfo, shadowMapCoord);
+    float currentDepth = shadowMapCoord.z;
 
-    float currentDepth = lightProjectedPosition.z;
-
-    float shadow = sampleShadowVSM(shadowDepthTextures[lightInfo.shadowMapIndex], lightProjectedPosition.xy, currentDepth);
+    float shadow = sampleShadowVSM(shadowDepthTextures[lightInfo.shadowMapIndex + cascadeIndex], shadowMapCoord.xy, currentDepth);
     
-    // float closestDepth = texture(shadowDepthTextures[lightInfo.shadowMapIndex], lightProjectedPosition.xy).r;
+    // float closestDepth = texture(shadowDepthTextures[lightInfo.shadowMapIndex], shadowMapCoord.xy).r;
     // float shadow = currentDepth > closestDepth ? 0.0 : 1.0;
 
     return shadow * NdotL;
@@ -298,5 +342,17 @@ void main() {
 
     // finalColour = vec3(surface.emission / 32.0);
 
+    if (showDebugShadowCascades) {
+        if (surface.exists) {
+            vec3 shadowMapCoord;
+            uint cascadeIndex = calculateShadowCascade(surface, lights[debugShadowCascadeLightIndex], shadowMapCoord);
+            const vec3 cascadeDebugColours[6] = vec3[6](vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 1.0), vec3(0.0, 1.0, 0.0), vec3(1.0, 1.0, 0.0), vec3(1.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0));
+            vec3 debugColour = cascadeIndex < lights[debugShadowCascadeLightIndex].shadowMapCount ? cascadeDebugColours[cascadeIndex % 6] : vec3(0.0);
+            finalColour = mix(finalColour, debugColour, debugShadowCascadeOpacity);
+        }
+    }
+
+
     outColor = vec4(finalColour, 1.0);
+
 }

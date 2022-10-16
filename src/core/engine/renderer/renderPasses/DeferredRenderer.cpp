@@ -487,6 +487,10 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
     uniformData.invProjectionMatrix = m_renderCamera.getInverseProjectionMatrix();
     uniformData.invViewProjectionMatrix = m_renderCamera.getInverseViewProjectionMatrix();
     uniformData.cameraRays = worldCameraRays;
+    uniformData.showDebugShadowCascades = false;
+    uniformData.debugShadowCascadeLightIndex = 0;
+    uniformData.debugShadowCascadeOpacity = 0.5F;
+
     m_resources->uniformBuffer->upload(0, sizeof(LightingPassUniformData), &uniformData);
 
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_graphicsPipeline->getPipelineLayout(), 0, 2, descriptorSets, 0, nullptr);

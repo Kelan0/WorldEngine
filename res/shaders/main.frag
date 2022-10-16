@@ -2,11 +2,11 @@
 
 #extension GL_EXT_nonuniform_qualifier : enable
 
-#define HAS_ALBEDO_TEXTURE_FLAG (1 << 0)
-#define HAS_ROUGHNESS_TEXTURE_FLAG (1 << 1)
-#define HAS_METALLIC_TEXTURE_FLAG (1 << 2)
-#define HAS_EMISSION_TEXTURE_FLAG (1 << 3)
-#define HAS_NORMAL_TEXTURE_FLAG (1 << 4)
+#define HAS_ALBEDO_TEXTURE_FLAG uint(1 << 0)
+#define HAS_ROUGHNESS_TEXTURE_FLAG uint(1 << 1)
+#define HAS_METALLIC_TEXTURE_FLAG uint(1 << 2)
+#define HAS_EMISSION_TEXTURE_FLAG uint(1 << 3)
+#define HAS_NORMAL_TEXTURE_FLAG uint(1 << 4)
 
 struct Material {
     uint albedoTextureIndex;
@@ -41,9 +41,9 @@ layout(set = 2, binding = 1) readonly buffer MaterialDataBuffer {
 
 vec3 unpackRGB(in uint rgb) {
     const float scale = 1.0 / 255.0;
-    return vec3(((rgb >>16) & 255) * scale,
-                ((rgb >> 8) & 255) * scale,
-                ((rgb) & 255) * scale);
+    return vec3(((rgb >> uint(16)) & uint(255)) * scale,
+                ((rgb >> uint(8)) & uint(255)) * scale,
+                ((rgb) & uint(255)) * scale);
 }
 
 vec3 getMaterialAlbedo(in vec2 textureCoord, in Material material) {
@@ -59,7 +59,7 @@ float getMaterialRoughness(in vec2 textureCoord, in Material material) {
     if (bool(material.flags & HAS_ROUGHNESS_TEXTURE_FLAG)) {
         return texture(textures[material.roughnessTextureIndex], textureCoord).r;
     } else {
-        return ((material.packedRoughnessMetallicEmissionR) & 255) * scale;
+        return ((material.packedRoughnessMetallicEmissionR) & uint(255)) * scale;
     }
 }
 
@@ -68,7 +68,7 @@ float getMaterialMetallic(in vec2 textureCoord, in Material material) {
     if (bool(material.flags & HAS_METALLIC_TEXTURE_FLAG)) {
         return texture(textures[material.metallicTextureIndex], textureCoord).r;
     } else {
-        return ((material.packedRoughnessMetallicEmissionR >> 8) & 255) * scale;
+        return ((material.packedRoughnessMetallicEmissionR >> uint(8)) & uint(255)) * scale;
     }
 }
 
@@ -77,9 +77,9 @@ vec3 getMaterialEmission(in vec2 textureCoord, in Material material) {
     if (bool(material.flags & HAS_EMISSION_TEXTURE_FLAG)) {
         return texture(textures[material.emissionTextureIndex], textureCoord).rgb;
     } else {
-        return vec3(((material.packedRoughnessMetallicEmissionR >> 16) & 65535) * scale,
-                    ((material.packedEmissionGB) & 65535) * scale,
-                    ((material.packedEmissionGB >> 16) & 65535) * scale);
+        return vec3(((material.packedRoughnessMetallicEmissionR >> uint(16)) & uint(65535)) * scale,
+                    ((material.packedEmissionGB) & uint(65535)) * scale,
+                    ((material.packedEmissionGB >> uint(16)) & uint(65535)) * scale);
     }
 }
 

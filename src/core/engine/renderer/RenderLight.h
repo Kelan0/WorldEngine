@@ -20,7 +20,12 @@ struct GPULight {
     uint32_t shadowMapIndex;
     uint32_t shadowMapCount; // Number of cascades for CSM directional lights
     uint32_t type;
-    uint32_t _pad2;
+    union {
+        uint32_t flags;
+        struct {
+            bool flags_csmMapBasedSelection : 1;
+        };
+    };
 };
 
 class Light {

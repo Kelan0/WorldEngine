@@ -220,7 +220,7 @@ class App : public Application {
 
         Entity lightEntity6 = EntityHierarchy::create(Engine::scene(), "lightEntity6");
         lightEntity6.addComponent<Transform>().setRotation(glm::vec3(-1.0F, -1.3F, -1.0F), glm::vec3(0.0F, 1.0F, 0.0F), false);
-        lightEntity6.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(70.0, 70.0, 70.0).setShadowCaster(true);
+        lightEntity6.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(70.0, 70.0, 70.0).setShadowCaster(true).setShadowCascadeDistances({3.0F, 8.0F, 15.0F, 24.0F});
 
 //        Entity lightEntity7 = EntityHierarchy::create(Engine::scene(), "lightEntity7");
 //        lightEntity7.addComponent<Transform>().setRotation(glm::vec3(-1.4F, -1.0F, 0.2F), glm::vec3(0.0F, 1.0F, 0.0F), false);

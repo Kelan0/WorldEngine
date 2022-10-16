@@ -270,6 +270,14 @@ DescriptorSet::DescriptorSet(const std::weak_ptr<vkr::Device>& device, const std
     //printf("Create DescriptorSet\n");
 }
 
+DescriptorSet::DescriptorSet(DescriptorSet&& move) noexcept :
+        m_device(std::exchange(move.m_device, nullptr)),
+        m_pool(std::exchange(move.m_pool, nullptr)),
+        m_layout(std::exchange(move.m_layout, nullptr)),
+        m_descriptorSet(std::exchange(move.m_descriptorSet, VK_NULL_HANDLE)),
+        m_resourceId(std::exchange(move.m_resourceId, GraphicsResource{})) {
+}
+
 DescriptorSet::~DescriptorSet() {
     //printf("Destroy DescriptorSet\n");
     if (m_pool->canFreeDescriptorSets()) {

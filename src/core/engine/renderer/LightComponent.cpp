@@ -1,12 +1,12 @@
 
 #include "core/engine/renderer/LightComponent.h"
-#include "core/engine/renderer/ShadowMap.h"
 
 LightComponent::LightComponent():
     m_type(LightType_Invalid),
     m_intensity(0.0F, 0.0F, 0.0F),
     m_shadowResolution(512, 512),
-    m_shadowCaster(false),
+    m_flags_shadowCaster(false),
+    m_flags_csmMapBasedSelection(true),
     m_shadowMap(nullptr) {
 }
 
@@ -27,7 +27,12 @@ LightComponent& LightComponent::setIntensity(const float& r, const float& g, con
 }
 
 LightComponent& LightComponent::setShadowCaster(const bool& shadowCaster) {
-    m_shadowCaster = shadowCaster;
+    m_flags_shadowCaster = shadowCaster;
+    return *this;
+}
+
+LightComponent& LightComponent::setCsmMapBasedSelection(const bool& csmMapBasedSelection) {
+    m_flags_csmMapBasedSelection = csmMapBasedSelection;
     return *this;
 }
 
@@ -40,6 +45,11 @@ LightComponent& LightComponent::setShadowResolution(const uint32_t& shadowWidth,
     return setShadowResolution(glm::uvec2(shadowWidth, shadowHeight));
 }
 
+LightComponent& LightComponent::setShadowCascadeDistances(const std::vector<double>& cascadeDistances) {
+    m_cascadeDistances = cascadeDistances;
+    return *this;
+}
+
 const LightType& LightComponent::getType() const {
     return m_type;
 }
@@ -48,12 +58,20 @@ const glm::vec3& LightComponent::getIntensity() const {
     return m_intensity;
 }
 
-const bool& LightComponent::isShadowCaster() const {
-    return m_shadowCaster;
+bool LightComponent::isShadowCaster() const {
+    return m_flags_shadowCaster;
+}
+
+bool LightComponent::isCsmMapBasedSelection() const {
+    return m_flags_csmMapBasedSelection;
 }
 
 const glm::uvec2& LightComponent::getShadowResolution() const {
     return m_shadowResolution;
+}
+
+const std::vector<double>& LightComponent::getShadowCascadeDistances() const {
+    return m_cascadeDistances;
 }
 
 ShadowMap* LightComponent::getShadowMap() const {

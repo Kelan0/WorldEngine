@@ -9,6 +9,7 @@
 #include "core/engine/renderer/RenderLight.h"
 
 class ShadowMap;
+class LightComponent;
 class GraphicsPipeline;
 class ComputePipeline;
 class RenderPass;
@@ -47,10 +48,21 @@ public:
 
     [[nodiscard]] DescriptorSet* getLightingRenderPassDescriptorSet() const;
 
+    std::shared_ptr<DescriptorSetLayout> getVsmBlurComputeDescriptorSetLayout() const;
+
+    std::shared_ptr<Sampler> getVsmShadowMapSampler() const;
+
+
 private:
     void initEmptyShadowMap();
 
     void updateActiveShadowMaps();
+
+    void markShadowMapInactive(ShadowMap* shadowMap);
+
+    ShadowMap* getShadowMap(const uint32_t& width, const uint32_t& height, const ShadowMap::ShadowType& shadowType, const ShadowMap::RenderType& renderType);
+
+    size_t getNumInactiveShadowMaps() const;
 
     void updateCameraInfoBuffer(size_t maxShadowLights);
 
@@ -58,17 +70,15 @@ private:
 
     void updateShadowMapInfoBuffer(size_t maxShadowLights);
 
-    void streamLightData();
-
-    void blurImage(const vk::CommandBuffer& commandBuffer, const Sampler* sampler, const ImageView* srcImage, const glm::uvec2& srcSize, const ImageView* dstImage, const glm::uvec2& dstSize, const glm::vec2& blurRadius);
-
     void prepareVsmBlurDescriptorSets();
 
     void prepareVsmBlurIntermediateImage(const vk::CommandBuffer& commandBuffer, const uint32_t& maxWidth, const uint32_t& maxHeight);
 
+    void vsmBlurShadowImage(const vk::CommandBuffer& commandBuffer, const glm::uvec2& resolution, const vk::Image& varianceShadowImage, const vk::Image& intermediateImage, const vk::DescriptorSet& descriptorSetBlurX, const vk::DescriptorSet& descriptorSetBlurY);
+
     void vsmBlurActiveShadowMaps(const vk::CommandBuffer& commandBuffer);
 
-    void calculateDirectionalShadowRenderCamera(const RenderCamera* viewerRenderCamera, const Transform& lightTransform, const double& cascadeStartDist, const double& cascadeEndDist, const double& shadowNearPlane, const double shadowFarPlane, RenderCamera* outShadowRenderCamera);
+    void calculateDirectionalShadowCascadeRenderCamera(const RenderCamera* viewerRenderCamera, const Transform& lightTransform, const double& cascadeStartDist, const double& cascadeEndDist, const double& shadowNearPlane, const double shadowFarPlane, RenderCamera* outShadowRenderCamera);
 
 private:
     struct VSMBlurResources {
@@ -114,7 +124,7 @@ private:
 
     std::vector<ShadowMap*> m_visibleShadowMaps;
     std::unordered_map<ShadowMap*, bool> m_activeShadowMaps;
-    std::deque<ShadowMap*> m_inactiveShadowMaps;
+    std::unordered_map<ShadowMap::ShadowType, std::vector<ShadowMap*>> m_inactiveShadowMaps;
 
     std::vector<GPULight> m_lightBufferData;
     std::vector<GPUShadowMap> m_shadowMapBufferData;

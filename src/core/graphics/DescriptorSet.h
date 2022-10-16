@@ -178,6 +178,8 @@ private:
     DescriptorSet(const std::weak_ptr<vkr::Device>& device, const std::weak_ptr<DescriptorPool>& pool, const std::weak_ptr<DescriptorSetLayout>& layout, const vk::DescriptorSet& descriptorSet);
 
 public:
+    DescriptorSet(DescriptorSet&& move) noexcept;
+
     ~DescriptorSet();
 
     static DescriptorSet* create(const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, const std::weak_ptr<DescriptorPool>& descriptorPool, const char* name, const char* layoutName);

@@ -4,6 +4,7 @@
 
 #include "core/core.h"
 #include "core/engine/renderer/RenderLight.h"
+#include "core/engine/renderer/ShadowMap.h"
 
 class ShadowMap;
 
@@ -22,17 +23,25 @@ public:
 
     LightComponent& setShadowCaster(const bool& shadowCaster);
 
+    LightComponent& setCsmMapBasedSelection(const bool& csmMapBasedSelection);
+
     LightComponent& setShadowResolution(const glm::uvec2& shadowResolution);
 
     LightComponent& setShadowResolution(const uint32_t& shadowWidth, const uint32_t& shadowHeight);
+
+    LightComponent& setShadowCascadeDistances(const std::vector<double>& cascadeDistances);
 
     [[nodiscard]] const LightType& getType() const;
 
     [[nodiscard]] const glm::vec3& getIntensity() const;
 
-    [[nodiscard]] const bool& isShadowCaster() const;
+    [[nodiscard]] bool isShadowCaster() const;
+
+    [[nodiscard]] bool isCsmMapBasedSelection() const;
 
     [[nodiscard]] const glm::uvec2& getShadowResolution() const;
+
+    [[nodiscard]] const std::vector<double>& getShadowCascadeDistances() const;
 
     [[nodiscard]] ShadowMap* getShadowMap() const;
 
@@ -42,9 +51,16 @@ private:
 private:
     LightType m_type;
     glm::vec3 m_intensity;
-    bool m_shadowCaster;
     glm::uvec2 m_shadowResolution;
     ShadowMap* m_shadowMap;
+    std::vector<double> m_cascadeDistances;
+    union {
+        uint32_t m_flags;
+        struct {
+            bool m_flags_shadowCaster : 1;
+            bool m_flags_csmMapBasedSelection : 1;
+        };
+    };
 };
 
 
