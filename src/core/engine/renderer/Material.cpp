@@ -141,14 +141,35 @@ void MaterialConfiguration::setNormalMap(const ImageViewConfiguration& imageView
     setNormalMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, samplerConfiguration, name)));
 }
 
+void MaterialConfiguration::setDisplacementMap(const std::weak_ptr<Texture>& displacementMap) {
+    this->displacementMap = displacementMap.lock();
+}
+
+void MaterialConfiguration::setDisplacementMap(const std::weak_ptr<ImageView>& image, const std::weak_ptr<Sampler>& sampler, const char* name) {
+    setDisplacementMap(std::shared_ptr<Texture>(Texture::create(image, sampler, name)));
+}
+
+void MaterialConfiguration::setDisplacementMap(const std::weak_ptr<ImageView>& image, const SamplerConfiguration& samplerConfiguration, const char* name) {
+    setDisplacementMap(std::shared_ptr<Texture>(Texture::create(image, samplerConfiguration, name)));
+}
+
+void MaterialConfiguration::setDisplacementMap(const ImageViewConfiguration& imageViewConfiguration, const std::weak_ptr<Sampler>& sampler, const char* name) {
+    setDisplacementMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, sampler, name)));
+}
+
+void MaterialConfiguration::setDisplacementMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration, const char* name) {
+    setDisplacementMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, samplerConfiguration, name)));
+}
+
+
 
 
 
 Material::Material():
-    m_albedo(0.0F),
-    m_emission(0.0F),
-    m_roughness(0.0F),
-    m_metallic(0.0F) {
+    m_albedo(uint8_t(0)),
+    m_emission(uint16_t(0)),
+    m_roughness(uint8_t(0)),
+    m_metallic(uint8_t(0)) {
 }
 
 Material::~Material() = default;
@@ -164,6 +185,7 @@ Material* Material::create(const MaterialConfiguration& materialConfiguration) {
     material->m_emissionMap = materialConfiguration.emissionMap;
     material->m_emission = materialConfiguration.emission;
     material->m_normalMap = materialConfiguration.normalMap;
+    material->m_displacementMap = materialConfiguration.displacementMap;
     return material;
 }
 
@@ -185,6 +207,10 @@ std::shared_ptr<Texture> Material::getMetallicMap() const {
 
 std::shared_ptr<Texture> Material::getNormalMap() const {
     return m_normalMap;
+}
+
+std::shared_ptr<Texture> Material::getDisplacementMap() const {
+    return m_displacementMap;
 }
 
 const glm::u8vec3& Material::getAlbedo() const {
@@ -221,4 +247,8 @@ bool Material::hasMetallicMap() const {
 
 bool Material::hasNormalMap() const {
     return m_normalMap != nullptr;
+}
+
+bool Material::hasDisplacementMap() const {
+    return m_displacementMap != nullptr;
 }

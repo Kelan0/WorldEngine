@@ -25,6 +25,7 @@ struct SurfacePoint {
     float metallic;
     float ambientOcclusion;
     vec3 emission;
+    vec2 velocity;
     vec3 viewDirToCamera;
     vec3 worldDirToCamera;
     float distToCamera;
@@ -83,11 +84,12 @@ const float MAX_REFLECTION_LOD = 4.0;
 layout(set = 0, binding = 1) uniform sampler2D texture_AlbedoRGB_Roughness;
 layout(set = 0, binding = 2) uniform sampler2D texture_NormalXYZ_Metallic;
 layout(set = 0, binding = 3) uniform sampler2D texture_EmissionRGB_AO;
-layout(set = 0, binding = 4) uniform sampler2D texture_Depth;
-layout(set = 0, binding = 5) uniform samplerCube environmentCubeMap;
-layout(set = 0, binding = 6) uniform samplerCube specularReflectionCubeMap;
-layout(set = 0, binding = 7) uniform samplerCube diffuseIrradianceCubeMap;
-layout(set = 0, binding = 8) uniform sampler2D BRDFIntegrationMap;
+layout(set = 0, binding = 4) uniform sampler2D texture_VelocityXY;
+layout(set = 0, binding = 5) uniform sampler2D texture_Depth;
+layout(set = 0, binding = 6) uniform samplerCube environmentCubeMap;
+layout(set = 0, binding = 7) uniform samplerCube specularReflectionCubeMap;
+layout(set = 0, binding = 8) uniform samplerCube diffuseIrradianceCubeMap;
+layout(set = 0, binding = 9) uniform sampler2D BRDFIntegrationMap;
 
 
 layout(set = 1, binding = 0) uniform UBO2 {
@@ -147,6 +149,8 @@ void loadSurface(in vec2 textureCoord, inout SurfacePoint surface) {
     texelValue = texture(texture_EmissionRGB_AO, fs_texture);
     surface.emission = texelValue.rgb * 255.0;
     surface.ambientOcclusion = texelValue.a;
+    texelValue = texture(texture_VelocityXY, fs_texture);
+    surface.velocity = texelValue.xy;
 
     surface.F0 = mix(vec3(0.04), surface.albedo, surface.metallic);
 }
@@ -156,13 +160,7 @@ float linstep(in float vMin, in float vMax, in float v) {
 }
 
 float sampleShadowVSM(in sampler2D shadowMap, in vec2 coord, in float compareDepth) {
-    if (coord.x < 0.0 || coord.x > 1.0 || coord.y < 0.0 || coord.y > 1.0)
-        return 1.0;
-    
     vec3 vsmTexel = texture(shadowMap, coord).xyz;
-
-//    if (vsmTexel.z < compareDepth)
-//        return 0.0;
 
     float M1 = vsmTexel[0];
     float M2 = vsmTexel[1];
@@ -172,7 +170,9 @@ float sampleShadowVSM(in sampler2D shadowMap, in vec2 coord, in float compareDep
     float diff = compareDepth - M1;
     float pMax = variance / (variance + diff * diff);
     pMax = linstep(0.5, 1.0, pMax);
-    return min(max(p, pMax), 1.0);
+    float shadow = min(max(p, pMax), 1.0);
+    shadow = smoothstep(0.1, 0.9, shadow);
+    return shadow;
 }
 
 vec3 calculateShadowMapCoord(in SurfacePoint surface, in uint shadowMapIndex) {
@@ -209,6 +209,7 @@ uint calculateShadowCascade(in SurfacePoint surface, in LightInfo lightInfo, ino
         shadowMapCoord = calculateShadowMapCoord(surface, lightInfo.shadowMapIndex + cascadeIndex);
     }
 
+    // TODO: blend between cascade edges
     return cascadeIndex;
 }
 
@@ -219,12 +220,15 @@ float calculateShadow(in SurfacePoint surface, in LightInfo lightInfo) {
 
     float NdotL = dot(surface.worldNormal, -1.0 * vec3(lightInfo.worldDirection));
     if (NdotL <= 1e-5)
-        return 0.0;
+        return 0.0; // Inverted surface, fully shadowed.
 
     vec3 shadowMapCoord;
     uint cascadeIndex = calculateShadowCascade(surface, lightInfo, shadowMapCoord);
-    float currentDepth = shadowMapCoord.z;
 
+    if (cascadeIndex >= lightInfo.shadowMapCount)
+        return 1.0; // No shadow map, fully lit.
+
+    float currentDepth = shadowMapCoord.z;
     float shadow = sampleShadowVSM(shadowDepthTextures[lightInfo.shadowMapIndex + cascadeIndex], shadowMapCoord.xy, currentDepth);
     
     // float closestDepth = texture(shadowDepthTextures[lightInfo.shadowMapIndex], shadowMapCoord.xy).r;
@@ -352,6 +356,9 @@ void main() {
         }
     }
 
+//    finalColour = vec3(isnan(surface.worldNormal[0]) ? vec3(1.0) : (surface.worldNormal * 0.5 + 0.5));
+//    finalColour = vec3(surface.albedo);
+//    finalColour = vec3(abs(surface.velocity), 0.0);
 
     outColor = vec4(finalColour, 1.0);
 

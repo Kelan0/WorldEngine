@@ -22,6 +22,8 @@ struct MaterialConfiguration {
 
     std::shared_ptr<Texture> normalMap;
 
+    std::shared_ptr<Texture> displacementMap;
+
 
     void setAlbedo(const glm::uvec3& albedo);
     void setAlbedo(const glm::vec3& albedo);
@@ -60,6 +62,12 @@ struct MaterialConfiguration {
     void setNormalMap(const std::weak_ptr<ImageView>& image, const SamplerConfiguration& samplerConfiguration, const char* name);
     void setNormalMap(const ImageViewConfiguration& imageViewConfiguration, const std::weak_ptr<Sampler>& sampler, const char* name);
     void setNormalMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration, const char* name);
+
+    void setDisplacementMap(const std::weak_ptr<Texture>& displacementMap);
+    void setDisplacementMap(const std::weak_ptr<ImageView>& image, const std::weak_ptr<Sampler>& sampler, const char* name);
+    void setDisplacementMap(const std::weak_ptr<ImageView>& image, const SamplerConfiguration& samplerConfiguration, const char* name);
+    void setDisplacementMap(const ImageViewConfiguration& imageViewConfiguration, const std::weak_ptr<Sampler>& sampler, const char* name);
+    void setDisplacementMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration, const char* name);
 };
 
 class Material {
@@ -81,6 +89,8 @@ public:
 
     [[nodiscard]] std::shared_ptr<Texture> getNormalMap() const;
 
+    [[nodiscard]] std::shared_ptr<Texture> getDisplacementMap() const;
+
     [[nodiscard]] const glm::u8vec3& getAlbedo() const;
 
     [[nodiscard]] const glm::u16vec3& getEmission() const;
@@ -99,12 +109,15 @@ public:
 
     [[nodiscard]] bool hasNormalMap() const;
 
+    [[nodiscard]] bool hasDisplacementMap() const;
+
 private:
     std::shared_ptr<Texture> m_albedoMap;
     std::shared_ptr<Texture> m_emissionMap;
     std::shared_ptr<Texture> m_roughnessMap;
     std::shared_ptr<Texture> m_metallicMap;
     std::shared_ptr<Texture> m_normalMap;
+    std::shared_ptr<Texture> m_displacementMap;
     glm::u8vec3 m_albedo;
     glm::u16vec3 m_emission;
     uint8_t m_roughness;

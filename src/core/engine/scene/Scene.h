@@ -41,9 +41,13 @@ public:
 
     void init();
 
-    Entity createEntity(const std::string& name);
-
     void destroyEntity(const Entity& entity);
+
+    Entity createEntity();
+
+    Entity createNamedEntity(const std::string& name);
+
+    Entity findNamedEntity(const std::string& name);
 
     template<class Component>
     void enableEvents();
@@ -66,6 +70,7 @@ private:
     entt::registry m_registry;
     EventDispatcher* m_eventDispatcher;
     //std::unordered_map<entt::entity, std::vector<Entity*>> m_entityRefTracker;
+    std::unordered_map<std::string, entt::entity> m_entityNameMap;
 
     Entity m_mainCameraEntity;
     Entity m_defaultCamera;

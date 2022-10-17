@@ -540,9 +540,13 @@ void SceneRenderer::updateEntityWorldTransforms() {
             for (size_t index = regionStart; index != regionEnd; ++index, ++it) {
                 if (m_resources->changedObjectTransforms[index]) {
                     glm::mat4& modelMatrix = m_resources->objectBuffer[index].modelMatrix;
+                    m_resources->objectBuffer[index].prevModelMatrix = modelMatrix;
                     Transform& transform = renderEntities.get<Transform>(*it);
                     transform.fillMatrix(modelMatrix);
                     anyTransformChanged = true;
+                }
+                if (m_resources->recreatedWorldTransformBuffer) {
+                    m_resources->objectBuffer[index].prevModelMatrix = m_resources->objectBuffer[index].modelMatrix;
                 }
             }
         }
@@ -807,7 +811,8 @@ ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
             m_resources.get(i)->changedObjectMaterials.ensureSize(maxObjects, true);
         }
 
-        ObjectDataUBO defaultObjectData;
+        ObjectDataUBO defaultObjectData{};
+        defaultObjectData.prevModelMatrix = glm::mat4(0.0);
         defaultObjectData.modelMatrix = glm::mat4(0.0);
 
         m_resources->objectBuffer.clear();
@@ -828,6 +833,10 @@ ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
         DescriptorSetWriter(m_resources->objectDescriptorSet)
             .writeBuffer(0, m_resources->worldTransformBuffer, 0, newBufferSize)
             .write();
+
+        m_resources->recreatedWorldTransformBuffer = true;
+    } else {
+        m_resources->recreatedWorldTransformBuffer = false;
     }
 
     PROFILE_REGION("Map buffer");

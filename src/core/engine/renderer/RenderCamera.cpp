@@ -107,6 +107,18 @@ const glm::mat4& RenderCamera::getInverseViewProjectionMatrix() const {
     return m_inverseViewProjectionMatrix;
 }
 
+const glm::mat4& RenderCamera::getPrevViewMatrix() const {
+    return m_prevViewMatrix;
+}
+
+const glm::mat4& RenderCamera::getPrevProjectionMatrix() const {
+    return m_prevProjectionMatrix;
+}
+
+const glm::mat4& RenderCamera::getPrevViewProjectionMatrix() const {
+    return m_prevViewProjectionMatrix;
+}
+
 void RenderCamera::copyCameraData(GPUCamera* dst) const {
     dst->viewMatrix = m_viewMatrix;
     dst->projectionMatrix = m_projectionMatrix;

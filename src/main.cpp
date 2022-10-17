@@ -99,7 +99,7 @@ class App : public Application {
         MeshData<Vertex> testMeshData;
         testMeshData.createCuboid(glm::vec3(-0.5, -0.5F, -0.5), glm::vec3(+0.5, +0.5F, +0.5));
         testMeshData.computeTangents();
-        MeshConfiguration cubeMeshConfig;
+        MeshConfiguration cubeMeshConfig{};
         cubeMeshConfig.device = Engine::graphics()->getDevice();
         cubeMeshConfig.setMeshData(&testMeshData);
         std::shared_ptr<Mesh> cubeMesh = std::shared_ptr<Mesh>(Mesh::create(cubeMeshConfig));
@@ -115,7 +115,7 @@ class App : public Application {
         auto i3 = testMeshData.addVertex(+floorSize, 0.0F, -floorSize, 0.0F, 1.0F, 0.0F, 4.0F, 0.0F);
         testMeshData.addQuad(i0, i1, i2, i3);
         testMeshData.computeTangents();
-        MeshConfiguration floorMeshConfig;
+        MeshConfiguration floorMeshConfig{};
         floorMeshConfig.device = Engine::graphics()->getDevice();
         floorMeshConfig.setMeshData(&testMeshData);
         std::shared_ptr<Mesh> floorMesh = std::shared_ptr<Mesh>(Mesh::create(floorMeshConfig));
@@ -134,12 +134,12 @@ class App : public Application {
         testMeshData.computeTangents();
 //
         printf("Loaded bunny.obj :- %llu polygons\n", testMeshData.getPolygonCount());
-        MeshConfiguration bunnyMeshConfig;
+        MeshConfiguration bunnyMeshConfig{};
         bunnyMeshConfig.device = Engine::graphics()->getDevice();
         bunnyMeshConfig.setMeshData(&testMeshData);
         std::shared_ptr<Mesh> bunnyMesh = std::shared_ptr<Mesh>(Mesh::create(bunnyMeshConfig));
 //
-        MaterialConfiguration bunnyMaterialConfig;
+        MaterialConfiguration bunnyMaterialConfig{};
         bunnyMaterialConfig.setAlbedo(glm::vec3(0.8F, 0.7F, 0.6F));
         bunnyMaterialConfig.setRoughness(0.23F);
         std::shared_ptr<Material> bunnyMaterial = std::shared_ptr<Material>(Material::create(bunnyMaterialConfig));
@@ -150,12 +150,13 @@ class App : public Application {
 
         testMeshData.clear();
         testMeshData.createUVSphere(glm::vec3(0.0F), 0.25F, 45, 45);
-        MeshConfiguration sphereMeshConfig;
+        testMeshData.computeTangents();
+        MeshConfiguration sphereMeshConfig{};
         sphereMeshConfig.device = Engine::graphics()->getDevice();
         sphereMeshConfig.setMeshData(&testMeshData);
         std::shared_ptr<Mesh> sphereMesh = std::shared_ptr<Mesh>(Mesh::create(sphereMeshConfig));
 
-        MaterialConfiguration sphereMaterial0Config;
+        MaterialConfiguration sphereMaterial0Config{};
         sphereMaterial0Config.setAlbedo(glm::vec3(0.2F));
         sphereMaterial0Config.setMetallic(0.9F);
         sphereMaterial0Config.setRoughness(0.4F);
@@ -165,13 +166,25 @@ class App : public Application {
         sphereEntity0.addComponent<Transform>().translate(-0.9, 0.333, 0.3);
         sphereEntity0.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(sphereMaterial0);
 
+        MaterialConfiguration christmasBallMaterialConfig{};
+        christmasBallMaterialConfig.setAlbedoMap(loadTexture("res/textures/christmas_tree_ball/albedo.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        christmasBallMaterialConfig.setRoughnessMap(loadTexture("res/textures/christmas_tree_ball/roughness.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        christmasBallMaterialConfig.setMetallicMap(loadTexture("res/textures/christmas_tree_ball/metallic.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        christmasBallMaterialConfig.setNormalMap(loadTexture("res/textures/christmas_tree_ball/normal.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        christmasBallMaterialConfig.setDisplacementMap(loadTexture("res/textures/christmas_tree_ball/displacement.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        std::shared_ptr<Material> christmasBallMaterial = std::shared_ptr<Material>(Material::create(christmasBallMaterialConfig));
+
+        Entity christmasBallEntity = EntityHierarchy::create(Engine::scene(), "christmasBallEntity");
+        christmasBallEntity.addComponent<Transform>().translate(-2.0, 0.6, 0.3).rotate(1.0F, 0.0F, 0.0F, glm::pi<float>() * 0.5F);
+        christmasBallEntity.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(christmasBallMaterial);
+
         size_t numSpheresX = 10;
         size_t numSpheresZ = 10;
 
         for (size_t i = 0; i < numSpheresX; ++i) {
             for (size_t j = 0; j < numSpheresZ; ++j) {
 
-                MaterialConfiguration sphereMaterial1Config;
+                MaterialConfiguration sphereMaterial1Config{};
                 sphereMaterial1Config.setAlbedo(glm::vec3(0.5F));
                 sphereMaterial1Config.setRoughness(1.0F - (((float)i + 0.5F) / (float)numSpheresX));
                 sphereMaterial1Config.setMetallic(1.0F - (((float)j + 0.5F) / (float)numSpheresX));
@@ -183,7 +196,7 @@ class App : public Application {
             }
         }
 
-        MaterialConfiguration glowMaterialConfig;
+        MaterialConfiguration glowMaterialConfig{};
         glowMaterialConfig.setAlbedo(glm::vec3(1.0F, 1.0F, 1.0F));
         glowMaterialConfig.setRoughness(1.0F);
         glowMaterialConfig.setMetallic(0.0F);
@@ -220,11 +233,11 @@ class App : public Application {
 
         Entity lightEntity6 = EntityHierarchy::create(Engine::scene(), "lightEntity6");
         lightEntity6.addComponent<Transform>().setRotation(glm::vec3(-1.0F, -1.3F, -1.0F), glm::vec3(0.0F, 1.0F, 0.0F), false);
-        lightEntity6.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(70.0, 70.0, 70.0).setShadowCaster(true).setShadowCascadeDistances({3.0F, 8.0F, 15.0F, 24.0F});
+        lightEntity6.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(70.0, 70.0, 70.0).setShadowCaster(true).setShadowCascadeDistances({3.0F, 6.0F, 12.0F, 24.0F});
 
 //        Entity lightEntity7 = EntityHierarchy::create(Engine::scene(), "lightEntity7");
 //        lightEntity7.addComponent<Transform>().setRotation(glm::vec3(-1.4F, -1.0F, 0.2F), glm::vec3(0.0F, 1.0F, 0.0F), false);
-//        lightEntity7.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(70.0, 70.0, 70.0).setShadowCaster(true);
+//        lightEntity7.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(70.0, 60.0, 10.0).setShadowCaster(true).setShadowCascadeDistances({3.0F, 6.0F, 12.0F, 24.0F});
 
         Engine::scene()->getMainCameraEntity().getComponent<Transform>().setTranslation(0.0F, 1.0F, 1.0F);
     }
@@ -273,15 +286,23 @@ class App : public Application {
 
     Frustum frustum;
     bool pauseFrustum = false;
+    double time = 0.0;
 
     void render(double dt) override {
         PROFILE_SCOPE("custom render")
         handleUserInput(dt);
+        time += dt;
 
         Entity mainCamera = Engine::scene()->getMainCameraEntity();
         Transform& cameraTransform = mainCamera.getComponent<Transform>();
         Camera& cameraProjection = mainCamera.getComponent<Camera>();
 
+        Entity christmasBallEntity = Engine::scene()->findNamedEntity("christmasBallEntity");
+        if (christmasBallEntity) {
+            Transform& transform = christmasBallEntity.getComponent<Transform>();
+            transform.rotate(0.0F, 0.0F, 1.0F, glm::two_pi<float>() * (float)dt * 0.25F);
+            transform.translate(0.0F, glm::sin(time * 2.0F) * dt * 0.333F, 0.0F);
+        }
 
         Engine::immediateRenderer()->matrixMode(MatrixMode_Projection);
         Engine::immediateRenderer()->pushMatrix();

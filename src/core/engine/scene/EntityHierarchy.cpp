@@ -173,7 +173,7 @@ bool EntityHierarchy::detach(const Entity& entity) {
 
 Entity EntityHierarchy::create(Scene* scene, const std::string& name) {
     PROFILE_SCOPE("EntityHierarchy::create")
-    const Entity& entity = scene->createEntity(name);
+    const Entity& entity = scene->createNamedEntity(name);
     entity.addComponent<EntityHierarchy>();
     return entity;
 }

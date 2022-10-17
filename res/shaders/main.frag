@@ -27,11 +27,15 @@ layout(location = 0) in vec3 fs_normal;
 layout(location = 1) in vec3 fs_tangent;
 layout(location = 2) in vec3 fs_bitangent;
 layout(location = 3) in vec2 fs_texture;
-layout(location = 4) in flat uint fs_objectIndex;
+layout(location = 4) in vec4 fs_prevPosition;
+layout(location = 5) in vec4 fs_currPosition;
+layout(location = 6) in flat uint fs_objectIndex;
+
 
 layout(location = 0) out vec4 out_AlbedoRGB_Roughness;
 layout(location = 1) out vec4 out_NormalXYZ_Metallic;
 layout(location = 2) out vec4 outEmissionRGB_AO;
+layout(location = 3) out vec2 outVelocityXY;
 
 layout(set = 2, binding = 0) uniform sampler2D textures[];
 
@@ -102,4 +106,7 @@ void main() {
     out_NormalXYZ_Metallic.w = getMaterialMetallic(fs_texture, material);
     outEmissionRGB_AO.rgb = getMaterialEmission(fs_texture, material);
     outEmissionRGB_AO.a = 1.0;
+    vec2 currPosition = (fs_currPosition.xy / fs_currPosition.w) * 0.5 + 0.5;
+    vec2 prevPosition = (fs_prevPosition.xy / fs_prevPosition.w) * 0.5 + 0.5;
+    outVelocityXY.xy = (currPosition.xy - prevPosition.xy) * 100.0;
 }

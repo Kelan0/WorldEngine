@@ -20,6 +20,7 @@ class Image2D;
 struct GraphicsPipelineConfiguration;
 
 struct ObjectDataUBO {
+    glm::mat4 prevModelMatrix; // TODO: don't store a second matrix per object, but instead store an index into the objectTransforms buffer to reference as the previous transform
     glm::mat4 modelMatrix;
 };
 
@@ -148,6 +149,7 @@ private:
         std::vector<GPUMaterial> materialBuffer;
         uint32_t uploadedMaterialBufferTextures;
         std::set<uint32_t> modifiedEntities;
+        bool recreatedWorldTransformBuffer;
     };
 
     FrameResource<RenderResources> m_resources;

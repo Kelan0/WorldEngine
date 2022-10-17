@@ -58,6 +58,12 @@ public:
 
     const glm::mat4& getInverseViewProjectionMatrix() const;
 
+    const glm::mat4& getPrevViewMatrix() const;
+
+    const glm::mat4& getPrevProjectionMatrix() const;
+
+    const glm::mat4& getPrevViewProjectionMatrix() const;
+
     void copyCameraData(GPUCamera* dst) const;
 
     size_t uploadCameraData(Buffer* buffer, const size_t& offset) const;

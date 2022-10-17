@@ -20,13 +20,19 @@ enum DeferredAttachmentType {
     Attachment_AlbedoRGB_Roughness = 0,
     Attachment_NormalXYZ_Metallic = 1,
     Attachment_EmissionRGB_AO = 2,
-    Attachment_Depth = 3,
-    NumAttachments = 4
+    Attachment_VelocityXY = 3,
+    Attachment_Depth = 4,
+    NumAttachments = 5
 };
 
 class DeferredGeometryRenderPass {
     friend class DeferredLightingRenderPass;
 private:
+    struct GeometryPassUniformData {
+        GPUCamera prevCamera;
+        GPUCamera camera;
+    };
+
     struct RenderResources {
         std::array<Image2D*, NumAttachments> images;
         std::array<ImageView*, NumAttachments> imageViews;
@@ -55,6 +61,8 @@ public:
     [[nodiscard]] ImageView* getNormalImageView() const;
 
     [[nodiscard]] ImageView* getEmissionImageView() const;
+
+    [[nodiscard]] ImageView* getVelocityImageView() const;
 
     [[nodiscard]] ImageView* getDepthImageView() const;
 

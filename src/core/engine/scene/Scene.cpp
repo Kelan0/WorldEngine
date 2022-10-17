@@ -5,6 +5,7 @@
 #include "core/engine/scene/Transform.h"
 #include "core/engine/scene/event/Events.h"
 #include "core/util/Profiler.h"
+#include "core/util/Util.h"
 
 Scene::Scene() {
     m_eventDispatcher = new EventDispatcher();
@@ -26,28 +27,20 @@ void Scene::init() {
 
     m_eventDispatcher->connect<ScreenResizeEvent>(&Scene::onScreenResize, this);
 
-    m_defaultCamera = createEntity("Default Camera");
+    m_defaultCamera = createNamedEntity("Default Camera");
     m_defaultCamera.addComponent<Camera>().setFovDegrees(90.0).setClippingPlanes(0.05, 500.0);
     m_defaultCamera.addComponent<Transform>();
     setMainCameraEntity(nullptr);
-}
-
-Entity Scene::createEntity(const std::string& name) {
-    PROFILE_SCOPE("Scene::createEntity")
-    entt::entity id = m_registry.create();
-
-    Entity entity(this, id);
-
-    entity.addComponent<EntityNameComponent>(name);
-    EntityEventDispatcher& eventDispatcher = entity.addComponent<EntityEventDispatcher>();
-
-    return entity;
 }
 
 void Scene::destroyEntity(const Entity& entity) {
     PROFILE_SCOPE("Scene::destroyEntity")
     if (entity) {
         entity.getComponent<EntityEventDispatcher>().dispatcher.trigger<EntityDestroyEvent>(entity);
+        EntityNameComponent* nameComponent = entity.tryGetComponent<EntityNameComponent>();
+        if (nameComponent != nullptr) {
+            m_entityNameMap.erase(nameComponent->name);
+        }
 
         entt::entity id = entity.m_entity;
         m_registry.destroy(id);
@@ -58,6 +51,40 @@ void Scene::destroyEntity(const Entity& entity) {
         //m_entityRefTracker.erase(id);
 
     }
+}
+
+Entity Scene::createEntity() {
+    PROFILE_SCOPE("Scene::createEntity")
+    entt::entity id = m_registry.create();
+    Entity entity(this, id);
+    EntityEventDispatcher& eventDispatcher = entity.addComponent<EntityEventDispatcher>();
+    return entity;
+}
+
+Entity Scene::createNamedEntity(const std::string& name) {
+    PROFILE_SCOPE("Scene::createNamedEntity")
+    auto result = m_entityNameMap.insert(std::make_pair(name, entt::null));
+    auto it = result.first;
+
+    if (!result.second) {
+        // Not inserted (already existed)
+        return Entity(this, it->second);
+    }
+
+    Entity entity = createEntity();
+    entity.addComponent<EntityNameComponent>(name);
+
+    it->second = (entt::entity)entity;
+
+    return entity;
+}
+
+Entity Scene::findNamedEntity(const std::string& name) {
+    auto it = m_entityNameMap.find(name);
+    if (it == m_entityNameMap.end()) {
+        return nullptr;
+    }
+    return Entity(this, it->second);
 }
 
 EventDispatcher* Scene::getEventDispatcher() const {
