@@ -93,6 +93,7 @@ struct SwapchainDetails {
 
     uint32_t currentFrameIndex;
     uint32_t currentImageIndex;
+    uint32_t prevImageIndex;
 };
 
 class GraphicsManager {
@@ -157,6 +158,8 @@ public:
     const vk::CommandBuffer& getCurrentCommandBuffer() const;
 
     const Framebuffer* getCurrentFramebuffer() const;
+
+    const ImageView* getPreviousFrameImageView() const;
 
     const std::shared_ptr<vkr::Queue>& getQueue(const std::string& name) const;
 

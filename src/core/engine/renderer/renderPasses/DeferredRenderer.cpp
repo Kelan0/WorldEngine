@@ -15,6 +15,7 @@
 #include "core/graphics/Texture.h"
 #include "core/graphics/Buffer.h"
 #include "core/util/Profiler.h"
+#include "core/util/Util.h"
 
 #define UNIFORM_BUFFER_BINDING 0
 #define ALBEDO_TEXTURE_BINDING 1
@@ -22,17 +23,19 @@
 #define EMISSION_TEXTURE_BINDING 3
 #define VELOCITY_TEXTURE_BINDING 4
 #define DEPTH_TEXTURE_BINDING 5
-#define ENVIRONMENT_CUBEMAP_BINDING 6
-#define SPECULAR_REFLECTION_CUBEMAP_BINDING 7
-#define DIFFUSE_IRRADIANCE_CUBEMAP_BINDING 8
-#define BRDF_INTEGRATION_MAP_BINDING 9
+#define PREVIOUS_FRAME_BINDING 6
+#define ENVIRONMENT_CUBEMAP_BINDING 7
+#define SPECULAR_REFLECTION_CUBEMAP_BINDING 8
+#define DIFFUSE_IRRADIANCE_CUBEMAP_BINDING 9
+#define BRDF_INTEGRATION_MAP_BINDING 10
 
 
 EnvironmentMap* environmentMap = nullptr;
 
 
-DeferredGeometryRenderPass::DeferredGeometryRenderPass() {
-
+DeferredGeometryRenderPass::DeferredGeometryRenderPass():
+        m_resolution(0, 0),
+        m_frameIndex(0) {
 }
 
 DeferredGeometryRenderPass::~DeferredGeometryRenderPass() {
@@ -82,6 +85,12 @@ bool DeferredGeometryRenderPass::init() {
         return false;
     }
 
+    m_haltonSequence.resize(128);
+    for (size_t i = 0; i < m_haltonSequence.size(); ++i) {
+        m_haltonSequence[i].x = Util::createHaltonSequence<float>(i + 1, 2);
+        m_haltonSequence[i].y = Util::createHaltonSequence<float>(i + 1, 3);
+    }
+
     Engine::eventDispatcher()->connect(&DeferredGeometryRenderPass::recreateSwapchain, this);
     return true;
 }
@@ -90,6 +99,8 @@ void DeferredGeometryRenderPass::render(double dt, const vk::CommandBuffer& comm
     PROFILE_SCOPE("DeferredGeometryRenderPass::render");
     BEGIN_CMD_LABEL(commandBuffer, "DeferredGeometryRenderPass::render");
 
+    glm::vec2 pixelSize = glm::vec2(1.0F) / glm::vec2(m_resolution);
+
     GeometryPassUniformData uniformData{};
     uniformData.prevCamera.viewMatrix = renderCamera->getPrevViewMatrix();
     uniformData.prevCamera.projectionMatrix = renderCamera->getPrevProjectionMatrix();
@@ -97,6 +108,7 @@ void DeferredGeometryRenderPass::render(double dt, const vk::CommandBuffer& comm
     uniformData.camera.viewMatrix = renderCamera->getViewMatrix();
     uniformData.camera.projectionMatrix = renderCamera->getProjectionMatrix();
     uniformData.camera.viewProjectionMatrix = renderCamera->getViewProjectionMatrix();
+    uniformData.taaJitterOffset = (m_haltonSequence[m_frameIndex % m_haltonSequence.size()] - glm::vec2(0.5F)) * pixelSize * 2.0F;
     m_resources->cameraInfoBuffer->upload(0, sizeof(GeometryPassUniformData), &uniformData);
 //    renderCamera->uploadCameraData(m_resources->cameraInfoBuffer, 0);
 
@@ -115,6 +127,7 @@ void DeferredGeometryRenderPass::render(double dt, const vk::CommandBuffer& comm
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
 
     Engine::sceneRenderer()->render(dt, commandBuffer, renderCamera);
+    ++m_frameIndex;
     END_CMD_LABEL(commandBuffer);
 }
 
@@ -405,6 +418,7 @@ bool DeferredLightingRenderPass::init() {
             .addCombinedImageSampler(EMISSION_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(VELOCITY_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(DEPTH_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
+            .addCombinedImageSampler(PREVIOUS_FRAME_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(ENVIRONMENT_CUBEMAP_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(SPECULAR_REFLECTION_CUBEMAP_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(DIFFUSE_IRRADIANCE_CUBEMAP_BINDING, vk::ShaderStageFlagBits::eFragment)
@@ -484,6 +498,15 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
     const Framebuffer* framebuffer = Engine::graphics()->getCurrentFramebuffer();
     const auto& renderPass = Engine::graphics()->renderPass();
 
+    const ImageView* previousFrameImageView = Engine::graphics()->getPreviousFrameImageView();
+    if (previousFrameImageView == nullptr) {
+        previousFrameImageView = m_geometryPass->getAlbedoImageView();
+    } else {
+        vk::ImageSubresourceRange subresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+        ImageUtil::transitionLayout(commandBuffer, previousFrameImageView->getImage(), subresourceRange, ImageTransition::FromAny(), ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader));
+    }
+
+
     BEGIN_CMD_LABEL(commandBuffer, "DeferredLightingRenderPass::renderScreen");
     renderPass->begin(commandBuffer, framebuffer, vk::SubpassContents::eInline);
 
@@ -495,6 +518,7 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
         .writeImage(EMISSION_TEXTURE_BINDING, m_attachmentSamplers[Attachment_EmissionRGB_AO], m_geometryPass->getEmissionImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
         .writeImage(VELOCITY_TEXTURE_BINDING, m_attachmentSamplers[Attachment_VelocityXY], m_geometryPass->getVelocityImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
         .writeImage(DEPTH_TEXTURE_BINDING, m_attachmentSamplers[Attachment_Depth], m_geometryPass->getDepthImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+        .writeImage(PREVIOUS_FRAME_BINDING, m_attachmentSamplers[Attachment_AlbedoRGB_Roughness], previousFrameImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
         .writeImage(ENVIRONMENT_CUBEMAP_BINDING, environmentMap->getEnvironmentMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
         .writeImage(SPECULAR_REFLECTION_CUBEMAP_BINDING, environmentMap->getSpecularReflectionMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
         .writeImage(DIFFUSE_IRRADIANCE_CUBEMAP_BINDING, environmentMap->getDiffuseIrradianceMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)

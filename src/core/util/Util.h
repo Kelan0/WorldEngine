@@ -89,7 +89,7 @@ namespace Util {
 
     template<typename T>
     T random(const T& min, const T& max) {
-        static_assert(std::is_floating_point<T>::value || std::is_integral<T>::value);
+        static_assert(std::is_floating_point_v<T> || std::is_integral_v<T>);
 
         if constexpr (std::is_floating_point<T>::value) {
             return std::uniform_real_distribution<T>(min, max)(rng());
@@ -109,6 +109,19 @@ namespace Util {
         return array;
     }
 
+    template<typename T>
+    T createHaltonSequence(const uint32_t& index, const uint32_t& base) {
+        static_assert(std::is_floating_point_v<T>);
+        T f = T(1);
+        T r = T(0);
+        uint32_t current = index;
+        do {
+            f = f / (T)base;
+            r = r + f * (T)(current % base);
+            current /= base;
+        } while (current > 0);
+        return r;
+    }
 }
 
 #endif //WORLDENGINE_UTIL_H

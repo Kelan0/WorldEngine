@@ -31,6 +31,7 @@ GraphicsManager::GraphicsManager() {
     m_surface.surface = nullptr;
     m_swapchain.swapchain = nullptr;
     m_swapchain.currentFrameIndex = 0;
+    m_swapchain.currentImageIndex = UINT32_MAX;
     m_renderPass = nullptr;
     m_commandPool = nullptr;
     m_descriptorPool = nullptr;
@@ -702,7 +703,7 @@ bool GraphicsManager::recreateSwapchain() {
     createInfo.setImageColorSpace(m_surface.surfaceFormat.colorSpace);
     createInfo.setImageExtent(m_swapchain.imageExtent);
     createInfo.setImageArrayLayers(1);
-    createInfo.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment);
+    createInfo.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled);
 
     std::vector<uint32_t> queueFamilyIndices = { m_queues.queueFamilies.graphicsQueueFamilyIndex.value(), m_queues.queueFamilies.presentQueueFamilyIndex.value() };
 
@@ -770,7 +771,7 @@ bool GraphicsManager::createSwapchainImages() {
         imageViewConfig.device = m_device.device;
         imageViewConfig.image = vk::Image(images[i]);
         imageViewConfig.format = m_surface.surfaceFormat.format;
-        m_swapchain.imageViews[i] = std::shared_ptr<ImageView>(ImageView::create(imageViewConfig, "SwapchainPresentImage"));
+        m_swapchain.imageViews[i] = std::shared_ptr<ImageView>(ImageView::create(imageViewConfig, "SwapchainPresentImageView"));
     }
 
 //    m_swapchain.depthImageView.reset();
@@ -841,19 +842,19 @@ bool GraphicsManager::createRenderPass() {
 
     SubpassConfiguration subpassConfiguration;
     subpassConfiguration.addColourAttachment(vk::AttachmentReference(0, vk::ImageLayout::eColorAttachmentOptimal));
-    vk::SubpassDependency subpassDependency;
-    subpassDependency.setSrcSubpass(VK_SUBPASS_EXTERNAL);
-    subpassDependency.setDstSubpass(0);
-    subpassDependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
-    subpassDependency.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
-    subpassDependency.setSrcAccessMask({});
-    subpassDependency.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+    std::array<vk::SubpassDependency, 1> subpassDependencies;
+    subpassDependencies[0].setSrcSubpass(VK_SUBPASS_EXTERNAL);
+    subpassDependencies[0].setDstSubpass(0);
+    subpassDependencies[0].setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+    subpassDependencies[0].setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+    subpassDependencies[0].setSrcAccessMask({});
+    subpassDependencies[0].setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
 
     RenderPassConfiguration renderPassConfig{};
     renderPassConfig.device = m_device.device;
     renderPassConfig.addAttachment(colourAttachment);
     renderPassConfig.addSubpass(subpassConfiguration);
-    renderPassConfig.addSubpassDependency(subpassDependency);
+    renderPassConfig.setSubpassDependencies(subpassDependencies);
 
     m_renderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig, "PresentRenderPass"));
     return m_renderPass != nullptr;
@@ -912,7 +913,11 @@ bool GraphicsManager::beginFrame() {
         return false;
     }
 
+    m_swapchain.prevImageIndex = m_swapchain.currentImageIndex;
     m_swapchain.currentImageIndex = acquireNextImageResult.value;
+//    if (m_swapchain.prevImageIndex == m_swapchain.currentImageIndex) {
+//        m_swapchain.prevImageIndex = (m_swapchain.currentImageIndex + m_swapchain.imageViews.size() - 1) % m_swapchain.imageViews.size();
+//    }
 
     const vk::CommandBuffer& commandBuffer = getCurrentCommandBuffer();
     const Framebuffer* framebuffer = getCurrentFramebuffer();
@@ -1025,6 +1030,13 @@ const vk::CommandBuffer& GraphicsManager::getCurrentCommandBuffer() const {
 
 const Framebuffer* GraphicsManager::getCurrentFramebuffer() const {
     return m_swapchain.framebuffers[m_swapchain.currentImageIndex].get();
+}
+
+const ImageView* GraphicsManager::getPreviousFrameImageView() const {
+    if (m_swapchain.prevImageIndex >= m_swapchain.imageViews.size()) {
+        return nullptr;
+    }
+    return m_swapchain.imageViews[m_swapchain.prevImageIndex].get();
 }
 
 const std::shared_ptr<vkr::Queue>& GraphicsManager::getQueue(const std::string& name) const {

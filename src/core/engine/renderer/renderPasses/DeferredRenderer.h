@@ -31,11 +31,14 @@ private:
     struct GeometryPassUniformData {
         GPUCamera prevCamera;
         GPUCamera camera;
+        glm::vec2 taaJitterOffset;
     };
 
     struct RenderResources {
         std::array<Image2D*, NumAttachments> images;
         std::array<ImageView*, NumAttachments> imageViews;
+        Image2D* prevDepthImage;
+        ImageView* prevDepthImageView;
         Framebuffer* framebuffer;
         DescriptorSet* globalDescriptorSet;
         Buffer* cameraInfoBuffer;
@@ -87,6 +90,8 @@ private:
     FrameResource<RenderResources> m_resources;
     std::shared_ptr<DescriptorSetLayout> m_globalDescriptorSetLayout;
     glm::uvec2 m_resolution;
+    std::vector<glm::vec2> m_haltonSequence;
+    uint32_t m_frameIndex;
 };
 
 

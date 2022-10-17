@@ -86,10 +86,11 @@ layout(set = 0, binding = 2) uniform sampler2D texture_NormalXYZ_Metallic;
 layout(set = 0, binding = 3) uniform sampler2D texture_EmissionRGB_AO;
 layout(set = 0, binding = 4) uniform sampler2D texture_VelocityXY;
 layout(set = 0, binding = 5) uniform sampler2D texture_Depth;
-layout(set = 0, binding = 6) uniform samplerCube environmentCubeMap;
-layout(set = 0, binding = 7) uniform samplerCube specularReflectionCubeMap;
-layout(set = 0, binding = 8) uniform samplerCube diffuseIrradianceCubeMap;
-layout(set = 0, binding = 9) uniform sampler2D BRDFIntegrationMap;
+layout(set = 0, binding = 6) uniform sampler2D previousFrameTexture;
+layout(set = 0, binding = 7) uniform samplerCube environmentCubeMap;
+layout(set = 0, binding = 8) uniform samplerCube specularReflectionCubeMap;
+layout(set = 0, binding = 9) uniform samplerCube diffuseIrradianceCubeMap;
+layout(set = 0, binding = 10) uniform sampler2D BRDFIntegrationMap;
 
 
 layout(set = 1, binding = 0) uniform UBO2 {
@@ -359,6 +360,10 @@ void main() {
 //    finalColour = vec3(isnan(surface.worldNormal[0]) ? vec3(1.0) : (surface.worldNormal * 0.5 + 0.5));
 //    finalColour = vec3(surface.albedo);
 //    finalColour = vec3(abs(surface.velocity), 0.0);
+
+//    vec3 prevFinalColour = texture(previousFrameTexture, fs_texture).rgb;
+//    finalColour = mix(finalColour, prevFinalColour, 0.99);
+//    finalColour = abs(finalColour - prevFinalColour);
 
     outColor = vec4(finalColour, 1.0);
 

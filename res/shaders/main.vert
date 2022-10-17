@@ -29,6 +29,7 @@ layout(location = 6) out flat uint fs_objectIndex;
 layout(std140, set = 0, binding = 0) uniform UBO2 {
     CameraData prevCamera;
     CameraData camera;
+    vec2 taaJitterOffset;
 };
 
 layout(std140, set = 1, binding = 0) readonly buffer ObjectDataBuffer {
@@ -55,4 +56,5 @@ void main() {
     fs_objectIndex = gl_InstanceIndex;
 
     gl_Position = fs_currPosition;
+    gl_Position.xy += taaJitterOffset * gl_Position.w;;
 }
