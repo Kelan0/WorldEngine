@@ -39,12 +39,17 @@ class Framebuffer;
 class ImageView;
 
 enum QueueType {
-    QUEUE_TYPE_GRAPHICS_BIT = VK_QUEUE_GRAPHICS_BIT,
-    QUEUE_TYPE_COMPUTE_BIT = VK_QUEUE_COMPUTE_BIT,
-    QUEUE_TYPE_TRANSFER_BIT = VK_QUEUE_TRANSFER_BIT,
-    QUEUE_TYPE_SPARSE_BINDING_BIT = VK_QUEUE_SPARSE_BINDING_BIT,
-    QUEUE_TYPE_PROTECTED_BIT = VK_QUEUE_PROTECTED_BIT,
-    QUEUE_TYPE_PRESENT_BIT = 0x800
+    QueueType_GraphicsBit = VK_QUEUE_GRAPHICS_BIT,
+    QueueType_ComputeBit = VK_QUEUE_COMPUTE_BIT,
+    QueueType_TransferBit = VK_QUEUE_TRANSFER_BIT,
+    QueueType_SparseBindingBit = VK_QUEUE_SPARSE_BINDING_BIT,
+    QueueType_ProtectedBit = VK_QUEUE_PROTECTED_BIT,
+    QueueType_PresentBit = 0x800,
+};
+
+enum SwapchainBufferMode {
+    SwapchainBufferMode_DoubleBuffer = 0,
+    SwapchainBufferMode_TripleBuffer = 1,
 };
 
 struct QueueDetails {
@@ -230,6 +235,7 @@ private:
 
     std::unique_ptr<vkr::DebugUtilsMessengerEXT> m_debugMessenger;
 
+    SwapchainBufferMode m_swapchainBufferMode;
     vk::PresentModeKHR m_preferredPresentMode;
     bool m_isInitialized;
     bool m_recreateSwapchain;

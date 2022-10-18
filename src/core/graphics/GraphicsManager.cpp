@@ -24,23 +24,20 @@ uint64_t GraphicsManager::s_nextResourceID = 0;
 
 QueueDetails::QueueDetails() {};
 
-GraphicsManager::GraphicsManager() {
-    m_instance = nullptr;
-    m_device.device = nullptr;
-    m_device.physicalDevice = nullptr;
-    m_surface.surface = nullptr;
-    m_swapchain.swapchain = nullptr;
+GraphicsManager::GraphicsManager():
+    m_instance(nullptr),
+    m_renderPass(nullptr),
+    m_commandPool(nullptr),
+    m_descriptorPool(nullptr),
+    m_memory(nullptr),
+    m_debugMessenger(nullptr),
+    m_preferredPresentMode(vk::PresentModeKHR::eMailbox),
+    m_isInitialized(false),
+    m_recreateSwapchain(false),
+    m_resolutionChanged(false),
+    m_swapchainBufferMode(SwapchainBufferMode_TripleBuffer) {
     m_swapchain.currentFrameIndex = 0;
     m_swapchain.currentImageIndex = UINT32_MAX;
-    m_renderPass = nullptr;
-    m_commandPool = nullptr;
-    m_descriptorPool = nullptr;
-    m_memory = nullptr;
-    m_debugMessenger = nullptr;
-    m_preferredPresentMode = vk::PresentModeKHR::eMailbox;
-    m_isInitialized = false;
-    m_recreateSwapchain = false;
-    m_resolutionChanged = false;
 }
 
 GraphicsManager::~GraphicsManager() {
@@ -99,10 +96,10 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
     };
 
     std::unordered_map<std::string, uint32_t> queueLayout;
-    queueLayout.insert(std::make_pair(QUEUE_GRAPHICS_MAIN, QUEUE_TYPE_GRAPHICS_BIT | QUEUE_TYPE_PRESENT_BIT));
-    queueLayout.insert(std::make_pair(QUEUE_COMPUTE_MAIN, QUEUE_TYPE_COMPUTE_BIT));
-    queueLayout.insert(std::make_pair(QUEUE_TRANSFER_MAIN, QUEUE_TYPE_TRANSFER_BIT));
-    queueLayout.insert(std::make_pair(QUEUE_GRAPHICS_TRANSFER_MAIN, QUEUE_TYPE_GRAPHICS_BIT | QUEUE_TYPE_TRANSFER_BIT));
+    queueLayout.insert(std::make_pair(QUEUE_GRAPHICS_MAIN, QueueType_GraphicsBit | QueueType_PresentBit));
+    queueLayout.insert(std::make_pair(QUEUE_COMPUTE_MAIN, QueueType_ComputeBit));
+    queueLayout.insert(std::make_pair(QUEUE_TRANSFER_MAIN, QueueType_TransferBit));
+    queueLayout.insert(std::make_pair(QUEUE_GRAPHICS_TRANSFER_MAIN, QueueType_GraphicsBit | QueueType_TransferBit));
 
     vk::PhysicalDeviceFeatures deviceFeatures;
     deviceFeatures.fillModeNonSolid = true;
@@ -420,12 +417,12 @@ bool GraphicsManager::isPhysicalDeviceSuitable(const vkr::PhysicalDevice& physic
 }
 
 bool GraphicsManager::selectQueueFamilies(const vkr::PhysicalDevice& physicalDevice, const std::vector<vk::QueueFamilyProperties>& queueFamilyProperties, uint32_t requiredQueueFlags, QueueDetails& queueFamilyIndices) {
-    bool requiresGraphics = (requiredQueueFlags & QUEUE_TYPE_GRAPHICS_BIT) != 0;
-    bool requiresCompute = (requiredQueueFlags & QUEUE_TYPE_COMPUTE_BIT) != 0;
-    bool requiresTransfer = (requiredQueueFlags & QUEUE_TYPE_TRANSFER_BIT) != 0;
-    bool requiresSparseBinding = (requiredQueueFlags & QUEUE_TYPE_SPARSE_BINDING_BIT) != 0;
-    bool requiresProtected = (requiredQueueFlags & QUEUE_TYPE_PROTECTED_BIT) != 0;
-    bool requiresPresent = (requiredQueueFlags & QUEUE_TYPE_PRESENT_BIT) != 0;;
+    bool requiresGraphics = (requiredQueueFlags & QueueType_GraphicsBit) != 0;
+    bool requiresCompute = (requiredQueueFlags & QueueType_ComputeBit) != 0;
+    bool requiresTransfer = (requiredQueueFlags & QueueType_TransferBit) != 0;
+    bool requiresSparseBinding = (requiredQueueFlags & QueueType_SparseBindingBit) != 0;
+    bool requiresProtected = (requiredQueueFlags & QueueType_ProtectedBit) != 0;
+    bool requiresPresent = (requiredQueueFlags & QueueType_PresentBit) != 0;;
 
     for (int i = 0; i < queueFamilyProperties.size(); ++i) {
         bool supportsGraphics = (bool)(queueFamilyProperties[i].queueFlags & vk::QueueFlagBits::eGraphics);
@@ -502,7 +499,7 @@ bool GraphicsManager::selectPhysicalDevice() {
         std::vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
 
         QueueDetails queueFamilyIndices = {};
-        uint32_t requiredQueueFlags = QUEUE_TYPE_GRAPHICS_BIT | QUEUE_TYPE_COMPUTE_BIT | QUEUE_TYPE_TRANSFER_BIT | QUEUE_TYPE_PRESENT_BIT;
+        uint32_t requiredQueueFlags = QueueType_GraphicsBit | QueueType_ComputeBit | QueueType_TransferBit | QueueType_PresentBit;
         if (!selectQueueFamilies(physicalDevice, queueFamilyProperties, requiredQueueFlags, queueFamilyIndices)) {
             continue;
         }
@@ -554,7 +551,7 @@ bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enable
         uint32_t queueFamilyFlags = (uint32_t)queueFamilyProperties[queueFamilyIndex].queueFlags; // Is this casts safe?
 
         if (m_queues.queueFamilies.presentQueueFamilyIndex == queueFamilyIndex)
-            queueFamilyFlags |= QUEUE_TYPE_PRESENT_BIT; // Add custom PRESENT bit if this queue family supports PRESENT
+            queueFamilyFlags |= QueueType_PresentBit; // Add custom PRESENT bit if this queue family supports PRESENT
 
         for (auto it2 = queueLayout.begin(); it2 != queueLayout.end() && queueIds.size() < queueFamilyProperties[queueFamilyIndex].queueCount;) {
             const std::string& id = it2->first;
@@ -691,7 +688,9 @@ bool GraphicsManager::recreateSwapchain() {
 
     initSurfaceDetails();
 
-    uint32_t imageCount = m_surface.capabilities.minImageCount + 1;
+    uint32_t imageCount = m_swapchainBufferMode == SwapchainBufferMode_TripleBuffer ? 3 : 2;
+    imageCount = glm::clamp(imageCount, m_surface.capabilities.minImageCount, m_surface.capabilities.maxImageCount);
+
     if (m_surface.capabilities.maxImageCount > 0) {
         imageCount = glm::min(imageCount, m_surface.capabilities.maxImageCount);
     }

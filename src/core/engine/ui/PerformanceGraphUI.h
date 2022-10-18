@@ -31,12 +31,13 @@ class PerformanceGraphUI : public UI {
     };
 
     struct FrameTimeInfo {
-        std::vector<double> frameTimes;
-        std::vector<double> sortedFrameTimes;
+        std::vector<float> frameTimes;
+        std::vector<std::pair<float, uint32_t>> sortedFrameTimes;
         double frameTimePercentile999;
         double frameTimePercentile99;
         double frameTimePercentile90;
         double frameTimeAvg;
+        uint32_t frameSequence = 0;
     };
 
     struct ProfileLayer {
@@ -63,13 +64,13 @@ public:
 private:
     void drawHeaderBar();
 
-    void drawProfileContent();
+    void drawProfileContent(const double& dt);
 
-    void drawProfileTree();
+    void drawProfileTree(const double& dt);
 
-    void drawFrameGraphs();
+    void drawFrameGraphs(const double& dt);
 
-    void drawFrameGraph(const char* strId, const std::vector<FrameProfileData>& frameData, const FrameTimeInfo& frameTimeInfo, const float& x, const float& y, const float& w, const float& h, const float& padding);
+    void drawFrameGraph(const double& dt, const char* strId, const std::vector<FrameProfileData>& frameData, const FrameTimeInfo& frameTimeInfo, const float& x, const float& y, const float& w, const float& h, const float& padding);
 
     bool drawFrameSlice(const std::vector<ProfileData>& profileData, const size_t& index, const float& x0, const float& y0, const float& x1, const float& y1);
 
