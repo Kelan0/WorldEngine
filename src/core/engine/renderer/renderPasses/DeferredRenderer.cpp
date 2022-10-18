@@ -502,8 +502,6 @@ void DeferredLightingRenderPass::renderScreen(const double& dt) {
 
     const vk::CommandBuffer& commandBuffer = Engine::graphics()->getCurrentCommandBuffer();
 
-    printf("Previous frame rendered: %s\n", m_prevFrameImage.rendered ? "true" : "false");
-
     const ImageView* previousFrameImageView = m_prevFrameImage.rendered ? m_prevFrameImage.imageView : nullptr;
     if (previousFrameImageView == nullptr) {
         previousFrameImageView = m_geometryPass->getAlbedoImageView();

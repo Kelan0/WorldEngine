@@ -108,5 +108,5 @@ void main() {
     outEmissionRGB_AO.a = 1.0;
     vec2 currPosition = (fs_currPosition.xy / fs_currPosition.w) * 0.5 + 0.5;
     vec2 prevPosition = (fs_prevPosition.xy / fs_prevPosition.w) * 0.5 + 0.5;
-    outVelocityXY.xy = (currPosition.xy - prevPosition.xy) * 100.0;
+    outVelocityXY.xy = (currPosition.xy - prevPosition.xy) * 100.0; // Scale velocity to maintain precision. It needs to be divided again when accessed
 }

@@ -152,7 +152,7 @@ void loadSurface(in vec2 textureCoord, inout SurfacePoint surface) {
     surface.emission = texelValue.rgb * 255.0;
     surface.ambientOcclusion = texelValue.a;
     texelValue = texture(texture_VelocityXY, fs_texture);
-    surface.velocity = texelValue.xy;
+    surface.velocity = texelValue.xy * 100.0;
 
     surface.F0 = mix(vec3(0.04), surface.albedo, surface.metallic);
 }
@@ -362,7 +362,8 @@ void main() {
 //    finalColour = vec3(surface.albedo);
 //    finalColour = vec3(abs(surface.velocity), 0.0);
 
-    vec3 prevFinalColour = texture(previousFrameTexture, fs_texture).rgb;
+    vec2 coordOffset = vec2(0.0);//surface.velocity;
+    vec3 prevFinalColour = texture(previousFrameTexture, fs_texture - coordOffset).rgb;
     finalColour = mix(prevFinalColour, finalColour, debugTestFactor);
 
     outColor = vec4(finalColour, 1.0);
