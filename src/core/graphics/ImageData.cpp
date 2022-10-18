@@ -1226,13 +1226,19 @@ ImageTransition::ShaderAccess::ShaderAccess(vk::PipelineStageFlags shaderPipelin
 }
 
 ImageTransition::ShaderReadOnly::ShaderReadOnly(vk::PipelineStageFlags shaderPipelineStages) :
-        ShaderAccess(shaderPipelineStages, true, false) {
+    ShaderAccess(shaderPipelineStages, true, false) {
 }
 
 ImageTransition::ShaderWriteOnly::ShaderWriteOnly(vk::PipelineStageFlags shaderPipelineStages) :
-        ShaderAccess(shaderPipelineStages, false, true) {
+    ShaderAccess(shaderPipelineStages, false, true) {
 }
 
 ImageTransition::ShaderReadWrite::ShaderReadWrite(vk::PipelineStageFlags shaderPipelineStages) :
-        ShaderAccess(shaderPipelineStages, true, true) {
+    ShaderAccess(shaderPipelineStages, true, true) {
+}
+
+ImageTransition::PresentSrc::PresentSrc() {
+    layout = vk::ImageLayout::ePresentSrcKHR;
+    pipelineStage = vk::PipelineStageFlagBits::eBottomOfPipe;
+    accessMask = vk::Flags<vk::AccessFlagBits>(0);
 }

@@ -37,8 +37,6 @@ private:
     struct RenderResources {
         std::array<Image2D*, NumAttachments> images;
         std::array<ImageView*, NumAttachments> imageViews;
-        Image2D* prevDepthImage;
-        ImageView* prevDepthImageView;
         Framebuffer* framebuffer;
         DescriptorSet* globalDescriptorSet;
         Buffer* cameraInfoBuffer;
@@ -71,10 +69,6 @@ public:
 
     [[nodiscard]] vk::Format getAttachmentFormat(const uint32_t& attachment) const;
 
-    void setResolution(const glm::uvec2& resolution);
-    void setResolution(const vk::Extent2D& resolution);
-    void setResolution(const uint32_t& width, const uint32_t& height);
-
 private:
     void recreateSwapchain(const RecreateSwapchainEvent& event);
 
@@ -89,7 +83,6 @@ private:
     std::shared_ptr<GraphicsPipeline> m_graphicsPipeline;
     FrameResource<RenderResources> m_resources;
     std::shared_ptr<DescriptorSetLayout> m_globalDescriptorSetLayout;
-    glm::uvec2 m_resolution;
     std::vector<glm::vec2> m_haltonSequence;
     uint32_t m_frameIndex;
 };
@@ -115,10 +108,13 @@ private:
     struct RenderResources {
         Buffer* uniformBuffer;
         DescriptorSet* lightingDescriptorSet;
+        Framebuffer* framebuffer;
+        Image2D* frameImage;
+        ImageView* frameImageView;
     };
 
 public:
-    DeferredLightingRenderPass(DeferredGeometryRenderPass* geometryPass);
+    explicit DeferredLightingRenderPass(DeferredGeometryRenderPass* geometryPass);
 
     ~DeferredLightingRenderPass();
 
@@ -131,8 +127,15 @@ public:
 private:
     void recreateSwapchain(const RecreateSwapchainEvent& event);
 
+    bool createFramebuffer(RenderResources* resources);
+
+    bool createGraphicsPipeline();
+
+    bool createRenderPass();
+
 private:
     DeferredGeometryRenderPass* m_geometryPass;
+    std::shared_ptr<RenderPass> m_renderPass;
     std::shared_ptr<GraphicsPipeline> m_graphicsPipeline;
     FrameResource<RenderResources> m_resources;
     std::shared_ptr<DescriptorSetLayout> m_lightingDescriptorSetLayout;

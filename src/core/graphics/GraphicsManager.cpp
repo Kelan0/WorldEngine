@@ -702,7 +702,7 @@ bool GraphicsManager::recreateSwapchain() {
     createInfo.setImageColorSpace(m_surface.surfaceFormat.colorSpace);
     createInfo.setImageExtent(m_swapchain.imageExtent);
     createInfo.setImageArrayLayers(1);
-    createInfo.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled);
+    createInfo.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst);
 
     std::vector<uint32_t> queueFamilyIndices = { m_queues.queueFamilies.graphicsQueueFamilyIndex.value(), m_queues.queueFamilies.presentQueueFamilyIndex.value() };
 
@@ -762,50 +762,19 @@ bool GraphicsManager::recreateSwapchain() {
 }
 
 bool GraphicsManager::createSwapchainImages() {
-    std::vector<VkImage> images = m_swapchain.swapchain->getImages();
-    m_swapchain.imageViews.resize(images.size());
+    m_swapchain.images = m_swapchain.swapchain->getImages();
+    m_swapchain.imageViews.resize(m_swapchain.images.size());
 
-    for (int i = 0; i < images.size(); ++i) {
+    for (int i = 0; i < m_swapchain.images.size(); ++i) {
         ImageViewConfiguration imageViewConfig{};
         imageViewConfig.device = m_device.device;
-        imageViewConfig.image = vk::Image(images[i]);
+        imageViewConfig.image = vk::Image(m_swapchain.images[i]);
         imageViewConfig.format = m_surface.surfaceFormat.format;
         m_swapchain.imageViews[i] = std::shared_ptr<ImageView>(ImageView::create(imageViewConfig, "SwapchainPresentImageView"));
     }
 
-//    m_swapchain.depthImageView.reset();
-//    m_swapchain.depthImage.reset();
-
-//    if (m_surface.depthFormat == vk::Format::eUndefined) {
-//        printf("Unable to create depth buffer: Undefined depth format\n");
-//    } else {
-//
-//        Image2DConfiguration depthImageConfig;
-//        depthImageConfig.device = m_device.device;
-//        depthImageConfig.width = m_swapchain.imageExtent.width;
-//        depthImageConfig.height = m_swapchain.imageExtent.height;
-//        depthImageConfig.format = m_surface.depthFormat;
-//        depthImageConfig.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
-//        m_swapchain.depthImage = std::shared_ptr<Image2D>(Image2D::create(depthImageConfig));
-//
-//        if (!m_swapchain.depthImage) {
-//            printf("Failed to create depth image\n");
-//        } else {
-//            ImageViewConfiguration depthImageViewConfig;
-//            depthImageViewConfig.device = m_device.device;
-//            depthImageViewConfig.image = m_swapchain.depthImage->getImage();
-//            depthImageViewConfig.format = m_swapchain.depthImage->getFormat();
-//            depthImageViewConfig.aspectMask = vk::ImageAspectFlagBits::eDepth;
-//            m_swapchain.depthImageView = std::shared_ptr<ImageView>(ImageView::create(depthImageViewConfig));
-//
-//            if (!m_swapchain.depthImageView) {
-//                printf("Failed to create depth image view\n");
-//            }
-//        }
-//    }
-
     m_swapchain.imagesInFlight.clear();
-    m_swapchain.imagesInFlight.resize(images.size(), VK_NULL_HANDLE);
+    m_swapchain.imagesInFlight.resize(m_swapchain.images.size(), VK_NULL_HANDLE);
 
     return true;
 }
@@ -993,6 +962,26 @@ void GraphicsManager::endFrame() {
     }
 
     m_swapchain.currentFrameIndex = (m_swapchain.currentFrameIndex + 1) % CONCURRENT_FRAMES;
+}
+
+void GraphicsManager::presentImageDirect(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::ImageLayout& imageLayout) {
+    PROFILE_SCOPE("GraphicsManager::presentImageDirect");
+    BEGIN_CMD_LABEL(commandBuffer, "GraphicsManager::presentImageDirect");
+    VkImage currentImage = m_swapchain.images[m_swapchain.currentImageIndex];
+    vk::ImageCopy region{};
+
+    vk::ImageSubresourceRange subresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+    ImageUtil::transitionLayout(commandBuffer, currentImage, subresourceRange, ImageTransition::FromAny(), ImageTransition::TransferDst());
+
+    region.srcSubresource = vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1);
+    region.srcOffset = vk::Offset3D(0, 0, 0);
+    region.dstSubresource = vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1);
+    region.dstOffset = vk::Offset3D(0, 0, 0);
+    region.extent = vk::Extent3D(m_swapchain.imageExtent.width, m_swapchain.imageExtent.height, 1);
+
+    commandBuffer.copyImage(image, imageLayout, currentImage, vk::ImageLayout::eTransferDstOptimal, 1, &region);
+    ImageUtil::transitionLayout(commandBuffer, currentImage, subresourceRange, ImageTransition::TransferDst(), ImageTransition::PresentSrc());
+    END_CMD_LABEL(commandBuffer);
 }
 
 const vk::Instance& GraphicsManager::getInstance() const {

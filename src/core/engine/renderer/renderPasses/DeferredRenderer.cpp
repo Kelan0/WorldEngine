@@ -34,7 +34,6 @@ EnvironmentMap* environmentMap = nullptr;
 
 
 DeferredGeometryRenderPass::DeferredGeometryRenderPass():
-        m_resolution(0, 0),
         m_frameIndex(0) {
 }
 
@@ -81,12 +80,12 @@ bool DeferredGeometryRenderPass::init() {
     }
 
     if (!createRenderPass()) {
-        printf("Failed to create DeferredRenderer RenderPass\n");
+        printf("Failed to create DeferredGeometry RenderPass\n");
         return false;
     }
 
     m_haltonSequence.resize(128);
-    for (size_t i = 0; i < m_haltonSequence.size(); ++i) {
+    for (uint32_t i = 0; i < m_haltonSequence.size(); ++i) {
         m_haltonSequence[i].x = Util::createHaltonSequence<float>(i + 1, 2);
         m_haltonSequence[i].y = Util::createHaltonSequence<float>(i + 1, 3);
     }
@@ -99,7 +98,7 @@ void DeferredGeometryRenderPass::render(double dt, const vk::CommandBuffer& comm
     PROFILE_SCOPE("DeferredGeometryRenderPass::render");
     BEGIN_CMD_LABEL(commandBuffer, "DeferredGeometryRenderPass::render");
 
-    glm::vec2 pixelSize = glm::vec2(1.0F) / glm::vec2(m_resolution);
+    glm::vec2 pixelSize = glm::vec2(1.0F) / glm::vec2(Engine::graphics()->getResolution());
 
     GeometryPassUniformData uniformData{};
     uniformData.prevCamera.viewMatrix = renderCamera->getPrevViewMatrix();
@@ -176,22 +175,9 @@ vk::Format DeferredGeometryRenderPass::getAttachmentFormat(const uint32_t& attac
     }
 }
 
-void DeferredGeometryRenderPass::setResolution(const glm::uvec2& resolution) {
-    m_resolution = resolution;
+void DeferredGeometryRenderPass::recreateSwapchain(const RecreateSwapchainEvent& event) {
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i)
         createFramebuffer(m_resources[i]);
-}
-
-void DeferredGeometryRenderPass::setResolution(const vk::Extent2D& resolution) {
-    setResolution(resolution.width, resolution.height);
-}
-
-void DeferredGeometryRenderPass::setResolution(const uint32_t& width, const uint32_t& height) {
-    setResolution(glm::uvec2(width, height));
-}
-
-void DeferredGeometryRenderPass::recreateSwapchain(const RecreateSwapchainEvent& event) {
-    setResolution(Engine::graphics()->getResolution());
     createGraphicsPipeline();
 }
 
@@ -208,7 +194,7 @@ bool DeferredGeometryRenderPass::createFramebuffer(RenderResources* resources) {
     imageConfig.device = Engine::graphics()->getDevice();
     imageConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
     imageConfig.sampleCount = sampleCount;
-    imageConfig.setSize(m_resolution);
+    imageConfig.setSize(Engine::graphics()->getResolution());
 
     ImageViewConfiguration imageViewConfig{};
     imageViewConfig.device = Engine::graphics()->getDevice();
@@ -263,7 +249,7 @@ bool DeferredGeometryRenderPass::createFramebuffer(RenderResources* resources) {
     // Framebuffer
     FramebufferConfiguration framebufferConfig{};
     framebufferConfig.device = Engine::graphics()->getDevice();
-    framebufferConfig.setSize(m_resolution);
+    framebufferConfig.setSize(Engine::graphics()->getResolution());
     framebufferConfig.setRenderPass(m_renderPass.get());
     framebufferConfig.setAttachments(resources->imageViews);
 
@@ -277,7 +263,7 @@ bool DeferredGeometryRenderPass::createGraphicsPipeline() {
     GraphicsPipelineConfiguration pipelineConfig{};
     pipelineConfig.device = Engine::graphics()->getDevice();
     pipelineConfig.renderPass = m_renderPass;
-    pipelineConfig.setViewport(m_resolution);
+    pipelineConfig.setViewport(Engine::graphics()->getResolution());
     pipelineConfig.vertexShader = "res/shaders/main.vert";
     pipelineConfig.fragmentShader = "res/shaders/main.frag";
     pipelineConfig.vertexInputBindings = MeshUtils::getVertexBindingDescriptions<Vertex>();
@@ -389,6 +375,10 @@ bool DeferredGeometryRenderPass::createRenderPass() {
 
 
 
+
+
+
+
 DeferredLightingRenderPass::DeferredLightingRenderPass(DeferredGeometryRenderPass* geometryPass):
     m_geometryPass(geometryPass) {
 }
@@ -443,6 +433,11 @@ bool DeferredLightingRenderPass::init() {
                 .write();
     }
 
+    if (!createRenderPass()) {
+        printf("Failed to create DeferredLighting RenderPass\n");
+        return false;
+    }
+
     ImageData* defaultEnvironmentCubeMap = new ImageData(1, 1, ImagePixelLayout::RGBA, ImagePixelFormat::Float32);
     for (uint32_t y = 0; y < defaultEnvironmentCubeMap->getHeight(); ++y) {
         for (uint32_t x = 0; x < defaultEnvironmentCubeMap->getWidth(); ++x) {
@@ -495,8 +490,6 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
     m_renderCamera.update();
 
     const vk::CommandBuffer& commandBuffer = Engine::graphics()->getCurrentCommandBuffer();
-    const Framebuffer* framebuffer = Engine::graphics()->getCurrentFramebuffer();
-    const auto& renderPass = Engine::graphics()->renderPass();
 
     const ImageView* previousFrameImageView = Engine::graphics()->getPreviousFrameImageView();
     if (previousFrameImageView == nullptr) {
@@ -508,7 +501,7 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
 
 
     BEGIN_CMD_LABEL(commandBuffer, "DeferredLightingRenderPass::renderScreen");
-    renderPass->begin(commandBuffer, framebuffer, vk::SubpassContents::eInline);
+    m_renderPass->begin(commandBuffer, m_resources->framebuffer, vk::SubpassContents::eInline);
 
     m_graphicsPipeline->bind(commandBuffer);
 
@@ -560,6 +553,13 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
 
     commandBuffer.endRenderPass();
 
+    vk::ImageSubresourceRange subresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+    ImageUtil::transitionLayout(commandBuffer, m_resources->frameImage->getImage(), subresourceRange, ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader), ImageTransition::TransferSrc());
+
+    Engine::graphics()->presentImageDirect(commandBuffer, m_resources->frameImage->getImage(), vk::ImageLayout::eTransferSrcOptimal);
+
+    ImageUtil::transitionLayout(commandBuffer, m_resources->frameImage->getImage(), subresourceRange, ImageTransition::TransferSrc(), ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader));
+
     END_CMD_LABEL(commandBuffer);
 }
 
@@ -568,9 +568,49 @@ GraphicsPipeline* DeferredLightingRenderPass::getGraphicsPipeline() const {
 }
 
 void DeferredLightingRenderPass::recreateSwapchain(const RecreateSwapchainEvent& event) {
+    for (size_t i = 0; i < CONCURRENT_FRAMES; ++i)
+        createFramebuffer(m_resources[i]);
+    createGraphicsPipeline();
+}
+
+bool DeferredLightingRenderPass::createFramebuffer(RenderResources* resources) {
+
+    vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1;
+
+    Image2DConfiguration imageConfig{};
+    imageConfig.device = Engine::graphics()->getDevice();
+    imageConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+    imageConfig.sampleCount = sampleCount;
+    imageConfig.setSize(Engine::graphics()->getResolution());
+
+    ImageViewConfiguration imageViewConfig{};
+    imageViewConfig.device = Engine::graphics()->getDevice();
+
+    imageConfig.format = Engine::graphics()->getColourFormat();
+    imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc;
+    resources->frameImage = Image2D::create(imageConfig, "DeferredLightingRenderPass-FrameImage");
+    imageViewConfig.format = imageConfig.format;
+    imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
+    imageViewConfig.setImage(resources->frameImage);
+    resources->frameImageView = ImageView::create(imageViewConfig, "DeferredLightingRenderPass-FrameImageView");
+
+    // Framebuffer
+    FramebufferConfiguration framebufferConfig{};
+    framebufferConfig.device = Engine::graphics()->getDevice();
+    framebufferConfig.setSize(Engine::graphics()->getResolution());
+    framebufferConfig.setRenderPass(m_renderPass.get());
+    framebufferConfig.addAttachment(resources->frameImageView);
+
+    resources->framebuffer = Framebuffer::create(framebufferConfig, "DeferredLightingRenderPass-Framebuffer");
+    if (resources->framebuffer == nullptr)
+        return false;
+    return true;
+}
+
+bool DeferredLightingRenderPass::createGraphicsPipeline() {
     GraphicsPipelineConfiguration pipelineConfig{};
     pipelineConfig.device = Engine::graphics()->getDevice();
-    pipelineConfig.renderPass = Engine::graphics()->renderPass();
+    pipelineConfig.renderPass = m_renderPass;
     pipelineConfig.setViewport(0, 0); // Default to full window resolution
     pipelineConfig.vertexShader = "res/shaders/screen/fullscreen_quad.vert";
     pipelineConfig.fragmentShader = "res/shaders/deferred/lighting.frag";
@@ -578,5 +618,49 @@ void DeferredLightingRenderPass::recreateSwapchain(const RecreateSwapchainEvent&
 //    pipelineConfig.addVertexInputAttribute(0, 0, vk::Format::eR32G32Sfloat, 0); // XY
     pipelineConfig.addDescriptorSetLayout(m_lightingDescriptorSetLayout.get());
     pipelineConfig.addDescriptorSetLayout(Engine::lightRenderer()->getLightingRenderPassDescriptorSetLayout().get());
-    m_graphicsPipeline->recreate(pipelineConfig, "DeferredLightingRenderPass-GraphicsPipeline");
+    return m_graphicsPipeline->recreate(pipelineConfig, "DeferredLightingRenderPass-GraphicsPipeline");
+}
+
+bool DeferredLightingRenderPass::createRenderPass() {
+    vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1;
+
+    std::array<vk::AttachmentDescription, 1> attachments;
+
+    attachments[0].setFormat(Engine::graphics()->getColourFormat());
+    attachments[0].setSamples(samples);
+    attachments[0].setLoadOp(vk::AttachmentLoadOp::eDontCare);
+    attachments[0].setStoreOp(vk::AttachmentStoreOp::eStore);
+    attachments[0].setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+    attachments[0].setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+    attachments[0].setInitialLayout(vk::ImageLayout::eUndefined);
+    attachments[0].setFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+
+    SubpassConfiguration subpassConfiguration{};
+    subpassConfiguration.addColourAttachment(0, vk::ImageLayout::eColorAttachmentOptimal);
+
+    std::array<vk::SubpassDependency, 2> dependencies;
+    dependencies[0].setSrcSubpass(VK_SUBPASS_EXTERNAL);
+    dependencies[0].setDstSubpass(0);
+    dependencies[0].setSrcStageMask(vk::PipelineStageFlagBits::eBottomOfPipe);
+    dependencies[0].setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+    dependencies[0].setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);
+    dependencies[0].setDstAccessMask(vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite);
+    dependencies[0].setDependencyFlags(vk::DependencyFlagBits::eByRegion);
+
+    dependencies[1].setSrcSubpass(0);
+    dependencies[1].setDstSubpass(VK_SUBPASS_EXTERNAL);
+    dependencies[1].setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+    dependencies[1].setDstStageMask(vk::PipelineStageFlagBits::eBottomOfPipe);
+    dependencies[1].setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite);
+    dependencies[1].setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
+    dependencies[1].setDependencyFlags(vk::DependencyFlagBits::eByRegion);
+
+    RenderPassConfiguration renderPassConfig{};
+    renderPassConfig.device = Engine::graphics()->getDevice();
+    renderPassConfig.setAttachments(attachments);
+    renderPassConfig.addSubpass(subpassConfiguration);
+    renderPassConfig.setSubpassDependencies(dependencies);
+
+    m_renderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig, "DeferredLightingRenderPass-RenderPass"));
+    return (bool)m_renderPass;
 }

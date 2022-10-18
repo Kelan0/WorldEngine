@@ -87,6 +87,7 @@ struct SurfaceDetails {
 
 struct SwapchainDetails {
     std::unique_ptr<vkr::SwapchainKHR> swapchain;
+    std::vector<VkImage> images;
     std::vector<std::shared_ptr<ImageView>> imageViews;
     std::vector<std::shared_ptr<Framebuffer>> framebuffers;
     std::vector<std::shared_ptr<vkr::CommandBuffer>> commandBuffers;
@@ -145,6 +146,8 @@ public:
     bool beginFrame();
 
     void endFrame();
+
+    void presentImageDirect(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::ImageLayout& imageLayout);
 
     const vk::Instance& getInstance() const;
 
