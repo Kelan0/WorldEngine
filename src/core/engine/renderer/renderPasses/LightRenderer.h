@@ -36,9 +36,9 @@ public:
 
     bool init();
 
-    void preRender(double dt);
+    void preRender(const double& dt);
 
-    void render(double dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera);
+    void render(const double& dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera);
 
     [[nodiscard]] const std::shared_ptr<RenderPass>& getRenderPass() const;
 

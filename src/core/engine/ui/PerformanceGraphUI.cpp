@@ -21,7 +21,7 @@ PerformanceGraphUI::PerformanceGraphUI():
 
 PerformanceGraphUI::~PerformanceGraphUI() = default;
 
-void PerformanceGraphUI::update(double dt) {
+void PerformanceGraphUI::update(const double& dt) {
     PROFILE_SCOPE("PerformanceGraphUI::update");
 
     if (m_clearFrames) {
@@ -129,7 +129,7 @@ void PerformanceGraphUI::update(double dt) {
     flushOldFrames();
 }
 
-void PerformanceGraphUI::draw(double dt) {
+void PerformanceGraphUI::draw(const double& dt) {
     PROFILE_SCOPE("PerformanceGraphUI::draw");
 
     ImGuiWindow* window = ImGui::GetCurrentWindow();

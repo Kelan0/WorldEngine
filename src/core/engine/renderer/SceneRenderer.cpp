@@ -124,7 +124,7 @@ bool SceneRenderer::init() {
     return true;
 }
 
-void SceneRenderer::preRender(double dt) {
+void SceneRenderer::preRender(const double& dt) {
     PROFILE_SCOPE("SceneRenderer::preRender")
     const auto& renderEntities = m_scene->registry()->group<RenderComponent, Transform>();
     m_numRenderEntities = renderEntities.size();
@@ -139,7 +139,7 @@ void SceneRenderer::preRender(double dt) {
     streamObjectData();
 }
 
-void SceneRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera) {
+void SceneRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera) {
     PROFILE_SCOPE("SceneRenderer::render")
     BEGIN_CMD_LABEL(commandBuffer, "SceneRenderer::render");
 
@@ -176,7 +176,7 @@ DescriptorSet* SceneRenderer::getMaterialDescriptorSet() const {
 }
 
 
-void SceneRenderer::recordRenderCommands(double dt, const vk::CommandBuffer& commandBuffer) {
+void SceneRenderer::recordRenderCommands(const double& dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("SceneRenderer::recordRenderCommands");
     BEGIN_CMD_LABEL(commandBuffer, "SceneRenderer::recordRenderCommands");
 

@@ -49,7 +49,7 @@ public:
 
     bool init();
 
-    void render(double dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera);
+    void render(const double& dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera);
 
     void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
 
@@ -103,14 +103,19 @@ private:
         bool showDebugShadowCascades;
         uint32_t debugShadowCascadeLightIndex;
         float debugShadowCascadeOpacity;
+        float debugTestFactor;
     };
 
+    struct FrameImage {
+        Image2D* image;
+        ImageView* imageView;
+        Framebuffer* framebuffer;
+        bool rendered;
+    };
     struct RenderResources {
         Buffer* uniformBuffer;
         DescriptorSet* lightingDescriptorSet;
-        Framebuffer* framebuffer;
-        Image2D* frameImage;
-        ImageView* frameImageView;
+        FrameImage frameImage;
     };
 
 public:
@@ -120,18 +125,22 @@ public:
 
     bool init();
 
-    void renderScreen(double dt);
+    void renderScreen(const double& dt);
 
     GraphicsPipeline* getGraphicsPipeline() const;
+
+    void setHistoryFadeFactor(const float& historyFadeFactor);
 
 private:
     void recreateSwapchain(const RecreateSwapchainEvent& event);
 
-    bool createFramebuffer(RenderResources* resources);
+    bool createFramebuffer(FrameImage* frameImage);
 
     bool createGraphicsPipeline();
 
     bool createRenderPass();
+
+    void swapFrameImage(FrameImage* frameImage1, FrameImage* frameImage2);
 
 private:
     DeferredGeometryRenderPass* m_geometryPass;
@@ -141,6 +150,8 @@ private:
     std::shared_ptr<DescriptorSetLayout> m_lightingDescriptorSetLayout;
     std::array<Sampler*, NumAttachments> m_attachmentSamplers{};
     RenderCamera m_renderCamera;
+    FrameImage m_prevFrameImage;
+    float m_historyFadeFactor;
 };
 
 

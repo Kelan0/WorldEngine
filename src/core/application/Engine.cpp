@@ -166,12 +166,16 @@ bool Engine::init(SDL_Window* windowHandle) {
     return true;
 }
 
-void Engine::render(double dt) {
+void Engine::preRender(const double& dt) {
+    PROFILE_SCOPE("Engine::preRender");
+    m_uiRenderer->preRender(dt);
+}
+
+void Engine::render(const double& dt) {
     PROFILE_SCOPE("Engine::render");
+
 //    PROFILE_BEGIN_GPU_TIMESTAMP("Engine::render");
     const Entity& cameraEntity = Engine::scene()->getMainCameraEntity();
-
-    m_uiRenderer->preRender(dt);
 
     m_renderCamera->setProjection(cameraEntity.getComponent<Camera>());
     m_renderCamera->setTransform(cameraEntity.getComponent<Transform>());
@@ -191,7 +195,6 @@ void Engine::render(double dt) {
 //    m_immediateRenderer->render(dt);
 
     commandBuffer.endRenderPass();
-
 
     m_deferredLightingPass->renderScreen(dt);
 

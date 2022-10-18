@@ -68,7 +68,9 @@ public:
 private:
     bool init(SDL_Window* windowHandle);
 
-    void render(double dt);
+    void preRender(const double& dt);
+
+    void render(const double& dt);
 
     static void destroy();
 

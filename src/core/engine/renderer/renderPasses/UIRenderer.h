@@ -20,9 +20,9 @@ public:
 
     void processEvent(const SDL_Event* event);
 
-    void preRender(double dt);
+    void preRender(const double& dt);
 
-    void render(double dt, const vk::CommandBuffer& commandBuffer);
+    void render(const double& dt, const vk::CommandBuffer& commandBuffer);
 
     template<typename T>
     void setUIEnabled(const bool& enabled);

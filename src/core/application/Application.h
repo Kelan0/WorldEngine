@@ -22,7 +22,7 @@ public:
 
     virtual void cleanup() = 0;
 
-    virtual void render(double dt) = 0;
+    virtual void render(const double& dt) = 0;
 
     template<class T>
     static int create(int argc, char* argv[]);
@@ -39,12 +39,17 @@ public:
 
     double getWindowAspectRatio() const;
 
+    const double& getFramerateLimit() const;
+
+    void setFramerateLimit(const double& framerateLimit);
+
     bool isViewportInverted() const;
 
     const std::string& getExecutionDirectory() const;
 
     const std::thread::id& getMainThreadId() const;
-    const uint64_t getHashedMainThreadId() const;
+    uint64_t getHashedMainThreadId() const;
+
 private:
     void start();
 
@@ -52,7 +57,7 @@ private:
 
     void cleanupInternal();
 
-    void renderInternal(double dt);
+    void renderInternal(const double& dt);
 
     void processEventsInternal();
 
@@ -62,6 +67,8 @@ private:
     SDL_Window* m_windowHandle;
     InputHandler* m_inputHandler;
     std::string m_executionDirectory;
+
+    double m_framerateLimit;
 
     std::thread::id m_mainThreadId;
 

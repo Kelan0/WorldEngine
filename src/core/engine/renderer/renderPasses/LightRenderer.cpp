@@ -224,7 +224,7 @@ bool LightRenderer::init() {
     return true;
 }
 
-void LightRenderer::preRender(double dt) {
+void LightRenderer::preRender(const double& dt) {
     PROFILE_SCOPE("LightRenderer::preRender")
     const auto& lightEntities = Engine::scene()->registry()->group<LightComponent>(entt::get<Transform>);
     m_numLightEntities = (uint32_t)lightEntities.size();
@@ -238,7 +238,7 @@ void LightRenderer::preRender(double dt) {
     m_lightingRenderPassResources->uniformBuffer->upload(0, sizeof(LightingRenderPassUBO), &uniformData);
 }
 
-void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera) {
+void LightRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera) {
     PROFILE_SCOPE("LightRenderer::render");
     BEGIN_CMD_LABEL(commandBuffer, "LightRenderer::render");
 

@@ -85,7 +85,7 @@ public:
 
     bool init();
 
-    void render(double dt);
+    void render(const double& dt);
 
     void begin(const MeshPrimitiveType& primitiveType);
 

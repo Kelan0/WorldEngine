@@ -57,9 +57,9 @@ public:
 
     ~PerformanceGraphUI() override;
 
-    void update(double dt) override;
+    void update(const double& dt) override;
 
-    void draw(double dt) override;
+    void draw(const double& dt) override;
 
 private:
     void drawHeaderBar();

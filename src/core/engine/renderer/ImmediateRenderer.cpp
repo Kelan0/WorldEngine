@@ -98,7 +98,7 @@ bool ImmediateRenderer::init() {
     return true;
 }
 
-void ImmediateRenderer::render(double dt) {
+void ImmediateRenderer::render(const double& dt) {
     PROFILE_SCOPE("ImmediateRenderer::render");
 
     uploadBuffers();

@@ -26,6 +26,8 @@
 #include "core/util/Profiler.h"
 #include "core/engine/scene/bound/Intersection.h"
 #include "core/engine/renderer/LightComponent.h"
+#include "core/engine/renderer/renderPasses/DeferredRenderer.h"
+#include "extern/imgui/imgui.h"
 
 #include <iostream>
 
@@ -249,7 +251,7 @@ class App : public Application {
             delete images[i];
     }
 
-    void handleUserInput(double dt) {
+    void handleUserInput(const double& dt) {
         if (input()->keyPressed(SDL_SCANCODE_ESCAPE)) {
             input()->toggleMouseGrabbed();
         }
@@ -287,11 +289,21 @@ class App : public Application {
     Frustum frustum;
     bool pauseFrustum = false;
     double time = 0.0;
+    float historyFadeFactor = 1.0F;
+    double framerateLimit = 0.0;
 
-    void render(double dt) override {
+    void render(const double& dt) override {
         PROFILE_SCOPE("custom render")
         handleUserInput(dt);
         time += dt;
+
+        ImGui::Begin("Test");
+        ImGui::SliderFloat("History Fade Factor", &historyFadeFactor, 0.0F, 1.0F);
+        ImGui::InputDouble("Framerate Limit", &framerateLimit);
+        ImGui::End();
+
+        Application::instance()->setFramerateLimit(framerateLimit);
+        Engine::deferredLightingPass()->setHistoryFadeFactor(historyFadeFactor);
 
         Entity mainCamera = Engine::scene()->getMainCameraEntity();
         Transform& cameraTransform = mainCamera.getComponent<Transform>();

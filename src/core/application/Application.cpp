@@ -18,6 +18,7 @@ Application* Application::s_instance = nullptr;
 
 
 Application::Application():
+        m_framerateLimit(0.0), // Unlimited
         m_windowHandle(nullptr),
         m_inputHandler(nullptr),
         m_running(false) {
@@ -79,8 +80,10 @@ void Application::cleanupInternal() {
     cleanup();
 }
 
-void Application::renderInternal(double dt) {
-    PROFILE_SCOPE("Application::renderInternal")
+void Application::renderInternal(const double& dt) {
+    PROFILE_SCOPE("Application::renderInternal");
+
+    Engine::instance()->preRender(dt);
 
     PROFILE_REGION("Application::render - Implementation")
     render(dt);
@@ -154,8 +157,7 @@ void Application::start() {
         lastTime = now;
 
         bool isFrame = false;
-        bool uncappedFramerate = true;
-        double frameDurationNanos = uncappedFramerate ? 1.0 : (1e+9 / 144.0);
+        double frameDurationNanos = m_framerateLimit < 1.0 ? 1.0 : (1e+9 / m_framerateLimit);
 
         partialFrames += elapsedNanos / frameDurationNanos;
 
@@ -280,6 +282,14 @@ double Application::getWindowAspectRatio() const {
     return (double)windowSize.x / (double)windowSize.y;
 }
 
+const double& Application::getFramerateLimit() const {
+    return m_framerateLimit;
+}
+
+void Application::setFramerateLimit(const double& framerateLimit) {
+    m_framerateLimit = framerateLimit;
+}
+
 bool Application::isViewportInverted() const {
     return true;
 }
@@ -292,7 +302,7 @@ const std::thread::id& Application::getMainThreadId() const {
     return m_mainThreadId;
 }
 
-const uint64_t Application::getHashedMainThreadId() const {
+uint64_t Application::getHashedMainThreadId() const {
     return ThreadUtils::getThreadHashedId(m_mainThreadId);
 }
 

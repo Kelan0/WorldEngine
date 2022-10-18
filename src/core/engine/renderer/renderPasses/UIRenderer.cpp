@@ -88,7 +88,7 @@ void UIRenderer::processEvent(const SDL_Event* event) {
     ImGui_ImplSDL2_ProcessEvent(event);
 }
 
-void UIRenderer::preRender(double dt) {
+void UIRenderer::preRender(const double& dt) {
 
     if (!m_createdFontsTexture) {
         m_createdFontsTexture = true;
@@ -112,7 +112,7 @@ void UIRenderer::preRender(double dt) {
     }
 }
 
-void UIRenderer::render(double dt, const vk::CommandBuffer& commandBuffer) {
+void UIRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer) {
     BEGIN_CMD_LABEL(commandBuffer, "UIRenderer::render");
 
 //    ImGui::ShowDemoWindow();

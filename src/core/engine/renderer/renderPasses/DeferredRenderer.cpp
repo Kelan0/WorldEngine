@@ -94,7 +94,7 @@ bool DeferredGeometryRenderPass::init() {
     return true;
 }
 
-void DeferredGeometryRenderPass::render(double dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera) {
+void DeferredGeometryRenderPass::render(const double& dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera) {
     PROFILE_SCOPE("DeferredGeometryRenderPass::render");
     BEGIN_CMD_LABEL(commandBuffer, "DeferredGeometryRenderPass::render");
 
@@ -381,13 +381,24 @@ bool DeferredGeometryRenderPass::createRenderPass() {
 
 DeferredLightingRenderPass::DeferredLightingRenderPass(DeferredGeometryRenderPass* geometryPass):
     m_geometryPass(geometryPass) {
+    m_prevFrameImage.image = nullptr;
+    m_prevFrameImage.imageView = nullptr;
+    m_prevFrameImage.framebuffer = nullptr;
+    m_prevFrameImage.rendered = false;
 }
 
 DeferredLightingRenderPass::~DeferredLightingRenderPass() {
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         delete m_resources[i]->lightingDescriptorSet;
         delete m_resources[i]->uniformBuffer;
+        delete m_resources[i]->frameImage.framebuffer;
+        delete m_resources[i]->frameImage.imageView;
+        delete m_resources[i]->frameImage.image;
     }
+    delete m_prevFrameImage.framebuffer;
+    delete m_prevFrameImage.imageView;
+    delete m_prevFrameImage.image;
+
     for (size_t i = 0; i < NumAttachments; ++i)
         delete m_attachmentSamplers[i];
 
@@ -482,7 +493,7 @@ bool DeferredLightingRenderPass::init() {
     return true;
 }
 
-void DeferredLightingRenderPass::renderScreen(double dt) {
+void DeferredLightingRenderPass::renderScreen(const double& dt) {
 
     const Entity& cameraEntity = Engine::scene()->getMainCameraEntity();
     m_renderCamera.setProjection(cameraEntity.getComponent<Camera>());
@@ -491,17 +502,16 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
 
     const vk::CommandBuffer& commandBuffer = Engine::graphics()->getCurrentCommandBuffer();
 
-    const ImageView* previousFrameImageView = Engine::graphics()->getPreviousFrameImageView();
+    printf("Previous frame rendered: %s\n", m_prevFrameImage.rendered ? "true" : "false");
+
+    const ImageView* previousFrameImageView = m_prevFrameImage.rendered ? m_prevFrameImage.imageView : nullptr;
     if (previousFrameImageView == nullptr) {
         previousFrameImageView = m_geometryPass->getAlbedoImageView();
-    } else {
-        vk::ImageSubresourceRange subresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
-        ImageUtil::transitionLayout(commandBuffer, previousFrameImageView->getImage(), subresourceRange, ImageTransition::FromAny(), ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader));
     }
 
 
     BEGIN_CMD_LABEL(commandBuffer, "DeferredLightingRenderPass::renderScreen");
-    m_renderPass->begin(commandBuffer, m_resources->framebuffer, vk::SubpassContents::eInline);
+    m_renderPass->begin(commandBuffer, m_resources->frameImage.framebuffer, vk::SubpassContents::eInline);
 
     m_graphicsPipeline->bind(commandBuffer);
 
@@ -544,6 +554,7 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
     uniformData.showDebugShadowCascades = false;
     uniformData.debugShadowCascadeLightIndex = 0;
     uniformData.debugShadowCascadeOpacity = 0.5F;
+    uniformData.debugTestFactor = m_historyFadeFactor;
 
     m_resources->uniformBuffer->upload(0, sizeof(LightingPassUniformData), &uniformData);
 
@@ -553,12 +564,16 @@ void DeferredLightingRenderPass::renderScreen(double dt) {
 
     commandBuffer.endRenderPass();
 
+
     vk::ImageSubresourceRange subresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
-    ImageUtil::transitionLayout(commandBuffer, m_resources->frameImage->getImage(), subresourceRange, ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader), ImageTransition::TransferSrc());
+    ImageUtil::transitionLayout(commandBuffer, m_resources->frameImage.image->getImage(), subresourceRange, ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader), ImageTransition::TransferSrc());
 
-    Engine::graphics()->presentImageDirect(commandBuffer, m_resources->frameImage->getImage(), vk::ImageLayout::eTransferSrcOptimal);
+    Engine::graphics()->presentImageDirect(commandBuffer, m_resources->frameImage.image->getImage(), vk::ImageLayout::eTransferSrcOptimal);
 
-    ImageUtil::transitionLayout(commandBuffer, m_resources->frameImage->getImage(), subresourceRange, ImageTransition::TransferSrc(), ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader));
+    ImageUtil::transitionLayout(commandBuffer, m_resources->frameImage.image->getImage(), subresourceRange, ImageTransition::TransferSrc(), ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader));
+
+    m_resources->frameImage.rendered = true;
+    swapFrameImage(&m_prevFrameImage, &m_resources->frameImage);
 
     END_CMD_LABEL(commandBuffer);
 }
@@ -567,15 +582,26 @@ GraphicsPipeline* DeferredLightingRenderPass::getGraphicsPipeline() const {
     return m_graphicsPipeline.get();
 }
 
+void DeferredLightingRenderPass::setHistoryFadeFactor(const float& historyFadeFactor) {
+    m_historyFadeFactor = historyFadeFactor;
+}
+
 void DeferredLightingRenderPass::recreateSwapchain(const RecreateSwapchainEvent& event) {
-    for (size_t i = 0; i < CONCURRENT_FRAMES; ++i)
-        createFramebuffer(m_resources[i]);
+    for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i) {
+        createFramebuffer(&m_resources[i]->frameImage);
+    }
+    createFramebuffer(&m_prevFrameImage);
+
     createGraphicsPipeline();
 }
 
-bool DeferredLightingRenderPass::createFramebuffer(RenderResources* resources) {
-
+bool DeferredLightingRenderPass::createFramebuffer(FrameImage* frameImage) {
     vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1;
+
+    delete frameImage->framebuffer;
+    delete frameImage->imageView;
+    delete frameImage->image;
+    frameImage->rendered = false;
 
     Image2DConfiguration imageConfig{};
     imageConfig.device = Engine::graphics()->getDevice();
@@ -588,22 +614,21 @@ bool DeferredLightingRenderPass::createFramebuffer(RenderResources* resources) {
 
     imageConfig.format = Engine::graphics()->getColourFormat();
     imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc;
-    resources->frameImage = Image2D::create(imageConfig, "DeferredLightingRenderPass-FrameImage");
+    frameImage->image = Image2D::create(imageConfig, "DeferredLightingRenderPass-FrameImage");
     imageViewConfig.format = imageConfig.format;
     imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
-    imageViewConfig.setImage(resources->frameImage);
-    resources->frameImageView = ImageView::create(imageViewConfig, "DeferredLightingRenderPass-FrameImageView");
+    imageViewConfig.setImage(frameImage->image);
+    frameImage->imageView = ImageView::create(imageViewConfig, "DeferredLightingRenderPass-FrameImageView");
 
     // Framebuffer
     FramebufferConfiguration framebufferConfig{};
     framebufferConfig.device = Engine::graphics()->getDevice();
     framebufferConfig.setSize(Engine::graphics()->getResolution());
     framebufferConfig.setRenderPass(m_renderPass.get());
-    framebufferConfig.addAttachment(resources->frameImageView);
+    framebufferConfig.addAttachment(frameImage->imageView);
 
-    resources->framebuffer = Framebuffer::create(framebufferConfig, "DeferredLightingRenderPass-Framebuffer");
-    if (resources->framebuffer == nullptr)
-        return false;
+    frameImage->framebuffer = Framebuffer::create(framebufferConfig, "DeferredLightingRenderPass-Framebuffer");
+    assert(frameImage->framebuffer != nullptr);
     return true;
 }
 
@@ -663,4 +688,11 @@ bool DeferredLightingRenderPass::createRenderPass() {
 
     m_renderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig, "DeferredLightingRenderPass-RenderPass"));
     return (bool)m_renderPass;
+}
+
+void DeferredLightingRenderPass::swapFrameImage(FrameImage* frameImage1, FrameImage* frameImage2) {
+    std::swap(frameImage1->image, frameImage2->image);
+    std::swap(frameImage1->imageView, frameImage2->imageView);
+    std::swap(frameImage1->framebuffer, frameImage2->framebuffer);
+    std::swap(frameImage1->rendered, frameImage2->rendered);
 }

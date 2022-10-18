@@ -77,6 +77,7 @@ layout(set = 0, binding = 0) uniform UBO1 {
     bool showDebugShadowCascades;
     uint debugShadowCascadeLightIndex;
     float debugShadowCascadeOpacity;
+    float debugTestFactor;
 };
 
 const float MAX_REFLECTION_LOD = 4.0;
@@ -361,9 +362,8 @@ void main() {
 //    finalColour = vec3(surface.albedo);
 //    finalColour = vec3(abs(surface.velocity), 0.0);
 
-//    vec3 prevFinalColour = texture(previousFrameTexture, fs_texture).rgb;
-//    finalColour = mix(finalColour, prevFinalColour, 0.99);
-//    finalColour = abs(finalColour - prevFinalColour);
+    vec3 prevFinalColour = texture(previousFrameTexture, fs_texture).rgb;
+    finalColour = mix(prevFinalColour, finalColour, debugTestFactor);
 
     outColor = vec4(finalColour, 1.0);
 

@@ -78,9 +78,9 @@ public:
 
     bool init();
 
-    void preRender(double dt);
+    void preRender(const double& dt);
 
-    void render(double dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera);
+    void render(const double& dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera);
 
     void setScene(Scene* scene);
 
@@ -105,7 +105,7 @@ public:
     void notifyMaterialChanged(const uint32_t& entityIndex);
 
 private:
-    void recordRenderCommands(double dt, const vk::CommandBuffer& commandBuffer);
+    void recordRenderCommands(const double& dt, const vk::CommandBuffer& commandBuffer);
 
     void initMissingTextureMaterial();
 
