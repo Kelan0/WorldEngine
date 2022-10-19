@@ -5,6 +5,7 @@
 #include "core/engine/renderer/renderPasses/UIRenderer.h"
 #include "core/engine/renderer/renderPasses/LightRenderer.h"
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
+#include "core/engine/renderer/renderPasses/PostProcessRenderer.h"
 #include "core/engine/renderer/ImmediateRenderer.h"
 #include "core/engine/scene/event/EventDispatcher.h"
 #include "core/graphics/GraphicsManager.h"
@@ -12,8 +13,8 @@
 #include "core/util/Profiler.h"
 #include <SDL2/SDL.h>
 
-Engine* Engine::s_instance = new Engine();
 
+Engine* Engine::s_instance = new Engine();
 
 Engine::Engine() {
     m_graphics = new GraphicsManager();
@@ -25,6 +26,7 @@ Engine::Engine() {
     m_immediateRenderer = new ImmediateRenderer();
     m_deferredGeometryPass = new DeferredGeometryRenderPass();
     m_deferredLightingPass = new DeferredLightingRenderPass(m_deferredGeometryPass);
+    m_postProcessingRenderer = new PostProcessRenderer();
 
     m_renderCamera = new RenderCamera();
 }
@@ -38,6 +40,7 @@ Engine::~Engine() {
     delete m_immediateRenderer;
     delete m_deferredGeometryPass;
     delete m_deferredLightingPass;
+    delete m_postProcessingRenderer;
     delete m_graphics;
     delete m_eventDispatcher;
 
@@ -80,6 +83,10 @@ DeferredLightingRenderPass* Engine::getDeferredLightingPass() const {
     return m_deferredLightingPass;
 }
 
+PostProcessRenderer* Engine::getPostProcessingRenderer() const {
+    return m_postProcessingRenderer;
+}
+
 EventDispatcher* Engine::getEventDispatcher() const {
     return m_eventDispatcher;
 }
@@ -114,6 +121,10 @@ DeferredGeometryRenderPass* Engine::deferredGeometryPass() {
 
 DeferredLightingRenderPass* Engine::deferredLightingPass() {
     return instance()->getDeferredLightingPass();
+}
+
+PostProcessRenderer* Engine::postProcessingRenderer() {
+    return instance()->getPostProcessingRenderer();
 }
 
 EventDispatcher* Engine::eventDispatcher() {
@@ -163,6 +174,10 @@ bool Engine::init(SDL_Window* windowHandle) {
     if (!m_deferredLightingPass->init())
         return false;
 
+    PROFILE_REGION("Init PostProcessRenderer")
+    if (!m_postProcessingRenderer->init())
+        return false;
+
     return true;
 }
 
@@ -191,12 +206,19 @@ void Engine::render(const double& dt) {
 
     m_deferredGeometryPass->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredGeometryPass->render(dt, commandBuffer, m_renderCamera);
-
 //    m_immediateRenderer->render(dt);
-
     commandBuffer.endRenderPass();
 
-    m_deferredLightingPass->renderScreen(dt);
+    m_deferredLightingPass->preRender(dt);
+    m_deferredLightingPass->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
+    m_deferredLightingPass->render(dt, commandBuffer);
+    commandBuffer.endRenderPass();
+
+//    m_deferredLightingPass->presentDirect(commandBuffer);
+
+    m_postProcessingRenderer->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
+    m_postProcessingRenderer->render(dt, commandBuffer);
+    commandBuffer.endRenderPass();
 
     m_uiRenderer->render(dt, commandBuffer);
 //    PROFILE_END_GPU_TIMESTAMP("Engine::render");

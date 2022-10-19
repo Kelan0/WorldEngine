@@ -303,7 +303,7 @@ class App : public Application {
         ImGui::End();
 
         Application::instance()->setFramerateLimit(framerateLimit);
-        Engine::deferredLightingPass()->setHistoryFadeFactor(historyFadeFactor);
+        Engine::deferredLightingPass()->setTaaHistoryFactor(historyFadeFactor);
 
         Entity mainCamera = Engine::scene()->getMainCameraEntity();
         Transform& cameraTransform = mainCamera.getComponent<Transform>();

@@ -2,17 +2,7 @@
 
 #extension GL_EXT_nonuniform_qualifier : enable
 
-struct ObjectData {
-    mat4 prevModelMatrix;
-    mat4 modelMatrix;
-};
-
-struct CameraData {
-    mat4 viewMatrix;
-    mat4 projectionMatrix;
-    mat4 viewProjectionMatrix;
-};
-
+#include "res/shaders/common/structures.glsl"
 
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;

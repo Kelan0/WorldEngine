@@ -190,7 +190,9 @@ const std::shared_ptr<Texture>& EnvironmentMap::getSpecularReflectionMapTexture(
     return m_specularReflectionMapTexture;
 }
 
-std::shared_ptr<Texture> EnvironmentMap::getBRDFIntegrationMap() {
+std::shared_ptr<Texture> EnvironmentMap::getBRDFIntegrationMap(const vk::CommandBuffer& commandBuffer) {
+    if (s_BRDFIntegrationMap == nullptr && (bool)commandBuffer)
+        calculateBRDFIntegrationMap(commandBuffer);
     return s_BRDFIntegrationMap;
 }
 

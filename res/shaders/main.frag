@@ -2,26 +2,13 @@
 
 #extension GL_EXT_nonuniform_qualifier : enable
 
+#include "res/shaders/common/structures.glsl"
+
 #define HAS_ALBEDO_TEXTURE_FLAG uint(1 << 0)
 #define HAS_ROUGHNESS_TEXTURE_FLAG uint(1 << 1)
 #define HAS_METALLIC_TEXTURE_FLAG uint(1 << 2)
 #define HAS_EMISSION_TEXTURE_FLAG uint(1 << 3)
 #define HAS_NORMAL_TEXTURE_FLAG uint(1 << 4)
-
-struct Material {
-    uint albedoTextureIndex;
-    uint roughnessTextureIndex;
-    uint metallicTextureIndex;
-    uint emissionTextureIndex;
-    uint normalTextureIndex;
-    uint packedAlbedoColour;
-    uint packedRoughnessMetallicEmissionR;
-    uint packedEmissionGB;
-    uint flags;
-    uint _pad0;
-    uint _pad2;
-    uint _pad3;
-};
 
 layout(location = 0) in vec3 fs_normal;
 layout(location = 1) in vec3 fs_tangent;

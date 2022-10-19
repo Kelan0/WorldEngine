@@ -353,7 +353,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     graphicsPipelineCreateInfo.setPDynamicState(&dynamicStateCreateInfo);
     graphicsPipelineCreateInfo.setLayout(m_pipelineLayout);
     graphicsPipelineCreateInfo.setRenderPass(m_renderPass->getRenderPass());
-    graphicsPipelineCreateInfo.setSubpass(0);
+    graphicsPipelineCreateInfo.setSubpass(graphicsPipelineConfiguration.subpass);
     graphicsPipelineCreateInfo.setBasePipelineHandle(VK_NULL_HANDLE);
     graphicsPipelineCreateInfo.setBasePipelineIndex(-1);
 

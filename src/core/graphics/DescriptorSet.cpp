@@ -149,10 +149,7 @@ int32_t DescriptorSetLayout::findBindingIndex(const uint32_t& binding) const {
 
 const vk::DescriptorSetLayoutBinding& DescriptorSetLayout::findBinding(const uint32_t& binding) const {
     int index = findBindingIndex(binding);
-    if (index < 0) {
-        assert(false);
-        return {}; // TODO: Reference to local variable, assert(false) ?
-    }
+    assert(index >= 0);
     return getBinding(index);
 }
 

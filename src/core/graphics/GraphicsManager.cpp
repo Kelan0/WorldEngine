@@ -695,6 +695,12 @@ bool GraphicsManager::recreateSwapchain() {
         imageCount = glm::min(imageCount, m_surface.capabilities.maxImageCount);
     }
 
+    vk::ImageUsageFlags imageUsageFlags = vk::ImageUsageFlagBits::eColorAttachment;
+    if (m_directImagePresentEnabled)
+        imageUsageFlags |= vk::ImageUsageFlagBits::eTransferDst;
+    if (m_swapchainImageSampled)
+        imageUsageFlags |= vk::ImageUsageFlagBits::eSampled;
+
     vk::SwapchainCreateInfoKHR createInfo;
     createInfo.setSurface(**m_surface.surface);
     createInfo.setMinImageCount(imageCount);
@@ -702,7 +708,7 @@ bool GraphicsManager::recreateSwapchain() {
     createInfo.setImageColorSpace(m_surface.surfaceFormat.colorSpace);
     createInfo.setImageExtent(m_swapchain.imageExtent);
     createInfo.setImageArrayLayers(1);
-    createInfo.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst);
+    createInfo.setImageUsage(imageUsageFlags);
 
     std::vector<uint32_t> queueFamilyIndices = { m_queues.queueFamilies.graphicsQueueFamilyIndex.value(), m_queues.queueFamilies.presentQueueFamilyIndex.value() };
 
@@ -1008,6 +1014,10 @@ const vk::PhysicalDeviceLimits& GraphicsManager::getPhysicalDeviceLimits() const
     return m_device.physicalDeviceProperties.limits;
 }
 
+uint32_t GraphicsManager::getPreviousFrameIndex() const {
+    return (m_swapchain.currentFrameIndex + CONCURRENT_FRAMES - 1) % CONCURRENT_FRAMES;
+}
+
 const uint32_t& GraphicsManager::getCurrentFrameIndex() const {
     return m_swapchain.currentFrameIndex;
 }
@@ -1090,6 +1100,28 @@ void GraphicsManager::setPreferredPresentMode(vk::PresentModeKHR presentMode) {
 
 bool GraphicsManager::didResolutionChange() const {
     return m_resolutionChanged;
+}
+
+const bool& GraphicsManager::isDirectImagePresentEnabled() const {
+    return m_directImagePresentEnabled;
+}
+
+void GraphicsManager::setDirectImagePresentEnabled(const bool& directImagePresentEnabled) {
+    if (m_directImagePresentEnabled != directImagePresentEnabled) {
+        m_directImagePresentEnabled = directImagePresentEnabled;
+        m_recreateSwapchain = true;
+    }
+}
+
+const bool& GraphicsManager::isSwapchainImageSampled() const {
+    return m_swapchainImageSampled;
+}
+
+void GraphicsManager::setSwapchainImageSampled(const bool& swapchainImageSampled) {
+    if (m_swapchainImageSampled != swapchainImageSampled) {
+        m_swapchainImageSampled = swapchainImageSampled;
+        m_recreateSwapchain = true;
+    }
 }
 
 DebugUtils::RenderInfo& GraphicsManager::debugInfo() {

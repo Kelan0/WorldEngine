@@ -36,7 +36,7 @@ public:
 
     const std::shared_ptr<Texture>& getSpecularReflectionMapTexture() const;
 
-    static std::shared_ptr<Texture> getBRDFIntegrationMap();
+    static std::shared_ptr<Texture> getBRDFIntegrationMap(const vk::CommandBuffer& commandBuffer = VK_NULL_HANDLE);
 
 private:
     void calculateDiffuseIrradiance(const vk::CommandBuffer& commandBuffer) const;

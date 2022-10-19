@@ -25,6 +25,7 @@ enum DeferredAttachmentType {
     NumAttachments = 5
 };
 
+
 class DeferredGeometryRenderPass {
     friend class DeferredLightingRenderPass;
 private:
@@ -54,8 +55,6 @@ public:
     void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
 
     [[nodiscard]] std::shared_ptr<RenderPass> getRenderPass() const;
-
-    [[nodiscard]] GraphicsPipeline* getGraphicsPipeline() const;
 
     [[nodiscard]] ImageView* getAlbedoImageView() const;
 
@@ -100,21 +99,26 @@ private:
         glm::mat4 invProjectionMatrix;
         glm::mat4 invViewProjectionMatrix;
         glm::mat4 cameraRays;
+        glm::uvec2 resolution;
+        int32_t currentFrameIndex;
+        int32_t previousFrameIndex;
         bool showDebugShadowCascades;
         uint32_t debugShadowCascadeLightIndex;
         float debugShadowCascadeOpacity;
-        float debugTestFactor;
+        float taaHistoryFactor;
+        bool taaUseFullKernel;
     };
 
     struct FrameImage {
-        Image2D* image;
-        ImageView* imageView;
-        Framebuffer* framebuffer;
-        bool rendered;
+        Image2D* image = nullptr;
+        ImageView* imageView = nullptr;
+        Framebuffer* framebuffer = nullptr;
+        bool rendered = false;
     };
     struct RenderResources {
-        Buffer* uniformBuffer;
-        DescriptorSet* lightingDescriptorSet;
+        Buffer* uniformBuffer = nullptr;
+        DescriptorSet* lightingDescriptorSet = nullptr;
+        bool updateDescriptorSet = true;
         FrameImage frameImage;
     };
 
@@ -125,11 +129,23 @@ public:
 
     bool init();
 
-    void renderScreen(const double& dt);
+    void preRender(const double& dt);
 
-    GraphicsPipeline* getGraphicsPipeline() const;
+    void render(const double& dt, const vk::CommandBuffer& commandBuffer);
 
-    void setHistoryFadeFactor(const float& historyFadeFactor);
+    void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
+
+    void presentDirect(const vk::CommandBuffer& commandBuffer);
+
+    void setTaaHistoryFactor(const float& taaHistoryFactor);
+
+    bool hasPreviousFrame() const;
+
+    ImageView* getPreviousFrameImageView() const;
+
+    ImageView* getCurrentFrameImageView() const;
+
+    vk::Format getOutputColourFormat() const;
 
 private:
     void recreateSwapchain(const RecreateSwapchainEvent& event);
@@ -148,10 +164,12 @@ private:
     std::shared_ptr<GraphicsPipeline> m_graphicsPipeline;
     FrameResource<RenderResources> m_resources;
     std::shared_ptr<DescriptorSetLayout> m_lightingDescriptorSetLayout;
-    std::array<Sampler*, NumAttachments> m_attachmentSamplers{};
+    Sampler* m_attachmentSampler;
+    Sampler* m_frameSampler;
     RenderCamera m_renderCamera;
-    FrameImage m_prevFrameImage;
-    float m_historyFadeFactor;
+    FrameImage* m_prevFrameImage;
+    std::unordered_map<ImageView*, int32_t> m_frameIndices;
+    float m_taaHistoryFactor;
 };
 
 

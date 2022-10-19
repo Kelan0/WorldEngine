@@ -42,6 +42,7 @@ struct DepthBias {
 struct GraphicsPipelineConfiguration {
     std::weak_ptr<vkr::Device> device;
     vk::Viewport viewport;
+    uint32_t subpass = 0;
     std::optional<std::string> vertexShader;
     std::optional<std::string> fragmentShader;
     std::vector<vk::VertexInputBindingDescription> vertexInputBindings;

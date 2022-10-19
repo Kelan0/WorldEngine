@@ -14,6 +14,7 @@ class LightRenderer;
 class ImmediateRenderer;
 class DeferredGeometryRenderPass;
 class DeferredLightingRenderPass;
+class PostProcessRenderer;
 class EventDispatcher;
 class RenderCamera;
 
@@ -43,6 +44,8 @@ public:
 
     [[nodiscard]] DeferredLightingRenderPass* getDeferredLightingPass() const;
 
+    [[nodiscard]] PostProcessRenderer* getPostProcessingRenderer() const;
+
     [[nodiscard]] EventDispatcher* getEventDispatcher() const;
 
     static GraphicsManager* graphics();
@@ -60,6 +63,8 @@ public:
     static DeferredGeometryRenderPass* deferredGeometryPass();
 
     static DeferredLightingRenderPass* deferredLightingPass();
+
+    static PostProcessRenderer* postProcessingRenderer();
 
     static EventDispatcher* eventDispatcher();
 
@@ -85,6 +90,7 @@ private:
     ImmediateRenderer* m_immediateRenderer;
     DeferredGeometryRenderPass* m_deferredGeometryPass;
     DeferredLightingRenderPass* m_deferredLightingPass;
+    PostProcessRenderer* m_postProcessingRenderer;
     EventDispatcher* m_eventDispatcher;
 
     RenderCamera* m_renderCamera;

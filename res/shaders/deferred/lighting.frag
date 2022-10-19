@@ -4,7 +4,7 @@
 
 #include "res/shaders/common/common.glsl"
 #include "res/shaders/common/pbr.glsl"
-
+#include "res/shaders/common/structures.glsl"
 
 #define LIGHT_TYPE_IINVALID 0
 #define LIGHT_TYPE_DIRECTIONAL 1
@@ -13,6 +13,7 @@
 #define LIGHT_TYPE_AREA 4
 
 #define LIGHT_FLAG_CSM_USE_MAP_BASED_SELECTION uint(1 << 0)
+
 
 struct SurfacePoint {
     bool exists;
@@ -32,36 +33,6 @@ struct SurfacePoint {
     vec3 F0;
 };
 
-struct DirectionalShadowMap {
-    mat4 invViewProjectionMatrix;
-    uint shadowMapIndex;
-};
-
-struct PointLight {
-    vec3 position;
-    vec3 intensity;
-};
-
-struct LightInfo {
-    vec4 worldPosition;
-    vec4 worldDirection;
-    vec4 intensity;
-    vec4 _pad1;
-    uint shadowMapIndex;
-    uint shadowMapCount;
-    uint type;
-    uint flags;
-};
-
-struct ShadowMapInfo {
-    mat4 viewProjectionMatrix;
-    float cascadeStartZ;
-    float cascadeEndZ;
-    float _pad0;
-    float _pad1;
-};
-
-
 layout(location = 0) in vec2 fs_texture;
 
 layout(location = 0) out vec4 outColor;
@@ -74,10 +45,14 @@ layout(set = 0, binding = 0) uniform UBO1 {
     mat4 invProjectionMatrix;
     mat4 invViewProjectionMatrix;
     mat4 cameraRays;
+    uvec2 resolution;
+    int currentFrameIndex;
+    int previousFrameIndex;
     bool showDebugShadowCascades;
     uint debugShadowCascadeLightIndex;
     float debugShadowCascadeOpacity;
-    float debugTestFactor;
+    float taaHistoryFactor;
+    bool taaUseFullKernel;
 };
 
 const float MAX_REFLECTION_LOD = 4.0;
@@ -87,7 +62,7 @@ layout(set = 0, binding = 2) uniform sampler2D texture_NormalXYZ_Metallic;
 layout(set = 0, binding = 3) uniform sampler2D texture_EmissionRGB_AO;
 layout(set = 0, binding = 4) uniform sampler2D texture_VelocityXY;
 layout(set = 0, binding = 5) uniform sampler2D texture_Depth;
-layout(set = 0, binding = 6) uniform sampler2D previousFrameTexture;
+layout(set = 0, binding = 6) uniform sampler2D frameTextures[];
 layout(set = 0, binding = 7) uniform samplerCube environmentCubeMap;
 layout(set = 0, binding = 8) uniform samplerCube specularReflectionCubeMap;
 layout(set = 0, binding = 9) uniform samplerCube diffuseIrradianceCubeMap;
@@ -151,8 +126,8 @@ void loadSurface(in vec2 textureCoord, inout SurfacePoint surface) {
     texelValue = texture(texture_EmissionRGB_AO, fs_texture);
     surface.emission = texelValue.rgb * 255.0;
     surface.ambientOcclusion = texelValue.a;
-    texelValue = texture(texture_VelocityXY, fs_texture);
-    surface.velocity = texelValue.xy * 100.0;
+//    texelValue = texture(texture_VelocityXY, fs_texture);
+//    surface.velocity = texelValue.xy * 100.0;
 
     surface.F0 = mix(vec3(0.04), surface.albedo, surface.metallic);
 }
@@ -287,6 +262,31 @@ vec3 calculateDirectionalLight(in SurfacePoint surface, in LightInfo light) {
     return calculateOutgoingRadiance(surface, lightRadiance, L);
 }
 
+vec3 calculateTemporalAntiAliasing(in SurfacePoint surface, in vec3 finalColour) {
+    const vec2 TAA_PLUS_KERNEL[] = vec2[4](vec2(-1,0),vec2(+1,0),vec2(0,-1),vec2(0,+1));
+    const vec2 TAA_FULL_KERNEL[] = vec2[8](vec2(-1,-1),vec2(0,-1),vec2(+1,-1),vec2(-1,0),vec2(+1,0),vec2(-1,+1),vec2(0,+1),vec2(+1,+1));
+
+    const vec2 pixelSize = vec2(1.0) / vec2(resolution);
+    vec2 closestCoord = fs_texture;
+    float closestDepth = surface.depth;
+    vec2 currentCoord;
+    float currentDepth;
+
+    for (uint i = 0; i < (taaUseFullKernel ? 8 : 4); ++i) {
+        vec2 offset = taaUseFullKernel ? TAA_FULL_KERNEL[i] : TAA_PLUS_KERNEL[i];
+        currentCoord = fs_texture + offset * pixelSize;
+        currentDepth = texture(texture_Depth, currentCoord).r;
+        if (currentDepth < closestDepth) {
+            closestDepth = currentDepth;
+            closestCoord = currentCoord;
+        }
+    }
+
+    vec2 velocity = texture(texture_VelocityXY, closestCoord).xy / 100.0;
+    vec3 prevFinalColour = texture(frameTextures[previousFrameIndex], fs_texture - velocity).rgb;
+    return mix(prevFinalColour, finalColour, taaHistoryFactor);
+}
+
 void main() {
     SurfacePoint surface;
     loadSurface(fs_texture, surface);
@@ -358,13 +358,7 @@ void main() {
         }
     }
 
-//    finalColour = vec3(isnan(surface.worldNormal[0]) ? vec3(1.0) : (surface.worldNormal * 0.5 + 0.5));
-//    finalColour = vec3(surface.albedo);
-//    finalColour = vec3(abs(surface.velocity), 0.0);
-
-    vec2 coordOffset = vec2(0.0);//surface.velocity;
-    vec3 prevFinalColour = texture(previousFrameTexture, fs_texture - coordOffset).rgb;
-    finalColour = mix(prevFinalColour, finalColour, debugTestFactor);
+    finalColour = calculateTemporalAntiAliasing(surface, finalColour);
 
     outColor = vec4(finalColour, 1.0);
 

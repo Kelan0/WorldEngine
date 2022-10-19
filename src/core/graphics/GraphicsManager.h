@@ -161,6 +161,8 @@ public:
 
     const vk::PhysicalDeviceLimits& getPhysicalDeviceLimits() const;
 
+    uint32_t getPreviousFrameIndex() const;
+
     const uint32_t& getCurrentFrameIndex() const;
 
     const vk::CommandBuffer& getCurrentCommandBuffer() const;
@@ -208,6 +210,14 @@ public:
 
     bool didResolutionChange() const;
 
+    const bool& isDirectImagePresentEnabled() const;
+
+    void setDirectImagePresentEnabled(const bool& directImagePresentEnabled);
+
+    const bool& isSwapchainImageSampled() const;
+
+    void setSwapchainImageSampled(const bool& swapchainImageSampled);
+
     DebugUtils::RenderInfo& debugInfo();
 
     const DebugUtils::RenderInfo& getDebugInfo() const;
@@ -243,7 +253,8 @@ private:
     bool m_isInitialized;
     bool m_recreateSwapchain;
     bool m_resolutionChanged;
-
+    bool m_directImagePresentEnabled;
+    bool m_swapchainImageSampled;
     DebugUtils::RenderInfo m_debugInfo;
 
     static uint64_t s_nextResourceID;
