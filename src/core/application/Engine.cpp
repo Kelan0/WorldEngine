@@ -24,8 +24,7 @@ Engine::Engine() {
     m_sceneRenderer = new SceneRenderer();
     m_lightRenderer = new LightRenderer();
     m_immediateRenderer = new ImmediateRenderer();
-    m_deferredGeometryPass = new DeferredGeometryRenderPass();
-    m_deferredLightingPass = new DeferredRenderer(m_deferredGeometryPass);
+    m_deferredRenderer = new DeferredRenderer();
     m_postProcessingRenderer = new PostProcessRenderer();
 
     m_renderCamera = new RenderCamera();
@@ -38,8 +37,7 @@ Engine::~Engine() {
     delete m_sceneRenderer;
     delete m_lightRenderer;
     delete m_immediateRenderer;
-    delete m_deferredGeometryPass;
-    delete m_deferredLightingPass;
+    delete m_deferredRenderer;
     delete m_postProcessingRenderer;
     delete m_graphics;
     delete m_eventDispatcher;
@@ -75,12 +73,8 @@ ImmediateRenderer* Engine::getImmediateRenderer() const {
     return m_immediateRenderer;
 }
 
-DeferredGeometryRenderPass* Engine::getDeferredGeometryPass() const {
-    return m_deferredGeometryPass;
-}
-
 DeferredRenderer* Engine::getDeferredLightingPass() const {
-    return m_deferredLightingPass;
+    return m_deferredRenderer;
 }
 
 PostProcessRenderer* Engine::getPostProcessingRenderer() const {
@@ -113,10 +107,6 @@ LightRenderer* Engine::lightRenderer() {
 
 ImmediateRenderer* Engine::immediateRenderer() {
     return instance()->getImmediateRenderer();
-}
-
-DeferredGeometryRenderPass* Engine::deferredGeometryPass() {
-    return instance()->getDeferredGeometryPass();
 }
 
 DeferredRenderer* Engine::deferredLightingPass() {
@@ -166,12 +156,8 @@ bool Engine::init(SDL_Window* windowHandle) {
     if (!m_immediateRenderer->init())
         return false;
 
-    PROFILE_REGION("Init DeferredRenderer geometry pass")
-    if (!m_deferredGeometryPass->init())
-        return false;
-
     PROFILE_REGION("Init DeferredRenderer lighting pass")
-    if (!m_deferredLightingPass->init())
+    if (!m_deferredRenderer->init())
         return false;
 
     PROFILE_REGION("Init PostProcessRenderer")
@@ -204,21 +190,15 @@ void Engine::render(const double& dt) {
 
     m_lightRenderer->render(dt, commandBuffer, m_renderCamera);
 
-    m_deferredGeometryPass->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
-    m_deferredGeometryPass->render(dt, commandBuffer, m_renderCamera);
+    m_deferredRenderer->beginGeometryRenderPass(commandBuffer, vk::SubpassContents::eInline);
+    m_deferredRenderer->renderGeometryPass(dt, commandBuffer, m_renderCamera);
 //    m_immediateRenderer->render(dt);
     commandBuffer.endRenderPass();
 
-    m_deferredLightingPass->preRender(dt);
-    m_deferredLightingPass->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
-    m_deferredLightingPass->render(dt, commandBuffer);
+    m_deferredRenderer->preRender(dt);
+    m_deferredRenderer->beginLightingRenderPass(commandBuffer, vk::SubpassContents::eInline);
+    m_deferredRenderer->render(dt, commandBuffer);
     commandBuffer.endRenderPass();
-
-//    m_deferredLightingPass->beginReprojectionRenderPass(commandBuffer, vk::SubpassContents::eInline);
-//    m_deferredLightingPass->renderReprojection(dt, commandBuffer);
-//    commandBuffer.endRenderPass();
-
-//    m_deferredLightingPass->presentDirect(commandBuffer);
 
     m_postProcessingRenderer->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
     m_postProcessingRenderer->render(dt, commandBuffer);
