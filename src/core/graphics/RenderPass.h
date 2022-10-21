@@ -6,13 +6,21 @@
 class Framebuffer;
 
 struct SubpassConfiguration {
-    std::vector<vk::AttachmentReference> attachmentReferences;
-    std::vector<size_t> colourAttachments;
-    size_t depthStencilAttachment = (size_t)(-1);
-    // TODO: resolve attachments, preserve attachments, input attachments
+    std::vector<vk::AttachmentReference> attachmentReferences; // List of references to RenderPassConfiguration::renderPassAttachments
+    std::vector<uint32_t> colourAttachments; // List of indices into attachmentReferences which represent colour attachments
+    std::vector<uint32_t> inputAttachments; // List of indices into attachmentReferences which represent input attachments
+    std::vector<uint32_t> preserveAttachments; // List of indices into attachmentReferences which represent preserve attachments
+    uint32_t depthStencilAttachment = UINT32_MAX; // Index in attachmentReferences which represents depth/stencil attachment
+    // TODO: resolve attachments
 
     void addColourAttachment(const vk::AttachmentReference& attachmentReference);
     void addColourAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout);
+
+    void addInputAttachment(const vk::AttachmentReference& attachmentReference);
+    void addInputAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout);
+
+    void addPreserveAttachment(const vk::AttachmentReference& attachmentReference);
+    void addPreserveAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout);
 
     void setDepthStencilAttachment(const vk::AttachmentReference& attachmentReference);
     void setDepthStencilAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout);
@@ -65,9 +73,15 @@ public:
 
     const RenderPassConfiguration& getConfiguration() const;
 
-    size_t getAttachmentCount() const;
+    uint32_t getSubpassCount() const;
 
-    size_t getColourAttachmentCount() const;
+    uint32_t getAttachmentCount() const;
+
+    uint32_t getAttachmentCount(const uint32_t& subpass) const;
+
+    uint32_t getColourAttachmentCount(const uint32_t& subpass) const;
+
+    bool hasDepthStencilAttachment(const uint32_t& subpass) const;
 
     void setClearValue(const uint32_t attachment, const vk::ClearValue& clearValue);
     void setClearColour(const uint32_t attachment, const glm::vec4& colour);
@@ -78,7 +92,6 @@ private:
     std::shared_ptr<vkr::Device> m_device;
     vk::RenderPass m_renderPass;
     RenderPassConfiguration m_config;
-    size_t m_colourAttachmentCount;
 };
 
 

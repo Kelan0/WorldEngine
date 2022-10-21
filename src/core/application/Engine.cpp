@@ -190,18 +190,22 @@ void Engine::render(const double& dt) {
 
     m_lightRenderer->render(dt, commandBuffer, m_renderCamera);
 
-    m_deferredRenderer->beginGeometryRenderPass(commandBuffer, vk::SubpassContents::eInline);
+    m_deferredRenderer->preRender(dt);
+
+    m_deferredRenderer->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
+
+    m_deferredRenderer->beginGeometrySubpass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredRenderer->renderGeometryPass(dt, commandBuffer, m_renderCamera);
 //    m_immediateRenderer->render(dt);
-    commandBuffer.endRenderPass();
 
-    m_deferredRenderer->preRender(dt);
-    m_deferredRenderer->beginLightingRenderPass(commandBuffer, vk::SubpassContents::eInline);
+    m_deferredRenderer->beginLightingSubpass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredRenderer->render(dt, commandBuffer);
+
     commandBuffer.endRenderPass();
 
     m_postProcessingRenderer->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
     m_postProcessingRenderer->render(dt, commandBuffer);
+
     commandBuffer.endRenderPass();
 
     m_uiRenderer->render(dt, commandBuffer);

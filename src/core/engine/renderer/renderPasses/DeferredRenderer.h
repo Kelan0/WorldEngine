@@ -22,7 +22,8 @@ enum DeferredAttachmentType {
     Attachment_EmissionRGB_AO = 2,
     Attachment_VelocityXY = 3,
     Attachment_Depth = 4,
-    NumAttachments = 5
+    Attachment_LightingRGB = 5,
+    NumAttachments = 6,
 };
 
 class DeferredRenderer {
@@ -50,24 +51,18 @@ private:
         bool taaUseFullKernel;
     };
 
-    struct FrameImage {
-        Image2D* image = nullptr;
-        ImageView* imageView = nullptr;
-        Framebuffer* framebuffer = nullptr;
-        bool rendered = false;
-    };
-
     struct RenderResources {
-        std::array<Image2D*, NumAttachments> geometryBufferImages;
-        std::array<ImageView*, NumAttachments> geometryBufferImageViews;
-        Framebuffer* geometryFramebuffer = nullptr;
+        std::array<Image2D*, NumAttachments> attachmentImages;
+        std::array<ImageView*, NumAttachments> attachmentImageViews;
+//        Framebuffer* geometryFramebuffer = nullptr;
         DescriptorSet* globalDescriptorSet = nullptr;
         Buffer* cameraInfoBuffer = nullptr;
+
+        Framebuffer* framebuffer = nullptr;
 
         Buffer* lightingPassUniformBuffer = nullptr;
         DescriptorSet* lightingPassDescriptorSet = nullptr;
         bool updateDescriptorSet = true;
-        FrameImage frameImage;
     };
 
 public:
@@ -83,9 +78,11 @@ public:
 
     void render(const double& dt, const vk::CommandBuffer& commandBuffer);
 
-    void beginGeometryRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
+    void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
 
-    void beginLightingRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
+    void beginGeometrySubpass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
+
+    void beginLightingSubpass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
 
     void presentDirect(const vk::CommandBuffer& commandBuffer);
 
@@ -114,23 +111,22 @@ public:
 private:
     void recreateSwapchain(const RecreateSwapchainEvent& event);
 
-    bool createGeometryFramebuffer(RenderResources* resources);
+    bool createFramebuffer(RenderResources* resources);
 
-    bool createFramebuffer(FrameImage* frameImage);
+//    bool createLightingFramebuffer(FrameImage* frameImage);
 
     bool createGeometryGraphicsPipeline();
 
-    bool createGraphicsPipeline();
-
-    bool createGeometryRenderPass();
+    bool createLightingGraphicsPipeline();
 
     bool createRenderPass();
 
-    void swapFrameImage(FrameImage* frameImage1, FrameImage* frameImage2);
+    void swapFrameImage(Image2D* image1, ImageView* imageView1, Image2D* image2, ImageView* imageView2);
 
 private:
-    std::shared_ptr<RenderPass> m_geometryRenderPass;
-    std::shared_ptr<RenderPass> m_lightingRenderPass;
+    std::shared_ptr<RenderPass> m_renderPass;
+//    std::shared_ptr<RenderPass> m_geometryRenderPass;
+//    std::shared_ptr<RenderPass> m_lightingRenderPass;
     std::shared_ptr<GraphicsPipeline> m_geometryGraphicsPipeline;
     std::shared_ptr<GraphicsPipeline> m_lightingGraphicsPipeline;
     FrameResource<RenderResources> m_resources;
@@ -139,7 +135,6 @@ private:
     Sampler* m_attachmentSampler;
     Sampler* m_frameSampler;
     RenderCamera m_renderCamera;
-    FrameImage* m_prevFrameImage;
     std::unordered_map<ImageView*, int32_t> m_frameIndices;
     std::vector<glm::vec2> m_haltonSequence;
     uint32_t m_frameIndex;

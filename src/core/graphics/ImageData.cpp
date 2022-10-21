@@ -766,6 +766,10 @@ bool ImageUtil::isStencilAttachment(const vk::Format& format) {
     }
 }
 
+bool ImageUtil::isColourAttachment(const vk::Format& format) {
+    return !isDepthAttachment(format) && !isStencilAttachment(format); // TODO: Is it correct to assume all format types that are not depth or stencil are colour?
+}
+
 vk::Format ImageUtil::selectSupportedFormat(const vk::PhysicalDevice& physicalDevice, const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features) {
     for (size_t i = 0; i < candidates.size(); ++i) {
         const vk::Format& format = candidates[i];

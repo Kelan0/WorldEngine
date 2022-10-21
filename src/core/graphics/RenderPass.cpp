@@ -7,7 +7,7 @@
 
 
 void SubpassConfiguration::addColourAttachment(const vk::AttachmentReference& attachmentReference) {
-    colourAttachments.emplace_back(attachmentReferences.size());
+    colourAttachments.emplace_back((uint32_t)attachmentReferences.size());
     attachmentReferences.emplace_back(attachmentReference);
 }
 
@@ -15,8 +15,26 @@ void SubpassConfiguration::addColourAttachment(const uint32_t& attachment, const
     addColourAttachment(vk::AttachmentReference(attachment, imageLayout));
 }
 
+void SubpassConfiguration::addInputAttachment(const vk::AttachmentReference& attachmentReference) {
+    inputAttachments.emplace_back((uint32_t)attachmentReferences.size());
+    attachmentReferences.emplace_back(attachmentReference);
+}
+
+void SubpassConfiguration::addInputAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout) {
+    addInputAttachment(vk::AttachmentReference(attachment, imageLayout));
+}
+
+void SubpassConfiguration::addPreserveAttachment(const vk::AttachmentReference& attachmentReference) {
+    preserveAttachments.emplace_back((uint32_t)attachmentReferences.size());
+    attachmentReferences.emplace_back(attachmentReference);
+}
+
+void SubpassConfiguration::addPreserveAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout) {
+    addPreserveAttachment(vk::AttachmentReference(attachment, imageLayout));
+}
+
 void SubpassConfiguration::setDepthStencilAttachment(const vk::AttachmentReference& attachmentReference) {
-    depthStencilAttachment = attachmentReferences.size();
+    depthStencilAttachment = (uint32_t)attachmentReferences.size();
     attachmentReferences.emplace_back(attachmentReference);
 }
 
@@ -112,15 +130,6 @@ RenderPass::RenderPass(std::weak_ptr<vkr::Device> device, vk::RenderPass renderP
     m_device(device),
     m_renderPass(renderPass),
     m_config(config) {
-
-    // TODO: we should use the SubpassConfigurations to determine which attachments are colour attachments.
-    // The number of colour attachments isn't really specific to a RenderPass, but is to a Subpass
-    m_colourAttachmentCount = 0;
-    for (const auto& attachment : config.renderPassAttachments) {
-        if (!ImageUtil::isDepthAttachment(attachment.format) && !ImageUtil::isStencilAttachment(attachment.format))
-            ++m_colourAttachmentCount; // We are assuming anything that is not depth/stencil is colour. Is this assumption correct?
-    }
-
 }
 
 RenderPass::~RenderPass() {
@@ -136,7 +145,10 @@ RenderPass* RenderPass::create(const RenderPassConfiguration& renderPassConfigur
 
     size_t attachmentReferenceCount = 0;
     for (const auto& subpassConfig : renderPassConfiguration.subpassConfigurations) {
-        attachmentReferenceCount += subpassConfig.colourAttachments.size() + 1;
+        attachmentReferenceCount += subpassConfig.colourAttachments.size();
+        attachmentReferenceCount += subpassConfig.inputAttachments.size();
+        if (subpassConfig.depthStencilAttachment < subpassConfig.attachmentReferences.size())
+            attachmentReferenceCount += 1;
     }
     allSubpassAttachmentRefs.reserve(attachmentReferenceCount);
 
@@ -146,13 +158,26 @@ RenderPass* RenderPass::create(const RenderPassConfiguration& renderPassConfigur
 
         if (!subpassConfig.colourAttachments.empty()) {
             offset = allSubpassAttachmentRefs.size();
-            for (const auto &colourAttachmentIndex: subpassConfig.colourAttachments)
+            for (const auto& colourAttachmentIndex: subpassConfig.colourAttachments)
                 allSubpassAttachmentRefs.emplace_back(subpassConfig.attachmentReferences[colourAttachmentIndex]);
             subpassDescription.setPColorAttachments(&allSubpassAttachmentRefs[offset]);
             subpassDescription.setColorAttachmentCount((uint32_t)subpassConfig.colourAttachments.size());
         }
 
-        if (subpassConfig.depthStencilAttachment != (size_t)(-1)) {
+        if (!subpassConfig.inputAttachments.empty()) {
+            offset = allSubpassAttachmentRefs.size();
+            for (const auto& inputAttachmentIndex: subpassConfig.inputAttachments)
+                allSubpassAttachmentRefs.emplace_back(subpassConfig.attachmentReferences[inputAttachmentIndex]);
+            subpassDescription.setPInputAttachments(&allSubpassAttachmentRefs[offset]);
+            subpassDescription.setInputAttachmentCount((uint32_t)subpassConfig.inputAttachments.size());
+        }
+
+        if (!subpassConfig.preserveAttachments.empty()) {
+            subpassDescription.setPPreserveAttachments(&subpassConfig.preserveAttachments[0]);
+            subpassDescription.setPreserveAttachmentCount((uint32_t)subpassConfig.preserveAttachments.size());
+        }
+
+        if (subpassConfig.depthStencilAttachment < subpassConfig.attachmentReferences.size()) {
             offset = allSubpassAttachmentRefs.size();
             allSubpassAttachmentRefs.emplace_back(subpassConfig.attachmentReferences[subpassConfig.depthStencilAttachment]);
             subpassDescription.setPDepthStencilAttachment(&allSubpassAttachmentRefs[offset]);
@@ -211,12 +236,30 @@ const RenderPassConfiguration& RenderPass::getConfiguration() const {
     return m_config;
 }
 
-size_t RenderPass::getAttachmentCount() const {
-    return m_config.renderPassAttachments.size();
+uint32_t RenderPass::getSubpassCount() const {
+    return (uint32_t)m_config.subpassConfigurations.size();
 }
 
-size_t RenderPass::getColourAttachmentCount() const {
-    return m_colourAttachmentCount;
+uint32_t RenderPass::getAttachmentCount() const {
+    return (uint32_t)m_config.renderPassAttachments.size();
+}
+
+uint32_t RenderPass::getAttachmentCount(const uint32_t& subpass) const {
+    assert(subpass < getSubpassCount());
+    const SubpassConfiguration& subpassConfiguration = m_config.subpassConfigurations[subpass];
+    return (uint32_t)subpassConfiguration.attachmentReferences.size();
+}
+
+uint32_t RenderPass::getColourAttachmentCount(const uint32_t& subpass) const {
+    assert(subpass < getSubpassCount());
+    const SubpassConfiguration& subpassConfiguration = m_config.subpassConfigurations[subpass];
+    return (uint32_t)subpassConfiguration.colourAttachments.size();
+}
+
+bool RenderPass::hasDepthStencilAttachment(const uint32_t& subpass) const {
+    assert(subpass < getSubpassCount());
+    const SubpassConfiguration& subpassConfiguration = m_config.subpassConfigurations[subpass];
+    return subpassConfiguration.depthStencilAttachment >= 0 && subpassConfiguration.depthStencilAttachment < subpassConfiguration.attachmentReferences.size();
 }
 
 void RenderPass::setClearValue(const uint32_t attachment, const vk::ClearValue& clearValue) {

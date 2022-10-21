@@ -57,11 +57,11 @@ layout(set = 0, binding = 0) uniform UBO1 {
 
 const float MAX_REFLECTION_LOD = 4.0;
 
-layout(set = 0, binding = 1) uniform sampler2D texture_AlbedoRGB_Roughness;
-layout(set = 0, binding = 2) uniform sampler2D texture_NormalXYZ_Metallic;
-layout(set = 0, binding = 3) uniform sampler2D texture_EmissionRGB_AO;
-layout(set = 0, binding = 4) uniform sampler2D texture_VelocityXY;
-layout(set = 0, binding = 5) uniform sampler2D texture_Depth;
+layout(set = 0, binding = 1, input_attachment_index = 0) uniform subpassInput texture_AlbedoRGB_Roughness;
+layout(set = 0, binding = 2, input_attachment_index = 1) uniform subpassInput texture_NormalXYZ_Metallic;
+layout(set = 0, binding = 3, input_attachment_index = 2) uniform subpassInput texture_EmissionRGB_AO;
+layout(set = 0, binding = 4, input_attachment_index = 3) uniform subpassInput texture_VelocityXY;
+layout(set = 0, binding = 5, input_attachment_index = 4) uniform subpassInput texture_Depth;
 layout(set = 0, binding = 6) uniform samplerCube environmentCubeMap;
 layout(set = 0, binding = 7) uniform samplerCube specularReflectionCubeMap;
 layout(set = 0, binding = 8) uniform samplerCube diffuseIrradianceCubeMap;
@@ -98,7 +98,7 @@ vec3 depthToViewSpacePosition(in float depth, in vec2 coord, in mat4 invProjecti
 void loadSurface(in vec2 textureCoord, inout SurfacePoint surface) {
     vec4 texelValue;
     
-    surface.depth = texture(texture_Depth, fs_texture).r;
+    surface.depth = subpassLoad(texture_Depth).r;
     if (surface.depth >= 1.0) {
         surface.exists = false;
         return;
@@ -115,17 +115,17 @@ void loadSurface(in vec2 textureCoord, inout SurfacePoint surface) {
 
     surface.worldDirToCamera = invViewRotationMatrix * surface.viewDirToCamera;
 
-    texelValue = texture(texture_AlbedoRGB_Roughness, fs_texture);
+    texelValue = subpassLoad(texture_AlbedoRGB_Roughness);
     surface.albedo = texelValue.rgb;
     surface.roughness = texelValue.w;
-    texelValue = texture(texture_NormalXYZ_Metallic, fs_texture);
+    texelValue = subpassLoad(texture_NormalXYZ_Metallic);
     surface.viewNormal = normalize(texelValue.xyz);
     surface.worldNormal = invViewRotationMatrix * surface.viewNormal;
     surface.metallic = texelValue.w;
-    texelValue = texture(texture_EmissionRGB_AO, fs_texture);
+    texelValue = subpassLoad(texture_EmissionRGB_AO);
     surface.emission = texelValue.rgb * 255.0;
     surface.ambientOcclusion = texelValue.a;
-//    texelValue = texture(texture_VelocityXY, fs_texture);
+//    texelValue = subpassLoad(texture_VelocityXY);
 //    surface.velocity = texelValue.xy * 100.0;
 
     surface.F0 = mix(vec3(0.04), surface.albedo, surface.metallic);

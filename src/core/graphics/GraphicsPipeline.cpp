@@ -303,7 +303,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     //depthStencilStateCreateInfo.front;
     //depthStencilStateCreateInfo.back;
 
-    while (pipelineConfig.attachmentBlendStates.size() < m_renderPass->getColourAttachmentCount())
+    while ((uint32_t)pipelineConfig.attachmentBlendStates.size() < m_renderPass->getColourAttachmentCount(graphicsPipelineConfiguration.subpass))
         pipelineConfig.attachmentBlendStates.emplace_back(); // Expand attachmentBlendStates array until it matches the size of the render pass attachments
 
     std::vector<vk::PipelineColorBlendAttachmentState> attachmentBlendStates;

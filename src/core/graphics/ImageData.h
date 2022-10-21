@@ -177,6 +177,8 @@ namespace ImageUtil {
 
     bool isStencilAttachment(const vk::Format& format);
 
+    bool isColourAttachment(const vk::Format& format);
+
     vk::Format selectSupportedFormat(const vk::PhysicalDevice& physicalDevice, const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features);
 
     bool getImageFormatProperties(const vk::Format& format, const vk::ImageType& type, const vk::ImageTiling& tiling, const vk::ImageUsageFlags& usage, const vk::ImageCreateFlags& flags, vk::ImageFormatProperties* imageFormatProperties);
