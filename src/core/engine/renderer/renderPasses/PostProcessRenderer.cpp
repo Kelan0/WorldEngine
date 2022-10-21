@@ -70,8 +70,8 @@ bool PostProcessRenderer::init() {
 }
 
 void PostProcessRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer) {
-    PROFILE_SCOPE("DeferredGeometryRenderPass::render")
-    BEGIN_CMD_LABEL(commandBuffer, "DeferredGeometryRenderPass::render")
+    PROFILE_SCOPE("PostProcessRenderer::render")
+    BEGIN_CMD_LABEL(commandBuffer, "PostProcessRenderer::render")
 
     bool updateFrameTextureBinding = false;
 

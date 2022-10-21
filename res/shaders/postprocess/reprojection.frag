@@ -15,6 +15,6 @@ layout(set = 0, binding = 0) uniform UBO1 {
 layout(set = 0, binding = 1) uniform sampler2D frameTextures[];
 
 void main() {
-    vec3 finalColour = texture(frameTextures[0], fs_texture).rgb;
+    vec3 finalColour = texture(frameTextures[currentFrameIndex], fs_texture).rgb;
     outColor = vec4(finalColour, 1.0);
 }

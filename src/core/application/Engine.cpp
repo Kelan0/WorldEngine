@@ -25,7 +25,7 @@ Engine::Engine() {
     m_lightRenderer = new LightRenderer();
     m_immediateRenderer = new ImmediateRenderer();
     m_deferredGeometryPass = new DeferredGeometryRenderPass();
-    m_deferredLightingPass = new DeferredLightingRenderPass(m_deferredGeometryPass);
+    m_deferredLightingPass = new DeferredRenderer(m_deferredGeometryPass);
     m_postProcessingRenderer = new PostProcessRenderer();
 
     m_renderCamera = new RenderCamera();
@@ -79,7 +79,7 @@ DeferredGeometryRenderPass* Engine::getDeferredGeometryPass() const {
     return m_deferredGeometryPass;
 }
 
-DeferredLightingRenderPass* Engine::getDeferredLightingPass() const {
+DeferredRenderer* Engine::getDeferredLightingPass() const {
     return m_deferredLightingPass;
 }
 
@@ -119,7 +119,7 @@ DeferredGeometryRenderPass* Engine::deferredGeometryPass() {
     return instance()->getDeferredGeometryPass();
 }
 
-DeferredLightingRenderPass* Engine::deferredLightingPass() {
+DeferredRenderer* Engine::deferredLightingPass() {
     return instance()->getDeferredLightingPass();
 }
 
@@ -213,6 +213,10 @@ void Engine::render(const double& dt) {
     m_deferredLightingPass->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredLightingPass->render(dt, commandBuffer);
     commandBuffer.endRenderPass();
+
+//    m_deferredLightingPass->beginReprojectionRenderPass(commandBuffer, vk::SubpassContents::eInline);
+//    m_deferredLightingPass->renderReprojection(dt, commandBuffer);
+//    commandBuffer.endRenderPass();
 
 //    m_deferredLightingPass->presentDirect(commandBuffer);
 

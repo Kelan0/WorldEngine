@@ -89,7 +89,7 @@ private:
 
 
 
-class DeferredLightingRenderPass {
+class DeferredRenderer {
 private:
     struct LightingPassUniformData {
         glm::mat4 viewMatrix;
@@ -116,16 +116,22 @@ private:
         bool rendered = false;
     };
     struct RenderResources {
-        Buffer* uniformBuffer = nullptr;
-        DescriptorSet* lightingDescriptorSet = nullptr;
+//        std::array<Image2D*, NumAttachments> geometryBufferImages;
+//        std::array<ImageView*, NumAttachments> geometryBufferImageViews;
+//        Framebuffer* framebuffer = nullptr;
+//        DescriptorSet* globalDescriptorSet = nullptr;
+//        Buffer* cameraInfoBuffer = nullptr;
+
+        Buffer* lightingPassUniformBuffer = nullptr;
+        DescriptorSet* lightingPassDescriptorSet = nullptr;
         bool updateDescriptorSet = true;
         FrameImage frameImage;
     };
 
 public:
-    explicit DeferredLightingRenderPass(DeferredGeometryRenderPass* geometryPass);
+    explicit DeferredRenderer(DeferredGeometryRenderPass* geometryPass);
 
-    ~DeferredLightingRenderPass();
+    ~DeferredRenderer();
 
     bool init();
 
@@ -134,6 +140,7 @@ public:
     void render(const double& dt, const vk::CommandBuffer& commandBuffer);
 
     void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
+
 
     void presentDirect(const vk::CommandBuffer& commandBuffer);
 
@@ -160,8 +167,8 @@ private:
 
 private:
     DeferredGeometryRenderPass* m_geometryPass;
-    std::shared_ptr<RenderPass> m_renderPass;
-    std::shared_ptr<GraphicsPipeline> m_graphicsPipeline;
+    std::shared_ptr<RenderPass> m_lightingRenderPass;
+    std::shared_ptr<GraphicsPipeline> m_lightingGraphicsPipeline;
     FrameResource<RenderResources> m_resources;
     std::shared_ptr<DescriptorSetLayout> m_lightingDescriptorSetLayout;
     Sampler* m_attachmentSampler;

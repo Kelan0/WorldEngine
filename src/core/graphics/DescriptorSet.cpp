@@ -557,7 +557,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, co
 bool DescriptorSetWriter::write() {
     if (!m_writes.empty()) {
         const auto& device = m_descriptorSet->getDevice();
-        for (auto &write: m_writes) {
+        for (auto& write: m_writes) {
             if (write.pImageInfo != nullptr) write.pImageInfo = &m_tempImageInfo[(size_t) write.pImageInfo - 1];
             if (write.pBufferInfo != nullptr) write.pBufferInfo = &m_tempBufferInfo[(size_t) write.pBufferInfo - 1];
             if (write.pTexelBufferView != nullptr) write.pTexelBufferView = &m_tempBufferViews[(size_t) write.pTexelBufferView - 1];
@@ -722,7 +722,7 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampler(const uint32_
     return *this;
 }
 
-DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampledImage(const uint32_t &binding, const vk::ShaderStageFlags &shaderStages, const uint32_t &arraySize) {
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampledImage(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const uint32_t& arraySize) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
 		printf("Unable to add DescriptorSetLayout SampledImage binding %d - The binding is already added\n", binding);
@@ -757,6 +757,23 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addCombinedImageSampler(
     vk::DescriptorSetLayoutBinding bindingInfo;
     bindingInfo.setBinding(binding);
     bindingInfo.setDescriptorType(vk::DescriptorType::eCombinedImageSampler);
+    bindingInfo.setDescriptorCount(arraySize);
+    bindingInfo.setStageFlags(shaderStages);
+    bindingInfo.setPImmutableSamplers(nullptr);
+    m_bindings.insert(std::make_pair(binding, bindingInfo));
+    return *this;
+}
+
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addInputAttachment(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const uint32_t& arraySize) {
+#if _DEBUG
+    if (m_bindings.count(binding) != 0) {
+		printf("Unable to add DescriptorSetLayout InputAttachment binding %d - The binding is already added\n", binding);
+		assert(false);
+	}
+#endif
+    vk::DescriptorSetLayoutBinding bindingInfo;
+    bindingInfo.setBinding(binding);
+    bindingInfo.setDescriptorType(vk::DescriptorType::eInputAttachment);
     bindingInfo.setDescriptorCount(arraySize);
     bindingInfo.setStageFlags(shaderStages);
     bindingInfo.setPImmutableSamplers(nullptr);

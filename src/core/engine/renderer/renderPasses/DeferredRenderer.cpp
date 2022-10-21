@@ -24,12 +24,10 @@
 #define EMISSION_TEXTURE_BINDING 3
 #define VELOCITY_TEXTURE_BINDING 4
 #define DEPTH_TEXTURE_BINDING 5
-#define FRAME_TEXTURE_BINDING 6
-#define ENVIRONMENT_CUBEMAP_BINDING 7
-#define SPECULAR_REFLECTION_CUBEMAP_BINDING 8
-#define DIFFUSE_IRRADIANCE_CUBEMAP_BINDING 9
-#define BRDF_INTEGRATION_MAP_BINDING 10
-
+#define ENVIRONMENT_CUBEMAP_BINDING 6
+#define SPECULAR_REFLECTION_CUBEMAP_BINDING 7
+#define DIFFUSE_IRRADIANCE_CUBEMAP_BINDING 8
+#define BRDF_INTEGRATION_MAP_BINDING 9
 
 EnvironmentMap* environmentMap = nullptr;
 
@@ -375,7 +373,7 @@ bool DeferredGeometryRenderPass::createRenderPass() {
 
 
 
-DeferredLightingRenderPass::DeferredLightingRenderPass(DeferredGeometryRenderPass* geometryPass):
+DeferredRenderer::DeferredRenderer(DeferredGeometryRenderPass* geometryPass):
     m_geometryPass(geometryPass),
     m_taaHistoryFactor(1.0F),
     m_attachmentSampler(nullptr),
@@ -391,10 +389,10 @@ DeferredLightingRenderPass::DeferredLightingRenderPass(DeferredGeometryRenderPas
     }
 }
 
-DeferredLightingRenderPass::~DeferredLightingRenderPass() {
+DeferredRenderer::~DeferredRenderer() {
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
-        delete m_resources[i]->lightingDescriptorSet;
-        delete m_resources[i]->uniformBuffer;
+        delete m_resources[i]->lightingPassDescriptorSet;
+        delete m_resources[i]->lightingPassUniformBuffer;
         delete m_resources[i]->frameImage.framebuffer;
         delete m_resources[i]->frameImage.imageView;
         delete m_resources[i]->frameImage.image;
@@ -411,11 +409,11 @@ DeferredLightingRenderPass::~DeferredLightingRenderPass() {
 
     delete environmentMap;
 
-    Engine::eventDispatcher()->disconnect(&DeferredLightingRenderPass::recreateSwapchain, this);
+    Engine::eventDispatcher()->disconnect(&DeferredRenderer::recreateSwapchain, this);
 }
 
-bool DeferredLightingRenderPass::init() {
-    m_graphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice()));
+bool DeferredRenderer::init() {
+    m_lightingGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice()));
 
     std::shared_ptr<DescriptorPool> descriptorPool = Engine::graphics()->descriptorPool();
 
@@ -426,12 +424,11 @@ bool DeferredLightingRenderPass::init() {
             .addCombinedImageSampler(EMISSION_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(VELOCITY_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(DEPTH_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
-            .addCombinedImageSampler(FRAME_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment, 1)
             .addCombinedImageSampler(ENVIRONMENT_CUBEMAP_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(SPECULAR_REFLECTION_CUBEMAP_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(DIFFUSE_IRRADIANCE_CUBEMAP_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(BRDF_INTEGRATION_MAP_BINDING, vk::ShaderStageFlagBits::eFragment)
-            .build("DeferredLightingRenderPass-LightingDescriptorSetLayout");
+            .build("DeferredRenderer-LightingPassDescriptorSetLayout");
 
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_resources.set(i, new RenderResources());
@@ -440,12 +437,13 @@ bool DeferredLightingRenderPass::init() {
         bufferConfig.device = Engine::graphics()->getDevice();
         bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         bufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer;
-        bufferConfig.size = sizeof(LightingPassUniformData);
-        m_resources[i]->uniformBuffer = Buffer::create(bufferConfig, "DeferredLightingRenderPass-LightingPassUniformBuffer");
 
-        m_resources[i]->lightingDescriptorSet = DescriptorSet::create(m_lightingDescriptorSetLayout, descriptorPool, "DeferredLightingRenderPass-LightingDescriptorSet");
-        DescriptorSetWriter(m_resources[i]->lightingDescriptorSet)
-                .writeBuffer(UNIFORM_BUFFER_BINDING, m_resources[i]->uniformBuffer, 0, m_resources[i]->uniformBuffer->getSize())
+        bufferConfig.size = sizeof(LightingPassUniformData);
+        m_resources[i]->lightingPassUniformBuffer = Buffer::create(bufferConfig, "DeferredRenderer-LightingPassUniformBuffer");
+
+        m_resources[i]->lightingPassDescriptorSet = DescriptorSet::create(m_lightingDescriptorSetLayout, descriptorPool, "DeferredRenderer-LightingPassDescriptorSet");
+        DescriptorSetWriter(m_resources[i]->lightingPassDescriptorSet)
+                .writeBuffer(UNIFORM_BUFFER_BINDING, m_resources[i]->lightingPassUniformBuffer)
                 .write();
 
         m_resources[i]->updateDescriptorSet = true;
@@ -469,11 +467,11 @@ bool DeferredLightingRenderPass::init() {
     samplerConfig.magFilter = vk::Filter::eNearest;
     samplerConfig.wrapU = vk::SamplerAddressMode::eMirroredRepeat;
     samplerConfig.wrapV = vk::SamplerAddressMode::eMirroredRepeat;
-    m_attachmentSampler = Sampler::create(samplerConfig, "DeferredLightingRenderPass-GBufferAttachmentSampler");
+    m_attachmentSampler = Sampler::create(samplerConfig, "DeferredRenderer-GBufferAttachmentSampler");
 
     samplerConfig.minFilter = vk::Filter::eLinear;
     samplerConfig.magFilter = vk::Filter::eLinear;
-    m_frameSampler = Sampler::create(samplerConfig, "DeferredLightingRenderPass-FrameSampler");
+    m_frameSampler = Sampler::create(samplerConfig, "DeferredRenderer-FrameSampler");
 
     ImageCubeConfiguration imageCubeConfig{};
     imageCubeConfig.device = Engine::graphics()->getDevice();
@@ -488,17 +486,17 @@ bool DeferredLightingRenderPass::init() {
 //    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_NegY, defaultEnvironmentCubeMap);
 //    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_PosZ, defaultEnvironmentCubeMap);
 //    imageCubeConfig.imageSource.setFaceSource(ImageCubeFace_NegZ, defaultEnvironmentCubeMap);
-    std::shared_ptr<ImageCube> imageCube = std::shared_ptr<ImageCube>(ImageCube::create(imageCubeConfig, "DeferredLightingRenderPass-DefaultSkyboxCubeImage"));
+    std::shared_ptr<ImageCube> imageCube = std::shared_ptr<ImageCube>(ImageCube::create(imageCubeConfig, "DeferredRenderer-DefaultSkyboxCubeImage"));
 
     environmentMap = new EnvironmentMap();
     environmentMap->setEnvironmentImage(imageCube);
     environmentMap->update();
 
-    Engine::eventDispatcher()->connect(&DeferredLightingRenderPass::recreateSwapchain, this);
+    Engine::eventDispatcher()->connect(&DeferredRenderer::recreateSwapchain, this);
     return true;
 }
 
-void DeferredLightingRenderPass::preRender(const double& dt) {
+void DeferredRenderer::preRender(const double& dt) {
     if (CONCURRENT_FRAMES > 1) {
         m_prevFrameImage = &m_resources[Engine::graphics()->getPreviousFrameIndex()]->frameImage;
     } else {
@@ -506,8 +504,8 @@ void DeferredLightingRenderPass::preRender(const double& dt) {
     }
 }
 
-void DeferredLightingRenderPass::render(const double& dt, const vk::CommandBuffer& commandBuffer) {
-
+void DeferredRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer) {
+    PROFILE_SCOPE("DeferredRenderer::render")
     const Entity& cameraEntity = Engine::scene()->getMainCameraEntity();
     m_renderCamera.setProjection(cameraEntity.getComponent<Camera>());
     m_renderCamera.setTransform(cameraEntity.getComponent<Transform>());
@@ -538,10 +536,7 @@ void DeferredLightingRenderPass::render(const double& dt, const vk::CommandBuffe
     uniformData.previousFrameIndex = 0;
     uniformData.currentFrameIndex = 0;
 
-    DescriptorSetWriter descriptorSetWriter(m_resources->lightingDescriptorSet);
-
-    const ImageView* previousFrameImageView = getPreviousFrameImageView();
-    descriptorSetWriter.writeImage(FRAME_TEXTURE_BINDING, m_frameSampler, previousFrameImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+    DescriptorSetWriter descriptorSetWriter(m_resources->lightingPassDescriptorSet);
 
     if (m_resources->updateDescriptorSet) {
         m_resources->updateDescriptorSet = false;
@@ -557,18 +552,18 @@ void DeferredLightingRenderPass::render(const double& dt, const vk::CommandBuffe
     }
     descriptorSetWriter.write();
 
-    BEGIN_CMD_LABEL(commandBuffer, "DeferredLightingRenderPass::renderScreen");
+    BEGIN_CMD_LABEL(commandBuffer, "DeferredRenderer::render");
 
-    m_graphicsPipeline->bind(commandBuffer);
+    m_lightingGraphicsPipeline->bind(commandBuffer);
 
     vk::DescriptorSet descriptorSets[2] = {
-            m_resources->lightingDescriptorSet->getDescriptorSet(),
+            m_resources->lightingPassDescriptorSet->getDescriptorSet(),
             Engine::lightRenderer()->getLightingRenderPassDescriptorSet()->getDescriptorSet(),
     };
 
-    m_resources->uniformBuffer->upload(0, sizeof(LightingPassUniformData), &uniformData);
+    m_resources->lightingPassUniformBuffer->upload(0, sizeof(LightingPassUniformData), &uniformData);
 
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_graphicsPipeline->getPipelineLayout(), 0, 2, descriptorSets, 0, nullptr);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_lightingGraphicsPipeline->getPipelineLayout(), 0, 2, descriptorSets, 0, nullptr);
 
     commandBuffer.draw(3, 1, 0, 0);
 
@@ -577,45 +572,43 @@ void DeferredLightingRenderPass::render(const double& dt, const vk::CommandBuffe
     END_CMD_LABEL(commandBuffer);
 }
 
-void DeferredLightingRenderPass::presentDirect(const vk::CommandBuffer& commandBuffer) {
+void DeferredRenderer::presentDirect(const vk::CommandBuffer& commandBuffer) {
     vk::ImageSubresourceRange subresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
     ImageUtil::transitionLayout(commandBuffer, m_resources->frameImage.image->getImage(), subresourceRange, ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader), ImageTransition::TransferSrc());
 
     Engine::graphics()->presentImageDirect(commandBuffer, m_resources->frameImage.image->getImage(), vk::ImageLayout::eTransferSrcOptimal);
 
     ImageUtil::transitionLayout(commandBuffer, m_resources->frameImage.image->getImage(), subresourceRange, ImageTransition::TransferSrc(), ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader));
-
-
 }
 
-void DeferredLightingRenderPass::beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents) {
-    m_renderPass->begin(commandBuffer, m_resources->frameImage.framebuffer, subpassContents);
+void DeferredRenderer::beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents) {
+    m_lightingRenderPass->begin(commandBuffer, m_resources->frameImage.framebuffer, subpassContents);
 }
 
-void DeferredLightingRenderPass::setTaaHistoryFactor(const float& taaHistoryFactor) {
+void DeferredRenderer::setTaaHistoryFactor(const float& taaHistoryFactor) {
     m_taaHistoryFactor = taaHistoryFactor;
 }
 
-bool DeferredLightingRenderPass::hasPreviousFrame() const {
+bool DeferredRenderer::hasPreviousFrame() const {
     return m_prevFrameImage != nullptr && m_prevFrameImage->rendered;
 }
 
-ImageView* DeferredLightingRenderPass::getPreviousFrameImageView() const {
+ImageView* DeferredRenderer::getPreviousFrameImageView() const {
     // We default to show the raw albedo image from the geometry pass if the previous frame does not exist (very first frame)
     // This is better than returning null and handling an awkward edge case wherever the previous frame is needed.
     return hasPreviousFrame() ? m_prevFrameImage->imageView : m_geometryPass->getAlbedoImageView();
 }
 
-ImageView* DeferredLightingRenderPass::getCurrentFrameImageView() const {
+ImageView* DeferredRenderer::getCurrentFrameImageView() const {
     return m_resources->frameImage.imageView;
 }
 
-vk::Format DeferredLightingRenderPass::getOutputColourFormat() const {
+vk::Format DeferredRenderer::getOutputColourFormat() const {
     return vk::Format::eR16G16B16A16Sfloat;
 //    return vk::Format::eR32G32B32A32Sfloat;
 }
 
-void DeferredLightingRenderPass::recreateSwapchain(const RecreateSwapchainEvent& event) {
+void DeferredRenderer::recreateSwapchain(const RecreateSwapchainEvent& event) {
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_resources[i]->updateDescriptorSet = true;
         createFramebuffer(&m_resources[i]->frameImage);
@@ -630,7 +623,7 @@ void DeferredLightingRenderPass::recreateSwapchain(const RecreateSwapchainEvent&
     m_frameIndices.clear();
 }
 
-bool DeferredLightingRenderPass::createFramebuffer(FrameImage* frameImage) {
+bool DeferredRenderer::createFramebuffer(FrameImage* frameImage) {
     vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1;
 
     delete frameImage->framebuffer;
@@ -649,39 +642,38 @@ bool DeferredLightingRenderPass::createFramebuffer(FrameImage* frameImage) {
 
     imageConfig.format = getOutputColourFormat();
     imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;// | vk::ImageUsageFlagBits::eTransferSrc;
-    frameImage->image = Image2D::create(imageConfig, "DeferredLightingRenderPass-FrameImage");
+    frameImage->image = Image2D::create(imageConfig, "DeferredRenderer-FrameImage");
     imageViewConfig.format = imageConfig.format;
     imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
     imageViewConfig.setImage(frameImage->image);
-    frameImage->imageView = ImageView::create(imageViewConfig, "DeferredLightingRenderPass-FrameImageView");
+    frameImage->imageView = ImageView::create(imageViewConfig, "DeferredRenderer-FrameImageView");
 
     // Framebuffer
     FramebufferConfiguration framebufferConfig{};
     framebufferConfig.device = Engine::graphics()->getDevice();
     framebufferConfig.setSize(Engine::graphics()->getResolution());
-    framebufferConfig.setRenderPass(m_renderPass.get());
+    framebufferConfig.setRenderPass(m_lightingRenderPass.get());
     framebufferConfig.addAttachment(frameImage->imageView);
 
-    frameImage->framebuffer = Framebuffer::create(framebufferConfig, "DeferredLightingRenderPass-Framebuffer");
+    frameImage->framebuffer = Framebuffer::create(framebufferConfig, "DeferredRenderer-Framebuffer");
     assert(frameImage->framebuffer != nullptr);
     return true;
 }
 
-bool DeferredLightingRenderPass::createGraphicsPipeline() {
+bool DeferredRenderer::createGraphicsPipeline() {
     GraphicsPipelineConfiguration pipelineConfig{};
     pipelineConfig.device = Engine::graphics()->getDevice();
-    pipelineConfig.renderPass = m_renderPass;
-    pipelineConfig.setViewport(0, 0); // Default to full window resolution
+    pipelineConfig.renderPass = m_lightingRenderPass;
+    pipelineConfig.subpass = 0;
+    pipelineConfig.setViewport(Engine::graphics()->getResolution());
     pipelineConfig.vertexShader = "res/shaders/screen/fullscreen_quad.vert";
     pipelineConfig.fragmentShader = "res/shaders/deferred/lighting.frag";
-//    pipelineConfig.addVertexInputBinding(0, sizeof(glm::vec2), vk::VertexInputRate::eVertex);
-//    pipelineConfig.addVertexInputAttribute(0, 0, vk::Format::eR32G32Sfloat, 0); // XY
     pipelineConfig.addDescriptorSetLayout(m_lightingDescriptorSetLayout.get());
     pipelineConfig.addDescriptorSetLayout(Engine::lightRenderer()->getLightingRenderPassDescriptorSetLayout().get());
-    return m_graphicsPipeline->recreate(pipelineConfig, "DeferredLightingRenderPass-GraphicsPipeline");
+    return m_lightingGraphicsPipeline->recreate(pipelineConfig, "DeferredRenderer-LightingGraphicsPipeline");
 }
 
-bool DeferredLightingRenderPass::createRenderPass() {
+bool DeferredRenderer::createRenderPass() {
     vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1;
 
     std::array<vk::AttachmentDescription, 1> attachments;
@@ -695,10 +687,10 @@ bool DeferredLightingRenderPass::createRenderPass() {
     attachments[0].setInitialLayout(vk::ImageLayout::eUndefined);
     attachments[0].setFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 
-    SubpassConfiguration subpassConfiguration{};
-    subpassConfiguration.addColourAttachment(0, vk::ImageLayout::eColorAttachmentOptimal);
+    std::array<SubpassConfiguration, 1> subpassConfigurations{};
+    subpassConfigurations[0].addColourAttachment(0, vk::ImageLayout::eColorAttachmentOptimal);
 
-    std::array<vk::SubpassDependency, 2> dependencies;
+    std::array<vk::SubpassDependency, 2> dependencies{};
     dependencies[0].setSrcSubpass(VK_SUBPASS_EXTERNAL);
     dependencies[0].setDstSubpass(0);
     dependencies[0].setSrcStageMask(vk::PipelineStageFlagBits::eBottomOfPipe);
@@ -718,14 +710,14 @@ bool DeferredLightingRenderPass::createRenderPass() {
     RenderPassConfiguration renderPassConfig{};
     renderPassConfig.device = Engine::graphics()->getDevice();
     renderPassConfig.setAttachments(attachments);
-    renderPassConfig.addSubpass(subpassConfiguration);
+    renderPassConfig.setSubpasses(subpassConfigurations);
     renderPassConfig.setSubpassDependencies(dependencies);
 
-    m_renderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig, "DeferredLightingRenderPass-RenderPass"));
-    return (bool)m_renderPass;
+    m_lightingRenderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig, "DeferredRenderer-LightingRenderPass"));
+    return (bool)m_lightingRenderPass;
 }
 
-void DeferredLightingRenderPass::swapFrameImage(FrameImage* frameImage1, FrameImage* frameImage2) {
+void DeferredRenderer::swapFrameImage(FrameImage* frameImage1, FrameImage* frameImage2) {
     std::swap(frameImage1->image, frameImage2->image);
     std::swap(frameImage1->imageView, frameImage2->imageView);
     std::swap(frameImage1->framebuffer, frameImage2->framebuffer);
