@@ -213,17 +213,24 @@ void SceneRenderer::recordRenderCommands(const double& dt, const vk::CommandBuff
 
 //    std::vector<DrawCommand> drawCommands = thread_exec(0, m_numRenderEntities);
 
-    auto futures = ThreadUtils::parallel_range(m_numRenderEntities, (size_t)1, (size_t)ThreadUtils::getThreadCount(), thread_exec);
-    auto drawCommands = ThreadUtils::getResults(futures);
+    if (m_numRenderEntities < 256) {
+        PROFILE_REGION("Single-Threaded gather draw commands")
+        const auto& drawCommands = thread_exec(0, m_numRenderEntities);
 
-
-    PROFILE_REGION("Draw meshes")
-    for (auto& commands : drawCommands)
-        for (auto& command : commands)
+        PROFILE_REGION("Draw meshes")
+        for (auto& command : drawCommands)
             command.mesh->draw(commandBuffer, command.instanceCount, command.firstInstance);
 
-//    for (size_t i = 0; i < drawCommands.size(); ++i)
-//        drawCommands[i].mesh->draw(commandBuffer, drawCommands[i].instanceCount, drawCommands[i].firstInstance);
+    } else {
+        PROFILE_REGION("Multi-Threaded gather draw commands")
+        auto futures = ThreadUtils::parallel_range(m_numRenderEntities, (size_t) 1,(size_t) ThreadUtils::getThreadCount(), thread_exec);
+        auto drawCommands = ThreadUtils::getResults(futures);
+        PROFILE_REGION("Draw meshes")
+        for (auto& commands: drawCommands)
+            for (auto& command: commands)
+                command.mesh->draw(commandBuffer, command.instanceCount, command.firstInstance);
+    }
+
     END_CMD_LABEL(commandBuffer);
 }
 

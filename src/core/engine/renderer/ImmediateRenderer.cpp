@@ -105,7 +105,7 @@ void ImmediateRenderer::render(const double& dt) {
 
     const vk::CommandBuffer& commandBuffer = Engine::graphics()->getCurrentCommandBuffer();
 
-    const vk::DescriptorSet& descriptorSet = m_descriptorSet->getDescriptorSet();
+    std::array<vk::DescriptorSet, 1> descriptorSets = { m_descriptorSet->getDescriptorSet() };
 
     GraphicsPipeline* currentPipeline = nullptr;
 
@@ -136,9 +136,9 @@ void ImmediateRenderer::render(const double& dt) {
         vk::DeviceSize vertexBufferOffset = command.vertexOffset * sizeof(ColouredVertex);
         vk::DeviceSize indexBufferOffset = command.indexOffset * sizeof(uint32_t);
 
-        uint32_t dynamicOffset = (uint32_t)(index * sizeof(UniformBufferData));
+        std::array<uint32_t, 1> dynamicOffsets = { (uint32_t)(index * sizeof(UniformBufferData)) };
 
-        commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->getPipelineLayout(), 0, 1, &descriptorSet, 1, &dynamicOffset);
+        commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
         commandBuffer.bindVertexBuffers(0, 1, &m_vertexBuffer->getBuffer(), &vertexBufferOffset);
         commandBuffer.bindIndexBuffer(m_indexBuffer->getBuffer(), indexBufferOffset, vk::IndexType::eUint32);
 

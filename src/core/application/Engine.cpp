@@ -5,6 +5,7 @@
 #include "core/engine/renderer/renderPasses/UIRenderer.h"
 #include "core/engine/renderer/renderPasses/LightRenderer.h"
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
+#include "core/engine/renderer/renderPasses/ReprojectionRenderer.h"
 #include "core/engine/renderer/renderPasses/PostProcessRenderer.h"
 #include "core/engine/renderer/ImmediateRenderer.h"
 #include "core/engine/scene/event/EventDispatcher.h"
@@ -24,6 +25,7 @@ Engine::Engine() {
     m_sceneRenderer = new SceneRenderer();
     m_lightRenderer = new LightRenderer();
     m_immediateRenderer = new ImmediateRenderer();
+    m_reprojectionRenderer = new ReprojectionRenderer();
     m_deferredRenderer = new DeferredRenderer();
     m_postProcessingRenderer = new PostProcessRenderer();
 
@@ -37,6 +39,7 @@ Engine::~Engine() {
     delete m_sceneRenderer;
     delete m_lightRenderer;
     delete m_immediateRenderer;
+    delete m_reprojectionRenderer;
     delete m_deferredRenderer;
     delete m_postProcessingRenderer;
     delete m_graphics;
@@ -77,6 +80,10 @@ DeferredRenderer* Engine::getDeferredLightingPass() const {
     return m_deferredRenderer;
 }
 
+ReprojectionRenderer* Engine::getReprojectionRenderer() const {
+    return m_reprojectionRenderer;
+}
+
 PostProcessRenderer* Engine::getPostProcessingRenderer() const {
     return m_postProcessingRenderer;
 }
@@ -107,6 +114,10 @@ LightRenderer* Engine::lightRenderer() {
 
 ImmediateRenderer* Engine::immediateRenderer() {
     return instance()->getImmediateRenderer();
+}
+
+ReprojectionRenderer* Engine::reprojectionRenderer() {
+    return instance()->getReprojectionRenderer();
 }
 
 DeferredRenderer* Engine::deferredLightingPass() {
@@ -156,8 +167,12 @@ bool Engine::init(SDL_Window* windowHandle) {
     if (!m_immediateRenderer->init())
         return false;
 
-    PROFILE_REGION("Init DeferredRenderer lighting pass")
+    PROFILE_REGION("Init DeferredRenderer")
     if (!m_deferredRenderer->init())
+        return false;
+
+    PROFILE_REGION("Init ReprojectionRenderer")
+    if (!m_reprojectionRenderer->init())
         return false;
 
     PROFILE_REGION("Init PostProcessRenderer")
@@ -193,19 +208,19 @@ void Engine::render(const double& dt) {
     m_deferredRenderer->preRender(dt);
 
     m_deferredRenderer->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
-
     m_deferredRenderer->beginGeometrySubpass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredRenderer->renderGeometryPass(dt, commandBuffer, m_renderCamera);
 //    m_immediateRenderer->render(dt);
-
     m_deferredRenderer->beginLightingSubpass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredRenderer->render(dt, commandBuffer);
+    commandBuffer.endRenderPass();
 
+    m_reprojectionRenderer->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
+    m_reprojectionRenderer->render(dt, commandBuffer);
     commandBuffer.endRenderPass();
 
     m_postProcessingRenderer->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
     m_postProcessingRenderer->render(dt, commandBuffer);
-
     commandBuffer.endRenderPass();
 
     m_uiRenderer->render(dt, commandBuffer);

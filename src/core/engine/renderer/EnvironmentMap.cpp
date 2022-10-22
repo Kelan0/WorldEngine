@@ -221,8 +221,10 @@ void EnvironmentMap::calculateDiffuseIrradiance(const vk::CommandBuffer& command
 
     constexpr uint32_t workgroupSize = 1;
 
+    std::array<vk::DescriptorSet, 1> descriptorSets = { descriptorSet->getDescriptorSet() };
+
     computePipeline->bind(commandBuffer);
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute,computePipeline->getPipelineLayout(), 0, 1, &descriptorSet->getDescriptorSet(), 0, nullptr);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute,computePipeline->getPipelineLayout(), 0, descriptorSets, nullptr);
 
     const uint32_t workgroupCountXY = (uint32_t) glm::ceil(m_irradianceMapSize / workgroupSize);
     computePipeline->dispatch(commandBuffer, workgroupCountXY, workgroupCountXY, 6);
@@ -255,7 +257,9 @@ void EnvironmentMap::calculateSpecularReflection(const vk::CommandBuffer& comman
 
     computePipeline->bind(commandBuffer);
 
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute,computePipeline->getPipelineLayout(), 0, 1, &descriptorSet->getDescriptorSet(), 0, nullptr);
+    std::array<vk::DescriptorSet, 1> descriptorSets = { descriptorSet->getDescriptorSet() };
+
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute,computePipeline->getPipelineLayout(), 0, descriptorSets, nullptr);
 
     uint32_t specularMapSize = m_specularMapSize;
     for (uint32_t i = 0; i < m_specularMapMipLevels; ++i) {
@@ -344,8 +348,10 @@ void EnvironmentMap::calculateBRDFIntegrationMap(const vk::CommandBuffer& comman
 
         constexpr uint32_t workgroupSize = 16;
 
+        std::array<vk::DescriptorSet, 1> descriptorSets = { descriptorSet->getDescriptorSet() };
+
         computePipeline->bind(commandBuffer);
-        commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute,computePipeline->getPipelineLayout(), 0, 1, &descriptorSet->getDescriptorSet(), 0, nullptr);
+        commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute,computePipeline->getPipelineLayout(), 0, descriptorSets, nullptr);
 
         BRDFIntegrationPushConstants pushConstantData{};
         pushConstantData.dstSize = glm::uvec2(BRDFIntegrationMapSize);

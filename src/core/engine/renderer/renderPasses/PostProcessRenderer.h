@@ -17,23 +17,12 @@ class Framebuffer;
 class PostProcessRenderer {
 private:
     struct PostProcessUniformData {
-        int32_t currentFrameIndex;
-        int32_t previousFrameIndex;
-        float taaHistoryFactor;
+        int32_t temp;
     };
-
-
-//    struct FrameImage {
-//        Image2D* image = nullptr;
-//        ImageView* imageView = nullptr;
-//        Framebuffer* framebuffer = nullptr;
-//        bool rendered = false;
-//    };
 
     struct RenderResources {
         Buffer* uniformBuffer = nullptr;
         DescriptorSet* descriptorSet = nullptr;
-//        FrameImage frameImage;
     };
 
 public:
@@ -46,10 +35,6 @@ public:
     void render(const double& dt, const vk::CommandBuffer& commandBuffer);
 
     void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
-
-    const float& getTaaHistoryFactor() const;
-
-    void setTaaHistoryFactor(const float& taaHistoryFactor);
 
 private:
     void recreateSwapchain(const RecreateSwapchainEvent& event);
@@ -66,10 +51,8 @@ private:
     FrameResource<RenderResources> m_resources;
     std::vector<ImageView*> m_frameTextureImageViews;
     std::shared_ptr<DescriptorSetLayout> m_postProcessingDescriptorSetLayout;
-    Sampler* m_frameSampler;
+    std::shared_ptr<Sampler> m_frameSampler;
     PostProcessUniformData m_uniformData;
-    std::unordered_map<ImageView*, int32_t> m_frameIndices;
-//    FrameImage frameImage;
 };
 
 #endif //WORLDENGINE_POSTPROCESSRENDERER_H

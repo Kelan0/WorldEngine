@@ -33,9 +33,7 @@ EnvironmentMap* environmentMap = nullptr;
 
 
 DeferredRenderer::DeferredRenderer():
-    m_taaHistoryFactor(1.0F),
     m_attachmentSampler(nullptr),
-    m_frameSampler(nullptr),
     m_frameIndex(0) {
 }
 
@@ -53,7 +51,6 @@ DeferredRenderer::~DeferredRenderer() {
     }
 
     delete m_attachmentSampler;
-    delete m_frameSampler;
 
     delete environmentMap;
 
@@ -133,10 +130,6 @@ bool DeferredRenderer::init() {
     samplerConfig.wrapV = vk::SamplerAddressMode::eMirroredRepeat;
     m_attachmentSampler = Sampler::create(samplerConfig, "DeferredRenderer-GBufferAttachmentSampler");
 
-    samplerConfig.minFilter = vk::Filter::eLinear;
-    samplerConfig.magFilter = vk::Filter::eLinear;
-    m_frameSampler = Sampler::create(samplerConfig, "DeferredRenderer-FrameSampler");
-
     ImageCubeConfiguration imageCubeConfig{};
     imageCubeConfig.device = Engine::graphics()->getDevice();
     imageCubeConfig.format = vk::Format::eR32G32B32A32Sfloat;
@@ -185,15 +178,13 @@ void DeferredRenderer::renderGeometryPass(const double& dt, const vk::CommandBuf
     m_resources->cameraInfoBuffer->upload(0, sizeof(GeometryPassUniformData), &uniformData);
 //    renderCamera->uploadCameraData(m_resources->cameraInfoBuffer, 0);
 
-    PROFILE_REGION("Bind resources");
-
-    std::vector<vk::DescriptorSet> descriptorSets = {
+    std::array<vk::DescriptorSet, 3> descriptorSets = {
             m_resources->globalDescriptorSet->getDescriptorSet(),
             Engine::sceneRenderer()->getObjectDescriptorSet()->getDescriptorSet(),
             Engine::sceneRenderer()->getMaterialDescriptorSet()->getDescriptorSet(),
     };
 
-    std::vector<uint32_t> dynamicOffsets = {};
+    std::array<uint32_t, 0> dynamicOffsets = {}; // zero-size array okay?
 
     m_geometryGraphicsPipeline->bind(commandBuffer);
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_geometryGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
@@ -230,10 +221,6 @@ void DeferredRenderer::render(const double& dt, const vk::CommandBuffer& command
     uniformData.showDebugShadowCascades = false;
     uniformData.debugShadowCascadeLightIndex = 0;
     uniformData.debugShadowCascadeOpacity = 0.5F;
-    uniformData.taaHistoryFactor = m_taaHistoryFactor;
-    uniformData.taaUseFullKernel = true;
-    uniformData.previousFrameIndex = 0;
-    uniformData.currentFrameIndex = 0;
 
     DescriptorSetWriter descriptorSetWriter(m_resources->lightingPassDescriptorSet);
 
@@ -255,14 +242,14 @@ void DeferredRenderer::render(const double& dt, const vk::CommandBuffer& command
 
     m_lightingGraphicsPipeline->bind(commandBuffer);
 
-    vk::DescriptorSet descriptorSets[2] = {
+    std::array<vk::DescriptorSet, 2> descriptorSets = {
             m_resources->lightingPassDescriptorSet->getDescriptorSet(),
             Engine::lightRenderer()->getLightingRenderPassDescriptorSet()->getDescriptorSet(),
     };
 
     m_resources->lightingPassUniformBuffer->upload(0, sizeof(LightingPassUniformData), &uniformData);
 
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_lightingGraphicsPipeline->getPipelineLayout(), 0, 2, descriptorSets, 0, nullptr);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_lightingGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, nullptr);
 
     commandBuffer.draw(3, 1, 0, 0);
 
@@ -291,15 +278,6 @@ void DeferredRenderer::beginLightingSubpass(const vk::CommandBuffer& commandBuff
 //    m_lightingRenderPass->begin(commandBuffer, m_resources->frameImage.framebuffer, subpassContents);
 }
 
-void DeferredRenderer::setTaaHistoryFactor(const float& taaHistoryFactor) {
-    m_taaHistoryFactor = taaHistoryFactor;
-}
-
-bool DeferredRenderer::hasPreviousFrame() const {
-//    return m_prevFrameImage != nullptr && m_prevFrameImage->rendered;
-    return false;
-}
-
 ImageView* DeferredRenderer::getAlbedoImageView() const {
     return m_resources->attachmentImageViews[Attachment_AlbedoRGB_Roughness];
 }
@@ -320,15 +298,7 @@ ImageView* DeferredRenderer::getDepthImageView() const {
     return m_resources->attachmentImageViews[Attachment_Depth];
 }
 
-ImageView* DeferredRenderer::getPreviousFrameImageView() const {
-    // We default to show the raw albedo image from the geometry pass if the previous frame does not exist (very first frame)
-    // This is better than returning null and handling an awkward edge case wherever the previous frame is needed.
-//    return hasPreviousFrame() ? m_prevFrameImage->imageView : getAlbedoImageView();
-return getAlbedoImageView();
-}
-
-ImageView* DeferredRenderer::getCurrentFrameImageView() const {
-//    return m_resources->frameImage.imageView;
+ImageView* DeferredRenderer::getOutputFrameImageView() const {
     return m_resources->attachmentImageViews[Attachment_LightingRGB];
 }
 
@@ -363,12 +333,11 @@ void DeferredRenderer::recreateSwapchain(const RecreateSwapchainEvent& event) {
 }
 
 bool DeferredRenderer::createFramebuffer(RenderResources* resources) {
-
+    delete resources->framebuffer;
     for (const auto &imageView: resources->attachmentImageViews)
         delete imageView;
     for (const auto &image: resources->attachmentImages)
         delete image;
-    delete resources->framebuffer;
 
     vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1;
 
@@ -419,7 +388,7 @@ bool DeferredRenderer::createFramebuffer(RenderResources* resources) {
 
     // Depth image
     imageConfig.format = getAttachmentFormat(Attachment_Depth);
-    imageConfig.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eInputAttachment;
+    imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eInputAttachment;
     resources->attachmentImages[Attachment_Depth] = Image2D::create(imageConfig, "DeferredRenderer-GBufferDepthImage");
     imageViewConfig.format = imageConfig.format;
     imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eDepth;

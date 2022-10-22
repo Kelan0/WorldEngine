@@ -448,10 +448,10 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
             .writeTexelBufferView(2, cubemapImageBufferView)
             .write();
 
-    std::vector<vk::DescriptorSet> descriptorSets = { equirectangularComputeDescriptorSet->getDescriptorSet() };
+    std::array<vk::DescriptorSet, 1> descriptorSets = { equirectangularComputeDescriptorSet->getDescriptorSet() };
 
     equirectangularComputePipeline->bind(commandBuffer);
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute,equirectangularComputePipeline->getPipelineLayout(), 0, descriptorSets,nullptr);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute,equirectangularComputePipeline->getPipelineLayout(), 0, descriptorSets, nullptr);
     equirectangularComputePipeline->dispatch(commandBuffer, (uint32_t) glm::ceil(cubeImageWidth / 16),(uint32_t) glm::ceil(cubeImageHeight / 16), 6);
 
     END_CMD_LABEL(commandBuffer);

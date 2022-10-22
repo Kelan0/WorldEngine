@@ -260,7 +260,7 @@ add_executable(${PROJECT_NAME}
         src/core/engine/ui/PerformanceGraphUI.cpp
         src/core/engine/ui/PerformanceGraphUI.h
         src/core/engine/ui/UI.cpp
-        src/core/engine/ui/UI.h src/core/engine/renderer/renderPasses/PostProcessRenderer.cpp src/core/engine/renderer/renderPasses/PostProcessRenderer.h)
+        src/core/engine/ui/UI.h src/core/engine/renderer/renderPasses/PostProcessRenderer.cpp src/core/engine/renderer/renderPasses/PostProcessRenderer.h src/core/engine/renderer/renderPasses/ReprojectionRenderer.cpp src/core/engine/renderer/renderPasses/ReprojectionRenderer.h)
 
 target_link_libraries(${PROJECT_NAME}
         ${Vulkan_LIBRARIES}

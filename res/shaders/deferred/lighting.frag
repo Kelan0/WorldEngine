@@ -46,13 +46,9 @@ layout(set = 0, binding = 0) uniform UBO1 {
     mat4 invViewProjectionMatrix;
     mat4 cameraRays;
     uvec2 resolution;
-    int currentFrameIndex;
-    int previousFrameIndex;
     bool showDebugShadowCascades;
     uint debugShadowCascadeLightIndex;
     float debugShadowCascadeOpacity;
-    float taaHistoryFactor;
-    bool taaUseFullKernel;
 };
 
 const float MAX_REFLECTION_LOD = 4.0;
@@ -261,31 +257,6 @@ vec3 calculateDirectionalLight(in SurfacePoint surface, in LightInfo light) {
     return calculateOutgoingRadiance(surface, lightRadiance, L);
 }
 
-//vec3 calculateTemporalAntiAliasing(in SurfacePoint surface, in vec3 finalColour) {
-//    const vec2 TAA_PLUS_KERNEL[] = vec2[4](vec2(-1,0),vec2(+1,0),vec2(0,-1),vec2(0,+1));
-//    const vec2 TAA_FULL_KERNEL[] = vec2[8](vec2(-1,-1),vec2(0,-1),vec2(+1,-1),vec2(-1,0),vec2(+1,0),vec2(-1,+1),vec2(0,+1),vec2(+1,+1));
-//
-//    const vec2 pixelSize = vec2(1.0) / vec2(resolution);
-//    vec2 closestCoord = fs_texture;
-//    float closestDepth = surface.depth;
-//    vec2 currentCoord;
-//    float currentDepth;
-//
-//    for (uint i = 0; i < (taaUseFullKernel ? 8 : 4); ++i) {
-//        vec2 offset = taaUseFullKernel ? TAA_FULL_KERNEL[i] : TAA_PLUS_KERNEL[i];
-//        currentCoord = fs_texture + offset * pixelSize;
-//        currentDepth = texture(texture_Depth, currentCoord).r;
-//        if (currentDepth < closestDepth) {
-//            closestDepth = currentDepth;
-//            closestCoord = currentCoord;
-//        }
-//    }
-//
-//    vec2 velocity = texture(texture_VelocityXY, closestCoord).xy / 100.0;
-//    vec3 prevFinalColour = texture(frameTextures[previousFrameIndex], fs_texture - velocity).rgb;
-//    return mix(prevFinalColour, finalColour, taaHistoryFactor);
-//}
-
 void main() {
     SurfacePoint surface;
     loadSurface(fs_texture, surface);
@@ -356,8 +327,6 @@ void main() {
             finalColour = mix(finalColour, debugColour, debugShadowCascadeOpacity);
         }
     }
-
-//    finalColour = calculateTemporalAntiAliasing(surface, finalColour);
 
     outColor = vec4(finalColour, 1.0);
 

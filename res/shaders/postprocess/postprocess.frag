@@ -7,14 +7,12 @@ layout(location = 0) in vec2 fs_texture;
 layout(location = 0) out vec4 outColor;
 
 layout(set = 0, binding = 0) uniform UBO1 {
-    int currentFrameIndex;
-    int previousFrameIndex;
-    float taaHistoryFactor;
+    int temp;
 };
 
-layout(set = 0, binding = 1) uniform sampler2D frameTextures[];
+layout(set = 0, binding = 1) uniform sampler2D frameTexture;
 
 void main() {
-    vec3 finalColour = texture(frameTextures[0], fs_texture).rgb;
+    vec3 finalColour = texture(frameTexture, fs_texture).rgb;
     outColor = vec4(finalColour, 1.0);
 }

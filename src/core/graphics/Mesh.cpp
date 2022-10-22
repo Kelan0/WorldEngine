@@ -125,12 +125,14 @@ void Mesh::draw(const vk::CommandBuffer& commandBuffer, const uint32_t& instance
     commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer, &offset);
     commandBuffer.bindIndexBuffer(m_indexBuffer->getBuffer(), 0, vk::IndexType::eUint32);
 
+#if TRACK_DRAW_DEBUG_INFO
     auto start = std::chrono::high_resolution_clock::now();
+#endif
 
     commandBuffer.drawIndexed(getIndexCount(), instanceCount, 0, 0, firstInstance);
 
+#if TRACK_DRAW_DEBUG_INFO
     auto end = std::chrono::high_resolution_clock::now();
-
     uint64_t elapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 
     // if debug
@@ -142,6 +144,7 @@ void Mesh::draw(const vk::CommandBuffer& commandBuffer, const uint32_t& instance
     Engine::graphics()->debugInfo().drawCalls++;
     Engine::graphics()->debugInfo().drawInstances += instanceCount;
     Engine::graphics()->debugInfo().elapsedDrawNanosCPU += elapsedNanos;
+#endif
 }
 
 uint32_t Mesh::getVertexCount() const {

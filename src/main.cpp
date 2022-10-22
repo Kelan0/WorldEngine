@@ -27,6 +27,7 @@
 #include "core/engine/scene/bound/Intersection.h"
 #include "core/engine/renderer/LightComponent.h"
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
+#include "core/engine/renderer/renderPasses/ReprojectionRenderer.h"
 #include "extern/imgui/imgui.h"
 
 #include <iostream>
@@ -303,7 +304,7 @@ class App : public Application {
         ImGui::End();
 
         Application::instance()->setFramerateLimit(framerateLimit);
-        Engine::deferredLightingPass()->setTaaHistoryFactor(historyFadeFactor);
+        Engine::reprojectionRenderer()->setTaaHistoryFactor(historyFadeFactor);
 
         Entity mainCamera = Engine::scene()->getMainCameraEntity();
         Transform& cameraTransform = mainCamera.getComponent<Transform>();

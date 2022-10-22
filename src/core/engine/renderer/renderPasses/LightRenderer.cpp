@@ -343,14 +343,12 @@ void LightRenderer::render(const double& dt, const vk::CommandBuffer& commandBuf
         m_shadowGraphicsPipeline->setViewport(commandBuffer, 0, 0.0F, 0.0F, (float) w, (float) h, 0.0F, 1.0F);
         m_shadowGraphicsPipeline->setScissor(commandBuffer, 0, 0, 0, w, h);
 
-        vk::DescriptorSet descriptorSets[2] = {
+        std::array<vk::DescriptorSet, 2> descriptorSets = {
                 m_shadowRenderPassResources->descriptorSet->getDescriptorSet(),
                 Engine::sceneRenderer()->getObjectDescriptorSet()->getDescriptorSet(),
         };
 
         m_shadowGraphicsPipeline->bind(commandBuffer);
-
-
 
         if (shadowMap->getShadowType() == ShadowMap::ShadowType_CascadedShadowMap) {
             CascadedShadowMap* cascadedShadowMap = dynamic_cast<CascadedShadowMap*>(shadowMap);
@@ -359,8 +357,8 @@ void LightRenderer::render(const double& dt, const vk::CommandBuffer& commandBuf
 
                 RenderCamera& shadowRenderCamera = visibleShadowRenderCameras[shadowMap->m_index + j];
 
-                uint32_t dynamicOffsets[1] = { (uint32_t)(sizeof(GPUCamera) * cameraInfoBufferIndex++) };
-                commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_shadowGraphicsPipeline->getPipelineLayout(), 0, 2, descriptorSets, 1, dynamicOffsets);
+                std::array<uint32_t, 1> dynamicOffsets = { (uint32_t)(sizeof(GPUCamera) * cameraInfoBufferIndex++) };
+                commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_shadowGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
 
                 m_shadowRenderPass->begin(commandBuffer, cascadedShadowMap->getCascadeFramebuffer(j), vk::SubpassContents::eInline);
                 Engine::sceneRenderer()->render(dt, commandBuffer, &shadowRenderCamera);

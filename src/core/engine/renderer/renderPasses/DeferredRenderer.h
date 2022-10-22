@@ -42,19 +42,14 @@ private:
         glm::mat4 invViewProjectionMatrix;
         glm::mat4 cameraRays;
         glm::uvec2 resolution;
-        int32_t currentFrameIndex;
-        int32_t previousFrameIndex;
         bool showDebugShadowCascades;
         uint32_t debugShadowCascadeLightIndex;
         float debugShadowCascadeOpacity;
-        float taaHistoryFactor;
-        bool taaUseFullKernel;
     };
 
     struct RenderResources {
         std::array<Image2D*, NumAttachments> attachmentImages;
         std::array<ImageView*, NumAttachments> attachmentImageViews;
-//        Framebuffer* geometryFramebuffer = nullptr;
         DescriptorSet* globalDescriptorSet = nullptr;
         Buffer* cameraInfoBuffer = nullptr;
 
@@ -86,10 +81,6 @@ public:
 
     void presentDirect(const vk::CommandBuffer& commandBuffer);
 
-    void setTaaHistoryFactor(const float& taaHistoryFactor);
-
-    bool hasPreviousFrame() const;
-
     ImageView* getAlbedoImageView() const;
 
     ImageView* getNormalImageView() const;
@@ -100,9 +91,7 @@ public:
 
     ImageView* getDepthImageView() const;
 
-    ImageView* getPreviousFrameImageView() const;
-
-    ImageView* getCurrentFrameImageView() const;
+    ImageView* getOutputFrameImageView() const;
 
     vk::Format getAttachmentFormat(const uint32_t& attachment) const;
 
@@ -112,8 +101,6 @@ private:
     void recreateSwapchain(const RecreateSwapchainEvent& event);
 
     bool createFramebuffer(RenderResources* resources);
-
-//    bool createLightingFramebuffer(FrameImage* frameImage);
 
     bool createGeometryGraphicsPipeline();
 
@@ -125,20 +112,16 @@ private:
 
 private:
     std::shared_ptr<RenderPass> m_renderPass;
-//    std::shared_ptr<RenderPass> m_geometryRenderPass;
-//    std::shared_ptr<RenderPass> m_lightingRenderPass;
     std::shared_ptr<GraphicsPipeline> m_geometryGraphicsPipeline;
     std::shared_ptr<GraphicsPipeline> m_lightingGraphicsPipeline;
     FrameResource<RenderResources> m_resources;
     std::shared_ptr<DescriptorSetLayout> m_globalDescriptorSetLayout;
     std::shared_ptr<DescriptorSetLayout> m_lightingDescriptorSetLayout;
     Sampler* m_attachmentSampler;
-    Sampler* m_frameSampler;
     RenderCamera m_renderCamera;
     std::unordered_map<ImageView*, int32_t> m_frameIndices;
     std::vector<glm::vec2> m_haltonSequence;
     uint32_t m_frameIndex;
-    float m_taaHistoryFactor;
 };
 
 

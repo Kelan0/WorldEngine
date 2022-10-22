@@ -13,6 +13,7 @@ class SceneRenderer;
 class LightRenderer;
 class ImmediateRenderer;
 class DeferredGeometryRenderPass;
+class ReprojectionRenderer;
 class DeferredRenderer;
 class PostProcessRenderer;
 class EventDispatcher;
@@ -42,6 +43,8 @@ public:
 
     [[nodiscard]] DeferredRenderer* getDeferredLightingPass() const;
 
+    [[nodiscard]] ReprojectionRenderer* getReprojectionRenderer() const;
+
     [[nodiscard]] PostProcessRenderer* getPostProcessingRenderer() const;
 
     [[nodiscard]] EventDispatcher* getEventDispatcher() const;
@@ -57,6 +60,8 @@ public:
     static LightRenderer* lightRenderer();
 
     static ImmediateRenderer* immediateRenderer();
+
+    static ReprojectionRenderer* reprojectionRenderer();
 
     static DeferredRenderer* deferredLightingPass();
 
@@ -85,6 +90,7 @@ private:
     LightRenderer* m_lightRenderer;
     ImmediateRenderer* m_immediateRenderer;
     DeferredRenderer* m_deferredRenderer;
+    ReprojectionRenderer* m_reprojectionRenderer;
     PostProcessRenderer* m_postProcessingRenderer;
     EventDispatcher* m_eventDispatcher;
 
