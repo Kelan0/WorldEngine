@@ -3,6 +3,7 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 
 #include "res/shaders/common/structures.glsl"
+#include "res/shaders/common/common.glsl"
 
 #define HAS_ALBEDO_TEXTURE_FLAG uint(1 << 0)
 #define HAS_ROUGHNESS_TEXTURE_FLAG uint(1 << 1)
@@ -95,5 +96,5 @@ void main() {
     outEmissionRGB_AO.a = 1.0;
     vec2 currPosition = (fs_currPosition.xy / fs_currPosition.w) * 0.5 + 0.5;
     vec2 prevPosition = (fs_prevPosition.xy / fs_prevPosition.w) * 0.5 + 0.5;
-    outVelocityXY.xy = (currPosition.xy - prevPosition.xy) * 100.0; // Scale velocity to maintain precision. It needs to be divided again when accessed
+    outVelocityXY.xy = (currPosition.xy - prevPosition.xy) * VELOCITY_PRECISION_SCALE; // Scale velocity to maintain precision. It needs to be divided again when accessed
 }

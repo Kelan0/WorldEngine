@@ -26,9 +26,13 @@ void PerformanceGraphUI::update(const double& dt) {
 
     if (m_clearFrames) {
         m_clearFrames = false;
-        for (auto it = m_frameProfileData.begin(); it != m_frameProfileData.end(); ++it) {
-            std::vector<FrameProfileData>& allProfiles = it->second;
+        for (auto& [threadId, allProfiles] : m_frameProfileData) {
             allProfiles.clear();
+        }
+
+        for (auto& [threadId, frameTimeInfo] : m_threadFrameTimeInfo) {
+            frameTimeInfo.frameTimes.clear();
+            frameTimeInfo.sortedFrameTimes.clear();
         }
     }
 

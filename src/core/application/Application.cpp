@@ -151,6 +151,11 @@ void Application::start() {
 
     DebugUtils::RenderInfo tempDebugInfo;
 
+    static profile_id profileID_CPU_Idle = Profiler::id("CPU Idle");
+
+    Profiler::beginFrame();
+    Profiler::beginCPU(profileID_CPU_Idle);
+
     while (m_running) {
         auto now = std::chrono::high_resolution_clock::now();
         uint64_t elapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastTime).count();
@@ -162,6 +167,8 @@ void Application::start() {
         partialFrames += elapsedNanos / frameDurationNanos;
 
         if (partialFrames >= 1.0) {
+            Profiler::endCPU(); // profileID_CPU_Idle
+            Profiler::endFrame();
             Profiler::beginFrame();
             isFrame = true;
 
@@ -247,12 +254,14 @@ void Application::start() {
             lastDebug = now;
         }
 
-        //SDL_Delay(1);
-
         if (isFrame) {
-            Profiler::endFrame();
+            // The CPU is idle from this point onward, until the loop restarts another frame.
+            Profiler::beginCPU(profileID_CPU_Idle);
         }
+
+        //SDL_Delay(1);
     }
+    Profiler::endFrame();
 
     Engine::graphics()->getDevice()->waitIdle();
 

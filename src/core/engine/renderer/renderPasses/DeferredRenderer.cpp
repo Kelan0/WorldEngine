@@ -43,10 +43,10 @@ DeferredRenderer::~DeferredRenderer() {
         delete m_resources[i]->lightingPassDescriptorSet;
         delete m_resources[i]->cameraInfoBuffer;
         delete m_resources[i]->lightingPassUniformBuffer;
-        delete m_resources[i]->framebuffer;
+        delete m_resources[i]->frame.framebuffer;
         for (size_t j = 0; j < NumAttachments; ++j) {
-            delete m_resources[i]->attachmentImageViews[j];
-            delete m_resources[i]->attachmentImages[j];
+            delete m_resources[i]->frame.imageViews[j];
+            delete m_resources[i]->frame.images[j];
         }
     }
 
@@ -83,8 +83,8 @@ bool DeferredRenderer::init() {
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_resources.set(i, new RenderResources());
 
-        m_resources[i]->attachmentImages = {}; // Default initialize elements to nullptr
-        m_resources[i]->attachmentImageViews = {};
+        m_resources[i]->frame.images = {}; // Default initialize elements to nullptr
+        m_resources[i]->frame.imageViews = {};
 
         BufferConfiguration bufferConfig{};
         bufferConfig.device = Engine::graphics()->getDevice();
@@ -143,7 +143,7 @@ bool DeferredRenderer::init() {
     environmentMap->setEnvironmentImage(imageCube);
     environmentMap->update();
 
-    m_haltonSequence.resize(128);
+    m_haltonSequence.resize(16);
     for (uint32_t i = 0; i < m_haltonSequence.size(); ++i) {
         m_haltonSequence[i].x = Util::createHaltonSequence<float>(i + 1, 2);
         m_haltonSequence[i].y = Util::createHaltonSequence<float>(i + 1, 3);
@@ -254,6 +254,9 @@ void DeferredRenderer::render(const double& dt, const vk::CommandBuffer& command
     commandBuffer.draw(3, 1, 0, 0);
 
     END_CMD_LABEL(commandBuffer);
+
+    m_resources->frame.rendered = true;
+    swapFrame();
 }
 
 void DeferredRenderer::presentDirect(const vk::CommandBuffer& commandBuffer) {
@@ -265,8 +268,12 @@ void DeferredRenderer::presentDirect(const vk::CommandBuffer& commandBuffer) {
 //    ImageUtil::transitionLayout(commandBuffer, m_resources->frameImage.image->getImage(), subresourceRange, ImageTransition::TransferSrc(), ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader));
 }
 
+bool DeferredRenderer::hasPreviousFrame() const {
+    return m_previousFrame.rendered;
+}
+
 void DeferredRenderer::beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents) {
-    m_renderPass->begin(commandBuffer, m_resources->framebuffer, subpassContents);
+    m_renderPass->begin(commandBuffer, m_resources->frame.framebuffer, subpassContents);
 }
 
 void DeferredRenderer::beginGeometrySubpass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents) {
@@ -279,27 +286,51 @@ void DeferredRenderer::beginLightingSubpass(const vk::CommandBuffer& commandBuff
 }
 
 ImageView* DeferredRenderer::getAlbedoImageView() const {
-    return m_resources->attachmentImageViews[Attachment_AlbedoRGB_Roughness];
+    return m_resources->frame.imageViews[Attachment_AlbedoRGB_Roughness];
 }
 
 ImageView* DeferredRenderer::getNormalImageView() const {
-    return m_resources->attachmentImageViews[Attachment_NormalXYZ_Metallic];
+    return m_resources->frame.imageViews[Attachment_NormalXYZ_Metallic];
 }
 
 ImageView* DeferredRenderer::getEmissionImageView() const {
-    return m_resources->attachmentImageViews[Attachment_EmissionRGB_AO];
+    return m_resources->frame.imageViews[Attachment_EmissionRGB_AO];
 }
 
 ImageView* DeferredRenderer::getVelocityImageView() const {
-    return m_resources->attachmentImageViews[Attachment_VelocityXY];
+    return m_resources->frame.imageViews[Attachment_VelocityXY];
 }
 
 ImageView* DeferredRenderer::getDepthImageView() const {
-    return m_resources->attachmentImageViews[Attachment_Depth];
+    return m_resources->frame.imageViews[Attachment_Depth];
 }
 
 ImageView* DeferredRenderer::getOutputFrameImageView() const {
-    return m_resources->attachmentImageViews[Attachment_LightingRGB];
+    return m_resources->frame.imageViews[Attachment_LightingRGB];
+}
+
+ImageView* DeferredRenderer::getPreviousAlbedoImageView() const {
+    return hasPreviousFrame() ? m_previousFrame.imageViews[Attachment_AlbedoRGB_Roughness] : getAlbedoImageView();
+}
+
+ImageView* DeferredRenderer::getPreviousNormalImageView() const {
+    return hasPreviousFrame() ? m_previousFrame.imageViews[Attachment_NormalXYZ_Metallic] : getNormalImageView();
+}
+
+ImageView* DeferredRenderer::getPreviousEmissionImageView() const {
+    return hasPreviousFrame() ? m_previousFrame.imageViews[Attachment_EmissionRGB_AO] : getEmissionImageView();
+}
+
+ImageView* DeferredRenderer::getPreviousVelocityImageView() const {
+    return hasPreviousFrame() ? m_previousFrame.imageViews[Attachment_VelocityXY] : getVelocityImageView();
+}
+
+ImageView* DeferredRenderer::getPreviousDepthImageView() const {
+    return hasPreviousFrame() ? m_previousFrame.imageViews[Attachment_Depth] : getDepthImageView();
+}
+
+ImageView* DeferredRenderer::getPreviousOutputFrameImageView() const {
+    return hasPreviousFrame() ? m_previousFrame.imageViews[Attachment_LightingRGB] : getOutputFrameImageView();
 }
 
 vk::Format DeferredRenderer::getAttachmentFormat(const uint32_t& attachment) const {
@@ -324,7 +355,16 @@ vk::Format DeferredRenderer::getOutputColourFormat() const {
 void DeferredRenderer::recreateSwapchain(const RecreateSwapchainEvent& event) {
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_resources[i]->updateDescriptorSet = true;
-        createFramebuffer(m_resources[i]);
+        createFramebuffer(&m_resources[i]->frame);
+    }
+
+    if (CONCURRENT_FRAMES == 1) {
+        createFramebuffer(&m_previousFrame);
+    } else {
+        m_previousFrame.images = {};
+        m_previousFrame.imageViews = {};
+        m_previousFrame.framebuffer = nullptr;
+        m_previousFrame.rendered = false;
     }
 
     createGeometryGraphicsPipeline();
@@ -332,12 +372,14 @@ void DeferredRenderer::recreateSwapchain(const RecreateSwapchainEvent& event) {
     m_frameIndices.clear();
 }
 
-bool DeferredRenderer::createFramebuffer(RenderResources* resources) {
-    delete resources->framebuffer;
-    for (const auto &imageView: resources->attachmentImageViews)
+bool DeferredRenderer::createFramebuffer(FrameImages* frame) {
+    delete frame->framebuffer;
+    for (const auto& imageView: frame->imageViews)
         delete imageView;
-    for (const auto &image: resources->attachmentImages)
+    for (const auto& image: frame->images)
         delete image;
+
+    frame->rendered = false;
 
     vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1;
 
@@ -353,67 +395,67 @@ bool DeferredRenderer::createFramebuffer(RenderResources* resources) {
     // Albedo/Roughness image
     imageConfig.format = getAttachmentFormat(Attachment_AlbedoRGB_Roughness);
     imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eInputAttachment;
-    resources->attachmentImages[Attachment_AlbedoRGB_Roughness] = Image2D::create(imageConfig, "DeferredRenderer-GBufferAlbedoRoughnessImage");
+    frame->images[Attachment_AlbedoRGB_Roughness] = Image2D::create(imageConfig, "DeferredRenderer-GBufferAlbedoRoughnessImage");
     imageViewConfig.format = imageConfig.format;
     imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
-    imageViewConfig.setImage(resources->attachmentImages[Attachment_AlbedoRGB_Roughness]);
-    resources->attachmentImageViews[Attachment_AlbedoRGB_Roughness] = ImageView::create(imageViewConfig, "DeferredRenderer-GBufferAlbedoRoughnessImageView");
+    imageViewConfig.setImage(frame->images[Attachment_AlbedoRGB_Roughness]);
+    frame->imageViews[Attachment_AlbedoRGB_Roughness] = ImageView::create(imageViewConfig, "DeferredRenderer-GBufferAlbedoRoughnessImageView");
 
     // Normal/Metallic image
     imageConfig.format = getAttachmentFormat(Attachment_NormalXYZ_Metallic);
     imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eInputAttachment;
-    resources->attachmentImages[Attachment_NormalXYZ_Metallic] = Image2D::create(imageConfig, "DeferredRenderer-GBufferNormalMetallicImage");
+    frame->images[Attachment_NormalXYZ_Metallic] = Image2D::create(imageConfig, "DeferredRenderer-GBufferNormalMetallicImage");
     imageViewConfig.format = imageConfig.format;
     imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
-    imageViewConfig.setImage(resources->attachmentImages[Attachment_NormalXYZ_Metallic]);
-    resources->attachmentImageViews[Attachment_NormalXYZ_Metallic] = ImageView::create(imageViewConfig, "DeferredRenderer-GBufferNormalMetallicImageView");
+    imageViewConfig.setImage(frame->images[Attachment_NormalXYZ_Metallic]);
+    frame->imageViews[Attachment_NormalXYZ_Metallic] = ImageView::create(imageViewConfig, "DeferredRenderer-GBufferNormalMetallicImageView");
 
     // Emission/AmbientOcclusion image
     imageConfig.format = getAttachmentFormat(Attachment_EmissionRGB_AO);
     imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eInputAttachment;
-    resources->attachmentImages[Attachment_EmissionRGB_AO] = Image2D::create(imageConfig, "DeferredRenderer-GBufferEmissionAOImage");
+    frame->images[Attachment_EmissionRGB_AO] = Image2D::create(imageConfig, "DeferredRenderer-GBufferEmissionAOImage");
     imageViewConfig.format = imageConfig.format;
     imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
-    imageViewConfig.setImage(resources->attachmentImages[Attachment_EmissionRGB_AO]);
-    resources->attachmentImageViews[Attachment_EmissionRGB_AO] = ImageView::create(imageViewConfig, "DeferredRenderer-GBufferEmissionAOImageView");
+    imageViewConfig.setImage(frame->images[Attachment_EmissionRGB_AO]);
+    frame->imageViews[Attachment_EmissionRGB_AO] = ImageView::create(imageViewConfig, "DeferredRenderer-GBufferEmissionAOImageView");
 
     // Velocity image
     imageConfig.format = getAttachmentFormat(Attachment_VelocityXY);
     imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eInputAttachment;
-    resources->attachmentImages[Attachment_VelocityXY] = Image2D::create(imageConfig, "DeferredRenderer-GBufferVelocityXYImage");
+    frame->images[Attachment_VelocityXY] = Image2D::create(imageConfig, "DeferredRenderer-GBufferVelocityXYImage");
     imageViewConfig.format = imageConfig.format;
     imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
-    imageViewConfig.setImage(resources->attachmentImages[Attachment_VelocityXY]);
-    resources->attachmentImageViews[Attachment_VelocityXY] = ImageView::create(imageViewConfig, "DeferredRenderer-GBufferVelocityXYImageView");
+    imageViewConfig.setImage(frame->images[Attachment_VelocityXY]);
+    frame->imageViews[Attachment_VelocityXY] = ImageView::create(imageViewConfig, "DeferredRenderer-GBufferVelocityXYImageView");
 
     // Depth image
     imageConfig.format = getAttachmentFormat(Attachment_Depth);
     imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eInputAttachment;
-    resources->attachmentImages[Attachment_Depth] = Image2D::create(imageConfig, "DeferredRenderer-GBufferDepthImage");
+    frame->images[Attachment_Depth] = Image2D::create(imageConfig, "DeferredRenderer-GBufferDepthImage");
     imageViewConfig.format = imageConfig.format;
     imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eDepth;
 //    if (ImageUtil::isStencilAttachment(imageViewConfig.format))
 //        imageViewConfig.aspectMask |= vk::ImageAspectFlagBits::eStencil;
-    imageViewConfig.setImage(resources->attachmentImages[Attachment_Depth]);
-    resources->attachmentImageViews[Attachment_Depth] = ImageView::create(imageViewConfig, "DeferredRenderer-GBufferDepthImageView");
+    imageViewConfig.setImage(frame->images[Attachment_Depth]);
+    frame->imageViews[Attachment_Depth] = ImageView::create(imageViewConfig, "DeferredRenderer-GBufferDepthImageView");
     // Lighting output image
     imageConfig.format = getAttachmentFormat(Attachment_LightingRGB);
     imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;
-    resources->attachmentImages[Attachment_LightingRGB] = Image2D::create(imageConfig, "DeferredRenderer-GBufferVelocityXYImage");
+    frame->images[Attachment_LightingRGB] = Image2D::create(imageConfig, "DeferredRenderer-GBufferVelocityXYImage");
     imageViewConfig.format = imageConfig.format;
     imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
-    imageViewConfig.setImage(resources->attachmentImages[Attachment_LightingRGB]);
-    resources->attachmentImageViews[Attachment_LightingRGB] = ImageView::create(imageViewConfig, "DeferredRenderer-GBufferVelocityXYImageView");
+    imageViewConfig.setImage(frame->images[Attachment_LightingRGB]);
+    frame->imageViews[Attachment_LightingRGB] = ImageView::create(imageViewConfig, "DeferredRenderer-GBufferVelocityXYImageView");
 
     // Framebuffer
     FramebufferConfiguration framebufferConfig{};
     framebufferConfig.device = Engine::graphics()->getDevice();
     framebufferConfig.setSize(Engine::graphics()->getResolution());
     framebufferConfig.setRenderPass(m_renderPass.get());
-    framebufferConfig.setAttachments(resources->attachmentImageViews);
+    framebufferConfig.setAttachments(frame->imageViews);
 
-    resources->framebuffer = Framebuffer::create(framebufferConfig, "DeferredRenderer-GBufferFramebuffer");
-    if (resources->framebuffer == nullptr)
+    frame->framebuffer = Framebuffer::create(framebufferConfig, "DeferredRenderer-GBufferFramebuffer");
+    if (frame->framebuffer == nullptr)
         return false;
     return true;
 }
@@ -566,7 +608,16 @@ bool DeferredRenderer::createRenderPass() {
 }
 
 
-void DeferredRenderer::swapFrameImage(Image2D* image1, ImageView* imageView1, Image2D* image2, ImageView* imageView2) {
-    std::swap(image1, image2);
-    std::swap(imageView1, imageView2);
+void DeferredRenderer::swapFrame() {
+    if (CONCURRENT_FRAMES == 1) {
+        std::swap(m_previousFrame.framebuffer, m_resources->frame.framebuffer);
+        std::swap(m_previousFrame.imageViews, m_resources->frame.imageViews);
+        std::swap(m_previousFrame.images, m_resources->frame.images);
+        std::swap(m_previousFrame.rendered, m_resources->frame.rendered);
+    } else {
+        m_previousFrame.images = m_resources[Engine::graphics()->getPreviousFrameIndex()]->frame.images;
+        m_previousFrame.imageViews = m_resources[Engine::graphics()->getPreviousFrameIndex()]->frame.imageViews;
+        m_previousFrame.framebuffer = m_resources[Engine::graphics()->getPreviousFrameIndex()]->frame.framebuffer;
+        m_previousFrame.rendered = m_resources[Engine::graphics()->getPreviousFrameIndex()]->frame.rendered;
+    }
 }

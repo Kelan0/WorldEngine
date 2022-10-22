@@ -14,7 +14,8 @@
 #define FRAME_TEXTURE_BINDING 1
 #define VELOCITY_TEXTURE_BINDING 2
 #define DEPTH_TEXTURE_BINDING 3
-#define HISTORY_TEXTURE_BINDING 4
+#define PREVIOUS_FRAME_TEXTURE_BINDING 4
+#define PREVIOUS_VELOCITY_TEXTURE_BINDING 5
 
 ReprojectionRenderer::ReprojectionRenderer() {
     m_uniformData.taaHistoryFactor = 1.0F;
@@ -48,7 +49,8 @@ bool ReprojectionRenderer::init() {
             .addCombinedImageSampler(FRAME_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(VELOCITY_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(DEPTH_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
-            .addCombinedImageSampler(HISTORY_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
+            .addCombinedImageSampler(PREVIOUS_FRAME_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
+            .addCombinedImageSampler(PREVIOUS_VELOCITY_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .build("ReprojectionRenderer-ReprojectionDescriptorSetLayout");
 
     for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i) {
@@ -94,13 +96,15 @@ void ReprojectionRenderer::render(const double& dt, const vk::CommandBuffer& com
     ImageView* frameImageView = Engine::deferredLightingPass()->getOutputFrameImageView();
     ImageView* velocityImageView = Engine::deferredLightingPass()->getVelocityImageView();
     ImageView* depthImageView = Engine::deferredLightingPass()->getDepthImageView();
-    ImageView* historyImageView = getPreviousFrameImageView();
+    ImageView* prevFrameImageView = getPreviousFrameImageView();
+    ImageView* prevVelocityImageView = Engine::deferredLightingPass()->getPreviousVelocityImageView();
 
     DescriptorSetWriter descriptorSetWriter(m_resources->reprojectionDescriptorSet);
     descriptorSetWriter.writeImage(FRAME_TEXTURE_BINDING, m_frameSampler.get(), frameImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
     descriptorSetWriter.writeImage(VELOCITY_TEXTURE_BINDING, m_frameSampler.get(), velocityImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
     descriptorSetWriter.writeImage(DEPTH_TEXTURE_BINDING, m_frameSampler.get(), depthImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
-    descriptorSetWriter.writeImage(HISTORY_TEXTURE_BINDING, m_frameSampler.get(), historyImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+    descriptorSetWriter.writeImage(PREVIOUS_FRAME_TEXTURE_BINDING, m_frameSampler.get(), prevFrameImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+    descriptorSetWriter.writeImage(PREVIOUS_VELOCITY_TEXTURE_BINDING, m_frameSampler.get(), prevVelocityImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
     descriptorSetWriter.write();
 
     BEGIN_CMD_LABEL(commandBuffer, "ReprojectionRenderer::render")
@@ -137,7 +141,7 @@ ImageView* ReprojectionRenderer::getPreviousFrameImageView() const {
 }
 
 bool ReprojectionRenderer::hasPreviousFrame() const {
-    return m_previousFrame.imageView != nullptr && m_previousFrame.rendered;
+    return m_previousFrame.rendered;
 }
 
 const float& ReprojectionRenderer::getTaaHistoryFactor() const {
@@ -275,10 +279,9 @@ void ReprojectionRenderer::swapFrames() {
         std::swap(m_previousFrame.rendered, m_resources->frame.rendered);
     } else {
         // Previous frame simply points into the frame resources internal array, so we update the pointers
-        uint32_t prevFrameIndex = Engine::graphics()->getPreviousFrameIndex();
-        m_previousFrame.image = m_resources[prevFrameIndex]->frame.image;
-        m_previousFrame.imageView = m_resources[prevFrameIndex]->frame.imageView;
-        m_previousFrame.framebuffer = m_resources[prevFrameIndex]->frame.framebuffer;
-        m_previousFrame.rendered = m_resources[prevFrameIndex]->frame.rendered;
+        m_previousFrame.image = m_resources[Engine::graphics()->getPreviousFrameIndex()]->frame.image;
+        m_previousFrame.imageView = m_resources[Engine::graphics()->getPreviousFrameIndex()]->frame.imageView;
+        m_previousFrame.framebuffer = m_resources[Engine::graphics()->getPreviousFrameIndex()]->frame.framebuffer;
+        m_previousFrame.rendered = m_resources[Engine::graphics()->getPreviousFrameIndex()]->frame.rendered;
     }
 }

@@ -47,14 +47,17 @@ private:
         float debugShadowCascadeOpacity;
     };
 
+    struct FrameImages {
+        std::array<Image2D*, NumAttachments> images = {};
+        std::array<ImageView*, NumAttachments> imageViews = {};
+        Framebuffer* framebuffer = nullptr;
+        bool rendered;
+    };
+
     struct RenderResources {
-        std::array<Image2D*, NumAttachments> attachmentImages;
-        std::array<ImageView*, NumAttachments> attachmentImageViews;
+        FrameImages frame;
         DescriptorSet* globalDescriptorSet = nullptr;
         Buffer* cameraInfoBuffer = nullptr;
-
-        Framebuffer* framebuffer = nullptr;
-
         Buffer* lightingPassUniformBuffer = nullptr;
         DescriptorSet* lightingPassDescriptorSet = nullptr;
         bool updateDescriptorSet = true;
@@ -81,6 +84,8 @@ public:
 
     void presentDirect(const vk::CommandBuffer& commandBuffer);
 
+    bool hasPreviousFrame() const;
+
     ImageView* getAlbedoImageView() const;
 
     ImageView* getNormalImageView() const;
@@ -93,6 +98,18 @@ public:
 
     ImageView* getOutputFrameImageView() const;
 
+    ImageView* getPreviousAlbedoImageView() const;
+
+    ImageView* getPreviousNormalImageView() const;
+
+    ImageView* getPreviousEmissionImageView() const;
+
+    ImageView* getPreviousVelocityImageView() const;
+
+    ImageView* getPreviousDepthImageView() const;
+
+    ImageView* getPreviousOutputFrameImageView() const;
+
     vk::Format getAttachmentFormat(const uint32_t& attachment) const;
 
     vk::Format getOutputColourFormat() const;
@@ -100,7 +117,7 @@ public:
 private:
     void recreateSwapchain(const RecreateSwapchainEvent& event);
 
-    bool createFramebuffer(RenderResources* resources);
+    bool createFramebuffer(FrameImages* frame);
 
     bool createGeometryGraphicsPipeline();
 
@@ -108,7 +125,7 @@ private:
 
     bool createRenderPass();
 
-    void swapFrameImage(Image2D* image1, ImageView* imageView1, Image2D* image2, ImageView* imageView2);
+    void swapFrame();
 
 private:
     std::shared_ptr<RenderPass> m_renderPass;
@@ -122,6 +139,7 @@ private:
     std::unordered_map<ImageView*, int32_t> m_frameIndices;
     std::vector<glm::vec2> m_haltonSequence;
     uint32_t m_frameIndex;
+    FrameImages m_previousFrame;
 };
 
 
