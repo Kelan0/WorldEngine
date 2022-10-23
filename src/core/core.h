@@ -67,6 +67,10 @@ namespace vkr = vk::raii;
 #define INT_DIV_CEIL(num, denom) (((num) + (denom) - 1) / (denom))
 #define ROUND_TO_MULTIPLE(value, multiple) (INT_DIV_CEIL(value, multiple) * multiple)
 
+#ifndef ENABLE_SHADER_HOT_RELOAD
+#define ENABLE_SHADER_HOT_RELOAD 1
+#endif
+
 constexpr uint32_t CONCURRENT_FRAMES = 3;
 
 typedef uint64_t GraphicsResource;

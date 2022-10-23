@@ -108,7 +108,7 @@ private:
 
     static ComputePipeline* getEquirectangularComputePipeline();
     static DescriptorSet* getEquirectangularComputeDescriptorSet();
-    static void onCleanupGraphics(const ShutdownGraphicsEvent& event);
+    static void onCleanupGraphics(ShutdownGraphicsEvent* event);
 
 private:
     std::shared_ptr<vkr::Device> m_device;

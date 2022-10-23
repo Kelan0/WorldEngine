@@ -617,7 +617,7 @@ GraphicsPipeline* ImmediateRenderer::getGraphicsPipeline(const RenderCommand& re
     return it->second;
 }
 
-void ImmediateRenderer::recreateSwapchain(const RecreateSwapchainEvent& event) {
+void ImmediateRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
     for (auto it = m_graphicsPipelines.begin(); it != m_graphicsPipelines.end(); ++it)
         delete it->second; // Delete the existing pipelines.
 

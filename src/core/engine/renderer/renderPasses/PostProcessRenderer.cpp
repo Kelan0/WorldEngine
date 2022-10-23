@@ -98,7 +98,7 @@ void PostProcessRenderer::beginRenderPass(const vk::CommandBuffer& commandBuffer
     Engine::graphics()->renderPass()->begin(commandBuffer, framebuffer, subpassContents);
 }
 
-void PostProcessRenderer::recreateSwapchain(const RecreateSwapchainEvent& event) {
+void PostProcessRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
     createGraphicsPipeline();
 }
 

@@ -57,7 +57,7 @@ private:
 
     static Buffer* getUniformBuffer();
 
-    static void onCleanupGraphics(const ShutdownGraphicsEvent& event);
+    static void onCleanupGraphics(ShutdownGraphicsEvent* event);
 
 private:
     uint32_t m_irradianceMapSize;

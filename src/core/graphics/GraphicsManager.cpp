@@ -35,6 +35,8 @@ GraphicsManager::GraphicsManager():
     m_isInitialized(false),
     m_recreateSwapchain(false),
     m_resolutionChanged(false),
+    m_directImagePresentEnabled(false),
+    m_swapchainImageSampled(false),
     m_swapchainBufferMode(SwapchainBufferMode_TripleBuffer) {
     m_swapchain.currentFrameIndex = 0;
     m_swapchain.currentImageIndex = UINT32_MAX;
@@ -43,7 +45,8 @@ GraphicsManager::GraphicsManager():
 GraphicsManager::~GraphicsManager() {
     printf("Uninitializing graphics engine\n");
 
-    Engine::eventDispatcher()->trigger(ShutdownGraphicsEvent());
+    ShutdownGraphicsEvent event{};
+    Engine::eventDispatcher()->trigger(&event);
 
     //DescriptorSetLayout::clearCache();
     //Buffer::resetStagingBuffer();
@@ -762,7 +765,8 @@ bool GraphicsManager::recreateSwapchain() {
 
     m_swapchain.currentFrameIndex = 0;
 
-    Engine::eventDispatcher()->trigger(RecreateSwapchainEvent());
+    RecreateSwapchainEvent event{};
+    Engine::eventDispatcher()->trigger(&event);
 
     return true;
 }

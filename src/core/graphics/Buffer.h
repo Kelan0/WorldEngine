@@ -68,7 +68,7 @@ private:
 
     static void reserveStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceSize size);
 
-    static void onCleanupGraphics(const ShutdownGraphicsEvent& event);
+    static void onCleanupGraphics(ShutdownGraphicsEvent* event);
 
 private:
     std::shared_ptr<vkr::Device> m_device;

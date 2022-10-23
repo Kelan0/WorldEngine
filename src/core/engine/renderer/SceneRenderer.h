@@ -123,9 +123,9 @@ private:
 
     void streamObjectData();
 
-    void onRenderComponentAdded(const ComponentAddedEvent<RenderComponent>& event);
+    void onRenderComponentAdded(ComponentAddedEvent<RenderComponent>* event);
 
-    void onRenderComponentRemoved(const ComponentRemovedEvent<RenderComponent>& event);
+    void onRenderComponentRemoved(ComponentRemovedEvent<RenderComponent>* event);
 
     ObjectDataUBO* mappedWorldTransformsBuffer(size_t maxObjects);
 

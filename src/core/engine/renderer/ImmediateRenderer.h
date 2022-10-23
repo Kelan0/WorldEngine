@@ -156,7 +156,7 @@ private:
 
     GraphicsPipeline* getGraphicsPipeline(const RenderCommand& renderCommand);
 
-    void recreateSwapchain(const RecreateSwapchainEvent& event);
+    void recreateSwapchain(RecreateSwapchainEvent* event);
 
     void validateCompleteCommand() const;
 

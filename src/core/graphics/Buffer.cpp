@@ -311,7 +311,7 @@ void Buffer::reserveStagingBuffer(std::weak_ptr<vkr::Device> device, vk::DeviceS
     }
 }
 
-void Buffer::onCleanupGraphics(const ShutdownGraphicsEvent& event) {
+void Buffer::onCleanupGraphics(ShutdownGraphicsEvent* event) {
     printf("Destroying staging buffer\n");
     s_stagingBuffer.reset();
 }

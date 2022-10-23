@@ -159,7 +159,7 @@ private:
 
     static bool createGpuTimestampQueryPool(const uint32_t& capacity, vk::QueryPool* queryPool);
 
-    static void onCleanupGraphics(const ShutdownGraphicsEvent& event);
+    static void onCleanupGraphics(ShutdownGraphicsEvent* event);
 
     static ThreadContext& threadContext();
 

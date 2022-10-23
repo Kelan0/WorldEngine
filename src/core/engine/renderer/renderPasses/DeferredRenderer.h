@@ -116,7 +116,7 @@ public:
     vk::Format getOutputColourFormat() const;
 
 private:
-    void recreateSwapchain(const RecreateSwapchainEvent& event);
+    void recreateSwapchain(RecreateSwapchainEvent* event);
 
     bool createFramebuffer(FrameImages* frame);
 

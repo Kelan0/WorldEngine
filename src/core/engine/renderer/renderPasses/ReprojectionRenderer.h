@@ -99,7 +99,7 @@ public:
     void setTaaJitterSampleCount(const uint32_t& sampleCount);
 
 private:
-    void recreateSwapchain(const RecreateSwapchainEvent& event);
+    void recreateSwapchain(RecreateSwapchainEvent* event);
 
     bool createFramebuffer(FrameImages* frame);
 

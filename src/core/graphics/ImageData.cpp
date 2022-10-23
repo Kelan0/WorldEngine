@@ -1124,7 +1124,7 @@ Buffer* ImageUtil::getImageStagingBuffer(const ImageRegion& imageRegion, const u
     return ImageUtil::getImageStagingBuffer(imageRegion.width, imageRegion.height, imageRegion.depth, bytesPerPixel);
 }
 
-void _ImageUtil_onCleanupGraphics(const ShutdownGraphicsEvent& event) {
+void _ImageUtil_onCleanupGraphics(ShutdownGraphicsEvent* event) {
     printf("Destroying image staging buffer\n");
     delete g_imageStagingBuffer;
 }

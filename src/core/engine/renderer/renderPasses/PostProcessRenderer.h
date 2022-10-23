@@ -37,7 +37,7 @@ public:
     void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
 
 private:
-    void recreateSwapchain(const RecreateSwapchainEvent& event);
+    void recreateSwapchain(RecreateSwapchainEvent* event);
 
 //    bool createFramebuffer(FrameImage* frameImage);
 

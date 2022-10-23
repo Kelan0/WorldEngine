@@ -19,10 +19,10 @@ void Scene::init() {
     PROFILE_SCOPE("Scene::init")
     enableEvents<EntityHierarchy>();
 
-    m_eventDispatcher->connect<ComponentRemovedEvent<EntityHierarchy>>([](const ComponentRemovedEvent<EntityHierarchy>& event) {
-        for (auto it = EntityHierarchy::begin(event.entity); it != EntityHierarchy::end(event.entity); ++it)
+    m_eventDispatcher->connect<ComponentRemovedEvent<EntityHierarchy>>([](ComponentRemovedEvent<EntityHierarchy>* event) {
+        for (auto it = EntityHierarchy::begin(event->entity); it != EntityHierarchy::end(event->entity); ++it)
             EntityHierarchy::detach(*it);
-        EntityHierarchy::detach(event.entity);
+        EntityHierarchy::detach(event->entity);
     });
 
     m_eventDispatcher->connect<ScreenResizeEvent>(&Scene::onScreenResize, this);
@@ -114,8 +114,8 @@ const Entity& Scene::getMainCameraEntity() const {
     return m_mainCameraEntity;
 }
 
-void Scene::onScreenResize(const ScreenResizeEvent& event) {
+void Scene::onScreenResize(ScreenResizeEvent* event) {
     printf("SCENE - screen resized\n");
-    double aspectRatio = (double)event.newSize.x / (double)event.newSize.y;
+    double aspectRatio = (double)event->newSize.x / (double)event->newSize.y;
     m_defaultCamera.getComponent<Camera>().setAspect(aspectRatio);
 }

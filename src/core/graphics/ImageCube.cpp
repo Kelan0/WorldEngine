@@ -676,7 +676,7 @@ DescriptorSet* ImageCube::getEquirectangularComputeDescriptorSet() {
     return s_computeEquirectangularDescriptorSet;
 }
 
-void ImageCube::onCleanupGraphics(const ShutdownGraphicsEvent& event) {
+void ImageCube::onCleanupGraphics(ShutdownGraphicsEvent* event) {
     printf("Destroying ImageCube equirectangular compute resources\n");
     delete s_computeEquirectangularDescriptorSet;
     delete s_computeEquirectangularPipeline;

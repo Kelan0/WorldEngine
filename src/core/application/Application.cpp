@@ -100,46 +100,53 @@ void Application::processEventsInternal() {
 
     glm::ivec2 windowSize = getWindowSize();
 
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-        switch (event.type) {
+    SDL_Event sdlEvent;
+    while (SDL_PollEvent(&sdlEvent)) {
+        switch (sdlEvent.type) {
             case SDL_QUIT:
                 stop();
                 break;
 
             case SDL_WINDOWEVENT:
-                switch (event.window.event) {
-                    case SDL_WINDOWEVENT_SHOWN:
+                switch (sdlEvent.window.event) {
+                    case SDL_WINDOWEVENT_SHOWN: {
                         m_rendering = true;
-                        Engine::eventDispatcher()->trigger(ScreenShowEvent{getWindowSize() });
+                        ScreenShowEvent event{getWindowSize()};
+                        Engine::eventDispatcher()->trigger(&event);
                         break;
-                    case SDL_WINDOWEVENT_HIDDEN:
+                    }
+                    case SDL_WINDOWEVENT_HIDDEN: {
                         m_rendering = false;
-                        printf("SDL_WINDOWEVENT_HIDDEN\n");
-                        Engine::eventDispatcher()->trigger(ScreenHiddenEvent{});
+                        ScreenHiddenEvent event{};
+                        Engine::eventDispatcher()->trigger(&event);
                         break;
-                    case SDL_WINDOWEVENT_MINIMIZED:
+                    }
+                    case SDL_WINDOWEVENT_MINIMIZED: {
                         m_rendering = false;
-                        printf("SDL_WINDOWEVENT_MINIMIZED\n");
-                        Engine::eventDispatcher()->trigger(ScreenMinimisedEvent{});
+                        ScreenMinimisedEvent event{};
+                        Engine::eventDispatcher()->trigger(&event);
                         break;
-                    case SDL_WINDOWEVENT_MAXIMIZED:
+                    }
+                    case SDL_WINDOWEVENT_MAXIMIZED: {
                         m_rendering = true;
-                        printf("SDL_WINDOWEVENT_MAXIMIZED\n");
-                        Engine::eventDispatcher()->trigger(ScreenMaximisedEvent{});
+                        ScreenMaximisedEvent event{};
+                        Engine::eventDispatcher()->trigger(&event);
                         break;
-                    case SDL_WINDOWEVENT_RESTORED:
-                        printf("SDL_WINDOWEVENT_RESTORED\n");
+                    }
+                    case SDL_WINDOWEVENT_RESTORED: {
                         break;
-                    case SDL_WINDOWEVENT_SIZE_CHANGED:
-                        Engine::eventDispatcher()->trigger(ScreenResizeEvent{windowSize, getWindowSize() });
+                    }
+                    case SDL_WINDOWEVENT_SIZE_CHANGED: {
+                        ScreenResizeEvent event{windowSize, getWindowSize()};
+                        Engine::eventDispatcher()->trigger(&event);
                         break;
+                    }
                 }
                 break;
         }
 
-        Engine::instance()->processEvent(&event);
-        m_inputHandler->processEvent(&event);
+        Engine::instance()->processEvent(&sdlEvent);
+        m_inputHandler->processEvent(&sdlEvent);
     }
 
     if (Engine::graphics()->didResolutionChange()) {
@@ -158,7 +165,8 @@ void Application::start() {
     m_running = true;
 
     // Trigger a ScreenResizeEvent at the beginning of the render loop so that anything that needs it can be initialized easily
-    Engine::eventDispatcher()->trigger(ScreenResizeEvent{getWindowSize(), getWindowSize() });
+    ScreenResizeEvent event{getWindowSize(), getWindowSize() };
+    Engine::eventDispatcher()->trigger(&event);
 
     std::vector<double> frameTimes;
     std::vector<double> cpuFrameTimes;

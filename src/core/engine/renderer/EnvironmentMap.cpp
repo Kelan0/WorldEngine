@@ -475,7 +475,7 @@ std::shared_ptr<Texture> EnvironmentMap::createTexture(const std::shared_ptr<Ima
     return std::shared_ptr<Texture>(Texture::create(imageViewConfig, samplerConfig, "EnvironmentMap-CubeTexture"));
 }
 
-void EnvironmentMap::onCleanupGraphics(const ShutdownGraphicsEvent& event) {
+void EnvironmentMap::onCleanupGraphics(ShutdownGraphicsEvent* event) {
     delete s_uniformBuffer;
     delete s_BRDFIntegrationMapDescriptorSet;
     delete s_BRDFIntegrationMapComputePipeline;

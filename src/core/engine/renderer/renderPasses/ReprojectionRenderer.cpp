@@ -225,7 +225,7 @@ void ReprojectionRenderer::setTaaJitterSampleCount(const uint32_t& sampleCount) 
     }
 }
 
-void ReprojectionRenderer::recreateSwapchain(const RecreateSwapchainEvent& event) {
+void ReprojectionRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         createFramebuffer(&m_resources[i]->frame);
         m_resources[i]->updateDescriptorSet = true;

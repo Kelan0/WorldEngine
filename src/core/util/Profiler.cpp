@@ -325,7 +325,7 @@ bool Profiler::createGpuTimestampQueryPool(const uint32_t& capacity, vk::QueryPo
     return true;
 }
 
-void Profiler::onCleanupGraphics(const ShutdownGraphicsEvent& event) {
+void Profiler::onCleanupGraphics(ShutdownGraphicsEvent* event) {
     GPUContext& ctx = gpuContext();
     const vk::Device& device = **Engine::graphics()->getDevice();
     for (int i = 0; i < CONCURRENT_FRAMES; ++i) {

@@ -17,21 +17,21 @@ private:
 
     template<class Event>
     struct Listener {
-        void(*callback)(const Event&);
+        void(*callback)(Event*);
 
-        void receive(const Event& event);
+        void receive(Event& event);
 
-        static size_t hash(void(*callback)(const Event&));
+        static size_t hash(void(*callback)(Event*));
     };
 
     template<class Event, typename T>
     struct InstanceListener {
         T* instance;
-        void(T::* callback)(const Event&);
+        void(T::* callback)(Event*);
 
-        void receive(const Event& event);
+        void receive(Event& event);
 
-        static size_t hash(void(T::* callback)(const Event&), T* instance);
+        static size_t hash(void(T::* callback)(Event*), T* instance);
     };
 
 public:
@@ -40,16 +40,16 @@ public:
     ~EventDispatcher();
 
     template<class Event>
-    void connect(void(*callback)(const Event&));
+    void connect(void(*callback)(Event*));
 
     template<typename Event, typename T>
-    void connect(void(T::* callback)(const Event&), T* instance);
+    void connect(void(T::* callback)(Event*), T* instance);
 
     template<class Event>
-    void disconnect(void(*callback)(const Event&));
+    void disconnect(void(*callback)(Event*));
 
     template<class Event, typename T>
-    void disconnect(void(T::* callback)(const Event&), T* instance);
+    void disconnect(void(T::* callback)(Event*), T* instance);
 
     template<class Event, typename T>
     void disconnect(T* instance);
@@ -58,7 +58,7 @@ public:
     void disconnect(T* instance);
 
     template<class Event>
-    void trigger(const Event& event);
+    void trigger(Event* event);
 
     template<class Event>
     void repeatTo(EventDispatcher* eventDispatcher);
@@ -71,7 +71,7 @@ public:
     bool isRepeatingAll(EventDispatcher* eventDispatcher);
 
 private:
-    void onEventDispatcherDestroyed(const EventDispatcherDestroyedEvent& event);
+    void onEventDispatcherDestroyed(EventDispatcherDestroyedEvent* event);
 
 private:
     entt::dispatcher m_dispatcher;
@@ -82,9 +82,9 @@ private:
 };
 
 template<class Event>
-inline void EventDispatcher::connect(void(*callback)(const Event&)) {
+inline void EventDispatcher::connect(void(*callback)(Event*)) {
     PROFILE_SCOPE("EventDispatcher::connect")
-    if (callback == NULL)
+    if (callback == nullptr)
         return;
 
     auto& listeners = m_eventListeners[std::type_index(typeid(Event))];
@@ -100,12 +100,12 @@ inline void EventDispatcher::connect(void(*callback)(const Event&)) {
 }
 
 template<typename Event, typename T>
-inline void EventDispatcher::connect(void(T::* callback)(const Event&), T* instance) {
+inline void EventDispatcher::connect(void(T::* callback)(Event*), T* instance) {
     PROFILE_SCOPE("EventDispatcher::connect")
-    if (instance == NULL)
+    if (instance == nullptr)
         return;
 
-    if (callback == NULL)
+    if (callback == nullptr)
         return;
 
     auto& listeners = m_eventListeners[std::type_index(typeid(Event))];
@@ -127,7 +127,7 @@ inline void EventDispatcher::connect(void(T::* callback)(const Event&), T* insta
 }
 
 template<class Event>
-inline void EventDispatcher::disconnect(void(*callback)(const Event&)) {
+inline void EventDispatcher::disconnect(void(*callback)(Event*)) {
     PROFILE_SCOPE("EventDispatcher::disconnect")
     auto it = m_eventListeners.find(std::type_index(typeid(Event)));
     if (it == m_eventListeners.end())
@@ -142,7 +142,7 @@ inline void EventDispatcher::disconnect(void(*callback)(const Event&)) {
     Listener<Event>* listener = static_cast<Listener<Event>*>(it1->second);
     listeners.erase(it1);
 
-    if (listener == NULL)
+    if (listener == nullptr)
         return; // Error?
 
     m_dispatcher.sink<Event>().template disconnect<&Listener<Event>::receive>(*listener);
@@ -151,7 +151,7 @@ inline void EventDispatcher::disconnect(void(*callback)(const Event&)) {
 }
 
 template<class Event, typename T>
-inline void EventDispatcher::disconnect(void(T::* callback)(const Event&), T* instance) {
+inline void EventDispatcher::disconnect(void(T::* callback)(Event*), T* instance) {
     PROFILE_SCOPE("EventDispatcher::disconnect")
     auto it = m_eventListeners.find(std::type_index(typeid(Event)));
     if (it == m_eventListeners.end())
@@ -179,7 +179,7 @@ inline void EventDispatcher::disconnect(void(T::* callback)(const Event&), T* in
         }
     }
 
-    if (listener == NULL)
+    if (listener == nullptr)
         return;
 
     m_dispatcher.sink<Event>().template disconnect<&InstanceListener<Event, T>::receive>(*listener);
@@ -210,7 +210,7 @@ inline void EventDispatcher::disconnect(T* instance) {
         auto& key = *it3;
 
         auto it4 = listeners.find(key);
-        assert(it4 != listeners.end() && it4->second != NULL);
+        assert(it4 != listeners.end() && it4->second != nullptr);
 
         InstanceListener<Event, T>* listener = static_cast<InstanceListener<Event, T>*>(it4->second);
         assert(listener->instance == instance);
@@ -223,24 +223,24 @@ inline void EventDispatcher::disconnect(T* instance) {
 }
 
 template<class Event>
-inline void EventDispatcher::trigger(const Event& event) {
+inline void EventDispatcher::trigger(Event* event) {
     PROFILE_SCOPE("EventDispatcher::trigger")
-    m_dispatcher.trigger<Event>(static_cast<Event>(event));
+    m_dispatcher.trigger(*event);
 
     auto& dispatchers = m_repeatEventDispatchers[std::type_index(typeid(Event))];
     for (auto it = dispatchers.begin(); it != dispatchers.end(); ++it) {
-        (*it)->trigger(event);
+        (*it)->trigger<Event>(event);
     }
 
     for (auto it = m_repeatAllDispatchers.begin(); it != m_repeatAllDispatchers.end(); ++it) {
-        (*it)->trigger(event);
+        (*it)->trigger<Event>(event);
     }
 }
 
 template<class Event>
 inline void EventDispatcher::repeatTo(EventDispatcher* eventDispatcher) {
     PROFILE_SCOPE("EventDispatcher::repeatTo")
-    if (eventDispatcher == NULL)
+    if (eventDispatcher == nullptr)
         return;
 
     if (isRepeatingTo<Event>(eventDispatcher))
@@ -254,7 +254,7 @@ inline void EventDispatcher::repeatTo(EventDispatcher* eventDispatcher) {
 template<class Event>
 inline bool EventDispatcher::isRepeatingTo(EventDispatcher* eventDispatcher) {
     PROFILE_SCOPE("EventDispatcher::isRepeatingTo")
-    if (eventDispatcher == NULL)
+    if (eventDispatcher == nullptr)
         return false;
 
     if (isRepeatingAll(eventDispatcher))
@@ -271,31 +271,31 @@ inline bool EventDispatcher::isRepeatingTo(EventDispatcher* eventDispatcher) {
 }
 
 template<class Event>
-inline void EventDispatcher::Listener<Event>::receive(const Event& event) {
-    reinterpret_cast<void(*)(const Event&)>(callback)(event);
+inline void EventDispatcher::Listener<Event>::receive(Event& event) {
+    reinterpret_cast<void(*)(Event*)>(callback)(&event);
 }
 
 template<class Event>
-inline size_t EventDispatcher::Listener<Event>::hash(void(*callback)(const Event&)) {
+inline size_t EventDispatcher::Listener<Event>::hash(void(*callback)(Event*)) {
     size_t s = 0;
     std::hash_combine(s, reinterpret_cast<void*>(callback));
     return s;
 }
 
 template<class Event, typename T>
-inline void EventDispatcher::InstanceListener<Event, T>::receive(const Event& event) {
-    (instance->*callback)(event);
+inline void EventDispatcher::InstanceListener<Event, T>::receive(Event& event) {
+    (instance->*callback)(&event);
 }
 
 template<class Event, typename T>
-inline size_t EventDispatcher::InstanceListener<Event, T>::hash(void(T::*callback)(const Event&), T* instance) {
+inline size_t EventDispatcher::InstanceListener<Event, T>::hash(void(T::*callback)(Event*), T* instance) {
 
     size_t s = 0;
 
     size_t numBytes = sizeof(callback);
 
     union {
-        void(T::* funcPtr)(const Event&);
+        void(T::* funcPtr)(Event*);
         void* ptr;
     };
     funcPtr = callback;

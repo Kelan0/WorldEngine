@@ -781,20 +781,20 @@ void SceneRenderer::notifyEntityModified(const uint32_t& entityIndex) {
         m_resources.get(i)->modifiedEntities.insert(entityIndex);
 }
 
-void SceneRenderer::onRenderComponentAdded(const ComponentAddedEvent<RenderComponent>& event) {
-    notifyMeshChanged(event.component->meshUpdateType());
+void SceneRenderer::onRenderComponentAdded(ComponentAddedEvent<RenderComponent>* event) {
+    notifyMeshChanged(event->component->meshUpdateType());
 
-    UpdateTypeHandler<Transform>::setEntityUpdateType(event.entity, event.component->transformUpdateType());
-    UpdateTypeHandler<Texture>::setEntityUpdateType(event.entity, event.component->materialUpdateType());
-    UpdateTypeHandler<Mesh>::setEntityUpdateType(event.entity, event.component->meshUpdateType());
+    UpdateTypeHandler<Transform>::setEntityUpdateType(event->entity, event->component->transformUpdateType());
+    UpdateTypeHandler<Texture>::setEntityUpdateType(event->entity, event->component->materialUpdateType());
+    UpdateTypeHandler<Mesh>::setEntityUpdateType(event->entity, event->component->meshUpdateType());
 }
 
-void SceneRenderer::onRenderComponentRemoved(const ComponentRemovedEvent<RenderComponent>& event) {
-    notifyMeshChanged(event.component->meshUpdateType());
+void SceneRenderer::onRenderComponentRemoved(ComponentRemovedEvent<RenderComponent>* event) {
+    notifyMeshChanged(event->component->meshUpdateType());
 
-    UpdateTypeHandler<Transform>::removeEntityUpdateType(event.entity, event.component->transformUpdateType());
-    UpdateTypeHandler<Texture>::removeEntityUpdateType(event.entity, event.component->materialUpdateType());
-    UpdateTypeHandler<Mesh>::removeEntityUpdateType(event.entity, event.component->meshUpdateType());
+    UpdateTypeHandler<Transform>::removeEntityUpdateType(event->entity, event->component->transformUpdateType());
+    UpdateTypeHandler<Texture>::removeEntityUpdateType(event->entity, event->component->materialUpdateType());
+    UpdateTypeHandler<Mesh>::removeEntityUpdateType(event->entity, event->component->meshUpdateType());
 }
 
 ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {

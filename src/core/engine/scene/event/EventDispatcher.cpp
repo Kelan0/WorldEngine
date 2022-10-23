@@ -4,9 +4,9 @@ EventDispatcher::EventDispatcher() {
 }
 
 EventDispatcher::~EventDispatcher() {
-    EventDispatcherDestroyedEvent event;
+    EventDispatcherDestroyedEvent event{};
     event.eventDispatcher = this;
-    trigger(event);
+    trigger(&event);
 
     for (auto it = m_repeatAllDispatchers.begin(); it != m_repeatAllDispatchers.end(); ++it) {
         (*it)->disconnect<EventDispatcherDestroyedEvent>(&EventDispatcher::onEventDispatcherDestroyed, this);
@@ -24,7 +24,7 @@ EventDispatcher::~EventDispatcher() {
 void EventDispatcher::repeatAll(EventDispatcher* eventDispatcher) {
     PROFILE_SCOPE("EntityHierarchy::repeatAll")
     // TODO: prevent circular references, where A repeats to B, then B repeats to A
-    if (eventDispatcher == NULL)
+    if (eventDispatcher == nullptr)
         return;
     if (isRepeatingAll(eventDispatcher))
         return;
@@ -48,7 +48,7 @@ void EventDispatcher::repeatAll(EventDispatcher* eventDispatcher) {
 
 bool EventDispatcher::isRepeatingAll(EventDispatcher* eventDispatcher) {
     PROFILE_SCOPE("EntityHierarchy::isRepeatingAll")
-    if (eventDispatcher == NULL)
+    if (eventDispatcher == nullptr)
         return false;
 
     for (auto it = m_repeatAllDispatchers.begin(); it != m_repeatAllDispatchers.end(); ++it) {
@@ -59,10 +59,10 @@ bool EventDispatcher::isRepeatingAll(EventDispatcher* eventDispatcher) {
     return false;
 }
 
-void EventDispatcher::onEventDispatcherDestroyed(const EventDispatcherDestroyedEvent& event) {
+void EventDispatcher::onEventDispatcherDestroyed(EventDispatcherDestroyedEvent* event) {
     PROFILE_SCOPE("EntityHierarchy::onEventDispatcherDestroyed")
     for (auto it = m_repeatAllDispatchers.begin(); it != m_repeatAllDispatchers.end();) {
-        if ((*it) == event.eventDispatcher) {
+        if ((*it) == event->eventDispatcher) {
             it = m_repeatAllDispatchers.erase(it);
         } else {
             ++it;
@@ -73,7 +73,7 @@ void EventDispatcher::onEventDispatcherDestroyed(const EventDispatcherDestroyedE
         auto& dispatchers = it->second;
 
         for (auto it1 = dispatchers.begin(); it1 != dispatchers.end();) {
-            if ((*it1) == event.eventDispatcher) {
+            if ((*it1) == event->eventDispatcher) {
                 it1 = dispatchers.erase(it1);
             } else {
                 ++it1;

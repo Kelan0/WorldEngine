@@ -5,6 +5,7 @@
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Buffer.h"
 #include "core/graphics/ShaderUtils.h"
+#include "core/engine/scene/event/EventDispatcher.h"
 
 
 AttachmentBlendState::AttachmentBlendState(const bool& blendEnable, const vk::ColorComponentFlags& colourWriteMask):

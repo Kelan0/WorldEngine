@@ -64,7 +64,7 @@ public:
     const Entity& getMainCameraEntity() const;
 
 private:
-    void onScreenResize(const ScreenResizeEvent& event);
+    void onScreenResize(ScreenResizeEvent* event);
 
 private:
     entt::registry m_registry;
@@ -90,10 +90,10 @@ inline void Scene::disableEvents() {
 
 template<class Component>
 inline void Scene::ComponentEvents<Component>::onConstruct(Scene* scene, entt::registry& registry, entt::entity entity) {
-    ComponentAddedEvent<Component> event;
+    ComponentAddedEvent<Component> event{};
     event.entity = Entity(scene, entity);
     event.component = &event.entity.template getComponent<Component>();
-    scene->getEventDispatcher()->trigger(event);
+    scene->getEventDispatcher()->trigger(&event);
 }
 
 template<class Component>
@@ -101,7 +101,7 @@ inline void Scene::ComponentEvents<Component>::onDestroy(Scene* scene, entt::reg
     ComponentRemovedEvent<Component> event;
     event.entity = Entity(scene, entity);
     event.component = &event.entity.template getComponent<Component>();
-    scene->getEventDispatcher()->trigger(event);
+    scene->getEventDispatcher()->trigger(&event);
 }
 
 #endif //WORLDENGINE_SCENE_H

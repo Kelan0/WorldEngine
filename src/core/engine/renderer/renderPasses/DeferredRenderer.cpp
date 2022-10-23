@@ -359,7 +359,7 @@ vk::Format DeferredRenderer::getOutputColourFormat() const {
 //    return vk::Format::eR32G32B32A32Sfloat;
 }
 
-void DeferredRenderer::recreateSwapchain(const RecreateSwapchainEvent& event) {
+void DeferredRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_resources[i]->updateDescriptorSet = true;
         createFramebuffer(&m_resources[i]->frame);
