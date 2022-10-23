@@ -192,7 +192,9 @@ void Application::start() {
         bool isFrame = false;
         double frameDurationNanos = m_framerateLimit < 1.0 ? 1.0 : (1e+9 / m_framerateLimit);
 
-        partialFrames += elapsedNanos / frameDurationNanos;
+        partialFrames += (double)elapsedNanos / frameDurationNanos;
+
+        Engine::eventDispatcher()->update();
 
         if (partialFrames >= 1.0) {
             Profiler::endCPU(); // profileID_CPU_Idle
@@ -233,58 +235,58 @@ void Application::start() {
         }
 
 
-        uint64_t debugDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastDebug).count();
-
-        if (debugDuration >= 1000000000u) {
-            PROFILE_SCOPE("Debug log")
-            double secondsElapsed = debugDuration / 1000000000.0;
-            std::sort(frameTimes.begin(), frameTimes.end(), [](const double& lhs, const double& rhs) { return lhs > rhs; });
-            double dtAvg = 0.0;
-            double dtLow50 = 0.0;
-            double dtLow10 = 0.0;
-            double dtLow1 = 0.0;
-            double dtMax = frameTimes.empty() ? 0.0 : frameTimes[0];
-            double fps = frameTimes.size() / secondsElapsed;
-
-            for (int i = 0; i < frameTimes.size(); ++i)
-                dtAvg += frameTimes[i];
-            dtAvg /= glm::max(size_t(1), frameTimes.size());
-
-            for (int i = 0; i < INT_DIV_CEIL(frameTimes.size(), 2); ++i)
-                dtLow50 += frameTimes[i];
-            dtLow50 /= glm::max(size_t(1), INT_DIV_CEIL(frameTimes.size(), 2));
-
-            for (int i = 0; i < INT_DIV_CEIL(frameTimes.size(), 10); ++i)
-                dtLow10 += frameTimes[i];
-            dtLow10 /= glm::max(size_t(1), INT_DIV_CEIL(frameTimes.size(), 10));
-
-            for (int i = 0; i < INT_DIV_CEIL(frameTimes.size(), 100); ++i)
-                dtLow1 += frameTimes[i];
-            dtLow1 /= glm::max(size_t(1), INT_DIV_CEIL(frameTimes.size(), 100));
-
-            double dtAvgCpu = 0.0;
-            for (int i = 0; i < cpuFrameTimes.size(); ++i)
-                dtAvgCpu += cpuFrameTimes[i];
-            dtAvgCpu /= cpuFrameTimes.size();
-
-            printf("%.2f FPS (AVG %.3f msec, AVG-CPU %.3f msec,    MAX %.3f msec 1%%LO %.3f msec, 10%%LO %.3f msec, 50%%LO %.3f msec)\n",
-                   fps, dtAvg, dtAvgCpu, dtMax, dtLow1, dtLow10, dtLow50);
-
-            printf("%f polygons/sec - Average frame rendered %f polygons, %f vertices, %f indices - %f draw calls, %f instances, %.2f msec for draw calls\n",
-                   (double)tempDebugInfo.renderedPolygons / secondsElapsed,
-                   (double)tempDebugInfo.renderedPolygons / (double)frameTimes.size(),
-                   (double)tempDebugInfo.renderedVertices / (double)frameTimes.size(),
-                   (double)tempDebugInfo.renderedIndices / (double)frameTimes.size(),
-                   (double)tempDebugInfo.drawCalls / (double)frameTimes.size(),
-                   (double)tempDebugInfo.drawInstances / (double)frameTimes.size(),
-                   ((double)tempDebugInfo.elapsedDrawNanosCPU / (double)frameTimes.size()) / (1e+6)
-            );
-
-            tempDebugInfo.reset();
-            frameTimes.clear();
-            cpuFrameTimes.clear();
-            lastDebug = now;
-        }
+//        uint64_t debugDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastDebug).count();
+//
+//        if (debugDuration >= 1000000000u) {
+//            PROFILE_SCOPE("Debug log")
+//            double secondsElapsed = debugDuration / 1000000000.0;
+//            std::sort(frameTimes.begin(), frameTimes.end(), [](const double& lhs, const double& rhs) { return lhs > rhs; });
+//            double dtAvg = 0.0;
+//            double dtLow50 = 0.0;
+//            double dtLow10 = 0.0;
+//            double dtLow1 = 0.0;
+//            double dtMax = frameTimes.empty() ? 0.0 : frameTimes[0];
+//            double fps = frameTimes.size() / secondsElapsed;
+//
+//            for (int i = 0; i < frameTimes.size(); ++i)
+//                dtAvg += frameTimes[i];
+//            dtAvg /= glm::max(size_t(1), frameTimes.size());
+//
+//            for (int i = 0; i < INT_DIV_CEIL(frameTimes.size(), 2); ++i)
+//                dtLow50 += frameTimes[i];
+//            dtLow50 /= glm::max(size_t(1), INT_DIV_CEIL(frameTimes.size(), 2));
+//
+//            for (int i = 0; i < INT_DIV_CEIL(frameTimes.size(), 10); ++i)
+//                dtLow10 += frameTimes[i];
+//            dtLow10 /= glm::max(size_t(1), INT_DIV_CEIL(frameTimes.size(), 10));
+//
+//            for (int i = 0; i < INT_DIV_CEIL(frameTimes.size(), 100); ++i)
+//                dtLow1 += frameTimes[i];
+//            dtLow1 /= glm::max(size_t(1), INT_DIV_CEIL(frameTimes.size(), 100));
+//
+//            double dtAvgCpu = 0.0;
+//            for (int i = 0; i < cpuFrameTimes.size(); ++i)
+//                dtAvgCpu += cpuFrameTimes[i];
+//            dtAvgCpu /= cpuFrameTimes.size();
+//
+//            printf("%.2f FPS (AVG %.3f msec, AVG-CPU %.3f msec,    MAX %.3f msec 1%%LO %.3f msec, 10%%LO %.3f msec, 50%%LO %.3f msec)\n",
+//                   fps, dtAvg, dtAvgCpu, dtMax, dtLow1, dtLow10, dtLow50);
+//
+//            printf("%f polygons/sec - Average frame rendered %f polygons, %f vertices, %f indices - %f draw calls, %f instances, %.2f msec for draw calls\n",
+//                   (double)tempDebugInfo.renderedPolygons / secondsElapsed,
+//                   (double)tempDebugInfo.renderedPolygons / (double)frameTimes.size(),
+//                   (double)tempDebugInfo.renderedVertices / (double)frameTimes.size(),
+//                   (double)tempDebugInfo.renderedIndices / (double)frameTimes.size(),
+//                   (double)tempDebugInfo.drawCalls / (double)frameTimes.size(),
+//                   (double)tempDebugInfo.drawInstances / (double)frameTimes.size(),
+//                   ((double)tempDebugInfo.elapsedDrawNanosCPU / (double)frameTimes.size()) / (1e+6)
+//            );
+//
+//            tempDebugInfo.reset();
+//            frameTimes.clear();
+//            cpuFrameTimes.clear();
+//            lastDebug = now;
+//        }
 
         if (isFrame) {
             // The CPU is idle from this point onward, until the loop restarts another frame.

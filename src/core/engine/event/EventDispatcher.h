@@ -12,6 +12,69 @@ struct EventDispatcherDestroyedEvent {
     EventDispatcher* eventDispatcher;
 };
 
+class TimerId {
+    friend class EventDispatcher;
+private:
+    struct Tracker {
+        bool valid;
+        uint32_t refCount;
+    };
+public:
+    TimerId();
+
+    TimerId(TimerId& copy);
+
+    TimerId(TimerId&& move) noexcept;
+
+    TimerId(std::nullptr_t);
+
+    ~TimerId();
+
+    TimerId& operator=(const TimerId& copy);
+
+    TimerId& operator=(TimerId&& move) noexcept;
+
+    TimerId& operator=(std::nullptr_t);
+
+    operator bool() const;
+    bool operator==(const TimerId& timerId) const;
+    bool operator!=(const TimerId& timerId) const;
+    size_t hash() const;
+
+private:
+    static TimerId get();
+
+    void invalidate();
+
+    void decrRef();
+
+private:
+    Tracker* m_tracker;
+    uint64_t m_id;
+    static uint64_t s_nextId;
+};
+
+namespace std {
+    template<>
+    struct hash<TimerId> {
+        size_t operator()(const TimerId& v) const {
+            return v.hash();
+        }
+    };
+};
+
+struct TimeoutEvent {
+//    typedef void(*Callback)(TimeoutEvent*);
+    typedef std::function<void(TimeoutEvent*)> Callback;
+
+    EventDispatcher* eventDispatcher;
+    Performance::moment_t startTime;
+    Performance::moment_t endTime;
+    Callback callback;
+    TimerId id;
+};
+
+
 class EventDispatcher {
 private:
 
@@ -38,6 +101,8 @@ public:
     EventDispatcher();
 
     ~EventDispatcher();
+
+    void update();
 
     template<class Event>
     void connect(void(*callback)(Event*));
@@ -70,6 +135,10 @@ public:
 
     bool isRepeatingAll(EventDispatcher* eventDispatcher);
 
+    TimerId setTimeout(TimeoutEvent::Callback callback, const double& timeoutMilliseconds);
+
+    bool clearTimeout(TimerId& id);
+
 private:
     void onEventDispatcherDestroyed(EventDispatcherDestroyedEvent* event);
 
@@ -79,6 +148,8 @@ private:
     std::unordered_map<void*, std::unordered_map<std::type_index, std::unordered_set<size_t>>> m_instanceEventBindings;
     std::vector<EventDispatcher*> m_repeatAllDispatchers;
     std::unordered_map<std::type_index, std::vector<EventDispatcher*>> m_repeatEventDispatchers;
+    std::vector<TimeoutEvent*> m_timeouts;
+    std::unordered_map<TimerId, TimeoutEvent*> m_timeoutIds;
 };
 
 template<class Event>

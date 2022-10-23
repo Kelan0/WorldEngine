@@ -302,11 +302,26 @@ class App : public Application {
     float framerateLimit = 0.0F;
 
 
+    TimerId timeoutId;
 
     void render(const double& dt) override {
         PROFILE_SCOPE("custom render")
         handleUserInput(dt);
         time += dt;
+
+        if (!timeoutId) {
+            printf("Setting timeout\n");
+            timeoutId = Engine::eventDispatcher()->setTimeout([&](TimeoutEvent* event) {
+                double actualDuration = Performance::milliseconds(event->startTime, Performance::now());
+                double expectedDuration = Performance::milliseconds(event->startTime, event->endTime);
+                printf("%.2f msec Timeout took %.2f msec\n", expectedDuration, actualDuration);
+            }, 1000);
+        }
+
+        if (input()->keyPressed(SDL_SCANCODE_C)) {
+            printf("Clearing timeout\n");
+            Engine::eventDispatcher()->clearTimeout(timeoutId);
+        }
 
         bool taaEnabled = Engine::reprojectionRenderer()->isTaaEnabled();
         float taaHistoryFadeFactor = Engine::reprojectionRenderer()->getTaaHistoryFactor();
