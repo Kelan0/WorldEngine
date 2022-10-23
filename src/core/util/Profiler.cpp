@@ -3,8 +3,8 @@
 #include "core/thread/ThreadUtils.h"
 #include "core/application/Application.h"
 #include "core/graphics/GraphicsManager.h"
-#include "core/engine/scene/event/EventDispatcher.h"
-#include "core/engine/scene/event/Events.h"
+#include "core/engine/event/EventDispatcher.h"
+#include "core/engine/event/GraphicsEvents.h"
 #include <thread>
 
 thread_local Performance::moment_t Performance::s_lastTime = Performance::now();

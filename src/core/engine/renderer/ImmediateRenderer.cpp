@@ -1,5 +1,6 @@
 
 #include "core/engine/renderer/ImmediateRenderer.h"
+#include "core/engine/event/GraphicsEvents.h"
 #include "core/application/Engine.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/util/Profiler.h"

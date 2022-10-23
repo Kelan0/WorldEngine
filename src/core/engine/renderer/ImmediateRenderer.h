@@ -5,13 +5,13 @@
 #include "core/graphics/Mesh.h"
 #include "core/graphics/GraphicsPipeline.h"
 #include "core/engine/geometry/MeshData.h"
-#include "core/engine/scene/event/EventDispatcher.h"
-#include "core/engine/scene/event/Events.h"
+#include "core/engine/event/EventDispatcher.h"
 
 #define IMMEDIATE_MODE_VALIDATION 1
 
 class DescriptorSet;
 class DescriptorSetLayout;
+struct RecreateSwapchainEvent;
 
 enum MatrixMode {
     MatrixMode_ModelView = 0,

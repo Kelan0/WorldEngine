@@ -2,7 +2,6 @@
 #define WORLDENGINE_DEFERREDRENDERER_H
 
 #include "core/core.h"
-#include "core/engine/scene/event/Events.h"
 #include "core/engine/renderer/RenderCamera.h"
 #include "core/graphics/FrameResource.h"
 
@@ -15,6 +14,7 @@ class Framebuffer;
 class DescriptorSetLayout;
 class DescriptorSet;
 class Buffer;
+struct RecreateSwapchainEvent;
 
 enum DeferredAttachmentType {
     Attachment_AlbedoRGB_Roughness = 0,

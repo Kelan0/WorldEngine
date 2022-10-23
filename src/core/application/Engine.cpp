@@ -8,7 +8,7 @@
 #include "core/engine/renderer/renderPasses/ReprojectionRenderer.h"
 #include "core/engine/renderer/renderPasses/PostProcessRenderer.h"
 #include "core/engine/renderer/ImmediateRenderer.h"
-#include "core/engine/scene/event/EventDispatcher.h"
+#include "core/engine/event/EventDispatcher.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/RenderPass.h"
 #include "core/util/Profiler.h"

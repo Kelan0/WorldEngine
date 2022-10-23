@@ -3,7 +3,6 @@
 
 #include "core/core.h"
 #include "core/graphics/FrameResource.h"
-#include "core/engine/scene/event/Events.h"
 
 class Image2D;
 class Texture;

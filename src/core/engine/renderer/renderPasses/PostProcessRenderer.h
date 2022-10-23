@@ -3,7 +3,6 @@
 
 #include "core/core.h"
 #include "core/graphics/FrameResource.h"
-#include "core/engine/scene/event/Events.h"
 
 class Buffer;
 class DescriptorSet;
@@ -13,6 +12,7 @@ class Sampler;
 class Image2D;
 class ImageView;
 class Framebuffer;
+struct RecreateSwapchainEvent;
 
 class PostProcessRenderer {
 private:

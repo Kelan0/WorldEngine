@@ -6,8 +6,8 @@
 #include "core/graphics/ComputePipeline.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/util/Util.h"
-#include "core/engine/scene/event/EventDispatcher.h"
-#include "core/engine/scene/event/Events.h"
+#include "core/engine/event/EventDispatcher.h"
+#include "core/engine/event/GraphicsEvents.h"
 
 std::unordered_map<std::string, ImageData*> ImageData::s_imageCache;
 std::unordered_map<std::string, ComputePipeline*> ImageData::ImageTransform::s_transformComputePipelines;

@@ -4,11 +4,11 @@
 
 #include "core/core.h"
 #include "core/graphics/ImageData.h"
-#include "core/engine/scene/event/Events.h"
 
 class DeviceMemoryBlock;
 class ComputePipeline;
 class DescriptorSet;
+struct ShutdownGraphicsEvent;
 
 enum ImageCubeFace {
     ImageCubeFace_PosX = 0,

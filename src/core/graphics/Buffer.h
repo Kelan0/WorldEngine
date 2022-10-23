@@ -5,7 +5,8 @@
 #include "core/core.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/FrameResource.h"
-#include "core/engine/scene/event/Events.h"
+
+struct ShutdownGraphicsEvent;
 
 struct BufferConfiguration {
     std::weak_ptr<vkr::Device> device;

@@ -1,8 +1,8 @@
 
 
 #include "core/engine/renderer/EnvironmentMap.h"
-#include "core/engine/scene/event/EventDispatcher.h"
-#include "core/engine/scene/event/Events.h"
+#include "core/engine/event/EventDispatcher.h"
+#include "core/engine/event/GraphicsEvents.h"
 #include "core/application/Application.h"
 #include "core/application/Engine.h"
 #include "core/graphics/ImageCube.h"

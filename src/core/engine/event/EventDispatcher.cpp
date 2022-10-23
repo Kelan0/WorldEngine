@@ -1,4 +1,4 @@
-#include "core/engine/scene/event/EventDispatcher.h"
+#include "EventDispatcher.h"
 
 EventDispatcher::EventDispatcher() {
 }

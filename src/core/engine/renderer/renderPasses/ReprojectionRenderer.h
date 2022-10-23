@@ -2,7 +2,6 @@
 #define WORLDENGINE_REPROJECTIONRENDERER_H
 
 #include "core/core.h"
-#include "core/engine/scene/event/Events.h"
 #include "core/graphics/FrameResource.h"
 
 class RenderPass;
@@ -14,6 +13,7 @@ class Sampler;
 class Buffer;
 class DescriptorSetLayout;
 class DescriptorSet;
+struct RecreateSwapchainEvent;
 
 class ReprojectionRenderer {
 public:

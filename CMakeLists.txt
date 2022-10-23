@@ -151,9 +151,8 @@ add_executable(${PROJECT_NAME}
         src/core/engine/scene/Scene.h
         src/core/engine/scene/Transform.cpp
         src/core/engine/scene/Transform.h
-        src/core/engine/scene/event/EventDispatcher.cpp
-        src/core/engine/scene/event/EventDispatcher.h
-        src/core/engine/scene/event/Events.h
+        src/core/engine/event/EventDispatcher.cpp
+        src/core/engine/event/EventDispatcher.h
         src/core/graphics/Buffer.cpp
         src/core/graphics/Buffer.h
         src/core/graphics/CommandPool.cpp
@@ -260,7 +259,7 @@ add_executable(${PROJECT_NAME}
         src/core/engine/ui/PerformanceGraphUI.cpp
         src/core/engine/ui/PerformanceGraphUI.h
         src/core/engine/ui/UI.cpp
-        src/core/engine/ui/UI.h src/core/engine/renderer/renderPasses/PostProcessRenderer.cpp src/core/engine/renderer/renderPasses/PostProcessRenderer.h src/core/engine/renderer/renderPasses/ReprojectionRenderer.cpp src/core/engine/renderer/renderPasses/ReprojectionRenderer.h)
+        src/core/engine/ui/UI.h src/core/engine/renderer/renderPasses/PostProcessRenderer.cpp src/core/engine/renderer/renderPasses/PostProcessRenderer.h src/core/engine/renderer/renderPasses/ReprojectionRenderer.cpp src/core/engine/renderer/renderPasses/ReprojectionRenderer.h src/core/engine/event/GraphicsEvents.cpp src/core/engine/event/GraphicsEvents.h src/core/engine/event/ApplicationEvents.cpp src/core/engine/event/ApplicationEvents.h)
 
 target_link_libraries(${PROJECT_NAME}
         ${Vulkan_LIBRARIES}

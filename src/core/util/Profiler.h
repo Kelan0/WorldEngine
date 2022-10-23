@@ -6,7 +6,6 @@
 #include <chrono>
 #include <iostream>
 #include "core/graphics/FrameResource.h"
-#include "core/engine/scene/event/Events.h"
 
 #if ITT_ENABLED
 #include <ittnotify.h>
@@ -19,6 +18,7 @@
 #define PROFILING_ENABLED 1
 #define INTERNAL_PROFILING_ENABLED 1
 
+struct ShutdownGraphicsEvent;
 
 struct __profile_handle {
     const char* name = nullptr;

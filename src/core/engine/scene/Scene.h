@@ -4,9 +4,10 @@
 
 #include "core/core.h"
 #include "core/engine/scene/Entity.h"
-#include "core/engine/scene/event/EventDispatcher.h"
-#include "core/engine/scene/event/Events.h"
+#include "core/engine/event/EventDispatcher.h"
 #include <entt/entt.hpp>
+
+struct ScreenResizeEvent;
 
 template<class T>
 struct ComponentAddedEvent {

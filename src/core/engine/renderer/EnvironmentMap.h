@@ -3,7 +3,6 @@
 #define WORLDENGINE_ENVIRONMENTMAP_H
 
 #include "core/core.h"
-#include "core/engine/scene/event/Events.h"
 
 class Image2D;
 class ImageCube;
@@ -13,6 +12,7 @@ class Sampler;
 class DescriptorSet;
 class ComputePipeline;
 class Buffer;
+struct ShutdownGraphicsEvent;
 
 class EnvironmentMap {
 public:

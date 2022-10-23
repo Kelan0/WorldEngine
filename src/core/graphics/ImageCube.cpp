@@ -8,8 +8,8 @@
 #include "core/graphics/ComputePipeline.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/application/Engine.h"
-#include "core/engine/scene/event/EventDispatcher.h"
-#include "core/engine/scene/event/Events.h"
+#include "core/engine/event/EventDispatcher.h"
+#include "core/engine/event/GraphicsEvents.h"
 #include "core/util/Util.h"
 
 

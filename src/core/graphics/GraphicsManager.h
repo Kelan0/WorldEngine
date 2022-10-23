@@ -3,7 +3,6 @@
 #define WORLDENGINE_GRAPHICSMANAGER_H
 
 #include "core/core.h"
-//#include "core/graphics/Image2D.h"
 #include "core/graphics/FrameResource.h"
 #include "core/util/DebugUtils.h"
 #include <SDL2/SDL.h>

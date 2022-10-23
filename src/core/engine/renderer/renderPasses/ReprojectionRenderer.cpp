@@ -1,6 +1,7 @@
 #include "core/engine/renderer/renderPasses/ReprojectionRenderer.h"
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
-#include "core/engine/scene/event/EventDispatcher.h"
+#include "core/engine/event/EventDispatcher.h"
+#include "core/engine/event/GraphicsEvents.h"
 #include "core/graphics/GraphicsPipeline.h"
 #include "core/graphics/Framebuffer.h"
 #include "core/graphics/RenderPass.h"
