@@ -3,6 +3,10 @@
 
 #include "core/core.h"
 
+struct ShaderLoadedEvent {
+    std::string filePath;
+};
+
 namespace ShaderUtils {
     enum ShaderStage {
         ShaderStage_Auto = 0,
@@ -13,7 +17,7 @@ namespace ShaderUtils {
         ShaderStage_GeometryShader = 5,
         ShaderStage_ComputeShader = 6,
     };
-    bool loadShaderStage(const ShaderStage& shaderStage, std::string filePath, std::vector<char>& bytecode);
+    bool loadShaderStage(const ShaderStage& shaderStage, std::string filePath, std::vector<char>* bytecode);
 
     bool loadShaderModule(const ShaderStage& shaderStage, const vk::Device& device, const std::string& filePath, vk::ShaderModule* outShaderModule);
 

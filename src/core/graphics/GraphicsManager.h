@@ -146,6 +146,8 @@ public:
 
     void endFrame();
 
+    void flushRendering();
+
     void presentImageDirect(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::ImageLayout& imageLayout);
 
     const vk::Instance& getInstance() const;
@@ -257,6 +259,7 @@ private:
     bool m_directImagePresentEnabled;
     bool m_swapchainImageSampled;
     DebugUtils::RenderInfo m_debugInfo;
+    bool m_flushRendering;
 
     static uint64_t s_nextResourceID;
 };

@@ -6,6 +6,7 @@
 #include "core/graphics/Buffer.h"
 #include "core/graphics/ShaderUtils.h"
 #include "core/engine/event/EventDispatcher.h"
+#include "core/engine/event/GraphicsEvents.h"
 
 
 AttachmentBlendState::AttachmentBlendState(const bool& blendEnable, const vk::ColorComponentFlags& colourWriteMask):
@@ -117,27 +118,25 @@ void GraphicsPipelineConfiguration::setAttachmentBlendState(const size_t& attach
     attachmentBlendStates[attachmentIndex] = attachmentBlendState;
 }
 
-GraphicsPipeline::GraphicsPipeline(std::weak_ptr<vkr::Device> device):
-        m_device(device) {
-}
+GraphicsPipeline::GraphicsPipeline(const std::weak_ptr<vkr::Device>& device):
+        m_device(device),
+        m_name(nullptr),
+        m_config(GraphicsPipelineConfiguration{}) {
 
-GraphicsPipeline::GraphicsPipeline(std::weak_ptr<vkr::Device> device,
-                                   vk::Pipeline& pipeline,
-                                   vk::PipelineLayout& pipelineLayout,
-                                   std::shared_ptr<RenderPass>& renderPass,
-                                   const GraphicsPipelineConfiguration& config):
-        m_device(std::move(device)),
-        m_pipeline(std::move(pipeline)),
-        m_renderPass(std::move(renderPass)),
-        m_pipelineLayout(std::move(pipelineLayout)),
-        m_config(config) {
+#if ENABLE_SHADER_HOT_RELOAD
+    Engine::eventDispatcher()->connect(&GraphicsPipeline::onShaderLoaded, this);
+#endif
 }
 
 GraphicsPipeline::~GraphicsPipeline() {
+#if ENABLE_SHADER_HOT_RELOAD
+    Engine::eventDispatcher()->disconnect(&GraphicsPipeline::onShaderLoaded, this);
+#endif
+
     cleanup();
 }
 
-GraphicsPipeline* GraphicsPipeline::create(std::weak_ptr<vkr::Device> device) {
+GraphicsPipeline* GraphicsPipeline::create(const std::weak_ptr<vkr::Device>& device) {
     return new GraphicsPipeline(device.lock());
 }
 
@@ -230,12 +229,12 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     std::vector<vk::PipelineShaderStageCreateInfo> pipelineShaderStages;
 
     if (pipelineConfig.vertexShader.has_value()) {
-        vk::ShaderModule &vertexShaderModule = allShaderModules.emplace_back(VK_NULL_HANDLE);
+        vk::ShaderModule& vertexShaderModule = allShaderModules.emplace_back(VK_NULL_HANDLE);
         if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_VertexShader, device, pipelineConfig.vertexShader.value(), &vertexShaderModule)) {
             cleanupShaderModules();
             return false;
         }
-        vk::PipelineShaderStageCreateInfo &vertexShaderStageCreateInfo = pipelineShaderStages.emplace_back();
+        vk::PipelineShaderStageCreateInfo& vertexShaderStageCreateInfo = pipelineShaderStages.emplace_back();
         vertexShaderStageCreateInfo.setStage(vk::ShaderStageFlagBits::eVertex);
         vertexShaderStageCreateInfo.setModule(vertexShaderModule);
         vertexShaderStageCreateInfo.setPName("main");
@@ -243,12 +242,12 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     }
 
     if (pipelineConfig.fragmentShader.has_value()) {
-        vk::ShaderModule &fragmentShaderModule = allShaderModules.emplace_back(VK_NULL_HANDLE);
+        vk::ShaderModule& fragmentShaderModule = allShaderModules.emplace_back(VK_NULL_HANDLE);
         if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_FragmentShader, device, pipelineConfig.fragmentShader.value(), &fragmentShaderModule)) {
             cleanupShaderModules();
             return false;
         }
-        vk::PipelineShaderStageCreateInfo &fragmentShaderStageCreateInfo = pipelineShaderStages.emplace_back();
+        vk::PipelineShaderStageCreateInfo& fragmentShaderStageCreateInfo = pipelineShaderStages.emplace_back();
         fragmentShaderStageCreateInfo.setStage(vk::ShaderStageFlagBits::eFragment);
         fragmentShaderStageCreateInfo.setModule(fragmentShaderModule);
         fragmentShaderStageCreateInfo.setPName("main");
@@ -374,6 +373,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
 
     m_pipeline = graphicsPipeline;
     m_config = std::move(pipelineConfig);
+    m_name = name;
     return true;
 }
 
@@ -631,3 +631,33 @@ void GraphicsPipeline::validateDynamicState(const vk::DynamicState& dynamicState
     }
 #endif
 }
+
+#if ENABLE_SHADER_HOT_RELOAD
+
+
+
+void GraphicsPipeline::onShaderLoaded(ShaderLoadedEvent* event) {
+    bool doRecreate = false;
+
+    if (m_config.vertexShader.has_value() && m_config.vertexShader.value() == event->filePath) {
+        printf("Vertex shader reloaded for GraphicsPipeline %s\n", m_name);
+        doRecreate = true;
+    }
+
+    if (m_config.fragmentShader.has_value() && m_config.fragmentShader.value() == event->filePath) {
+        printf("Fragment shader reloaded for GraphicsPipeline %s\n", m_name);
+        doRecreate = true;
+    }
+
+    if (doRecreate) {
+        Engine::graphics()->flushRendering();
+
+        GraphicsPipeline* pipeline = this;
+
+        Engine::eventDispatcher()->connect(CallbackWrapper<FlushRenderingEvent>([this](FlushRenderingEvent* event) {
+            recreate(m_config, m_name);
+        }), true);
+
+    }
+}
+#endif

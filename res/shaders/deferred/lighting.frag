@@ -304,7 +304,7 @@ void main() {
 
 
     finalColour = finalColour / (finalColour + vec3(1.0));
-    finalColour = pow(finalColour, vec3(1.0 / 2.2));  
+    finalColour = pow(finalColour, vec3(1.0 / 2.2));
 
     // finalColour = vec3(calculateShadow(surface, lights[0]));
 

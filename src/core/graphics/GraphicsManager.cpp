@@ -972,6 +972,18 @@ void GraphicsManager::endFrame() {
     }
 
     m_swapchain.currentFrameIndex = (m_swapchain.currentFrameIndex + 1) % CONCURRENT_FRAMES;
+
+    if (m_flushRendering) {
+        m_flushRendering = false;
+        Engine::graphics()->getDevice()->waitIdle();
+        FlushRenderingEvent event{};
+        Engine::eventDispatcher()->trigger(&event);
+    }
+}
+
+void GraphicsManager::flushRendering() {
+    // At the end of the current frame, all rendering commands will be flushed, and a FlushRenderingEvent will be triggered
+    m_flushRendering = true;
 }
 
 void GraphicsManager::presentImageDirect(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::ImageLayout& imageLayout) {

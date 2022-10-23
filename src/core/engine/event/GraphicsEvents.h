@@ -12,4 +12,8 @@ struct ShutdownGraphicsEvent {
     uint8_t _v;
 };
 
+struct FlushRenderingEvent {
+    uint8_t _v;
+};
+
 #endif //WORLDENGINE_GRAPHICSEVENTS_H

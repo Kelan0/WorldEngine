@@ -122,6 +122,18 @@ namespace Util {
         } while (current > 0);
         return r;
     }
+
+    void trimLeft(std::string& str);
+
+    void trimRight(std::string& str);
+
+    void trim(std::string& str);
+
+    std::string trimLeftCpy(std::string str);
+
+    std::string trimRightCpy(std::string& str);
+
+    std::string trimCpy(std::string& str);
 }
 
 #endif //WORLDENGINE_UTIL_H

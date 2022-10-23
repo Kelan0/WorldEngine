@@ -11,6 +11,7 @@ void main() {
         vec2(-1.0, +3.0)
     );
 
+
     gl_Position = vec4(vertices[gl_VertexIndex], 0.0, 1.0);
     fs_texture = gl_Position.xy * 0.5 + vec2(0.5);
     fs_texture.y = 1.0 - fs_texture.y;

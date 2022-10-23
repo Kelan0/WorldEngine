@@ -87,11 +87,42 @@ struct IntervalEvent {
 };
 
 
+template<class Event>
+class CallbackWrapper {
+    friend class EventDispatcher;
+private:
+public:
+    typedef std::function<void(Event*)> Callback;
+
+public:
+    CallbackWrapper(Callback callback);
+
+    CallbackWrapper(const CallbackWrapper& copy);
+
+    CallbackWrapper(CallbackWrapper&& move) noexcept;
+
+    ~CallbackWrapper();
+
+    void call(Event* event);
+
+    explicit operator bool() const;
+
+private:
+
+private:
+    Callback m_callback;
+    bool m_allocatedInternally;
+};
+
+
+
 class EventDispatcher {
 private:
 
     template<class Event>
     struct Listener {
+        EventDispatcher* eventDispatcher;
+        bool disconnectNextReceive;
         void(*callback)(Event*);
 
         void receive(Event& event);
@@ -101,8 +132,10 @@ private:
 
     template<class Event, typename T>
     struct InstanceListener {
-        T* instance;
+        EventDispatcher* eventDispatcher;
+        bool disconnectNextReceive;
         void(T::* callback)(Event*);
+        T* instance;
 
         void receive(Event& event);
 
@@ -117,10 +150,13 @@ public:
     void update();
 
     template<class Event>
-    void connect(void(*callback)(Event*));
+    void connect(void(*callback)(Event*), const bool& once = false);
+
+    template<typename Event>
+    void connect(const CallbackWrapper<Event>& callback, const bool& once = false);
 
     template<typename Event, typename T>
-    void connect(void(T::* callback)(Event*), T* instance);
+    void connect(void(T::* callback)(Event*), T* instance, const bool& once = false);
 
     template<class Event>
     void disconnect(void(*callback)(Event*));
@@ -174,8 +210,47 @@ private:
     Performance::moment_t m_lastUpdate;
 };
 
+
 template<class Event>
-inline void EventDispatcher::connect(void(*callback)(Event*)) {
+CallbackWrapper<Event>::CallbackWrapper(Callback callback):
+    m_callback(callback),
+    m_allocatedInternally(false) {
+        printf("Create CallbackWrapper\n");
+}
+
+template<class Event>
+CallbackWrapper<Event>::CallbackWrapper(const CallbackWrapper& copy):
+    m_callback(copy.m_callback),
+    m_allocatedInternally(false) {
+    printf("Copy CallbackWrapper\n");
+}
+
+template<class Event>
+CallbackWrapper<Event>::CallbackWrapper(CallbackWrapper&& move) noexcept:
+    m_callback(std::exchange(move.m_callback, {})),
+    m_allocatedInternally(std::exchange(move.m_allocatedInternally, false)) {
+    printf("Move CallbackWrapper\n");
+}
+
+template<class Event>
+CallbackWrapper<Event>::~CallbackWrapper() {
+    printf("Delete CallbackWrapper\n");
+}
+
+template<class Event>
+void CallbackWrapper<Event>::call(Event* event) {
+    m_callback(event);
+}
+
+template<class Event>
+CallbackWrapper<Event>::operator bool() const {
+    return (bool)m_callback;
+}
+
+
+
+template<class Event>
+inline void EventDispatcher::connect(void(*callback)(Event*), const bool& once) {
     PROFILE_SCOPE("EventDispatcher::connect")
     if (callback == nullptr)
         return;
@@ -187,13 +262,26 @@ inline void EventDispatcher::connect(void(*callback)(Event*)) {
         return; // This key was already inserted, so don't connect the callback a second time
 
     Listener<Event>* listener = new Listener<Event>();
+    listener->eventDispatcher = this;
+    listener->disconnectNextReceive = once;
     listener->callback = callback;
     m_dispatcher.sink<Event>().template connect<&Listener<Event>::receive>(*listener);
     listeners.insert(std::make_pair(key, static_cast<void*>(listener)));
 }
 
+template<typename Event>
+void EventDispatcher::connect(const CallbackWrapper<Event>& callback, const bool& once) {
+    PROFILE_SCOPE("EventDispatcher::connect")
+    if (!callback)
+        return;
+
+    CallbackWrapper<Event>* instance = new CallbackWrapper<Event>(callback);
+    instance->m_allocatedInternally = true;
+    connect(&CallbackWrapper<Event>::call, instance, once);
+}
+
 template<typename Event, typename T>
-inline void EventDispatcher::connect(void(T::* callback)(Event*), T* instance) {
+inline void EventDispatcher::connect(void(T::* callback)(Event*), T* instance, const bool& once) {
     PROFILE_SCOPE("EventDispatcher::connect")
     if (instance == nullptr)
         return;
@@ -209,6 +297,8 @@ inline void EventDispatcher::connect(void(T::* callback)(Event*), T* instance) {
         return; // This key was already inserted, so don't connect the callback a second time
 
     InstanceListener<Event, T>* listener = new InstanceListener<Event, T>();
+    listener->eventDispatcher = this;
+    listener->disconnectNextReceive = once;
     listener->callback = callback;
     listener->instance = instance;
     m_dispatcher.sink<Event>().template connect<&InstanceListener<Event, T>::receive>(*listener);
@@ -248,7 +338,7 @@ inline void EventDispatcher::disconnect(void(T::* callback)(Event*), T* instance
     PROFILE_SCOPE("EventDispatcher::disconnect")
     auto it = m_eventListeners.find(std::type_index(typeid(Event)));
     if (it == m_eventListeners.end())
-        return;
+        return; // No listeners bound for this event
 
     auto& listeners = it->second;
     size_t key = InstanceListener<Event, T>::hash(callback, instance);
@@ -269,6 +359,16 @@ inline void EventDispatcher::disconnect(void(T::* callback)(Event*), T* instance
             if (bindings.empty()) {
                 eventBindings.erase(it3);
             }
+        }
+    }
+
+    if constexpr (std::is_same_v<CallbackWrapper<Event>, T>) { // should we use is_convertible_v ?
+        CallbackWrapper<Event>* callbackWrapper = static_cast<CallbackWrapper<Event>*>(instance);
+        if (callbackWrapper != nullptr && callbackWrapper->m_allocatedInternally) {
+            // This is stinky code, however there shouldn't be a way to get external access to an internally
+            // allocated CallbackWrapper, therefor I am okay with deleting an object passed to the function
+            // without the caller having a way to know, since that should also only be happening internally.
+            delete callbackWrapper;
         }
     }
 
@@ -371,6 +471,9 @@ inline bool EventDispatcher::isRepeatingTo(EventDispatcher* eventDispatcher) {
 template<class Event>
 inline void EventDispatcher::Listener<Event>::receive(Event& event) {
     reinterpret_cast<void(*)(Event*)>(callback)(&event);
+    if (disconnectNextReceive) {
+        eventDispatcher->disconnect(callback);
+    }
 }
 
 template<class Event>
@@ -383,6 +486,9 @@ inline size_t EventDispatcher::Listener<Event>::hash(void(*callback)(Event*)) {
 template<class Event, typename T>
 inline void EventDispatcher::InstanceListener<Event, T>::receive(Event& event) {
     (instance->*callback)(&event);
+    if (disconnectNextReceive) {
+        eventDispatcher->disconnect(callback, instance);
+    }
 }
 
 template<class Event, typename T>
@@ -392,6 +498,7 @@ inline size_t EventDispatcher::InstanceListener<Event, T>::hash(void(T::*callbac
 
     size_t numBytes = sizeof(callback);
 
+    // TODO: is this valid? We need a way to uniquely identify callback, so we reinterpret it as a void* and hash that.
     union {
         void(T::* funcPtr)(Event*);
         void* ptr;

@@ -9,6 +9,7 @@
 class RenderPass;
 class Buffer;
 class DescriptorSetLayout;
+struct ShaderLoadedEvent;
 
 struct BlendMode {
     vk::BlendFactor src = vk::BlendFactor::eOne;
@@ -93,18 +94,12 @@ class GraphicsPipeline {
     NO_COPY(GraphicsPipeline);
 
 private:
-    GraphicsPipeline(std::weak_ptr<vkr::Device> device);
-
-    GraphicsPipeline(std::weak_ptr<vkr::Device> device,
-                     vk::Pipeline& pipeline,
-                     vk::PipelineLayout& pipelineLayout,
-                     std::shared_ptr<RenderPass>& renderPass,
-                     const GraphicsPipelineConfiguration& config);
+    explicit GraphicsPipeline(const std::weak_ptr<vkr::Device>& device);
 
 public:
     ~GraphicsPipeline();
 
-    static GraphicsPipeline* create(std::weak_ptr<vkr::Device> device);
+    static GraphicsPipeline* create(const std::weak_ptr<vkr::Device>& device);
 
     static GraphicsPipeline* create(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration, const char* name);
 
@@ -199,12 +194,17 @@ private:
 
     void validateDynamicState(const vk::DynamicState& dynamicState);
 
+#if ENABLE_SHADER_HOT_RELOAD
+    void onShaderLoaded(ShaderLoadedEvent* event);
+#endif
+
 private:
     std::shared_ptr<vkr::Device> m_device;
     vk::Pipeline m_pipeline;
     vk::PipelineLayout m_pipelineLayout;
     std::shared_ptr<RenderPass> m_renderPass;
     GraphicsPipelineConfiguration m_config;
+    const char* m_name;
 };
 
 

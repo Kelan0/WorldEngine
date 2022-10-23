@@ -38,31 +38,31 @@ vec3 findClosestFragment3x3(in vec2 texCoord) {
 
     vec3 currentFragment;
     currentFragment.xy = texCoord - dv - du;
-    currentFragment.z = texture(depthTexture, currentFragment.xy).z;
+    currentFragment.z = texture(depthTexture, currentFragment.xy).r;
     vec3 closestFragment = currentFragment;
     currentFragment.xy = texCoord - dv;
-    currentFragment.z = texture(depthTexture, currentFragment.xy).z;
+    currentFragment.z = texture(depthTexture, currentFragment.xy).r;
     if (currentFragment.z < closestFragment.z) closestFragment = currentFragment;
     currentFragment.xy = texCoord - dv + du;
-    currentFragment.z = texture(depthTexture, currentFragment.xy).z;
+    currentFragment.z = texture(depthTexture, currentFragment.xy).r;
     if (currentFragment.z < closestFragment.z) closestFragment = currentFragment;
     currentFragment.xy = texCoord - du;
-    currentFragment.z = texture(depthTexture, currentFragment.xy).z;
+    currentFragment.z = texture(depthTexture, currentFragment.xy).r;
     if (currentFragment.z < closestFragment.z) closestFragment = currentFragment;
     currentFragment.xy = texCoord;
-    currentFragment.z = texture(depthTexture, currentFragment.xy).z;
+    currentFragment.z = texture(depthTexture, currentFragment.xy).r;
     if (currentFragment.z < closestFragment.z) closestFragment = currentFragment;
     currentFragment.xy = texCoord + du;
-    currentFragment.z = texture(depthTexture, currentFragment.xy).z;
+    currentFragment.z = texture(depthTexture, currentFragment.xy).r;
     if (currentFragment.z < closestFragment.z) closestFragment = currentFragment;
     currentFragment.xy = texCoord + dv - du;
-    currentFragment.z = texture(depthTexture, currentFragment.xy).z;
+    currentFragment.z = texture(depthTexture, currentFragment.xy).r;
     if (currentFragment.z < closestFragment.z) closestFragment = currentFragment;
     currentFragment.xy = texCoord + dv;
-    currentFragment.z = texture(depthTexture, currentFragment.xy).z;
+    currentFragment.z = texture(depthTexture, currentFragment.xy).r;
     if (currentFragment.z < closestFragment.z) closestFragment = currentFragment;
     currentFragment.xy = texCoord + dv + du;
-    currentFragment.z = texture(depthTexture, currentFragment.xy).z;
+    currentFragment.z = texture(depthTexture, currentFragment.xy).r;
     if (currentFragment.z < closestFragment.z) closestFragment = currentFragment;
     return closestFragment;
 }
@@ -311,14 +311,19 @@ void main() {
     if (taaEnabled) {
         vec2 unjitteredTexCoord = fs_texture - taaCurrentJitterOffset;
         vec3 closestFragment = findClosestFragment3x3(unjitteredTexCoord);
-        vec2 velocity = sampleVelocity(closestFragment.xy);
-        //    vec3 finalColour = texture(frameTexture, unjitteredTexCoord).rgb;
 
-        finalColour = calculateTemporalAntiAliasing(fs_texture, velocity);
+        if (closestFragment.z < 1.0) {
+
+            vec2 velocity = sampleVelocity(closestFragment.xy);
+            finalColour = calculateTemporalAntiAliasing(fs_texture, velocity);
+        } else {
+            finalColour = texture(frameTexture, fs_texture).rgb;
+        }
     } else {
         finalColour = texture(frameTexture, fs_texture).rgb;
     }
 
     outColor = vec4(finalColour, 1.0);
 //    outColor = vec4(abs(velocity) * 100.0, 0.0, 1.0);
+//    outColor = vec4(vec3(texture(depthTexture, fs_texture).r), 1.0);
 }
