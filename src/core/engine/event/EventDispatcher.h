@@ -74,6 +74,18 @@ struct TimeoutEvent {
     TimerId id;
 };
 
+struct IntervalEvent {
+//    typedef void(*Callback)(IntervalEvent*);
+    typedef std::function<void(IntervalEvent*)> Callback;
+    EventDispatcher* eventDispatcher;
+    Performance::moment_t startTime;
+    Performance::moment_t lastTime;
+    Performance::duration_t duration;
+    double partialTicks;
+    Callback callback;
+    TimerId id;
+};
+
 
 class EventDispatcher {
 private:
@@ -135,9 +147,17 @@ public:
 
     bool isRepeatingAll(EventDispatcher* eventDispatcher);
 
-    TimerId setTimeout(TimeoutEvent::Callback callback, const double& timeoutMilliseconds);
+    TimerId setTimeout(const TimeoutEvent::Callback& callback, const double& durationMilliseconds);
+
+    TimerId setTimeout(const TimeoutEvent::Callback& callback, const Performance::duration_t& duration);
+
+    TimerId setInterval(const IntervalEvent::Callback& callback, const double& durationMilliseconds);
+
+    TimerId setInterval(const IntervalEvent::Callback& callback, const Performance::duration_t& duration);
 
     bool clearTimeout(TimerId& id);
+
+    bool clearInterval(TimerId& id);
 
 private:
     void onEventDispatcherDestroyed(EventDispatcherDestroyedEvent* event);
@@ -150,6 +170,8 @@ private:
     std::unordered_map<std::type_index, std::vector<EventDispatcher*>> m_repeatEventDispatchers;
     std::vector<TimeoutEvent*> m_timeouts;
     std::unordered_map<TimerId, TimeoutEvent*> m_timeoutIds;
+    std::unordered_map<TimerId, IntervalEvent*> m_intervalIds;
+    Performance::moment_t m_lastUpdate;
 };
 
 template<class Event>
@@ -340,6 +362,11 @@ inline bool EventDispatcher::isRepeatingTo(EventDispatcher* eventDispatcher) {
 
     return false;
 }
+
+
+
+
+
 
 template<class Event>
 inline void EventDispatcher::Listener<Event>::receive(Event& event) {

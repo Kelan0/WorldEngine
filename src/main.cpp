@@ -99,6 +99,9 @@ class App : public Application {
 
 
 
+        Engine::eventDispatcher()->setInterval([](IntervalEvent* interval) {
+            printf("Test interval took %.2f msec\n", Performance::milliseconds(interval->lastTime, Performance::now()));
+        }, 500);
 
 
 

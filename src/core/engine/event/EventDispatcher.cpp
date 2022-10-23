@@ -1,3 +1,5 @@
+#include <utility>
+
 #include "core/engine/event/EventDispatcher.h"
 #include "core/thread/ThreadUtils.h"
 
@@ -91,7 +93,8 @@ void TimerId::decrRef() {
     }
 }
 
-EventDispatcher::EventDispatcher() {
+EventDispatcher::EventDispatcher():
+    m_lastUpdate(Performance::moment_t{}) { // lastUpdate is zero nanoseconds since epoch
 }
 
 EventDispatcher::~EventDispatcher() {
@@ -114,6 +117,24 @@ EventDispatcher::~EventDispatcher() {
 
 void EventDispatcher::update() {
     Performance::moment_t currentTime = Performance::now();
+    if (m_lastUpdate == Performance::moment_t{}) {
+        m_lastUpdate = currentTime; // First update, sync from epoch to now
+    }
+    uint64_t elapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(currentTime - m_lastUpdate).count();
+
+    for (auto& [id, interval] : m_intervalIds) {
+        uint64_t intervalDurationNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(interval->duration).count();
+        interval->partialTicks += (double)elapsedNanos / (double)intervalDurationNanos;
+        if (interval->partialTicks >= 1.0) {
+            interval->partialTicks -= 1.0;
+            interval->callback(interval);
+            interval->lastTime = currentTime;
+        }
+        if (interval->partialTicks > 10.0) {
+            // This update loop is failing to keep up with the interval, forcefully reset it.
+            interval->partialTicks = 0.0;
+        }
+    }
 
     int64_t eraseCount = 0;
 
@@ -137,6 +158,8 @@ void EventDispatcher::update() {
     if (eraseCount > 0) {
         m_timeouts.erase(m_timeouts.begin(), m_timeouts.begin() + eraseCount);
     }
+
+    m_lastUpdate = currentTime;
 }
 
 void EventDispatcher::repeatAll(EventDispatcher* eventDispatcher) {
@@ -177,14 +200,17 @@ bool EventDispatcher::isRepeatingAll(EventDispatcher* eventDispatcher) {
     return false;
 }
 
-TimerId EventDispatcher::setTimeout(TimeoutEvent::Callback callback, const double& timeoutMilliseconds) {
-    std::chrono::duration<double, std::milli> durationMilliseconds(timeoutMilliseconds);
+TimerId EventDispatcher::setTimeout(const TimeoutEvent::Callback& callback, const double& durationMilliseconds) {
+    return setTimeout(callback, std::chrono::duration_cast<Performance::duration_t>(std::chrono::duration<double, std::milli>(durationMilliseconds)));
+}
+
+TimerId EventDispatcher::setTimeout(const TimeoutEvent::Callback& callback, const Performance::duration_t& duration) {
 
     TimerId id = TimerId::get();
     TimeoutEvent* timeout = new TimeoutEvent();
     timeout->eventDispatcher = this;
     timeout->startTime = Performance::now();
-    timeout->endTime = timeout->startTime + std::chrono::duration_cast<Performance::duration_t>(durationMilliseconds);
+    timeout->endTime = timeout->startTime + duration;
     timeout->callback = callback;
     timeout->id = id;
 
@@ -195,6 +221,26 @@ TimerId EventDispatcher::setTimeout(TimeoutEvent::Callback callback, const doubl
     });
 
     m_timeouts.insert(it, timeout);
+
+    return id;
+}
+
+TimerId EventDispatcher::setInterval(const IntervalEvent::Callback& callback, const double& durationMilliseconds) {
+    return setInterval(callback, std::chrono::duration_cast<Performance::duration_t>(std::chrono::duration<double, std::milli>(durationMilliseconds)));
+}
+
+TimerId EventDispatcher::setInterval(const IntervalEvent::Callback& callback, const Performance::duration_t& duration) {
+    TimerId id = TimerId::get();
+    IntervalEvent* interval = new IntervalEvent();
+    interval->eventDispatcher = this;
+    interval->startTime = Performance::now();
+    interval->lastTime = interval->startTime;
+    interval->partialTicks = 0.0;
+    interval->duration = duration;
+    interval->callback = callback;
+    interval->id = id;
+
+    m_intervalIds.insert(std::make_pair(id, interval));
 
     return id;
 }
@@ -233,6 +279,22 @@ bool EventDispatcher::clearTimeout(TimerId& id) {
         }
     }
 
+    return false;
+}
+
+bool EventDispatcher::clearInterval(TimerId& id) {
+    if (!id) {
+        return true;
+    }
+    auto it0 = m_intervalIds.find(id);
+    if (it0 == m_intervalIds.end()) {
+        return false;
+    }
+
+    IntervalEvent* interval = it0->second;
+    assert(interval->id == id);
+
+    m_intervalIds.erase(it0);
     return false;
 }
 
