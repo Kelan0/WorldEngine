@@ -31,7 +31,8 @@ private:
     struct GeometryPassUniformData {
         GPUCamera prevCamera;
         GPUCamera camera;
-        glm::vec2 taaJitterOffset;
+        glm::vec2 taaPreviousJitterOffset;
+        glm::vec2 taaCurrentJitterOffset;
     };
     struct LightingPassUniformData {
         glm::mat4 viewMatrix;
@@ -137,8 +138,6 @@ private:
     Sampler* m_attachmentSampler;
     RenderCamera m_renderCamera;
     std::unordered_map<ImageView*, int32_t> m_frameIndices;
-    std::vector<glm::vec2> m_haltonSequence;
-    uint32_t m_frameIndex;
     FrameImages m_previousFrame;
 };
 

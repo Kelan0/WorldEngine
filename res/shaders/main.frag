@@ -25,6 +25,13 @@ layout(location = 1) out vec4 out_NormalXYZ_Metallic;
 layout(location = 2) out vec4 outEmissionRGB_AO;
 layout(location = 3) out vec2 outVelocityXY;
 
+layout(std140, set = 0, binding = 0) uniform UBO2 {
+    CameraData prevCamera;
+    CameraData camera;
+    vec2 taaPreviousJitterOffset;
+    vec2 taaCurrentJitterOffset;
+};
+
 layout(set = 2, binding = 0) uniform sampler2D textures[];
 
 layout(set = 2, binding = 1) readonly buffer MaterialDataBuffer {
@@ -94,7 +101,11 @@ void main() {
     out_NormalXYZ_Metallic.w = getMaterialMetallic(fs_texture, material);
     outEmissionRGB_AO.rgb = getMaterialEmission(fs_texture, material);
     outEmissionRGB_AO.a = 1.0;
-    vec2 currPosition = (fs_currPosition.xy / fs_currPosition.w) * 0.5 + 0.5;
-    vec2 prevPosition = (fs_prevPosition.xy / fs_prevPosition.w) * 0.5 + 0.5;
-    outVelocityXY.xy = (currPosition.xy - prevPosition.xy) * VELOCITY_PRECISION_SCALE; // Scale velocity to maintain precision. It needs to be divided again when accessed
+    vec2 currPositionNDC = (fs_currPosition.xy / fs_currPosition.w);
+    vec2 prevPositionNDC = (fs_prevPosition.xy / fs_prevPosition.w);
+    vec2 currPosition = (currPositionNDC.xy - taaCurrentJitterOffset.xy);
+    vec2 prevPosition = (prevPositionNDC.xy - taaPreviousJitterOffset.xy);
+    vec2 velocity = (currPosition.xy - prevPosition.xy) * vec2(0.5, -0.5);
+
+    outVelocityXY.xy = velocity * VELOCITY_PRECISION_SCALE; // Scale velocity to maintain precision. It needs to be divided again when accessed
 }

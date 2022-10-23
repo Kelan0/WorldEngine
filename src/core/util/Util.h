@@ -116,8 +116,8 @@ namespace Util {
         T r = T(0);
         uint32_t current = index;
         do {
-            f = f / (T)base;
-            r = r + f * (T)(current % base);
+            f /= (T)base;
+            r += f * (T)(current % base);
             current /= base;
         } while (current > 0);
         return r;

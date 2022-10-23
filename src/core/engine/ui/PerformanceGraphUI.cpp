@@ -33,6 +33,11 @@ void PerformanceGraphUI::update(const double& dt) {
         for (auto& [threadId, frameTimeInfo] : m_threadFrameTimeInfo) {
             frameTimeInfo.frameTimes.clear();
             frameTimeInfo.sortedFrameTimes.clear();
+            frameTimeInfo.frameTimeAvg = 0.0;
+            frameTimeInfo.frameTimePercentile90 = 0.0;
+            frameTimeInfo.frameTimePercentile99 = 0.0;
+            frameTimeInfo.frameTimePercentile999 = 0.0;
+            frameTimeInfo.frameSequence = 0;
         }
     }
 

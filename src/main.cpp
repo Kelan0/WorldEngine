@@ -44,6 +44,8 @@ class App : public Application {
     std::vector<std::shared_ptr<Texture>> textures;
     double cameraPitch = 0.0F;
     double cameraYaw = 0.0F;
+    float playerMovementSpeed = 1.0F;
+    bool cameraMouseInputLocked = false;
 
     std::shared_ptr<Texture> loadTexture(const std::string& filePath, vk::Format format, std::weak_ptr<Sampler> sampler) {
         std::string imageName = std::string("TestImage:") + filePath;
@@ -263,26 +265,32 @@ class App : public Application {
             if (isViewportInverted())
                 dMouse.y *= -1;
 
-            cameraPitch += dMouse.y * 0.001F;
-            cameraYaw -= dMouse.x * 0.001F;
-            if (cameraYaw > +M_PI) cameraYaw -= M_PI * 2.0;
-            if (cameraYaw < -M_PI) cameraYaw += M_PI * 2.0;
-            if (cameraPitch > +M_PI * 0.5) cameraPitch = +M_PI * 0.5;
-            if (cameraPitch < -M_PI * 0.5) cameraPitch = -M_PI * 0.5;
+            if (cameraMouseInputLocked) {
+                cameraPitch = cameraTransform.getPitch();
+                cameraYaw = cameraTransform.getYaw();
+            } else {
+                cameraPitch += dMouse.y * 0.001F;
+                cameraYaw -= dMouse.x * 0.001F;
+                if (cameraYaw > +M_PI) cameraYaw -= M_PI * 2.0;
+                if (cameraYaw < -M_PI) cameraYaw += M_PI * 2.0;
+                if (cameraPitch > +M_PI * 0.5) cameraPitch = +M_PI * 0.5;
+                if (cameraPitch < -M_PI * 0.5) cameraPitch = -M_PI * 0.5;
 
-            cameraTransform.setRotation((float)cameraPitch, (float)cameraYaw);
+                cameraTransform.setRotation((float) cameraPitch, (float) cameraYaw);
+            }
 
-            double movementSpeed = 1.0;
             glm::dvec3 movementDir(0.0);
 
             if (input()->keyDown(SDL_SCANCODE_W)) movementDir.z--;
             if (input()->keyDown(SDL_SCANCODE_S)) movementDir.z++;
             if (input()->keyDown(SDL_SCANCODE_A)) movementDir.x--;
             if (input()->keyDown(SDL_SCANCODE_D)) movementDir.x++;
+            if (input()->keyDown(SDL_SCANCODE_LSHIFT)) movementDir.y--;
+            if (input()->keyDown(SDL_SCANCODE_SPACE)) movementDir.y++;
 
             if (glm::dot(movementDir, movementDir) > 0.5F) {
                 movementDir = cameraTransform.getRotationMatrix() * glm::normalize(movementDir);
-                cameraTransform.translate(movementDir * movementSpeed * dt);
+                cameraTransform.translate(movementDir * (double)playerMovementSpeed * dt);
             }
         }
     }
@@ -290,25 +298,71 @@ class App : public Application {
     Frustum frustum;
     bool pauseFrustum = false;
     double time = 0.0;
-    float historyFadeFactor = 1.0F;
-    double framerateLimit = 0.0;
+    float framerateLimit = 0.0F;
+
+
 
     void render(const double& dt) override {
         PROFILE_SCOPE("custom render")
         handleUserInput(dt);
         time += dt;
 
+        bool taaEnabled = Engine::reprojectionRenderer()->isTaaEnabled();
+        float taaHistoryFadeFactor = Engine::reprojectionRenderer()->getTaaHistoryFactor();
+        uint32_t colourClippingMode = Engine::reprojectionRenderer()->getTaaColourClippingMode();
+        bool useCatmullRomFilter = Engine::reprojectionRenderer()->getTaaUseCatmullRomFilter();
+        bool useMitchellFilter = Engine::reprojectionRenderer()->getTaaUseMitchellFilter();
+        glm::vec2 mitchellCoeffs = Engine::reprojectionRenderer()->getTaaMitchellFilterCoefficients();
+
+        const char* colourClippingModeNames[3] = { "Clamp", "Fast Clipping", "Accurate Clipping" };
+
         ImGui::Begin("Test");
-        ImGui::SliderFloat("History Fade Factor", &historyFadeFactor, 0.0F, 1.0F);
-        ImGui::InputDouble("Framerate Limit", &framerateLimit);
+        if (ImGui::CollapsingHeader("Temporal AA")) {
+            ImGui::Checkbox("Enabled", &taaEnabled);
+            ImGui::BeginDisabled(!taaEnabled);
+            if (ImGui::BeginCombo("Colour clipping mode", colourClippingModeNames[colourClippingMode])) {
+                for (uint32_t i = 0; i < 3; ++i)
+                    if (ImGui::Selectable(colourClippingModeNames[i], colourClippingMode == i))
+                        colourClippingMode = i;
+                ImGui::EndCombo();
+            }
+            ImGui::Checkbox("Use CatmullRom filter", &useCatmullRomFilter);
+            ImGui::SameLine();
+            ImGui::Checkbox("Use Mitchell Filter", &useMitchellFilter);
+            ImGui::BeginDisabled(!useMitchellFilter);
+            ImGui::SliderFloat("Mitchell B", &mitchellCoeffs[0], -2.0F, +2.0F);
+            ImGui::SliderFloat("Mitchell C", &mitchellCoeffs[1], 0.0F, +4.0F);
+            ImGui::EndDisabled();
+            ImGui::SliderFloat("History Fade Factor", &taaHistoryFadeFactor, 0.0F, 1.0F);
+            ImGui::EndDisabled();
+        }
+        if (ImGui::CollapsingHeader("Misc")) {
+            ImGui::SliderFloat("Framerate Limit", &framerateLimit, 0.0F, 200.0F);
+            ImGui::SliderFloat("Movement speed", &playerMovementSpeed, 0.05F, 10.0F);
+            ImGui::Checkbox("Look at cube", &cameraMouseInputLocked);
+        }
         ImGui::End();
 
+        taaHistoryFadeFactor = glm::floor(taaHistoryFadeFactor / 0.01F) * 0.01F;
+        framerateLimit = glm::floor(framerateLimit / 5.0F) * 5.0F;
+
         Application::instance()->setFramerateLimit(framerateLimit);
-        Engine::reprojectionRenderer()->setTaaHistoryFactor(historyFadeFactor);
+
+        Engine::reprojectionRenderer()->setTaaEnabled(taaEnabled);
+        Engine::reprojectionRenderer()->setTaaHistoryFactor(taaHistoryFadeFactor);
+        Engine::reprojectionRenderer()->setTaaUseCatmullRomFilter(useCatmullRomFilter);
+        Engine::reprojectionRenderer()->setTaaColourClippingMode((ReprojectionRenderer::ColourClippingMode)colourClippingMode);
+        Engine::reprojectionRenderer()->setTaaUseMitchellFilter(useMitchellFilter);
+        Engine::reprojectionRenderer()->setTaaMitchellFilterCoefficients(mitchellCoeffs[0], mitchellCoeffs[1]);
 
         Entity mainCamera = Engine::scene()->getMainCameraEntity();
         Transform& cameraTransform = mainCamera.getComponent<Transform>();
         Camera& cameraProjection = mainCamera.getComponent<Camera>();
+
+        if (cameraMouseInputLocked) {
+            Entity cubeEntity = Engine::scene()->findNamedEntity("cubeEntity");
+            cameraTransform.setRotation(cubeEntity.getComponent<Transform>().getTranslation() - cameraTransform.getTranslation(),glm::vec3(0, 1, 0), false);
+        }
 
         Entity christmasBallEntity = Engine::scene()->findNamedEntity("christmasBallEntity");
         if (christmasBallEntity) {

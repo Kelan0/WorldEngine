@@ -72,6 +72,7 @@ private:
 
     std::thread::id m_mainThreadId;
 
+    bool m_rendering;
     bool m_running;
 };
 

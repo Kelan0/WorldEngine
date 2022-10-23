@@ -17,19 +17,19 @@
 
 Engine* Engine::s_instance = new Engine();
 
-Engine::Engine() {
-    m_graphics = new GraphicsManager();
-    m_eventDispatcher = new EventDispatcher();
-    m_scene = new Scene();
-    m_uiRenderer = new UIRenderer();
-    m_sceneRenderer = new SceneRenderer();
-    m_lightRenderer = new LightRenderer();
-    m_immediateRenderer = new ImmediateRenderer();
-    m_reprojectionRenderer = new ReprojectionRenderer();
-    m_deferredRenderer = new DeferredRenderer();
-    m_postProcessingRenderer = new PostProcessRenderer();
-
-    m_renderCamera = new RenderCamera();
+Engine::Engine():
+    m_graphics(new GraphicsManager()),
+    m_eventDispatcher(new EventDispatcher()),
+    m_scene(new Scene()),
+    m_uiRenderer(new UIRenderer()),
+    m_sceneRenderer(new SceneRenderer()),
+    m_lightRenderer(new LightRenderer()),
+    m_immediateRenderer(new ImmediateRenderer()),
+    m_reprojectionRenderer(new ReprojectionRenderer()),
+    m_deferredRenderer(new DeferredRenderer()),
+    m_postProcessingRenderer(new PostProcessRenderer()),
+    m_renderCamera(new RenderCamera()),
+    m_currentFrameCount(0) {
 }
 
 Engine::~Engine() {
@@ -92,6 +92,10 @@ EventDispatcher* Engine::getEventDispatcher() const {
     return m_eventDispatcher;
 }
 
+const uint64_t& Engine::getCurrentFrameCount() const {
+    return m_currentFrameCount;
+}
+
 GraphicsManager* Engine::graphics() {
     return instance()->getGraphics();
 }
@@ -130,6 +134,10 @@ PostProcessRenderer* Engine::postProcessingRenderer() {
 
 EventDispatcher* Engine::eventDispatcher() {
     return instance()->getEventDispatcher();
+}
+
+const uint64_t& Engine::currentFrameCount() {
+    return instance()->getCurrentFrameCount();
 }
 
 Engine* Engine::instance() {
@@ -179,6 +187,8 @@ bool Engine::init(SDL_Window* windowHandle) {
     if (!m_postProcessingRenderer->init())
         return false;
 
+    m_currentFrameCount = 0;
+
     return true;
 }
 
@@ -226,6 +236,8 @@ void Engine::render(const double& dt) {
     m_uiRenderer->render(dt, commandBuffer);
 //    PROFILE_END_GPU_TIMESTAMP("Engine::render");
     END_CMD_LABEL(commandBuffer);
+
+    ++m_currentFrameCount;
 }
 
 void Engine::destroy() {

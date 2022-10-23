@@ -3,9 +3,10 @@
 
 
 const float PI = 3.14159265359;
+const float SQRT2 = 1.4142135623730951;
 const vec2 invAtan = vec2(0.15915494309, 0.31830988618);
 
-const float VELOCITY_PRECISION_SCALE = 1.0;
+const float VELOCITY_PRECISION_SCALE = 100.0;
 
 const vec3 cubeCornerVertices[24] = vec3[](
     vec3(+1.0, +1.0, +1.0), vec3(+1.0, +1.0, -1.0), vec3(+1.0, -1.0, -1.0), vec3(+1.0, -1.0, +1.0), // +x

@@ -9,6 +9,7 @@
 #include "core/graphics/Texture.h"
 #include "core/graphics/Buffer.h"
 #include "core/graphics/DescriptorSet.h"
+#include "core/util/Util.h"
 
 #define UNIFORM_BUFFER_BINDING 0
 #define FRAME_TEXTURE_BINDING 1
@@ -17,9 +18,16 @@
 #define PREVIOUS_FRAME_TEXTURE_BINDING 4
 #define PREVIOUS_VELOCITY_TEXTURE_BINDING 5
 
-ReprojectionRenderer::ReprojectionRenderer() {
-    m_uniformData.taaHistoryFactor = 1.0F;
-    m_uniformData.taaUseFullKernel = true;
+ReprojectionRenderer::ReprojectionRenderer():
+    m_uniformData(ReprojectionUniformData{}) {
+    m_uniformData.taaPreviousJitterOffset = glm::vec2(0.0F, 0.0F);
+    m_uniformData.taaCurrentJitterOffset = glm::vec2(0.0F, 0.0F);
+    setTaaHistoryFactor(0.1F);
+    setTaaUseCatmullRomFilter(true);
+    setTaaUseMitchellFilter(true);
+    setTaaColourClippingMode(ColourClippingMode_Accurate);
+    setTaaMitchellFilterCoefficients(0.0F, 0.5F);
+    setTaaEnabled(true);
 }
 
 ReprojectionRenderer::~ReprojectionRenderer() {
@@ -84,6 +92,8 @@ bool ReprojectionRenderer::init() {
         return false;
     }
 
+    setTaaJitterSampleCount(32);
+
     Engine::eventDispatcher()->connect(&ReprojectionRenderer::recreateSwapchain, this);
     return true;
 }
@@ -92,6 +102,12 @@ void ReprojectionRenderer::render(const double& dt, const vk::CommandBuffer& com
     PROFILE_SCOPE("ReprojectionRenderer::render")
 
     m_uniformData.resolution = Engine::graphics()->getResolution();
+    if (isTaaEnabled() && !m_haltonSequence.empty()) {
+        m_uniformData.taaPreviousJitterOffset = m_uniformData.taaCurrentJitterOffset;
+        m_uniformData.taaCurrentJitterOffset = m_haltonSequence[Engine::currentFrameCount() % m_haltonSequence.size()] * Engine::graphics()->getNormalizedPixelSize() * 0.5F;
+    } else {
+        m_uniformData.taaPreviousJitterOffset = m_uniformData.taaCurrentJitterOffset = glm::vec2(0.0F, 0.0F);
+    }
 
     ImageView* frameImageView = Engine::deferredLightingPass()->getOutputFrameImageView();
     ImageView* velocityImageView = Engine::deferredLightingPass()->getVelocityImageView();
@@ -144,12 +160,69 @@ bool ReprojectionRenderer::hasPreviousFrame() const {
     return m_previousFrame.rendered;
 }
 
-const float& ReprojectionRenderer::getTaaHistoryFactor() const {
-    return m_uniformData.taaHistoryFactor;
+float ReprojectionRenderer::getTaaHistoryFactor() const {
+    return m_uniformData.taaHistoryFadeFactor;
 }
 
 void ReprojectionRenderer::setTaaHistoryFactor(const float& taaHistoryFactor) {
-    m_uniformData.taaHistoryFactor = taaHistoryFactor;
+    m_uniformData.taaHistoryFadeFactor = taaHistoryFactor;
+}
+
+bool ReprojectionRenderer::getTaaUseCatmullRomFilter() const {
+    return m_uniformData.useCatmullRomFilter;
+}
+
+void ReprojectionRenderer::setTaaUseCatmullRomFilter(const bool& useCatmullRomFilter) {
+    m_uniformData.useCatmullRomFilter = useCatmullRomFilter;
+}
+
+ReprojectionRenderer::ColourClippingMode ReprojectionRenderer::getTaaColourClippingMode() const {
+    return (ColourClippingMode)m_uniformData.colourClippingMode;
+}
+
+void ReprojectionRenderer::setTaaColourClippingMode(const ColourClippingMode& colourClippingMode) {
+    m_uniformData.colourClippingMode = (uint32_t)colourClippingMode;
+}
+
+glm::vec2 ReprojectionRenderer::getTaaMitchellFilterCoefficients() const {
+    return glm::vec2(m_uniformData.mitchellB, m_uniformData.mitchellC);
+}
+
+void ReprojectionRenderer::setTaaMitchellFilterCoefficients(const float& B, const float& C) {
+    m_uniformData.mitchellB = B;
+    m_uniformData.mitchellC = C;
+}
+
+bool ReprojectionRenderer::getTaaUseMitchellFilter() const {
+    return m_uniformData.useMitchellFilter;
+}
+
+void ReprojectionRenderer::setTaaUseMitchellFilter(const bool& useMitchellFilter) {
+    m_uniformData.useMitchellFilter = useMitchellFilter;
+}
+
+bool ReprojectionRenderer::isTaaEnabled() const {
+    return m_uniformData.taaEnabled;
+}
+
+void ReprojectionRenderer::setTaaEnabled(const bool& taaEnabled) {
+    m_uniformData.taaEnabled = taaEnabled;
+}
+
+const glm::vec2& ReprojectionRenderer::getTaaPreviousJitterOffset() const {
+    return m_uniformData.taaPreviousJitterOffset;
+}
+
+const glm::vec2& ReprojectionRenderer::getTaaCurrentJitterOffset() const {
+    return m_uniformData.taaCurrentJitterOffset;
+}
+
+void ReprojectionRenderer::setTaaJitterSampleCount(const uint32_t& sampleCount) {
+    m_haltonSequence.resize(sampleCount);
+    for (uint32_t i = 0; i < sampleCount; ++i) {
+        m_haltonSequence[i].x = Util::createHaltonSequence<float>(i + 1, 2) * 2.0F - 1.0F;
+        m_haltonSequence[i].y = Util::createHaltonSequence<float>(i + 1, 3) * 2.0F - 1.0F;
+    }
 }
 
 void ReprojectionRenderer::recreateSwapchain(const RecreateSwapchainEvent& event) {

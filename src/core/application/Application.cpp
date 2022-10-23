@@ -21,7 +21,8 @@ Application::Application():
         m_framerateLimit(0.0), // Unlimited
         m_windowHandle(nullptr),
         m_inputHandler(nullptr),
-        m_running(false) {
+        m_running(false),
+        m_rendering(false) {
 }
 
 Application::~Application() {
@@ -109,7 +110,26 @@ void Application::processEventsInternal() {
             case SDL_WINDOWEVENT:
                 switch (event.window.event) {
                     case SDL_WINDOWEVENT_SHOWN:
+                        m_rendering = true;
                         Engine::eventDispatcher()->trigger(ScreenShowEvent{getWindowSize() });
+                        break;
+                    case SDL_WINDOWEVENT_HIDDEN:
+                        m_rendering = false;
+                        printf("SDL_WINDOWEVENT_HIDDEN\n");
+                        Engine::eventDispatcher()->trigger(ScreenHiddenEvent{});
+                        break;
+                    case SDL_WINDOWEVENT_MINIMIZED:
+                        m_rendering = false;
+                        printf("SDL_WINDOWEVENT_MINIMIZED\n");
+                        Engine::eventDispatcher()->trigger(ScreenMinimisedEvent{});
+                        break;
+                    case SDL_WINDOWEVENT_MAXIMIZED:
+                        m_rendering = true;
+                        printf("SDL_WINDOWEVENT_MAXIMIZED\n");
+                        Engine::eventDispatcher()->trigger(ScreenMaximisedEvent{});
+                        break;
+                    case SDL_WINDOWEVENT_RESTORED:
+                        printf("SDL_WINDOWEVENT_RESTORED\n");
                         break;
                     case SDL_WINDOWEVENT_SIZE_CHANGED:
                         Engine::eventDispatcher()->trigger(ScreenResizeEvent{windowSize, getWindowSize() });
@@ -180,23 +200,27 @@ void Application::start() {
 
             processEventsInternal();
 
-            if (Engine::graphics()->beginFrame()) {
-                uint64_t frameElapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastFrame).count();
-                double dt = frameElapsedNanos / 1e+9;
+            // TODO: update tick independent of render and framerate, possibly on separate thread?
 
-                auto cpuBegin = std::chrono::high_resolution_clock::now();
-                renderInternal(dt);
-                auto cpuEnd = std::chrono::high_resolution_clock::now();
+            if (m_rendering) {
+                if (Engine::graphics()->beginFrame()) {
+                    uint64_t frameElapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastFrame).count();
+                    double dt = frameElapsedNanos / 1e+9;
 
-                Engine::graphics()->endFrame();
+                    auto cpuBegin = std::chrono::high_resolution_clock::now();
+                    renderInternal(dt);
+                    auto cpuEnd = std::chrono::high_resolution_clock::now();
 
-                tempDebugInfo += Engine::graphics()->debugInfo();
+                    Engine::graphics()->endFrame();
 
-                lastFrame = now;
+                    tempDebugInfo += Engine::graphics()->debugInfo();
 
-                auto endFrame = std::chrono::high_resolution_clock::now();
-                frameTimes.emplace_back(std::chrono::duration_cast<std::chrono::nanoseconds>(endFrame - beginFrame).count() / 1000000.0);
-                cpuFrameTimes.emplace_back(std::chrono::duration_cast<std::chrono::nanoseconds>(cpuEnd - cpuBegin).count() / 1000000.0);
+                    lastFrame = now;
+
+                    auto endFrame = std::chrono::high_resolution_clock::now();
+                    frameTimes.emplace_back(std::chrono::duration_cast<std::chrono::nanoseconds>(endFrame - beginFrame).count() / 1000000.0);
+                    cpuFrameTimes.emplace_back(std::chrono::duration_cast<std::chrono::nanoseconds>(cpuEnd - cpuBegin).count() / 1000000.0);
+                }
             }
         }
 
@@ -262,6 +286,8 @@ void Application::start() {
         //SDL_Delay(1);
     }
     Profiler::endFrame();
+
+    m_rendering = false;
 
     Engine::graphics()->getDevice()->waitIdle();
 

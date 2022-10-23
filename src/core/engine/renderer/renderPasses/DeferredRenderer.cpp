@@ -1,5 +1,6 @@
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/renderer/renderPasses/LightRenderer.h"
+#include "core/engine/renderer/renderPasses/ReprojectionRenderer.h"
 #include "core/engine/renderer/SceneRenderer.h"
 #include "core/engine/renderer/ShadowMap.h"
 #include "core/engine/renderer/EnvironmentMap.h"
@@ -33,8 +34,7 @@ EnvironmentMap* environmentMap = nullptr;
 
 
 DeferredRenderer::DeferredRenderer():
-    m_attachmentSampler(nullptr),
-    m_frameIndex(0) {
+    m_attachmentSampler(nullptr) {
 }
 
 DeferredRenderer::~DeferredRenderer() {
@@ -64,7 +64,7 @@ bool DeferredRenderer::init() {
     std::shared_ptr<DescriptorPool> descriptorPool = Engine::graphics()->descriptorPool();
 
     m_globalDescriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
-            .addUniformBuffer(0, vk::ShaderStageFlagBits::eVertex)
+            .addUniformBuffer(0, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
             .build("DeferredRenderer-GlobalDescriptorSetLayout");
 
     m_lightingDescriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
@@ -143,12 +143,6 @@ bool DeferredRenderer::init() {
     environmentMap->setEnvironmentImage(imageCube);
     environmentMap->update();
 
-    m_haltonSequence.resize(16);
-    for (uint32_t i = 0; i < m_haltonSequence.size(); ++i) {
-        m_haltonSequence[i].x = Util::createHaltonSequence<float>(i + 1, 2);
-        m_haltonSequence[i].y = Util::createHaltonSequence<float>(i + 1, 3);
-    }
-
     Engine::eventDispatcher()->connect(&DeferredRenderer::recreateSwapchain, this);
     return true;
 }
@@ -165,18 +159,32 @@ void DeferredRenderer::renderGeometryPass(const double& dt, const vk::CommandBuf
     PROFILE_SCOPE("DeferredRenderer::renderGeometryPass");
     BEGIN_CMD_LABEL(commandBuffer, "DeferredRenderer::renderGeometryPass");
 
-    glm::vec2 pixelSize = glm::vec2(1.0F) / glm::vec2(Engine::graphics()->getResolution());
-
     GeometryPassUniformData uniformData{};
+
     uniformData.prevCamera.viewMatrix = renderCamera->getPrevViewMatrix();
     uniformData.prevCamera.projectionMatrix = renderCamera->getPrevProjectionMatrix();
     uniformData.prevCamera.viewProjectionMatrix = renderCamera->getPrevViewProjectionMatrix();
     uniformData.camera.viewMatrix = renderCamera->getViewMatrix();
     uniformData.camera.projectionMatrix = renderCamera->getProjectionMatrix();
     uniformData.camera.viewProjectionMatrix = renderCamera->getViewProjectionMatrix();
-    uniformData.taaJitterOffset = (m_haltonSequence[m_frameIndex % m_haltonSequence.size()] - glm::vec2(0.5F)) * pixelSize * 2.0F;
+
+    if (Engine::reprojectionRenderer()->isTaaEnabled()) {
+        uniformData.taaPreviousJitterOffset = Engine::reprojectionRenderer()->getTaaPreviousJitterOffset();
+        uniformData.taaCurrentJitterOffset = Engine::reprojectionRenderer()->getTaaCurrentJitterOffset();
+        glm::mat4 previousJitterOffsetMatrix = glm::translate(glm::mat4(1.0F),glm::vec3(uniformData.taaPreviousJitterOffset, 0.0F));
+        glm::mat4 currentJitterOffsetMatrix = glm::translate(glm::mat4(1.0F),glm::vec3(uniformData.taaCurrentJitterOffset, 0.0F));
+        uniformData.prevCamera.projectionMatrix = previousJitterOffsetMatrix * uniformData.prevCamera.projectionMatrix;
+        uniformData.prevCamera.viewProjectionMatrix = previousJitterOffsetMatrix * uniformData.prevCamera.viewProjectionMatrix;
+        uniformData.camera.projectionMatrix = currentJitterOffsetMatrix * uniformData.camera.projectionMatrix;
+        uniformData.camera.viewProjectionMatrix = currentJitterOffsetMatrix * uniformData.camera.viewProjectionMatrix;
+    } else {
+        uniformData.taaPreviousJitterOffset = glm::vec2(0.0F);
+        uniformData.taaCurrentJitterOffset = glm::vec2(0.0F);
+    }
+
     m_resources->cameraInfoBuffer->upload(0, sizeof(GeometryPassUniformData), &uniformData);
 //    renderCamera->uploadCameraData(m_resources->cameraInfoBuffer, 0);
+
 
     std::array<vk::DescriptorSet, 3> descriptorSets = {
             m_resources->globalDescriptorSet->getDescriptorSet(),
@@ -190,7 +198,6 @@ void DeferredRenderer::renderGeometryPass(const double& dt, const vk::CommandBuf
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_geometryGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
 
     Engine::sceneRenderer()->render(dt, commandBuffer, renderCamera);
-    ++m_frameIndex;
     END_CMD_LABEL(commandBuffer);
 }
 

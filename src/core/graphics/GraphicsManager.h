@@ -196,6 +196,8 @@ public:
 
     glm::ivec2 getResolution() const;
 
+    glm::vec2 getNormalizedPixelSize() const;
+
     float getAspectRatio() const;
 
     const vk::Extent2D& getImageExtent() const;

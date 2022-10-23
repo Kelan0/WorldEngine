@@ -13,6 +13,18 @@ struct ScreenShowEvent {
     glm::uvec2 size;
 };
 
+struct ScreenHiddenEvent {
+    uint8_t _v;
+};
+
+struct ScreenMinimisedEvent {
+    uint8_t _v;
+};
+
+struct ScreenMaximisedEvent {
+    uint8_t _v;
+};
+
 struct RecreateSwapchainEvent {
     uint8_t _v;
 };

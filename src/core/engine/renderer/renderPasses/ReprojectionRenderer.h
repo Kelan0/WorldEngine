@@ -16,11 +16,25 @@ class DescriptorSetLayout;
 class DescriptorSet;
 
 class ReprojectionRenderer {
+public:
+    enum ColourClippingMode {
+        ColourClippingMode_None = 0,
+        ColourClippingMode_Fast = 1,
+        ColourClippingMode_Accurate = 2,
+    };
+
 private:
     struct ReprojectionUniformData {
         glm::uvec2 resolution;
-        float taaHistoryFactor;
-        bool taaUseFullKernel;
+        glm::vec2 taaCurrentJitterOffset;
+        glm::vec2 taaPreviousJitterOffset;
+        float taaHistoryFadeFactor;
+        bool useCatmullRomFilter;
+        uint32_t colourClippingMode;
+        bool useMitchellFilter;
+        float mitchellB;
+        float mitchellC;
+        bool taaEnabled;
     };
 
     struct FrameImages {
@@ -54,9 +68,35 @@ public:
 
     bool hasPreviousFrame() const;
 
-    const float& getTaaHistoryFactor() const;
+    float getTaaHistoryFactor() const;
 
     void setTaaHistoryFactor(const float& taaHistoryFactor);
+
+    bool getTaaUseCatmullRomFilter() const;
+
+    void setTaaUseCatmullRomFilter(const bool& useCatmullRomFilter);
+
+    ColourClippingMode getTaaColourClippingMode() const;
+
+    void setTaaColourClippingMode(const ColourClippingMode& colourClippingMode);
+
+    glm::vec2 getTaaMitchellFilterCoefficients() const;
+
+    void setTaaMitchellFilterCoefficients(const float& B, const float& C);
+
+    bool getTaaUseMitchellFilter() const;
+
+    void setTaaUseMitchellFilter(const bool& useMitchellFilter);
+
+    bool isTaaEnabled() const;
+
+    void setTaaEnabled(const bool& taaEnabled);
+
+    const glm::vec2& getTaaPreviousJitterOffset() const;
+
+    const glm::vec2& getTaaCurrentJitterOffset() const;
+
+    void setTaaJitterSampleCount(const uint32_t& sampleCount);
 
 private:
     void recreateSwapchain(const RecreateSwapchainEvent& event);
@@ -78,6 +118,7 @@ private:
     std::shared_ptr<Sampler> m_frameSampler;
     ReprojectionUniformData m_uniformData;
     FrameImages m_previousFrame;
+    std::vector<glm::vec2> m_haltonSequence;
 };
 
 

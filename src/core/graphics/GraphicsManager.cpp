@@ -1152,6 +1152,10 @@ glm::ivec2 GraphicsManager::getResolution() const {
     return glm::ivec2(m_swapchain.imageExtent.width, m_swapchain.imageExtent.height);
 }
 
+glm::vec2 GraphicsManager::getNormalizedPixelSize() const {
+    return glm::vec2(1.0F) / glm::vec2(getResolution());
+}
+
 float GraphicsManager::getAspectRatio() const {
     return (float)m_swapchain.imageExtent.width / (float)m_swapchain.imageExtent.height;
 }

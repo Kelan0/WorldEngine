@@ -49,6 +49,8 @@ public:
 
     [[nodiscard]] EventDispatcher* getEventDispatcher() const;
 
+    [[nodiscard]] const uint64_t& getCurrentFrameCount() const;
+
     static GraphicsManager* graphics();
 
     static Scene* scene();
@@ -68,6 +70,8 @@ public:
     static PostProcessRenderer* postProcessingRenderer();
 
     static EventDispatcher* eventDispatcher();
+
+    static const uint64_t& currentFrameCount();
 
     static Engine* instance();
 
@@ -93,6 +97,7 @@ private:
     ReprojectionRenderer* m_reprojectionRenderer;
     PostProcessRenderer* m_postProcessingRenderer;
     EventDispatcher* m_eventDispatcher;
+    uint64_t m_currentFrameCount;
 
     RenderCamera* m_renderCamera;
 };
