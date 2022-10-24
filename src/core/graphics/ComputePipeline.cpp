@@ -5,6 +5,7 @@
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/ShaderUtils.h"
 #include "core/application/Engine.h"
+#include "core/util/Profiler.h"
 
 
 std::unordered_map<size_t, ComputePipeline*> ComputePipeline::s_cachedComputePipelines;
@@ -142,15 +143,15 @@ void ComputePipeline::bind(const vk::CommandBuffer& commandBuffer) const {
 }
 
 void ComputePipeline::dispatch(const vk::CommandBuffer& commandBuffer, const uint32_t& workgroupCountX, const uint32_t& workgroupCountY, const uint32_t& workgroupCountZ) const {
-    BEGIN_CMD_LABEL(commandBuffer, "ComputePipeline::dispatch");
+    PROFILE_BEGIN_GPU_CMD("ComputePipeline::dispatch", commandBuffer);
     commandBuffer.dispatch(workgroupCountX, workgroupCountY, workgroupCountZ);
-    END_CMD_LABEL(commandBuffer);
+    PROFILE_END_GPU_CMD(commandBuffer);
 }
 
 void ComputePipeline::dispatchBase(const vk::CommandBuffer& commandBuffer, const uint32_t& workgroupOffsetX, const uint32_t& workgroupOffsetY, const uint32_t& workgroupOffsetZ, const uint32_t& workgroupCountX, const uint32_t& workgroupCountY, const uint32_t& workgroupCountZ) const {
-    BEGIN_CMD_LABEL(commandBuffer, "ComputePipeline::dispatchBase");
+    PROFILE_BEGIN_GPU_CMD("ComputePipeline::dispatchBase", commandBuffer);
     commandBuffer.dispatchBase(workgroupOffsetX, workgroupOffsetY, workgroupOffsetZ, workgroupCountX, workgroupCountY, workgroupCountZ);
-    END_CMD_LABEL(commandBuffer);
+    PROFILE_END_GPU_CMD(commandBuffer);
 }
 
 const vk::Pipeline& ComputePipeline::getPipeline() const {

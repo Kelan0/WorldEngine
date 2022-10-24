@@ -215,26 +215,22 @@ template<class Event>
 CallbackWrapper<Event>::CallbackWrapper(Callback callback):
     m_callback(callback),
     m_allocatedInternally(false) {
-        printf("Create CallbackWrapper\n");
 }
 
 template<class Event>
 CallbackWrapper<Event>::CallbackWrapper(const CallbackWrapper& copy):
     m_callback(copy.m_callback),
     m_allocatedInternally(false) {
-    printf("Copy CallbackWrapper\n");
 }
 
 template<class Event>
 CallbackWrapper<Event>::CallbackWrapper(CallbackWrapper&& move) noexcept:
     m_callback(std::exchange(move.m_callback, {})),
     m_allocatedInternally(std::exchange(move.m_allocatedInternally, false)) {
-    printf("Move CallbackWrapper\n");
 }
 
 template<class Event>
 CallbackWrapper<Event>::~CallbackWrapper() {
-    printf("Delete CallbackWrapper\n");
 }
 
 template<class Event>

@@ -67,7 +67,7 @@ bool PostProcessRenderer::init() {
 
 void PostProcessRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("PostProcessRenderer::render")
-    BEGIN_CMD_LABEL(commandBuffer, "PostProcessRenderer::render")
+    PROFILE_BEGIN_GPU_CMD("PostProcessRenderer::render", commandBuffer)
 
     bool updateFrameTextureBinding = true;
 
@@ -91,7 +91,7 @@ void PostProcessRenderer::render(const double& dt, const vk::CommandBuffer& comm
 
     commandBuffer.draw(3, 1, 0, 0);
 
-    END_CMD_LABEL(commandBuffer)
+    PROFILE_END_GPU_CMD(commandBuffer)
 }
 
 void PostProcessRenderer::beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents) {

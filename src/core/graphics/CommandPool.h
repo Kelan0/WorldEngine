@@ -34,6 +34,10 @@ public:
 
     std::shared_ptr<vkr::CommandBuffer> getCommandBuffer(const std::string& name);
 
+    const vk::CommandBuffer& getTemporaryCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration);
+
+    vk::Fence releaseTemporaryCommandBufferFence(const vk::CommandBuffer& commandBuffer);
+
     void freeCommandBuffer(const std::string& name);
 
     bool hasCommandBuffer(const std::string& name) const;
@@ -41,9 +45,14 @@ public:
     const GraphicsResource& getResourceId() const;
 
 private:
+    void updateTemporaryCommandBuffers();
+
+private:
     std::shared_ptr<vkr::Device> m_device;
     vk::CommandPool m_commandPool;
     std::unordered_map<std::string, std::shared_ptr<vkr::CommandBuffer>> m_commandBuffers;
+    std::unordered_map<vk::CommandBuffer, vk::Fence> m_temporaryCmdBufferFences;
+    std::vector<vk::Fence> m_unusedFences;
 
     GraphicsResource m_resourceId;
 };

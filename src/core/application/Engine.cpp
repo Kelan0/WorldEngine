@@ -211,7 +211,7 @@ void Engine::render(const double& dt) {
     m_lightRenderer->preRender(dt);
 
     auto& commandBuffer = graphics()->getCurrentCommandBuffer();
-    BEGIN_CMD_LABEL(commandBuffer, "Engine::render");
+    PROFILE_BEGIN_GPU_CMD("Engine::render", commandBuffer)
 
     m_lightRenderer->render(dt, commandBuffer, m_renderCamera);
 
@@ -235,7 +235,7 @@ void Engine::render(const double& dt) {
 
     m_uiRenderer->render(dt, commandBuffer);
 //    PROFILE_END_GPU_TIMESTAMP("Engine::render");
-    END_CMD_LABEL(commandBuffer);
+    PROFILE_END_GPU_CMD(commandBuffer);
 
     ++m_currentFrameCount;
 }

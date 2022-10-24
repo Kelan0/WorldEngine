@@ -94,7 +94,7 @@ void TimerId::decrRef() {
 }
 
 EventDispatcher::EventDispatcher():
-    m_lastUpdate(Performance::moment_t{}) { // lastUpdate is zero nanoseconds since epoch
+    m_lastUpdate(Performance::zero_moment) { // lastUpdate is zero nanoseconds since epoch
 }
 
 EventDispatcher::~EventDispatcher() {
@@ -117,7 +117,7 @@ EventDispatcher::~EventDispatcher() {
 
 void EventDispatcher::update() {
     Performance::moment_t currentTime = Performance::now();
-    if (m_lastUpdate == Performance::moment_t{}) {
+    if (m_lastUpdate == Performance::zero_moment) {
         m_lastUpdate = currentTime; // First update, sync from epoch to now
     }
     uint64_t elapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(currentTime - m_lastUpdate).count();

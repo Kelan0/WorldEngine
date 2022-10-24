@@ -124,7 +124,7 @@ void ReprojectionRenderer::render(const double& dt, const vk::CommandBuffer& com
     descriptorSetWriter.writeImage(PREVIOUS_VELOCITY_TEXTURE_BINDING, m_frameSampler.get(), prevVelocityImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
     descriptorSetWriter.write();
 
-    BEGIN_CMD_LABEL(commandBuffer, "ReprojectionRenderer::render")
+    PROFILE_BEGIN_GPU_CMD("ReprojectionRenderer::render", commandBuffer)
 
     m_reprojectionGraphicsPipeline->bind(commandBuffer);
 
@@ -138,7 +138,7 @@ void ReprojectionRenderer::render(const double& dt, const vk::CommandBuffer& com
 
     commandBuffer.draw(3, 1, 0, 0);
 
-    END_CMD_LABEL(commandBuffer)
+    PROFILE_END_GPU_CMD(commandBuffer)
 
     m_resources->frame.rendered = true;
 

@@ -14,5 +14,10 @@ layout(set = 0, binding = 1) uniform sampler2D frameTexture;
 
 void main() {
     vec3 finalColour = texture(frameTexture, fs_texture).rgb;
+
+
+    finalColour = finalColour / (finalColour + vec3(1.0));
+    finalColour = pow(finalColour, vec3(1.0 / 2.2));
+
     outColor = vec4(finalColour, 1.0);
 }

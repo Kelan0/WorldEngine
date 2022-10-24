@@ -32,6 +32,7 @@ typedef __profile_handle* profile_id;
 namespace Performance {
     using duration_t = std::chrono::nanoseconds;
     using moment_t = std::chrono::high_resolution_clock::time_point;
+    constexpr moment_t zero_moment = moment_t{};
 
     duration_t mark();
 
@@ -60,19 +61,21 @@ namespace Performance {
 class Profiler {
 private:
     struct GPUQueryPool {
+        std::weak_ptr<vkr::Device> device;
         vk::QueryPool pool = VK_NULL_HANDLE;
         uint32_t capacity = 0;
         uint32_t size = 0;
+        uint32_t available = 0;
+        std::vector<uint64_t> queryResults;
     };
 
     struct GPUQuery {
         uint32_t queryIndex = 0;
         GPUQueryPool* queryPool = nullptr;
+        double time = 0.0;
     };
 
     struct GPUQueryFrameData {
-        std::vector<GPUQueryPool> queryPools;
-        uint32_t queryCount = 0;
     };
 
 public:
@@ -89,8 +92,6 @@ public:
     };
 
     struct GPUProfile : public Profile {
-        Performance::moment_t startTime;
-        Performance::moment_t endTime;
         GPUQuery startQuery;
         GPUQuery endQuery;
     };
@@ -113,9 +114,13 @@ public:
     };
 
     struct GPUContext : public ProfileContext {
-        std::vector<GPUProfile> frameProfiles;
-        std::vector<GPUProfile> prevFrameProfiles;
-        FrameResource<GPUQueryFrameData> queryData;
+        std::vector<GPUProfile> allFrameProfiles;
+        std::vector<size_t> allFrameStartIndexOffsets;
+        size_t latestReadyFrameIndex = SIZE_MAX;
+        std::vector<GPUQueryPool*> queryPools;
+        GPUQueryPool* currentQueryPool = nullptr;
+        uint32_t queryCount = 0;
+        uint32_t queryPoolSize = 1000;
 
         GPUContext();
 
@@ -142,11 +147,17 @@ public:
 
     static void endCPU();
 
-    static void beginGPU(const profile_id& id);
+    static void beginGraphicsFrame(const vk::CommandBuffer& commandBuffer);
 
-    static void endGPU();
+    static void endGraphicsFrame(const vk::CommandBuffer& commandBuffer);
+
+    static void beginGPU(const profile_id& id, const vk::CommandBuffer& commandBuffer);
+
+    static void endGPU(const vk::CommandBuffer& commandBuffer);
 
     static void getFrameProfile(std::unordered_map<uint64_t, std::vector<CPUProfile>>& outThreadProfiles);
+
+    static bool getLatestGpuFrameProfile(std::vector<GPUProfile>& outGpuProfiles);
 
     static bool isGpuProfilingEnabled();
 
@@ -155,9 +166,9 @@ public:
 private:
     static bool writeTimestamp(const vk::CommandBuffer& commandBuffer, const vk::PipelineStageFlagBits& pipelineStage, GPUQuery* outQuery);
 
-    static bool getGpuQueryPool(const uint32_t& maxQueries, GPUQueryPool** queryPool);
+    static bool getGpuQueryPool(const uint32_t& numQueries, GPUQueryPool** queryPool);
 
-    static bool createGpuTimestampQueryPool(const uint32_t& capacity, vk::QueryPool* queryPool);
+    static bool createGpuTimestampQueryPool(const vk::Device& device, const uint32_t& capacity, vk::QueryPool* queryPool);
 
     static void onCleanupGraphics(ShutdownGraphicsEvent* event);
 
@@ -209,11 +220,14 @@ private:
 #define PROFILE_END_REGION() { \
     PF_NAME.endRegion(); }
 
-#define PROFILE_BEGIN_GPU_TIMESTAMP(name) \
-    Profiler::beginGPU(Profiler::id(name));
+#define PROFILE_BEGIN_GPU_CMD(name, commandBuffer) {\
+    static profile_id PFID_NAME(__pf_gpu_cmd_id_) = Profiler::id(name); \
+    Profiler::beginGPU(PFID_NAME(__pf_gpu_cmd_id_), commandBuffer); \
+}
 
-#define PROFILE_END_GPU_TIMESTAMP(name) \
-    Profiler::endGPU(Profiler::id(name));
+#define PROFILE_END_GPU_CMD(commandBuffer) {\
+    Profiler::endGPU(commandBuffer); \
+}
 
 #define PROFILE_CATEGORY(name)
 

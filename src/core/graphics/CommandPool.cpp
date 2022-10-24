@@ -7,11 +7,21 @@ CommandPool::CommandPool(const std::weak_ptr<vkr::Device>& device, const vk::Com
 }
 
 CommandPool::~CommandPool() {
-    for (auto & commandBuffer : m_commandBuffers) {
+    for (auto& commandBuffer : m_commandBuffers) {
         if (commandBuffer.second.use_count() > 1) {
             printf("Command buffer \"%s\" has %llu external references when command pool was destroyed\n", commandBuffer.first.c_str(), (uint64_t)(commandBuffer.second.use_count() - 1));
         }
     }
+
+    for (auto& [commandBuffer, fence] : m_temporaryCmdBufferFences) {
+        (**m_device).freeCommandBuffers(m_commandPool, 1, &commandBuffer);
+        (**m_device).destroyFence(fence);
+    }
+
+    for (auto& fence : m_unusedFences) {
+        (**m_device).destroyFence(fence);
+    }
+
     m_commandBuffers.clear();
     (**m_device).destroyCommandPool(m_commandPool);
 }
@@ -100,6 +110,74 @@ void CommandPool::freeCommandBuffer(const std::string& name) {
 	}
 #endif
     m_commandBuffers.erase(name);
+}
+
+const vk::CommandBuffer& CommandPool::getTemporaryCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration) {
+    const vk::Device& device = **m_device;
+
+    vk::Result result;
+
+    updateTemporaryCommandBuffers();
+
+    vk::Fence fence = VK_NULL_HANDLE;
+
+    if (m_unusedFences.empty()) {
+        printf("CommandPool::getTemporaryCommandBuffer - creating fence\n");
+        vk::FenceCreateInfo fenceCreateInfo{};
+        result = device.createFence(&fenceCreateInfo, nullptr, &fence);
+        assert(result == vk::Result::eSuccess && fence);
+        Engine::graphics()->setObjectName(device, (uint64_t)(VkFence)fence, vk::ObjectType::eFence, name.c_str());
+    } else {
+        fence = m_unusedFences.back();
+        result = device.resetFences(1, &fence);
+        assert(result == vk::Result::eSuccess);
+        m_unusedFences.pop_back();
+    }
+
+    vk::CommandBufferAllocateInfo commandBufferAllocInfo{};
+    commandBufferAllocInfo.setCommandPool(m_commandPool);
+    commandBufferAllocInfo.setCommandBufferCount(1);
+    commandBufferAllocInfo.setLevel(commandBufferConfiguration.level);
+
+    vk::CommandBuffer commandBuffer = VK_NULL_HANDLE;
+    result = device.allocateCommandBuffers(&commandBufferAllocInfo, &commandBuffer);
+    assert(result == vk::Result::eSuccess && commandBuffer);
+    Engine::graphics()->setObjectName(device, (uint64_t)(VkCommandBuffer)commandBuffer, vk::ObjectType::eCommandBuffer, name.c_str());
+
+    auto [it, inserted] = m_temporaryCmdBufferFences.insert(std::make_pair(commandBuffer, fence));
+    if (!inserted) {
+        // This shouldn't happen if the command buffer handle is guaranteed to be unique every time, even from the same pool. Is this the case?
+        it->second = fence;
+    }
+    return it->first;
+}
+
+vk::Fence CommandPool::releaseTemporaryCommandBufferFence(const vk::CommandBuffer& commandBuffer) {
+    updateTemporaryCommandBuffers();
+    auto it = m_temporaryCmdBufferFences.find(commandBuffer);
+    if (it == m_temporaryCmdBufferFences.end()) {
+        return VK_NULL_HANDLE;
+    }
+    return it->second;
+}
+
+void CommandPool::updateTemporaryCommandBuffers() {
+    const vk::Device& device = **m_device;
+
+    vk::Result result;
+
+    for (auto it = m_temporaryCmdBufferFences.begin(); it != m_temporaryCmdBufferFences.end(); ) {
+        const vk::Fence& fence = it->second;
+        result = device.waitForFences(1, &fence, VK_FALSE, 0);
+        if (result == vk::Result::eSuccess) {
+            const vk::CommandBuffer& commandBuffer = it->first;
+            device.freeCommandBuffers(m_commandPool, 1, &commandBuffer);
+            m_unusedFences.emplace_back(fence);
+            it = m_temporaryCmdBufferFences.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 bool CommandPool::hasCommandBuffer(const std::string& name) const {

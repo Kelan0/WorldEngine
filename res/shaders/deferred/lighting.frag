@@ -302,10 +302,6 @@ void main() {
          finalColour = ambient + Lo;
     }
 
-
-    finalColour = finalColour / (finalColour + vec3(1.0));
-    finalColour = pow(finalColour, vec3(1.0 / 2.2));
-
     // finalColour = vec3(calculateShadow(surface, lights[0]));
 
     // vec2 testPos = vec2(fs_texture.x, 1.0 - fs_texture.y);

@@ -908,7 +908,9 @@ bool GraphicsManager::beginFrame() {
 
     PROFILE_REGION("Begin command buffer");
     commandBuffer.begin(beginInfo);
-    BEGIN_CMD_LABEL(commandBuffer, "Frame");
+
+    Profiler::beginGraphicsFrame(commandBuffer);
+    PROFILE_BEGIN_GPU_CMD("Frame", commandBuffer);
 
     return true;
 }
@@ -923,7 +925,9 @@ void GraphicsManager::endFrame() {
     const vk::CommandBuffer& commandBuffer = getCurrentCommandBuffer();
 
     PROFILE_REGION("End command buffer")
-    END_CMD_LABEL(commandBuffer);
+    PROFILE_END_GPU_CMD(commandBuffer);
+
+    Profiler::endGraphicsFrame(commandBuffer);
     commandBuffer.end();
 
     PROFILE_REGION("Wait for image fence")
@@ -988,7 +992,7 @@ void GraphicsManager::flushRendering() {
 
 void GraphicsManager::presentImageDirect(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::ImageLayout& imageLayout) {
     PROFILE_SCOPE("GraphicsManager::presentImageDirect");
-    BEGIN_CMD_LABEL(commandBuffer, "GraphicsManager::presentImageDirect");
+    PROFILE_BEGIN_GPU_CMD("GraphicsManager::presentImageDirect", commandBuffer);
     VkImage currentImage = m_swapchain.images[m_swapchain.currentImageIndex];
     vk::ImageCopy region{};
 
@@ -1003,7 +1007,7 @@ void GraphicsManager::presentImageDirect(const vk::CommandBuffer& commandBuffer,
 
     commandBuffer.copyImage(image, imageLayout, currentImage, vk::ImageLayout::eTransferDstOptimal, 1, &region);
     ImageUtil::transitionLayout(commandBuffer, currentImage, subresourceRange, ImageTransition::TransferDst(), ImageTransition::PresentSrc());
-    END_CMD_LABEL(commandBuffer);
+    PROFILE_END_GPU_CMD(commandBuffer);
 }
 
 const vk::Instance& GraphicsManager::getInstance() const {
@@ -1088,7 +1092,8 @@ const uint32_t& GraphicsManager::getPresentQueueFamilyIndex() const {
 const vk::CommandBuffer& GraphicsManager::beginOneTimeCommandBuffer() {
     CommandBufferConfiguration commandBufferConfig;
     commandBufferConfig.level = vk::CommandBufferLevel::ePrimary;
-    const vk::CommandBuffer& commandBuffer = **Engine::graphics()->commandPool()->getOrCreateCommandBuffer("one_time_cmd", commandBufferConfig);
+//    const vk::CommandBuffer& commandBuffer = **Engine::graphics()->commandPool()->getOrCreateCommandBuffer("one_time_cmd", commandBufferConfig);
+    const vk::CommandBuffer& commandBuffer = commandPool()->getTemporaryCommandBuffer("one_time_cmd", commandBufferConfig);
 
     vk::CommandBufferBeginInfo commandBeginInfo;
     commandBeginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
@@ -1099,11 +1104,18 @@ const vk::CommandBuffer& GraphicsManager::beginOneTimeCommandBuffer() {
 void GraphicsManager::endOneTimeCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Queue& queue) {
     commandBuffer.end();
 
+    const vk::Fence& fence = commandPool()->releaseTemporaryCommandBufferFence(commandBuffer);
+
     vk::SubmitInfo queueSubmitInfo{};
     queueSubmitInfo.setCommandBufferCount(1);
     queueSubmitInfo.setPCommandBuffers(&commandBuffer);
-    vk::Result result = queue.submit(1, &queueSubmitInfo, VK_NULL_HANDLE);
+    vk::Result result = queue.submit(1, &queueSubmitInfo, fence);
     assert(result == vk::Result::eSuccess);
+
+}
+
+void GraphicsManager::endOneTimeCommandBuffer(const vk::CommandBuffer& commandBuffer, const std::shared_ptr<vkr::Queue>& queue) {
+    endOneTimeCommandBuffer(commandBuffer, **queue);
 }
 
 
@@ -1203,9 +1215,10 @@ void GraphicsManager::setObjectName(const vk::Device& device, const uint64_t& ob
         objectNameInfo.objectType = objectType;
         objectNameInfo.pObjectName = objectName;
         device.setDebugUtilsObjectNameEXT(objectNameInfo);
-    } else {
-        printf("");
     }
+}
+void GraphicsManager::setObjectName(const vk::Device& device, const uint64_t& objectHandle, const vk::ObjectType& objectType, const std::string& objectName) {
+    setObjectName(device, objectHandle, objectType, objectName.c_str());
 }
 
 void GraphicsManager::insertQueueDebugLabel(const vk::Queue& queue, const char* name) {
@@ -1252,16 +1265,15 @@ void GraphicsManager::insertCmdDebugLabel(const vk::CommandBuffer& commandBuffer
 }
 
 void GraphicsManager::beginCmdDebugLabel(const vk::CommandBuffer& commandBuffer, const char* name) {
-    if (name != nullptr) {
-        static std::unordered_map<std::string, std::array<float, 4>> s_colours;
-        auto colour = Util::mapComputeIfAbsent(s_colours, std::string(name), [](const std::string& key) {
-            return Util::randomArray<float, 4>(0.1F, 0.95F);
-        });
-        vk::DebugUtilsLabelEXT label{};
-        label.pLabelName = name;
-        label.setColor(colour);
-        commandBuffer.beginDebugUtilsLabelEXT(label);
-    }
+    assert(name != nullptr);
+    static std::unordered_map<std::string, std::array<float, 4>> s_colours;
+    auto colour = Util::mapComputeIfAbsent(s_colours, std::string(name), [](const std::string& key) {
+        return Util::randomArray<float, 4>(0.1F, 0.95F);
+    });
+    vk::DebugUtilsLabelEXT label{};
+    label.pLabelName = name;
+    label.setColor(colour);
+    commandBuffer.beginDebugUtilsLabelEXT(label);
 }
 
 void GraphicsManager::endCmdDebugLabel(const vk::CommandBuffer& commandBuffer) {

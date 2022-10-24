@@ -158,7 +158,7 @@ void DeferredRenderer::preRender(const double& dt) {
 
 void DeferredRenderer::renderGeometryPass(const double& dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera) {
     PROFILE_SCOPE("DeferredRenderer::renderGeometryPass");
-    BEGIN_CMD_LABEL(commandBuffer, "DeferredRenderer::renderGeometryPass");
+    PROFILE_BEGIN_GPU_CMD("DeferredRenderer::renderGeometryPass", commandBuffer);
 
     GeometryPassUniformData uniformData{};
 
@@ -199,7 +199,7 @@ void DeferredRenderer::renderGeometryPass(const double& dt, const vk::CommandBuf
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_geometryGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
 
     Engine::sceneRenderer()->render(dt, commandBuffer, renderCamera);
-    END_CMD_LABEL(commandBuffer);
+    PROFILE_END_GPU_CMD(commandBuffer);
 }
 
 void DeferredRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer) {
@@ -246,7 +246,7 @@ void DeferredRenderer::render(const double& dt, const vk::CommandBuffer& command
     }
     descriptorSetWriter.write();
 
-    BEGIN_CMD_LABEL(commandBuffer, "DeferredRenderer::render");
+    PROFILE_BEGIN_GPU_CMD("DeferredRenderer::render", commandBuffer);
 
     m_lightingGraphicsPipeline->bind(commandBuffer);
 
@@ -261,7 +261,7 @@ void DeferredRenderer::render(const double& dt, const vk::CommandBuffer& command
 
     commandBuffer.draw(3, 1, 0, 0);
 
-    END_CMD_LABEL(commandBuffer);
+    PROFILE_END_GPU_CMD(commandBuffer);
 
     m_resources->frame.rendered = true;
     swapFrame();
