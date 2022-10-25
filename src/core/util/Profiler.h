@@ -65,8 +65,9 @@ private:
         vk::QueryPool pool = VK_NULL_HANDLE;
         uint32_t capacity = 0;
         uint32_t size = 0;
-        uint32_t available = 0;
+        bool allAvailable = false;
         std::vector<uint64_t> queryResults;
+        uint32_t id = 0;
     };
 
     struct GPUQuery {
@@ -76,6 +77,7 @@ private:
     };
 
     struct GPUQueryFrameData {
+
     };
 
 public:
@@ -118,9 +120,10 @@ public:
         std::vector<size_t> allFrameStartIndexOffsets;
         size_t latestReadyFrameIndex = SIZE_MAX;
         std::vector<GPUQueryPool*> queryPools;
-        GPUQueryPool* currentQueryPool = nullptr;
-        uint32_t queryCount = 0;
-        uint32_t queryPoolSize = 1000;
+        std::vector<GPUQueryPool*> unusedQueryPools;
+        std::vector<GPUQueryPool*> destroyedQueryPools;
+        size_t currentQueryPoolIndex = SIZE_MAX;
+        uint32_t minQueryPoolSize = 25;
 
         GPUContext();
 
@@ -147,9 +150,9 @@ public:
 
     static void endCPU();
 
-    static void beginGraphicsFrame(const vk::CommandBuffer& commandBuffer);
+    static void beginGraphicsFrame();
 
-    static void endGraphicsFrame(const vk::CommandBuffer& commandBuffer);
+    static void endGraphicsFrame();
 
     static void beginGPU(const profile_id& id, const vk::CommandBuffer& commandBuffer);
 
@@ -166,9 +169,13 @@ public:
 private:
     static bool writeTimestamp(const vk::CommandBuffer& commandBuffer, const vk::PipelineStageFlagBits& pipelineStage, GPUQuery* outQuery);
 
-    static bool getGpuQueryPool(const uint32_t& numQueries, GPUQueryPool** queryPool);
+    static bool getNextQueryPool(GPUQueryPool** queryPool);
 
     static bool createGpuTimestampQueryPool(const vk::Device& device, const uint32_t& capacity, vk::QueryPool* queryPool);
+
+    static void destroyQueryPool(GPUQueryPool* queryPool);
+
+    static void resetQueryPools(GPUQueryPool** queryPools, const size_t& count);
 
     static void onCleanupGraphics(ShutdownGraphicsEvent* event);
 

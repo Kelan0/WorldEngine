@@ -189,8 +189,10 @@ void Application::start() {
         uint64_t elapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastTime).count();
         lastTime = now;
 
+        const double framerateLimit = m_framerateLimit < 1.0 ? 1000.0 : m_framerateLimit;
+
         bool isFrame = false;
-        double frameDurationNanos = m_framerateLimit < 1.0 ? 1.0 : (1e+9 / m_framerateLimit);
+        double frameDurationNanos = 1e+9 / framerateLimit;
 
         partialFrames += (double)elapsedNanos / frameDurationNanos;
 
@@ -293,7 +295,7 @@ void Application::start() {
             Profiler::beginCPU(profileID_CPU_Idle);
         }
 
-        //SDL_Delay(1);
+//        SDL_Delay(1);
     }
     Profiler::endFrame();
 

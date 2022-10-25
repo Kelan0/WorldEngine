@@ -909,7 +909,7 @@ bool GraphicsManager::beginFrame() {
     PROFILE_REGION("Begin command buffer");
     commandBuffer.begin(beginInfo);
 
-    Profiler::beginGraphicsFrame(commandBuffer);
+    Profiler::beginGraphicsFrame();
     PROFILE_BEGIN_GPU_CMD("Frame", commandBuffer);
 
     return true;
@@ -927,7 +927,6 @@ void GraphicsManager::endFrame() {
     PROFILE_REGION("End command buffer")
     PROFILE_END_GPU_CMD(commandBuffer);
 
-    Profiler::endGraphicsFrame(commandBuffer);
     commandBuffer.end();
 
     PROFILE_REGION("Wait for image fence")
@@ -976,6 +975,8 @@ void GraphicsManager::endFrame() {
     }
 
     m_swapchain.currentFrameIndex = (m_swapchain.currentFrameIndex + 1) % CONCURRENT_FRAMES;
+
+    Profiler::endGraphicsFrame();
 
     if (m_flushRendering) {
         m_flushRendering = false;

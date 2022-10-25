@@ -7,6 +7,15 @@
 #include "core/engine/event/GraphicsEvents.h"
 #include <thread>
 
+uint32_t nextQueryPoolId = 1;
+
+std::string stringListIds(const std::vector<uint32_t>& ids) {
+    std::string str;
+    for (size_t i = 0; i < ids.size(); ++i)
+        str += "ID" + std::to_string(ids[i]) + ((i < ids.size() - 1) ? ", " : "");
+    return str;
+}
+
 thread_local Performance::moment_t Performance::s_lastTime = Performance::now();
 #if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
 std::unordered_map<uint64_t, Profiler::ThreadContext*> Profiler::s_threadContexts;
@@ -199,7 +208,7 @@ void Profiler::endCPU() {
 #endif
 }
 
-void Profiler::beginGraphicsFrame(const vk::CommandBuffer& commandBuffer) {
+void Profiler::beginGraphicsFrame() {
 #if PROFILING_ENABLED
 #if INTERNAL_PROFILING_ENABLED
     GPUContext& ctx = gpuContext();
@@ -211,39 +220,71 @@ void Profiler::beginGraphicsFrame(const vk::CommandBuffer& commandBuffer) {
 #endif
 }
 
-void Profiler::endGraphicsFrame(const vk::CommandBuffer& commandBuffer) {
+void Profiler::endGraphicsFrame() {
 #if PROFILING_ENABLED
 #if INTERNAL_PROFILING_ENABLED
     GPUContext& ctx = gpuContext();
+
+//    std::vector<uint32_t> ids;
+//    std::set<uint32_t> uniqueIds;
+
+    for (const auto& queryPool : ctx.destroyedQueryPools) {
+//        ids.emplace_back(queryPool->id);
+        destroyQueryPool(queryPool);
+    }
+    ctx.destroyedQueryPools.clear();
+
+//    if (!ids.empty())
+//        printf("[%s] %llu query pools destroyed\n", stringListIds(ids).c_str(), ids.size());
+    if (ctx.allFrameStartIndexOffsets.size() > 10) {
+        printf("?\n");
+    }
 
     const vk::Device& device = **Engine::graphics()->getDevice();
 
     vk::Result result;
 
-    ctx.currentQueryPool = nullptr;
 
     vk::QueryResultFlags flags = vk::QueryResultFlagBits::e64 | vk::QueryResultFlagBits::eWithAvailability;
+
+    // Reset currentQueryPoolIndex so that the first call to getNextQueryPool will first look in the unusedQueryPools list.
+    ctx.currentQueryPoolIndex = SIZE_MAX;
 
     size_t dataSize;
     uint32_t strideBytes = sizeof(uint64_t) * 2;
 
+    uint32_t debugPoolsAvailableCount = 0;
+
+//    ids.clear();
+
+    // Loop over all active query pools and try to retrieve the results.
     for (auto& queryPool : ctx.queryPools) {
-        if (queryPool->available < queryPool->size) {
+        if (!queryPool->allAvailable) {
             queryPool->queryResults.resize(queryPool->size * 2);
             dataSize = queryPool->queryResults.size() * sizeof(uint64_t);
             result = device.getQueryPoolResults(queryPool->pool, 0, queryPool->size, dataSize, queryPool->queryResults.data(), (vk::DeviceSize)strideBytes, flags);
 
-            queryPool->available = 0;
+            queryPool->allAvailable = true;
             for (uint32_t i = 0; i < queryPool->size; ++i) {
-                if (queryPool->queryResults[i * 2] != 0) {
-                    ++queryPool->available;
+                if (queryPool->queryResults[i * 2 + 1] == 0) {
+                    queryPool->allAvailable = false;
                 }
             }
+//            if (queryPool->allAvailable) {
+//                ids.emplace_back(queryPool->id);
+//                ++debugPoolsAvailableCount;
+//            }
         }
     }
 
+//    if (debugPoolsAvailableCount > 0)
+//        printf("[%s] %u QueryPools became fully available this frame\n", stringListIds(ids).c_str(), debugPoolsAvailableCount);
+
     ctx.latestReadyFrameIndex = SIZE_MAX;
 
+//    uniqueIds.clear();
+
+    // Loop over all pending frames and try to retrieve the results.
     const double& timestampPeriodMsec = (double)Engine::graphics()->getPhysicalDeviceLimits().timestampPeriod / 1000000.0;
     for (size_t i = 0; i < ctx.allFrameStartIndexOffsets.size(); ++i) {
         size_t& frameStartIndexOffset = ctx.allFrameStartIndexOffsets[i];
@@ -251,55 +292,126 @@ void Profiler::endGraphicsFrame(const vk::CommandBuffer& commandBuffer) {
                                      ? ctx.allFrameStartIndexOffsets[i + 1]
                                      : ctx.allFrameProfiles.size();
 
+        size_t frameProfileCount = frameEndIndexOffset - frameStartIndexOffset;
+
         // Sanity check: The first profile of a frame should not have a parent.
         assert(ctx.allFrameProfiles[frameStartIndexOffset].parentIndex == SIZE_MAX);
 
-        uint32_t frameAvailableQueriesCount = 0;
+        bool allQueriesAvailable = true;
 
         for (size_t j = frameStartIndexOffset; j < frameEndIndexOffset; ++j) {
             GPUProfile& profile = ctx.allFrameProfiles[j];
 
             if (profile.startQuery.queryPool != nullptr) {
-                if (profile.startQuery.queryPool->available > 0 && profile.startQuery.queryPool->queryResults[profile.startQuery.queryIndex * 2 + 1] != 0) {
+                if (profile.startQuery.queryPool->allAvailable) {
+                    assert(profile.startQuery.queryPool->queryResults[profile.startQuery.queryIndex * 2 + 1] != 0);
+//                    uniqueIds.insert(profile.startQuery.queryPool->id);
                     profile.startQuery.time = (double) profile.startQuery.queryPool->queryResults[profile.startQuery.queryIndex * 2] * timestampPeriodMsec;
                     profile.startQuery.queryPool = nullptr;
                 }
             }
             if (profile.endQuery.queryPool != nullptr) {
-                if (profile.endQuery.queryPool->available > 0 && profile.endQuery.queryPool->queryResults[profile.endQuery.queryIndex * 2 + 1] != 0) {
+                if (profile.endQuery.queryPool->allAvailable) {
+                    assert(profile.endQuery.queryPool->queryResults[profile.endQuery.queryIndex * 2 + 1] != 0);
+//                    uniqueIds.insert(profile.endQuery.queryPool->id);
                     profile.endQuery.time = (double) profile.endQuery.queryPool->queryResults[profile.endQuery.queryIndex * 2] * timestampPeriodMsec;
                     profile.endQuery.queryPool = nullptr;
                 }
             }
-            if (profile.startQuery.queryPool == nullptr && profile.endQuery.queryPool == nullptr) {
-                ++frameAvailableQueriesCount;
+            if (profile.startQuery.queryPool != nullptr || profile.endQuery.queryPool != nullptr) {
+                allQueriesAvailable = false;
             }
         }
 
-        size_t numProfiles = frameEndIndexOffset - frameStartIndexOffset;
-        if (frameAvailableQueriesCount == numProfiles) {
-            // All queries were available for the entire frame.
+        if (allQueriesAvailable) {
             ctx.latestReadyFrameIndex = i;
         }
     }
 
-    // TODO: we need to clear out the query pools, either delete the completed ones, or better, reuse them. (pool of pools?)
+//    if (!uniqueIds.empty()) {
+//        ids.assign(uniqueIds.begin(), uniqueIds.end());
+//        printf("[%s] %llu query pools were fully read back\n", stringListIds(ids).c_str(), uniqueIds.size());
+//    }
 
+    size_t requiredFrameCount = 0;
+
+    // Cleanup data for all frames before latestReadyFrameIndex, and update indices
     if (ctx.latestReadyFrameIndex != SIZE_MAX) {
-        while (ctx.latestReadyFrameIndex > 0) {
+//        printf("Latest ready frame index is %llu\n", ctx.latestReadyFrameIndex);
+
+        size_t numFramesDeleted = 0;
+        size_t numProfilesDeleted = 0;
+        if (ctx.latestReadyFrameIndex > 0) {
             size_t eraseCount = ctx.allFrameStartIndexOffsets[ctx.latestReadyFrameIndex];
             ctx.allFrameProfiles.erase(ctx.allFrameProfiles.begin(), ctx.allFrameProfiles.begin() + eraseCount);
-            ctx.allFrameStartIndexOffsets.erase(ctx.allFrameStartIndexOffsets.begin());
-            for (size_t i = 0; i < ctx.allFrameStartIndexOffsets.size(); ++i) {
+            ctx.allFrameStartIndexOffsets.erase(ctx.allFrameStartIndexOffsets.begin(), ctx.allFrameStartIndexOffsets.begin() + ctx.latestReadyFrameIndex);
+            for (size_t i = 0; i < ctx.allFrameStartIndexOffsets.size(); ++i)
                 ctx.allFrameStartIndexOffsets[i] -= eraseCount;
-            }
-            --ctx.latestReadyFrameIndex;
+            numFramesDeleted += ctx.latestReadyFrameIndex;
+            numProfilesDeleted += eraseCount;
+            ctx.latestReadyFrameIndex = 0;
         }
+        requiredFrameCount = ctx.allFrameProfiles.size() - ctx.allFrameStartIndexOffsets[ctx.latestReadyFrameIndex];
+//        printf("Storing previous %llu frames, latestReadyFrameIndex=%llu (%llu frames ago). Data for %llu frames were removed (%llu profiles)\n", ctx.allFrameStartIndexOffsets.size(), ctx.latestReadyFrameIndex, ctx.allFrameStartIndexOffsets.size() - ctx.latestReadyFrameIndex - 1, numFramesDeleted, numProfilesDeleted);
+    } else {
+        requiredFrameCount = ctx.allFrameProfiles.size();
     }
 
-    ctx.queryCount = 0;
+    // Grow minimum query pool size for next frame if current frame exceeded it.
+    uint32_t requiredQueryCount = (uint32_t)requiredFrameCount * 2;
+//    printf("Required query count is %u, current minimum is %u\n", requiredQueryCount, ctx.minQueryPoolSize);
+    if (requiredQueryCount >= ctx.minQueryPoolSize) {
+//        ctx.minQueryPoolSize = ROUND_TO_MULTIPLE(requiredQueryCount + ctx.minQueryPoolSize / 2, 500);
+        ctx.minQueryPoolSize = requiredQueryCount + ctx.minQueryPoolSize / 2;
+//        printf("Growing minQueryPoolSize to %u\n", ctx.minQueryPoolSize);
+    }
+
+//    ids.clear();
+    // Delete all unused query pools which have a smaller capacity than ctx.minQueryPoolSize.
+    auto it0 = ctx.unusedQueryPools.begin();
+    for (; it0 != ctx.unusedQueryPools.end(); ++it0) {
+        GPUQueryPool* queryPool = *it0;
+        if (queryPool->capacity >= ctx.minQueryPoolSize)
+            break; // The list is sorted, so stop as soon as we find the first one large enough
+        ctx.destroyedQueryPools.emplace_back(queryPool);
+//        ids.emplace_back(queryPool->id);
+    }
+//    if (it0 != ctx.unusedQueryPools.begin())
+//        printf("[%s] %lld unused query pools were smaller than the minimum size and deleted\n", stringListIds(ids).c_str(), (int64_t)std::distance(ctx.unusedQueryPools.begin(), it0));
+    ctx.unusedQueryPools.erase(ctx.unusedQueryPools.begin(), it0);
+
+//    ids.clear();
+
+//    uint32_t debugNumDestroyed = 0;
+    // Remove all newly unused query pools from the queryPools list (either moved to unused list, or deleted if too small)
+    for (auto it1 = ctx.queryPools.begin(); it1 != ctx.queryPools.end();) {
+        GPUQueryPool* queryPool = *it1;
+        if (queryPool->allAvailable) {
+            // All queries within this QueryPool were made available and read back. This query pool is no longer being used.
+            it1 = ctx.queryPools.erase(it1);
+
+            if (queryPool->capacity >= ctx.minQueryPoolSize) {
+                // This QueryPool has a large enough capacity to be reused, insert into the sorted list of unused query pools.
+                auto it2 = std::upper_bound(ctx.unusedQueryPools.begin(), ctx.unusedQueryPools.end(), queryPool, [](const GPUQueryPool* lhs, const GPUQueryPool* rhs) {
+                    return lhs->capacity < rhs->capacity;
+                });
+                ctx.unusedQueryPools.insert(it2, queryPool);
+            } else {
+                // This QueryPool is no longer large enough to be reused, so delete it. If none are available when needed, a new one will be created.
+                ctx.destroyedQueryPools.emplace_back(queryPool);
+//                ids.emplace_back(queryPool->id);
+//                ++debugNumDestroyed;
+            }
+        } else {
+            ++it1;
+        }
+    }
+//    if (debugNumDestroyed > 0)
+//        printf("[%s] %u used query pools were smaller than the minimum size and deleted\n", stringListIds(ids).c_str(), debugNumDestroyed);
 
     ctx.frameStarted = false;
+
+//    printf("EndGraphicsFrame: %llu query pools allocated, %llu profiles stored, %llu frames stored\n\n", ctx.queryPools.size() + ctx.unusedQueryPools.size(), ctx.allFrameProfiles.size(), ctx.allFrameStartIndexOffsets.size());
 #endif
 #endif
 }
@@ -417,55 +529,73 @@ bool Profiler::writeTimestamp(const vk::CommandBuffer& commandBuffer, const vk::
     GPUContext& ctx = gpuContext();
 
     outQuery->queryPool = nullptr;
-    if (!getGpuQueryPool(1, &outQuery->queryPool)) {
+    if (!getNextQueryPool(&outQuery->queryPool)) {
         return false;
     }
 
     outQuery->queryIndex = outQuery->queryPool->size;
     commandBuffer.writeTimestamp(pipelineStage, outQuery->queryPool->pool, outQuery->queryIndex);
     ++outQuery->queryPool->size;
-    ctx.queryCount++;
     return true;
 }
 
-bool Profiler::getGpuQueryPool(const uint32_t& numQueries, GPUQueryPool** queryPool) {
+bool Profiler::getNextQueryPool(GPUQueryPool** queryPool) {
     GPUContext& ctx = gpuContext();
 
-    if (ctx.currentQueryPool != nullptr) {
-        if (ctx.currentQueryPool->size + numQueries < ctx.currentQueryPool->capacity) {
-            *queryPool = ctx.currentQueryPool;
-            return true;
+    GPUQueryPool* selectedQueryPool = nullptr;
+//    if (ctx.queryPools.empty() && ctx.unusedQueryPools.empty())
+//        printf("Profiler::getNextQueryPool - No existing query pools\n");
+
+    if (ctx.currentQueryPoolIndex < ctx.queryPools.size()) {
+        // We are using an existing query pool
+        selectedQueryPool = ctx.queryPools[ctx.currentQueryPoolIndex];
+
+        if (selectedQueryPool->size + 1 >= selectedQueryPool->capacity) {
+            // The existing query pool was full.
+//            printf("Current query pool at index %llu (ID%u) is full\n", ctx.currentQueryPoolIndex, selectedQueryPool->id);
+            selectedQueryPool = nullptr;
+        }
+    }
+
+    if (selectedQueryPool == nullptr && !ctx.unusedQueryPools.empty()) {
+        selectedQueryPool = ctx.unusedQueryPools.back();
+        ctx.unusedQueryPools.pop_back();
+        assert(selectedQueryPool->capacity >= ctx.minQueryPoolSize);
+
+        ctx.currentQueryPoolIndex = ctx.queryPools.size();
+        ctx.queryPools.emplace_back(selectedQueryPool);
+//        printf("Selected unused query pool ID%u at index %llu\n", selectedQueryPool->id, ctx.currentQueryPoolIndex);
+        resetQueryPools(&selectedQueryPool, 1);
+    }
+
+    if (selectedQueryPool == nullptr) {
+        std::shared_ptr<vkr::Device> device = Engine::graphics()->getDevice();
+
+        vk::QueryPool queryPoolHandle = VK_NULL_HANDLE;
+        if (!createGpuTimestampQueryPool(**device, ctx.minQueryPoolSize, &queryPoolHandle)) {
+            return false;
         }
 
-//        ctx.queryPoolSize += ctx.queryPoolSize / 2; // Grow by 50%
+        uint32_t id = nextQueryPoolId++;
+        Engine::graphics()->setObjectName(**device, (uint64_t)(VkQueryPool)(queryPoolHandle), vk::ObjectType::eQueryPool, "Profiler-GpuTimeQueryPool-" + std::to_string(id));
+
+//        printf("Allocated new query pool ID%u, capacity=%u on frame %llu\n", id, ctx.minQueryPoolSize, Engine::currentFrameCount());
+
+        ctx.currentQueryPoolIndex = ctx.queryPools.size();
+        selectedQueryPool = ctx.queryPools.emplace_back(new GPUQueryPool());
+        selectedQueryPool->device = device;
+        selectedQueryPool->pool = queryPoolHandle;
+        selectedQueryPool->capacity = ctx.minQueryPoolSize;
+        selectedQueryPool->size = ctx.minQueryPoolSize; // Pretend all queries are used to force a reset
+        selectedQueryPool->id = id;
+        resetQueryPools(&selectedQueryPool, 1);
     }
 
-    std::shared_ptr<vkr::Device> device = Engine::graphics()->getDevice();
-
-    vk::QueryPool queryPoolHandle = VK_NULL_HANDLE;
-    if (!createGpuTimestampQueryPool(**device, ctx.queryPoolSize, &queryPoolHandle)) {
-        return false;
-    }
-
-    Engine::graphics()->setObjectName(**device, (uint64_t)(VkQueryPool)(queryPoolHandle), vk::ObjectType::eQueryPool, "Profiler-GpuTimeQueryPool-" + std::to_string(ctx.queryPools.size()));
-
-//    (**device).resetQueryPool(queryPoolHandle, 0, s_queryPoolSize);
-
-    const vk::CommandBuffer& commandBuffer = Engine::graphics()->beginOneTimeCommandBuffer();
-    commandBuffer.resetQueryPool(queryPoolHandle, 0, ctx.queryPoolSize);
-    Engine::graphics()->endOneTimeCommandBuffer(commandBuffer, Engine::graphics()->getQueue(QUEUE_GRAPHICS_MAIN));
-
-    ctx.currentQueryPool = ctx.queryPools.emplace_back(new GPUQueryPool());
-    ctx.currentQueryPool->device = device;
-    ctx.currentQueryPool->pool = queryPoolHandle;
-    ctx.currentQueryPool->capacity = ctx.queryPoolSize;
-    ctx.currentQueryPool->size = 0;
-    *queryPool = ctx.currentQueryPool;
+    *queryPool = selectedQueryPool;
     return true;
 }
 
 bool Profiler::createGpuTimestampQueryPool(const vk::Device& device, const uint32_t& capacity, vk::QueryPool* queryPool) {
-    printf("createGpuTimestampQueryPool, capacity=%u on frame %llu\n", capacity, Engine::currentFrameCount());
     vk::QueryPoolCreateInfo createInfo{};
     createInfo.flags = {};
     createInfo.queryType = vk::QueryType::eTimestamp;
@@ -473,19 +603,58 @@ bool Profiler::createGpuTimestampQueryPool(const vk::Device& device, const uint3
 
     vk::Result result = device.createQueryPool(&createInfo, nullptr, queryPool);
     if (result != vk::Result::eSuccess) {
-        printf("Unable to allocate query pool for GPU time stamps: \"%s\"\n", vk::to_string(result).c_str());
+//        printf("Unable to allocate query pool for GPU time stamps: \"%s\"\n", vk::to_string(result).c_str());
         return false;
     }
     return true;
 }
 
+void Profiler::destroyQueryPool(GPUQueryPool* queryPool) {
+    const vk::Device& device = **queryPool->device.lock();
+    device.destroyQueryPool(queryPool->pool, nullptr);
+    delete queryPool;
+}
+
+void Profiler::resetQueryPools(GPUQueryPool** queryPools, const size_t& count) {
+    GPUContext& ctx = gpuContext();
+    vk::CommandBuffer commandBuffer = VK_NULL_HANDLE;
+
+    uint32_t numReset = 0;
+
+    std::vector<uint32_t> ids;
+
+    for (size_t i = 0; i < count; ++i) {
+        GPUQueryPool* queryPool = queryPools[i];
+        if (queryPool == nullptr || queryPool->size == 0 || queryPool->capacity < ctx.minQueryPoolSize)
+            continue;
+
+        if (!commandBuffer) // Begin the command buffer only if there was something to reset
+            commandBuffer = Engine::graphics()->beginOneTimeCommandBuffer();
+
+//        const vk::Device& device = **queryPool->device.lock();
+//        device.resetQueryPool(queryPool->pool, 0, queryPool->capacity);
+        commandBuffer.resetQueryPool(queryPool->pool, 0, queryPool->capacity);
+        queryPool->size = 0;
+        queryPool->allAvailable = false;
+        ids.emplace_back(queryPool->id);
+        ++numReset;
+    }
+
+//    if (numReset > 0)
+//        printf("Resetting %u query pools [%s]\n", numReset, stringListIds(ids).c_str());
+
+    if (commandBuffer)
+        Engine::graphics()->endOneTimeCommandBuffer(commandBuffer, Engine::graphics()->getQueue(QUEUE_GRAPHICS_MAIN));
+}
+
 void Profiler::onCleanupGraphics(ShutdownGraphicsEvent* event) {
     GPUContext& ctx = gpuContext();
-    const vk::Device& device = **Engine::graphics()->getDevice();
-    for (const auto& queryPool : ctx.queryPools) {
-        device.destroyQueryPool(queryPool->pool);
-        delete queryPool;
-    }
+    for (const auto& queryPool : ctx.queryPools)
+        destroyQueryPool(queryPool);
+    for (const auto& queryPool : ctx.unusedQueryPools)
+        destroyQueryPool(queryPool);
+    for (const auto& queryPool : ctx.destroyedQueryPools)
+        destroyQueryPool(queryPool);
 }
 
 Profiler::ThreadContext& Profiler::threadContext() {
