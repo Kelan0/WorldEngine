@@ -467,6 +467,7 @@ void Profiler::endGPU(const vk::CommandBuffer& commandBuffer) {
 }
 
 void Profiler::getFrameProfile(std::unordered_map<uint64_t, std::vector<CPUProfile>>& outThreadProfiles) {
+    PROFILE_SCOPE("Profiler::getFrameProfile")
 #if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
     std::scoped_lock<std::mutex> lock(s_threadContextsMtx);
     for (auto& entry : s_threadContexts) {
@@ -489,12 +490,12 @@ void Profiler::getFrameProfile(std::unordered_map<uint64_t, std::vector<CPUProfi
 }
 
 bool Profiler::getLatestGpuFrameProfile(std::vector<GPUProfile>& outGpuProfiles) {
+    PROFILE_SCOPE("Profiler::getLatestGpuFrameProfile")
 #if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
     GPUContext& ctx = gpuContext();
 
-    if (ctx.latestReadyFrameIndex > ctx.allFrameStartIndexOffsets.size()) {
+    if (ctx.latestReadyFrameIndex > ctx.allFrameStartIndexOffsets.size())
         return false; // No frames are ready, queries are still pending a response.
-    }
 
     std::scoped_lock<std::mutex> lock(ctx.mtx);
 
@@ -510,8 +511,10 @@ bool Profiler::getLatestGpuFrameProfile(std::vector<GPUProfile>& outGpuProfiles)
 
     outGpuProfiles.resize(copyDstIndex + copyCount);
     std::copy(ctx.allFrameProfiles.begin() + copySrcIndex, ctx.allFrameProfiles.begin() + copySrcIndex + copyCount, outGpuProfiles.begin() + copyDstIndex);
-#endif
     return true;
+#else
+    return false;
+#endif
 }
 
 bool Profiler::isGpuProfilingEnabled() {

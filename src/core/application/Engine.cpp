@@ -49,6 +49,7 @@ Engine::~Engine() {
 }
 
 void Engine::processEvent(const SDL_Event* event) {
+    PROFILE_SCOPE("Engine::processEvent")
     m_uiRenderer->processEvent(event);
 }
 

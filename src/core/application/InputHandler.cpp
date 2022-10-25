@@ -1,5 +1,6 @@
 #include "core/application/InputHandler.h"
 #include "core/application/Application.h"
+#include "core/util/Profiler.h"
 
 
 InputHandler::InputHandler(SDL_Window* windowHandle) {
@@ -30,6 +31,7 @@ InputHandler::InputHandler(SDL_Window* windowHandle) {
 InputHandler::~InputHandler() {}
 
 void InputHandler::update() {
+    PROFILE_SCOPE("InputHandler::update")
     for (int i = 0; i < KEYBOARD_SIZE; i++) {
         m_keysPressed[i] = false;
         m_keysReleased[i] = false;
@@ -52,6 +54,7 @@ void InputHandler::update() {
 }
 
 void InputHandler::processEvent(const SDL_Event* event) {
+    PROFILE_SCOPE("InputHandler::processEvent")
     switch (event->type) {
         case SDL_KEYDOWN:
             m_keysDown[event->key.keysym.scancode] = true;

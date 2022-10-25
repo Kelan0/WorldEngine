@@ -100,8 +100,11 @@ void Application::processEventsInternal() {
 
     glm::ivec2 windowSize = getWindowSize();
 
+    PROFILE_REGION("Poll All Events");
+
     SDL_Event sdlEvent;
     while (SDL_PollEvent(&sdlEvent)) {
+        PROFILE_REGION("Handle Event")
         switch (sdlEvent.type) {
             case SDL_QUIT:
                 stop();
@@ -147,6 +150,8 @@ void Application::processEventsInternal() {
 
         Engine::instance()->processEvent(&sdlEvent);
         m_inputHandler->processEvent(&sdlEvent);
+
+        PROFILE_END_REGION()
     }
 
     if (Engine::graphics()->didResolutionChange()) {

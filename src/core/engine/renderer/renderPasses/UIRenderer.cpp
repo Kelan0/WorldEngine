@@ -85,10 +85,12 @@ bool UIRenderer::init(SDL_Window* windowHandle) {
 }
 
 void UIRenderer::processEvent(const SDL_Event* event) {
+    PROFILE_SCOPE("UIRenderer::processEvent")
     ImGui_ImplSDL2_ProcessEvent(event);
 }
 
 void UIRenderer::preRender(const double& dt) {
+    PROFILE_SCOPE("UIRenderer::preRender")
 
     if (!m_createdFontsTexture) {
         m_createdFontsTexture = true;
