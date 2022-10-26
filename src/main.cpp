@@ -302,6 +302,8 @@ class App : public Application {
         handleUserInput(dt);
         time += dt;
 
+        ImGui::ShowDemoWindow();
+
         bool taaEnabled = Engine::reprojectionRenderer()->isTaaEnabled();
         float taaHistoryFadeFactor = Engine::reprojectionRenderer()->getTaaHistoryFactor();
         uint32_t colourClippingMode = Engine::reprojectionRenderer()->getTaaColourClippingMode();

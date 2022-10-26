@@ -17,6 +17,7 @@ class PerformanceGraphUI : public UI {
         uint32_t pathIndex = UINT32_MAX;
         float elapsedMillis;
         size_t nextSiblingIndex = 0;
+        uint16_t parentOffset = 0;
         bool hasChildren = false;
     };
 
@@ -50,9 +51,16 @@ class PerformanceGraphUI : public UI {
 
     struct ProfileLayer {
         std::string layerName;
-        float colour[3];
-        bool expanded;
-        bool visible;
+        std::vector<uint32_t> pathIndices;
+        uint32_t colour;
+        float accumulatedTotalTime;
+        float accumulatedSelfTime;
+        float accumulatedTotalTimeAvg;
+        float accumulatedSelfTimeAvg;
+        float accumulatedTotalTimeSum;
+        float accumulatedSelfTimeSum;
+        bool expanded : 1;
+        bool visible : 1;
     };
 
     enum class ProfileTreeSortOrder {
@@ -76,6 +84,8 @@ private:
 
     void drawProfileTree(const double& dt);
 
+    void drawUniqueLayerList(const double& dt);
+
     void drawFrameGraphs(const double& dt);
 
     void drawFrameGraph(const double& dt, const char* strId, const std::vector<FrameProfileData>& frameData, FrameGraphInfo& frameGraphInfo, const float& x, const float& y, const float& w, const float& h, const float& padding);
@@ -88,7 +98,13 @@ private:
 
     void buildProfileTree(const FrameProfileData& frameData, FrameGraphInfo& frameGraphInfo, const size_t& index, const ProfileTreeSortOrder& sortOrder, std::vector<size_t>& tempReorderBuffer);
 
+    void initializeProfileDataTree(FrameProfileData& currentFrame, const Profiler::Profile* profiles, const size_t& count, const size_t& stride);
+
+    void initializeProfileTreeLayers(FrameProfileData& currentFrame, const Profiler::Profile* profiles, const size_t& count, const size_t& stride, std::vector<uint32_t>& layerPath);
+
     void updateFrameGraphInfo(FrameGraphInfo& frameGraphInfo, const float& rootElapsed);
+
+    void updateAccumulatedAverages();
 
     void flushOldFrames();
 
@@ -120,6 +136,10 @@ private:
     bool m_clearFrames;
     int m_graphVisible;
 
+    Performance::moment_t m_lastAverageAccumulationTime;
+    Performance::duration_t m_averageAccumulationDuration;
+    size_t m_averageAccumulationFrameCount;
+    float m_rollingAverageUpdateFactor;
 };
 
 

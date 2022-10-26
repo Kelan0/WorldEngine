@@ -6,17 +6,22 @@
 #include "extern/imgui/imgui_internal.h"
 
 PerformanceGraphUI::PerformanceGraphUI():
-    m_profilingPaused(false),
-    m_graphsNormalized(false),
-    m_clearFrames(false),
-    m_showFrameTime90Percentile(false),
-    m_showFrameTime99Percentile(false),
-    m_showFrameTime999Percentile(false),
-    m_graphVisible(0),
-    m_maxFrameProfiles(500) {
+        m_profilingPaused(false),
+        m_graphsNormalized(false),
+        m_clearFrames(true),
+        m_showFrameTime90Percentile(false),
+        m_showFrameTime99Percentile(false),
+        m_showFrameTime999Percentile(false),
+        m_graphVisible(0),
+        m_maxFrameProfiles(500),
+        m_averageAccumulationDuration(std::chrono::milliseconds(333)),
+        m_lastAverageAccumulationTime(Performance::zero_moment),
+        m_averageAccumulationFrameCount(0),
+        m_rollingAverageUpdateFactor(0.05F) {
 }
 
 PerformanceGraphUI::~PerformanceGraphUI() = default;
+
 
 void PerformanceGraphUI::update(const double& dt) {
     PROFILE_SCOPE("PerformanceGraphUI::update")
@@ -61,9 +66,24 @@ void PerformanceGraphUI::update(const double& dt) {
 
     Profiler::getFrameProfile(m_currentThreadProfiles);
 
+    uint64_t mainThreadId = Application::instance()->getHashedMainThreadId();
+
     std::vector<uint32_t> layerPath;
     size_t parentIndex = SIZE_MAX;
     size_t popCount = 0;
+
+    const float rollingAvgAlpha = 0.05F;
+    for (ProfileLayer& layer : m_layers) {
+//        layer.accumulatedSelfTimeAvg = glm::lerp(layer.accumulatedSelfTimeAvg, layer.accumulatedSelfTime, rollingAvgAlpha);
+//        layer.accumulatedTotalTimeAvg = glm::lerp(layer.accumulatedTotalTimeAvg, layer.accumulatedTotalTime, rollingAvgAlpha);
+//        if (layer.accumulatedSelfTimeAvg == 0.0F) layer.accumulatedSelfTimeAvg = layer.accumulatedSelfTime;
+//        if (layer.accumulatedTotalTimeAvg == 0.0F) layer.accumulatedTotalTimeAvg = layer.accumulatedTotalTime;
+
+        layer.accumulatedSelfTimeSum += layer.accumulatedSelfTime;
+        layer.accumulatedTotalTimeSum += layer.accumulatedTotalTime;
+        layer.accumulatedSelfTime = 0.0F;
+        layer.accumulatedTotalTime = 0.0F;
+    }
 
     PROFILE_REGION("Process thread profile data")
     for (const auto& [threadId, threadProfiles] : m_currentThreadProfiles) {
@@ -72,38 +92,36 @@ void PerformanceGraphUI::update(const double& dt) {
 
 
         FrameProfileData& currentFrame = allProfiles.emplace_back();
-        currentFrame.profileData.clear();
 
-        currentFrame.profileData.reserve(threadProfiles.size());
+        initializeProfileDataTree(currentFrame, threadProfiles.data(), threadProfiles.size(), sizeof(ThreadProfile));
 
-        layerPath.clear();
-        parentIndex = SIZE_MAX;
-        popCount = 0;
+        initializeProfileTreeLayers(currentFrame, threadProfiles.data(), threadProfiles.size(), sizeof(ThreadProfile), layerPath);
 
-        for (const ThreadProfile& profile : threadProfiles) {
-            bool hasChildren = profile.lastChildIndex != SIZE_MAX;
+        for (size_t i = 0; i < threadProfiles.size(); ++i) {
+            const ThreadProfile& profile = threadProfiles[i];
+            currentFrame.profileData[i].elapsedMillis = (float)Performance::milliseconds(profile.startTime, profile.endTime);
+        }
 
-            const uint32_t& layerIndex = getUniqueLayerIndex(profile.id->name);
+        if (threadId == mainThreadId) {
+            for (size_t i = 0; i < currentFrame.profileData.size(); ++i) {
+                const ProfileData& profile = currentFrame.profileData[i];
+                ProfileLayer& uniqueLayer = m_layers[profile.layerIndex];
+                uniqueLayer.accumulatedTotalTime += profile.elapsedMillis;
+                uniqueLayer.accumulatedSelfTime += profile.elapsedMillis;
 
-            popCount = 0;
-            while (parentIndex != SIZE_MAX && profile.parentIndex <= parentIndex) {
-                parentIndex = threadProfiles[parentIndex].parentIndex;
-                ++popCount;
+//                ProfileLayer& pathLayer = m_layers[profile.pathIndex];
+//                pathLayer.accumulatedTotalTime += profile.elapsedMillis;
+//                pathLayer.accumulatedSelfTime += profile.elapsedMillis;
+
+                if (profile.parentOffset != 0) {
+                    ProfileData& parentProfile = currentFrame.profileData[i - profile.parentOffset];
+                    ProfileLayer& parentUniqueLayer = m_layers[parentProfile.layerIndex];
+                    parentUniqueLayer.accumulatedSelfTime -= profile.elapsedMillis;
+
+//                    ProfileLayer& parentPathLayer = m_layers[parentProfile.pathIndex];
+//                    parentPathLayer.accumulatedSelfTime -= profile.elapsedMillis;
+                }
             }
-
-            layerPath.resize(layerPath.size() - popCount);
-            layerPath.emplace_back(layerIndex);
-
-            const uint32_t& pathIndex = getPathLayerIndex(layerPath);
-
-            ProfileData& profileData = currentFrame.profileData.emplace_back();
-            profileData.layerIndex = layerIndex;
-            profileData.pathIndex = pathIndex;
-            profileData.elapsedMillis = (float)Performance::milliseconds(profile.startTime, profile.endTime);
-            profileData.nextSiblingIndex = profile.nextSiblingIndex;
-            profileData.hasChildren = hasChildren;
-
-            parentIndex = profile.parentIndex;
         }
 
         float rootElapsed = (float)Performance::milliseconds(threadProfiles[0].startTime, threadProfiles[0].endTime);
@@ -116,44 +134,23 @@ void PerformanceGraphUI::update(const double& dt) {
     if (Profiler::getLatestGpuFrameProfile(m_currentGpuProfiles)) {
         PROFILE_REGION("Process GPU profile data")
         FrameProfileData& currentFrame = m_gpuFrameProfileData.emplace_back();
-        currentFrame.profileData.clear();
 
-        currentFrame.profileData.reserve(m_currentGpuProfiles.size());
+        initializeProfileDataTree(currentFrame, m_currentGpuProfiles.data(), m_currentGpuProfiles.size(), sizeof(GPUProfile));
 
-        layerPath.clear();
-        parentIndex = SIZE_MAX;
-        popCount = 0;
+        initializeProfileTreeLayers(currentFrame, m_currentGpuProfiles.data(), m_currentGpuProfiles.size(), sizeof(GPUProfile), layerPath);
 
-        for (const GPUProfile & profile : m_currentGpuProfiles) {
-            bool hasChildren = profile.lastChildIndex != SIZE_MAX;
-
-            const uint32_t& layerIndex = getUniqueLayerIndex(profile.id->name);
-
-            popCount = 0;
-            while (parentIndex != SIZE_MAX && profile.parentIndex <= parentIndex) {
-                parentIndex = m_currentGpuProfiles[parentIndex].parentIndex;
-                ++popCount;
-            }
-
-            layerPath.resize(layerPath.size() - popCount);
-            layerPath.emplace_back(layerIndex);
-
-            const uint32_t& pathIndex = getPathLayerIndex(layerPath);
-
-            ProfileData& profileData = currentFrame.profileData.emplace_back();
-            profileData.layerIndex = layerIndex;
-            profileData.pathIndex = pathIndex;
-            profileData.elapsedMillis = (float)(profile.endQuery.time - profile.startQuery.time);
-            profileData.nextSiblingIndex = profile.nextSiblingIndex;
-            profileData.hasChildren = hasChildren;
-
-            parentIndex = profile.parentIndex;
+        for (size_t i = 0; i < m_currentGpuProfiles.size(); ++i) {
+            const GPUProfile& profile = m_currentGpuProfiles[i];
+            currentFrame.profileData[i].elapsedMillis = (float)(profile.endQuery.time - profile.startQuery.time);
         }
+
 
         float rootElapsed = (float)(m_currentGpuProfiles[0].endQuery.time - m_currentGpuProfiles[0].startQuery.time);
         updateFrameGraphInfo(m_gpuFrameGraphInfo, rootElapsed);
     }
     PROFILE_END_REGION()
+
+    updateAccumulatedAverages();
 
     flushOldFrames();
 }
@@ -165,7 +162,10 @@ void PerformanceGraphUI::draw(const double& dt) {
     if (window->Size.x < 10 || window->Size.y < 10)
         return;
 
-    ImGui::Begin("Profiler");
+    if (!ImGui::Begin("Profiler")) {
+        ImGui::End(); // Early exit - Window is not visible.
+        return;
+    }
     drawHeaderBar();
     ImGui::Separator();
     drawProfileContent(dt);
@@ -235,7 +235,8 @@ void PerformanceGraphUI::drawProfileContent(const double& dt) {
     {
         ImGui::BeginColumns("frameGraph-profileTree", 2);
         {
-            drawProfileTree(dt);
+//            drawProfileTree(dt);
+            drawUniqueLayerList(dt);
 
             ImGui::NextColumn();
 
@@ -254,10 +255,9 @@ void PerformanceGraphUI::drawProfileTree(const double& dt) {
         return;
 
 
-    ImGui::BeginChild("profileTree");
-    {
+    if (ImGui::BeginChild("ProfileTree")) {
         int count = 5;
-        ImGui::BeginColumns("profileTree", count, ImGuiColumnsFlags_NoPreserveWidths);
+        ImGui::BeginColumns("ProfileTreeColumns", count, ImGuiColumnsFlags_NoPreserveWidths);
         {
             // TODO: this should only be initialized once
             float x = ImGui::GetWindowContentRegionMax().x;
@@ -307,10 +307,111 @@ void PerformanceGraphUI::drawProfileTree(const double& dt) {
     ImGui::EndChild();
 }
 
+void PerformanceGraphUI::drawUniqueLayerList(const double& dt) {
+    PROFILE_SCOPE("PerformanceGraphUI::drawUniqueLayerList")
+
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->Size.x < 10 || window->Size.y < 10)
+        return;
+
+    if (ImGui::BeginChild("UniqueLayerList")) {
+        int count = 4;
+        if (ImGui::BeginTable("UniqueLayerListTable", count, ImGuiTableFlags_Resizable | ImGuiTableFlags_Sortable | ImGuiTableFlags_ScrollY)) {
+            ImGui::TableSetupScrollFreeze(0, 1);
+            ImGui::TableSetupColumn("Profile Name", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("CPU Time", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_PreferSortDescending, 80);
+            ImGui::TableSetupColumn("CPU %%", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, 60);
+            ImGui::TableSetupColumn("Colour", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, 100);
+            ImGui::TableHeadersRow();
+
+            uint64_t threadId = Application::instance()->getHashedMainThreadId();
+            auto it = m_threadFrameProfileData.find(threadId);
+            if (it != m_threadFrameProfileData.end() && !it->second.empty()) {
+                const FrameProfileData& currentFrame = it->second.back();
+                const ProfileData& rootProfile = currentFrame.profileData[0];
+                const ProfileLayer& rootProfileLayer = m_layers[rootProfile.layerIndex];
+
+                PROFILE_REGION("Allocate layer indices")
+                std::vector<size_t> uniqueLayerIndices;
+                uniqueLayerIndices.emplace_back(rootProfile.layerIndex);
+
+                uniqueLayerIndices.reserve(m_uniqueLayerIndexMap.size() + 1);
+                for (const auto& [layerName, layerIndex] : m_uniqueLayerIndexMap)
+                    uniqueLayerIndices.emplace_back(layerIndex);
+
+
+                PROFILE_REGION("Sort layers")
+                ImGuiTableSortSpecs* tableSortSpecs = ImGui::TableGetSortSpecs();
+                if (tableSortSpecs != nullptr && tableSortSpecs->SpecsCount > 0) {
+//                    if (tableSortSpecs->Specs[0].ColumnIndex == 0) { // Sort by name
+//                        std::sort(uniqueLayerIndices.begin(), uniqueLayerIndices.end(), [&tableSortSpecs, this](const uint32_t& lhs, const uint32_t& rhs) {
+//                            return m_layers[lhs].layerName < m_layers[rhs].layerName;
+//                        });
+//                    }
+                    if (tableSortSpecs->Specs[0].ColumnIndex == 1) { // Sort by CPU time
+                        if (tableSortSpecs->Specs[0].SortDirection == ImGuiSortDirection_Ascending) {
+                            std::sort(uniqueLayerIndices.begin() + 1, uniqueLayerIndices.end(), [this](const size_t& lhs, const size_t& rhs) {
+                                return m_layers[lhs].accumulatedSelfTimeAvg < m_layers[rhs].accumulatedSelfTimeAvg;
+                            });
+                        } else if (tableSortSpecs->Specs[0].SortDirection == ImGuiSortDirection_Descending) {
+                            std::sort(uniqueLayerIndices.begin() + 1, uniqueLayerIndices.end(), [this](const size_t& lhs, const size_t& rhs) {
+                                return m_layers[lhs].accumulatedSelfTimeAvg > m_layers[rhs].accumulatedSelfTimeAvg;
+                            });
+                        }
+                    }
+                }
+                PROFILE_REGION("Display layers")
+
+                float s = 1.0F / 255.0F;
+                ImVec4 tempColour;
+                tempColour.w = 1.0F;
+
+                std::string id = std::string("##");
+                id.reserve(256); // We avoid string re-allocations
+
+                float invRootPercentDivisor = 1.0F / (rootProfileLayer.accumulatedTotalTimeAvg * 0.01F);
+
+                for (size_t i = 0; i < uniqueLayerIndices.size(); ++i) {
+                    const size_t& layerIndex = uniqueLayerIndices[i];
+                    ProfileLayer& uniqueLayer = m_layers[layerIndex];
+
+                    // The first layer is always for the root level, so we want to show the total frame time here.
+                    float layerTime = i == 0 ? uniqueLayer.accumulatedTotalTimeAvg : uniqueLayer.accumulatedSelfTimeAvg;
+
+                    id.reserve(uniqueLayer.layerName.size() + 2);
+                    uniqueLayer.layerName.copy(&id[2], uniqueLayer.layerName.size(), 0);
+
+//                    tempColour = ImGui::ColorConvertU32ToFloat4(uniqueLayer.colour); // This is oddly slow
+                    tempColour.x = (float)((uniqueLayer.colour >> IM_COL32_R_SHIFT) & 0xFF) * s;
+                    tempColour.y = (float)((uniqueLayer.colour >> IM_COL32_G_SHIFT) & 0xFF) * s;
+                    tempColour.z = (float)((uniqueLayer.colour >> IM_COL32_B_SHIFT) & 0xFF) * s;
+
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%s", uniqueLayer.layerName.c_str());
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%.2f msec", layerTime);
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%.2f %%", layerTime * invRootPercentDivisor);
+                    ImGui::TableNextColumn();
+                    if (ImGui::ColorEdit3(id.c_str(), &tempColour.x, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoInputs))
+                        uniqueLayer.colour = ImGui::ColorConvertFloat4ToU32(tempColour);
+                }
+                PROFILE_END_REGION()
+            }
+            ImGui::EndTable();
+        }
+    }
+    ImGui::EndChild();
+}
+
 void PerformanceGraphUI::drawFrameGraphs(const double& dt) {
     PROFILE_SCOPE("PerformanceGraphUI::drawFrameGraphs")
 
-    ImGui::BeginChild("FrameGraphContainer");
+    if (!ImGui::BeginChild("FrameGraphContainer")) {
+        ImGui::EndChild();
+        return;
+    }
     ImGuiWindow* window = ImGui::GetCurrentWindow();
 
     uint64_t threadId = Application::instance()->getHashedMainThreadId();
@@ -358,11 +459,13 @@ void PerformanceGraphUI::drawFrameGraph(const double& dt, const char* strId, con
     ImVec2 bbminOuter = ImVec2(bbmin.x - margin, bbmin.y - margin);
     ImVec2 bbmaxOuter = ImVec2(bbmax.x + margin, bbmax.y + margin);
 
-    ImGui::BeginChild(strId, ImVec2(bbmaxOuter.x - bbminOuter.x, bbmaxOuter.y - bbminOuter.y));
+    if (!ImGui::BeginChild(strId, ImVec2(bbmaxOuter.x - bbminOuter.x, bbmaxOuter.y - bbminOuter.y))) {
+        ImGui::EndChild(); // Early exit if graph is not visible.
+        return;
+    }
 
     const float segmentSpacing = 0.0F;
     float segmentWidth = 1.0F;
-
 
 
     frameGraphInfo.maxFrameProfiles = INT_DIV_CEIL((size_t)(bbmaxInner.x - bbminInner.x), 100) * 100 + 200;
@@ -398,20 +501,20 @@ void PerformanceGraphUI::drawFrameGraph(const double& dt, const char* strId, con
     for (auto it1 = frameData.rbegin(); it1 != frameData.rend(); ++it1, ++index) {
         if (index < 0)
             continue;
-    
+
         x1 = bbmax.x - ((float)index * (segmentWidth + segmentSpacing) + padding);
         x0 = x1 - segmentWidth;
-    
+
         if (x1 < bbmin.x)
             break;
-    
+
         const std::vector<ProfileData>& profileData = it1->profileData;
 
         if (profileData.empty())
             continue;
 
 //        maxFrameTime = glm::max(maxFrameTime, profileData[m_frameGraphRootIndex].elapsedMillis);
-    
+
         y1 = bbmax.y;
         if (m_graphsNormalized) {
             y0 = bbmin.y;
@@ -458,10 +561,8 @@ bool PerformanceGraphUI::drawFrameSlice(const std::vector<ProfileData>& profileD
 
     if ((int)y != (int)y0) {
         // At least one pixel of space was not filled by children, or this is a leaf that is larger than one pixel.
-        ImU32 colour = ImGui::ColorConvertFloat4ToU32(ImVec4(layer.colour[0], layer.colour[1], layer.colour[2], 1.0F));
-
         ImDrawList* dl = ImGui::GetWindowDrawList();
-        dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x1, y), colour);
+        dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x1, y), layer.colour);
     }
 
     return true;
@@ -475,7 +576,7 @@ void PerformanceGraphUI::drawFrameTimeOverlays(const FrameGraphInfo& frameGraphI
 
     const ImU32 frameTimeLineColour = ImGui::ColorConvertFloat4ToU32(ImVec4(0.5F, 0.5F, 0.5F, 0.5F));
     float x, y;
-    char str[100] = { '\0' };
+    char str[100] = {'\0'};
 
     const float h = ymax - ymin;
 
@@ -542,7 +643,6 @@ void PerformanceGraphUI::drawFrameTimeOverlays(const FrameGraphInfo& frameGraphI
             dl->AddLine(ImVec2(x, y), ImVec2(xmax, y), frameTimeLineColour);
         }
     }
-
 }
 
 float PerformanceGraphUI::drawFrameTimeOverlayText(const char* str, float x, float y, const float& xmin, const float& ymin, const float& xmax, const float& ymax) {
@@ -574,7 +674,10 @@ void PerformanceGraphUI::buildProfileTree(const FrameProfileData& frameData, Fra
     if (index == frameGraphInfo.frameGraphRootIndex)
         treeNodeFlags |= ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Selected;
 
-    pathLayer.expanded = ImGui::TreeNodeEx((layer.layerName + pathLayer.layerName).c_str(), treeNodeFlags);
+    std::string id = std::string("##") + layer.layerName + pathLayer.layerName;
+    pathLayer.expanded = ImGui::TreeNodeEx(id.c_str(), treeNodeFlags);
+
+    ImVec4 tempColour = ImGui::ColorConvertU32ToFloat4(pathLayer.colour);
 
     ImGui::SameLine();
     ImGui::NextColumn(); // CPU time
@@ -582,10 +685,11 @@ void PerformanceGraphUI::buildProfileTree(const FrameProfileData& frameData, Fra
     ImGui::NextColumn(); // CPU %
     ImGui::Text("%.2f %%", currProfile.elapsedMillis / rootProfile.elapsedMillis * 100.0);
     ImGui::NextColumn(); // Colour
-    ImGui::ColorEdit3(pathLayer.layerName.c_str(), &pathLayer.colour[0], ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoInputs);
+    if (ImGui::ColorEdit3(id.c_str(), &tempColour.x, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoInputs))
+        pathLayer.colour = ImGui::ColorConvertFloat4ToU32(tempColour);
     ImGui::NextColumn(); // Visible
     if (currProfile.hasChildren) {
-        if (ImGui::RadioButton(pathLayer.layerName.c_str(), frameGraphInfo.frameGraphRootIndex == index))
+        if (ImGui::RadioButton(id.c_str(), frameGraphInfo.frameGraphRootIndex == index))
             frameGraphInfo.frameGraphRootIndex = index;
     }
     ImGui::NextColumn();
@@ -624,6 +728,68 @@ void PerformanceGraphUI::buildProfileTree(const FrameProfileData& frameData, Fra
             }
         }
         ImGui::TreePop();
+    }
+}
+
+void PerformanceGraphUI::initializeProfileDataTree(FrameProfileData& currentFrame, const Profiler::Profile* profiles, const size_t& count, const size_t& stride) {
+    PROFILE_SCOPE("PerformanceGraphUI::initializeProfileDataTree")
+    currentFrame.profileData.clear();
+    currentFrame.profileData.reserve(count);
+
+    uint16_t parentOffset;
+
+    const uint8_t* rawPtr = reinterpret_cast<const uint8_t*>(profiles);
+    size_t offset = 0;
+
+    for (size_t i = 0; i < count; ++i, offset += stride) {
+        const Profiler::Profile& profile = *reinterpret_cast<const Profiler::Profile*>(rawPtr + offset);
+//        const Profiler::Profile& profile = profiles[i];
+
+        bool hasChildren = profile.lastChildIndex != SIZE_MAX;
+
+        parentOffset = 0;
+
+        if (profile.parentIndex != SIZE_MAX) {
+            assert(i > profile.parentIndex);
+            assert((i - profile.parentIndex) <= UINT16_MAX); // Is this a reasonable limit, or is it possible that a valid use case of recursion could break this?
+            parentOffset = (uint16_t)(i - profile.parentIndex);
+        }
+
+        PerformanceGraphUI::ProfileData& profileData = currentFrame.profileData.emplace_back();
+        profileData.nextSiblingIndex = profile.nextSiblingIndex; // TODO: store 16-bit nextSiblingOffset instead
+        profileData.parentOffset = parentOffset;
+        profileData.hasChildren = hasChildren;
+    }
+}
+
+void PerformanceGraphUI::initializeProfileTreeLayers(FrameProfileData& currentFrame, const Profiler::Profile* profiles, const size_t& count, const size_t& stride, std::vector<uint32_t>& layerPath) {
+    PROFILE_SCOPE("PerformanceGraphUI::initializeProfileTreeLayers")
+
+    layerPath.clear();
+    size_t parentIndex = SIZE_MAX;
+    uint32_t popCount;
+
+    const uint8_t* rawPtr = reinterpret_cast<const uint8_t*>(profiles);
+
+    for (size_t i = 0; i < count; ++i) {
+        const Profiler::Profile& profile = *reinterpret_cast<const Profiler::Profile*>(rawPtr + i * stride);
+        ProfileData& profileData = currentFrame.profileData[i];
+
+        const uint32_t& layerIndex = getUniqueLayerIndex(profile.id->name);
+        popCount = 0;
+        // Profile tree is sorted depth-first, we pop until we reach the root or the common parent wit the previous node
+        while (parentIndex != SIZE_MAX && profile.parentIndex <= parentIndex) {
+            const Profiler::Profile& parentProfile = *reinterpret_cast<const Profiler::Profile*>(rawPtr + parentIndex * stride);
+            parentIndex = parentProfile.parentIndex;
+            ++popCount;
+        }
+        layerPath.resize(layerPath.size() - popCount);
+        layerPath.emplace_back(layerIndex);
+        profileData.layerIndex = layerIndex;
+
+        profileData.pathIndex = getPathLayerIndex(layerPath);
+
+        parentIndex = profile.parentIndex;
     }
 }
 
@@ -670,18 +836,45 @@ void PerformanceGraphUI::updateFrameGraphInfo(FrameGraphInfo& frameGraphInfo, co
     frameGraphInfo.frameTimeAvg /= (double)frameGraphInfo.frameTimes.size();
 }
 
+void PerformanceGraphUI::updateAccumulatedAverages() {
+    PROFILE_SCOPE("PerformanceGraphUI::updateAccumulatedAverages")
+    ++m_averageAccumulationFrameCount;
+
+    float invAverageDivisor = 1.0F / (float)m_averageAccumulationFrameCount;
+
+    auto currentTime = Performance::now();
+    auto elapsedTime = currentTime - m_lastAverageAccumulationTime;
+    if (elapsedTime >= m_averageAccumulationDuration || m_lastAverageAccumulationTime == Performance::zero_moment) {
+        m_lastAverageAccumulationTime = currentTime;
+        m_averageAccumulationFrameCount = 0;
+
+        float newAverage;
+
+        for (ProfileLayer& layer : m_layers) {
+            newAverage = layer.accumulatedSelfTimeSum * invAverageDivisor;
+            layer.accumulatedSelfTimeAvg = glm::lerp(newAverage, layer.accumulatedSelfTimeAvg, m_rollingAverageUpdateFactor);
+
+            newAverage = layer.accumulatedTotalTimeSum * invAverageDivisor;
+            layer.accumulatedTotalTimeAvg = glm::lerp(newAverage, layer.accumulatedTotalTimeAvg, m_rollingAverageUpdateFactor);
+
+            layer.accumulatedSelfTimeSum = 0.0F;
+            layer.accumulatedTotalTimeSum = 0.0F;
+        }
+    }
+}
+
 void PerformanceGraphUI::flushOldFrames() {
     PROFILE_SCOPE("PerformanceGraphUI::flushOldFrames")
     size_t totalFlushed = 0;
 
-    for (auto it = m_threadFrameProfileData.begin(); it != m_threadFrameProfileData.end(); ++it) {
+    for (auto it = m_threadFrameProfileData.begin(); it != m_threadFrameProfileData.end(); ++it)
         totalFlushed += Util::removeVectorOverflowStart(it->second, m_maxFrameProfiles);
-    }
+    totalFlushed += Util::removeVectorOverflowStart(m_gpuFrameProfileData, m_maxFrameProfiles);
 
     size_t maxThreadInfoFrameTimes = 10000;
-    for (auto& it : m_threadFrameGraphInfo) {
+    for (auto& it : m_threadFrameGraphInfo)
         totalFlushed += Util::removeVectorOverflowStart(it.second.frameTimes, maxThreadInfoFrameTimes);
-    }
+    totalFlushed += Util::removeVectorOverflowStart(m_gpuFrameGraphInfo.frameTimes, m_maxFrameProfiles);
 }
 
 double PerformanceGraphUI::calculateFrameTimePercentile(const std::vector<double>& frameTimes, std::deque<double>& tempContainer, double percentile) {
@@ -711,32 +904,43 @@ double PerformanceGraphUI::calculateFrameTimePercentile(const std::vector<double
 }
 
 const uint32_t& PerformanceGraphUI::getUniqueLayerIndex(const std::string& layerName) {
+//    PROFILE_SCOPE("PerformanceGraphUI::getUniqueLayerIndex")
     auto it = m_uniqueLayerIndexMap.find(layerName);
     if (it == m_uniqueLayerIndexMap.end()) {
         uint32_t index = (uint32_t)m_layers.size();
         ProfileLayer& layer = m_layers.emplace_back();
-        layer.colour[0] = (float)rand() / RAND_MAX;
-        layer.colour[1] = (float)rand() / RAND_MAX;
-        layer.colour[2] = (float)rand() / RAND_MAX;
+        layer.colour = Util::random<uint32_t>(0, UINT32_MAX) | IM_COL32_A_MASK;
         layer.expanded = false;
         layer.visible = true;
         layer.layerName = layerName;
+        layer.accumulatedSelfTime = 0.0F;
+        layer.accumulatedSelfTimeAvg = 0.0F;
+        layer.accumulatedSelfTimeSum = 0.0F;
+        layer.accumulatedTotalTime = 0.0F;
+        layer.accumulatedTotalTimeAvg = 0.0F;
+        layer.accumulatedTotalTimeSum = 0.0F;
         it = m_uniqueLayerIndexMap.insert(std::make_pair(layerName, index)).first;
     }
     return it->second;
 }
 
 const uint32_t& PerformanceGraphUI::getPathLayerIndex(const std::vector<uint32_t>& layerPath) {
+//    PROFILE_SCOPE("PerformanceGraphUI::getPathLayerIndex")
     auto it = m_pathLayerIndexMap.find(layerPath);
     if (it == m_pathLayerIndexMap.end()) {
         uint32_t index = (uint32_t)m_layers.size();
         ProfileLayer& layer = m_layers.emplace_back();
-        layer.colour[0] = (float)rand() / RAND_MAX;
-        layer.colour[1] = (float)rand() / RAND_MAX;
-        layer.colour[2] = (float)rand() / RAND_MAX;
+        layer.colour = Util::random<uint32_t>(0, UINT32_MAX) | IM_COL32_A_MASK;
         layer.expanded = false;
         layer.visible = true;
-        layer.layerName = std::string("##") + std::to_string(index);
+        layer.layerName = std::to_string(index);
+        layer.pathIndices = layerPath;
+        layer.accumulatedSelfTime = 0.0F;
+        layer.accumulatedSelfTimeAvg = 0.0F;
+        layer.accumulatedSelfTimeSum = 0.0F;
+        layer.accumulatedTotalTime = 0.0F;
+        layer.accumulatedTotalTimeAvg = 0.0F;
+        layer.accumulatedTotalTimeSum = 0.0F;
         //layer.layerName = "";
         //for (size_t i = 0; i < layerPath.size(); ++i) {
         //    if (i > 0)

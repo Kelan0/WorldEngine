@@ -65,8 +65,6 @@ double Performance::milliseconds(const moment_t& startTime) {
 }
 
 
-
-
 Profiler::ThreadContext::ThreadContext() {
 #if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
     uint64_t currentId = ThreadUtils::getCurrentThreadHashedId();
@@ -116,10 +114,12 @@ profile_id Profiler::id(const char* name) {
 }
 
 #if ITT_ENABLED
+
 __itt_domain* Profiler::domain() {
     static __itt_domain* s_domain = __itt_domain_createA(PROFILE_DOMAIN_NAME);
     return s_domain;
 }
+
 #endif
 
 void Profiler::beginFrame() {
@@ -306,7 +306,7 @@ void Profiler::endGraphicsFrame() {
                 if (profile.startQuery.queryPool->allAvailable) {
                     assert(profile.startQuery.queryPool->queryResults[profile.startQuery.queryIndex * 2 + 1] != 0);
 //                    uniqueIds.insert(profile.startQuery.queryPool->id);
-                    profile.startQuery.time = (double) profile.startQuery.queryPool->queryResults[profile.startQuery.queryIndex * 2] * timestampPeriodMsec;
+                    profile.startQuery.time = (double)profile.startQuery.queryPool->queryResults[profile.startQuery.queryIndex * 2] * timestampPeriodMsec;
                     profile.startQuery.queryPool = nullptr;
                 }
             }
@@ -314,7 +314,7 @@ void Profiler::endGraphicsFrame() {
                 if (profile.endQuery.queryPool->allAvailable) {
                     assert(profile.endQuery.queryPool->queryResults[profile.endQuery.queryIndex * 2 + 1] != 0);
 //                    uniqueIds.insert(profile.endQuery.queryPool->id);
-                    profile.endQuery.time = (double) profile.endQuery.queryPool->queryResults[profile.endQuery.queryIndex * 2] * timestampPeriodMsec;
+                    profile.endQuery.time = (double)profile.endQuery.queryPool->queryResults[profile.endQuery.queryIndex * 2] * timestampPeriodMsec;
                     profile.endQuery.queryPool = nullptr;
                 }
             }
@@ -501,8 +501,8 @@ bool Profiler::getLatestGpuFrameProfile(std::vector<GPUProfile>& outGpuProfiles)
 
     size_t copySrcIndex = ctx.allFrameStartIndexOffsets[ctx.latestReadyFrameIndex];
     size_t nextCopySrcIndex = (ctx.latestReadyFrameIndex < ctx.allFrameStartIndexOffsets.size() - 1)
-            ? ctx.allFrameStartIndexOffsets[ctx.latestReadyFrameIndex + 1]
-            : ctx.allFrameProfiles.size();
+                              ? ctx.allFrameStartIndexOffsets[ctx.latestReadyFrameIndex + 1]
+                              : ctx.allFrameProfiles.size();
 
     assert(copySrcIndex < nextCopySrcIndex);
 
@@ -671,12 +671,8 @@ Profiler::GPUContext& Profiler::gpuContext() {
 }
 
 
-
-
-
-
 ScopeProfiler::ScopeProfiler(profile_id const& id):
-    m_currentRegionId(nullptr) {
+        m_currentRegionId(nullptr) {
 #if PROFILING_ENABLED
     Profiler::beginCPU(id);
 #endif
