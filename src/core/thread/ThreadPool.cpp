@@ -53,7 +53,7 @@ BaseTask* ThreadPool::nextTask(Thread* currentThread) {
     assert(currentThread->thread.get_id() == std::this_thread::get_id());
 
     if (!wakeThreadCondition(currentThread)) {
-        PROFILE_SCOPE("Wait for tasks")
+        PROFILE_SCOPE("ThreadPool::nextTask - Wait for tasks")
 
         std::unique_lock<std::mutex> lock(m_tasksAvailableMutex);
         while (!wakeThreadCondition(currentThread))
@@ -77,7 +77,7 @@ BaseTask* ThreadPool::nextTask(Thread* currentThread) {
     std::uniform_int_distribution<size_t> rand(0, m_threads.size() - 1);
     size_t offset = rand(random());
 
-    PROFILE_REGION("Attempt lock & pop")
+    PROFILE_REGION("ThreadPool::nextTask - Attempt lock & pop")
     while (task == nullptr && attempts < maxAttempts && m_taskCount > 0) {
 
         ++attempts;
@@ -113,7 +113,7 @@ BaseTask* ThreadPool::nextTask(Thread* currentThread) {
     }
 
     if (task == nullptr) {
-        PROFILE_REGION("Yield")
+        PROFILE_REGION("ThreadPool::nextTask - Yield")
         std::this_thread::yield(); // Give other threads some execution time before immediately retrying.
     }
 
@@ -220,10 +220,10 @@ void ThreadPool::endBatch() {
 void ThreadPool::syncBatchedTasks() {
     PROFILE_SCOPE("ThreadPool::syncBatchedTasks")
 
-    PROFILE_REGION("Acquire lock")
+    PROFILE_REGION("ThreadPool::syncBatchedTasks - Acquire lock")
     std::unique_lock<std::recursive_mutex> batchTasksLock(m_batchedTasksMutex);
 
-    PROFILE_REGION("Distribute tasks to workers")
+    PROFILE_REGION("ThreadPool::syncBatchedTasks - Distribute tasks to workers")
 
     size_t numBatchedTasks = m_batchedTasks.size();
 
@@ -249,12 +249,12 @@ void ThreadPool::syncBatchedTasks() {
     m_batchedTasks.clear();
 
     {
-        PROFILE_REGION("Lock and incr tasks")
+        PROFILE_REGION("ThreadPool::syncBatchedTasks - Lock and incr tasks")
 
         std::unique_lock<std::mutex> taskCountLock(m_tasksAvailableMutex);
         m_taskCount += numBatchedTasks;
 
-        PROFILE_REGION("Notify workers")
+        PROFILE_REGION("ThreadPool::syncBatchedTasks - Notify workers")
         m_tasksAvailableCondition.notify_all();
     }
 

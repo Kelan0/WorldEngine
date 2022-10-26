@@ -253,6 +253,8 @@ add_executable(${PROJECT_NAME}
         src/extern/imgui/imgui_impl_sdl.h
         src/extern/imgui/imgui_impl_vulkan.cpp
         src/extern/imgui/imgui_impl_vulkan.h
+        src/extern/imgui/imgui_stdlib.cpp
+        src/extern/imgui/imgui_stdlib.h
         src/extern/imgui/imgui_demo.cpp
         src/core/engine/renderer/renderPasses/UIRenderer.cpp
         src/core/engine/renderer/renderPasses/UIRenderer.h

@@ -461,8 +461,6 @@ void SceneRenderer::findModifiedEntities() {
     auto thread_exec = [this](size_t rangeStart, size_t rangeEnd) {
         PROFILE_SCOPE("SceneRenderer::findModifiedEntities/thread_exec")
 
-        PROFILE_REGION("Find modified regions")
-
         std::vector<std::pair<size_t, size_t>> modifiedRegions;
         size_t maxRegionMergeDist = 128;
         size_t firstModifiedIndex = SIZE_MAX;
@@ -558,12 +556,10 @@ void SceneRenderer::updateEntityWorldTransforms() {
             }
         }
 
-        PROFILE_REGION("Reset modified transform flags")
         if (anyTransformChanged)
             m_resources->changedObjectTransforms.set(rangeStart, rangeEnd - rangeStart, false);
     };
 
-    PROFILE_REGION("Submit work")
 //    thread_exec(0, m_numRenderEntities);
     auto futures = ThreadUtils::parallel_range(m_numRenderEntities, DenseFlagArray::pack_bits, ThreadUtils::getThreadCount() * 5, thread_exec);
 //    auto futures = ThreadUtils::run(thread_exec, 0, m_numRenderEntities);
@@ -620,8 +616,6 @@ void SceneRenderer::updateMaterialsBuffer() {
                 }
             }
         }
-
-        PROFILE_REGION("Reset modified texture flags")
 
         if (anyMaterialChanged)
             m_resources->changedObjectMaterials.set(rangeStart, rangeEnd - rangeStart, false);

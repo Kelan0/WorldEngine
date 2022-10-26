@@ -33,6 +33,7 @@ namespace Performance {
     using duration_t = std::chrono::nanoseconds;
     using moment_t = std::chrono::high_resolution_clock::time_point;
     constexpr moment_t zero_moment = moment_t{};
+    constexpr duration_t zero_duration = duration_t{};
 
     duration_t mark();
 
