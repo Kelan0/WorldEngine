@@ -2,6 +2,7 @@
 #define WORLDENGINE_UIRENDERER_H
 
 #include "core/core.h"
+#include "core/util/Util.h"
 #include "core/engine/ui/UI.h"
 #include "core/graphics/FrameResource.h"
 #include "core/graphics/RenderPass.h"
@@ -25,6 +26,9 @@ public:
     void render(const double& dt, const vk::CommandBuffer& commandBuffer);
 
     template<typename T>
+    bool initUI();
+
+    template<typename T>
     void setUIEnabled(const bool& enabled);
 
     template<typename T>
@@ -39,19 +43,26 @@ private:
 
 
 template<typename T>
-void UIRenderer::setUIEnabled(const bool& enabled) {
+bool UIRenderer::initUI() {
     static_assert(std::is_base_of<UI, T>::value);
 
     auto type = std::type_index(typeid(T));
     auto it = m_uis.find(type);
     if (it == m_uis.end()) {
-        printf("Creating UI: %s\n", type.name());
-        m_uis.insert(std::make_pair(type, std::make_pair(new T(), enabled)));
-    } else {
-        it->second.second = enabled;
+        m_uis.insert(std::make_pair(type, std::make_pair(new T(), false)));
+        return true;
     }
+    return false;
+}
 
-    printf("%s UI %s\n", enabled ? "enabling" : "disabling",  type.name());
+template<typename T>
+void UIRenderer::setUIEnabled(const bool& enabled) {
+    static_assert(std::is_base_of<UI, T>::value);
+
+    auto type = std::type_index(typeid(T));
+    auto it = m_uis.find(type);
+    assert(it != m_uis.end());
+    it->second.second = enabled;
 }
 
 template<typename T>

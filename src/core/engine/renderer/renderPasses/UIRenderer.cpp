@@ -81,6 +81,8 @@ bool UIRenderer::init(SDL_Window* windowHandle) {
 
     m_createdFontsTexture = false;
 
+    initUI<PerformanceGraphUI>();
+
     return true;
 }
 

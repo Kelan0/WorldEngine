@@ -18,11 +18,13 @@ class PerformanceGraphUI : public UI {
         float elapsedMillis;
         size_t nextSiblingIndex = 0;
         uint16_t parentOffset = 0;
-        bool hasChildren = false;
+//        bool hasChildren = false;
+        uint32_t childCount = 0;
     };
 
     struct FrameProfileData {
         std::vector<ProfileData> profileData;
+        size_t rootIndex;
         bool treeStructureChanged;
 //        size_t treeStructureHash;
     };
@@ -34,6 +36,25 @@ class PerformanceGraphUI : public UI {
 
     struct FrameGraphSlice {
         std::vector<FrameGraphSegment> segments;
+    };
+
+    struct ProfileLayer {
+        std::string layerName;
+        std::vector<uint32_t> pathIndices;
+        uint32_t colour;
+        bool expanded : 1;
+        bool visible : 1;
+        bool passedTreeFilter : 1;
+    };
+
+    struct LayerInstanceInfo {
+        uint32_t layerIndex;
+        float accumulatedTotalTime;
+        float accumulatedSelfTime;
+        float accumulatedTotalTimeAvg;
+        float accumulatedSelfTimeAvg;
+        float accumulatedTotalTimeSum;
+        float accumulatedSelfTimeSum;
     };
 
     struct FrameGraphInfo {
@@ -52,21 +73,9 @@ class PerformanceGraphUI : public UI {
 //        size_t frameGraphRootIndex = 0;
         std::vector<uint32_t> frameGraphRootPath;
         float heightScaleMsec = 5.0F;
-    };
-
-    struct ProfileLayer {
-        std::string layerName;
-        std::vector<uint32_t> pathIndices;
-        uint32_t colour;
-        float accumulatedTotalTime;
-        float accumulatedSelfTime;
-        float accumulatedTotalTimeAvg;
-        float accumulatedSelfTimeAvg;
-        float accumulatedTotalTimeSum;
-        float accumulatedSelfTimeSum;
-        bool expanded : 1;
-        bool visible : 1;
-        bool passedTreeFilter : 1;
+        bool forceShowRoot = false;
+        uint32_t treeDepthLimit = UINT32_MAX;
+        std::unordered_map<uint32_t, LayerInstanceInfo> uniqueLayerInstanceInfo;
     };
 
     enum ProfileTreeSortOrder {
@@ -84,6 +93,10 @@ class PerformanceGraphUI : public UI {
         GraphVisibilityMode_Both = 0,
         GraphVisibilityMode_CPU = 1,
         GraphVisibilityMode_GPU = 2,
+    };
+    enum ProfileVisibilityMode {
+        ProfileVisibilityMode_CPU = 0,
+        ProfileVisibilityMode_GPU = 1,
     };
 public:
     PerformanceGraphUI();
@@ -103,9 +116,13 @@ private:
 
     void drawProfileHotFunctionList(const double& dt);
 
+    void drawProfileHotFunctionListBody(const double& dt, const std::vector<ProfileData>& profileData, FrameGraphInfo& frameGraphInfo, const float& lineHeight);
+
     void drawFrameGraphs(const double& dt);
 
     void drawFrameGraph(const double& dt, const char* strId, const std::vector<FrameProfileData>& frameData, FrameGraphInfo& frameGraphInfo, const float& x, const float& y, const float& w, const float& h, const float& padding);
+
+    bool buildFrameSlice(const std::vector<ProfileData>& profileData, const size_t& index, const float& y0, const float& y1, const uint32_t& treeDepthLimit, FrameGraphSlice& outFrameGraphSlice);
 
     bool drawFrameSlice(const std::vector<ProfileData>& profileData, const size_t& index, const float& x0, const float& y0, const float& x1, const float& y1, const uint32_t& treeDepthLimit);
 
@@ -113,13 +130,17 @@ private:
 
     float drawFrameTimeOverlayText(const char* str, float x, float y, const float& xmin, const float& ymin, const float& xmax, const float& ymax);
 
-    void buildProfileTree(const FrameProfileData& frameData, FrameGraphInfo& frameGraphInfo, const size_t& index, const ProfileTreeSortOrder& sortOrder, std::vector<size_t>& tempReorderBuffer);
+    void buildProfileTree(std::vector<FrameProfileData>& frameData, FrameGraphInfo& frameGraphInfo, const size_t& index, const ProfileTreeSortOrder& sortOrder, std::vector<size_t>& tempReorderBuffer);
 
     void initializeProfileDataTree(FrameProfileData* currentFrame, const Profiler::Profile* profiles, const size_t& count, const size_t& stride);
 
     void initializeProfileTreeLayers(FrameProfileData* currentFrame, const Profiler::Profile* profiles, const size_t& count, const size_t& stride, std::vector<uint32_t>& layerPath);
 
+    void compressProfileTreeLayers(FrameProfileData* currentFrame);
+
     void checkFrameProfileTreeStructureChanged(FrameProfileData* currentFrame, FrameProfileData* previousFrame);
+
+    void updateFrameGraphLayerInstances(const std::vector<ProfileData>& profileData, FrameGraphInfo& frameGraphInfo);
 
     void updateFrameGraphInfo(FrameGraphInfo& frameGraphInfo, const float& rootElapsed);
 
@@ -137,13 +158,29 @@ private:
 
     bool isProfilePathEqual(const std::vector<uint32_t>& path1, const std::vector<uint32_t>& path2);
 
+    bool isProfilePathDescendent(const std::vector<uint32_t>& path1, const std::vector<uint32_t>& path2);
+
     size_t getProfileIndexFromPath(const std::vector<ProfileData>& profileData, const std::vector<uint32_t>& path);
 
     size_t findChildIndexForLayer(const std::vector<ProfileData>& profileData, const size_t& parentProfileIndex, const uint32_t& layerIndex);
 
+    size_t findSiblingIndexForLayer(const std::vector<ProfileData>& profileData, const size_t& firstSiblingProfileIndex, const uint32_t& layerIndex);
+
     void updateFilteredLayerPaths(const std::vector<ProfileData>& profileData);
 
     bool matchSearchTerms(const std::string& str, const std::vector<std::string>& searchTerms);
+
+    bool isProfileHidden(const ProfileData& profile);
+
+    bool hasVisibleChildren(const ProfileData& profile);
+
+    ProfileData* getProfileParent(std::vector<ProfileData>& profiles, const size_t& index);
+
+    size_t findCommonParent(const std::vector<ProfileData>& profiles, size_t profileIndex1, size_t profileIndex2);
+
+//    void removeChildFromParent(std::vector<ProfileData>& profiles, const size_t& parentIndex);
+
+    void forEachFrameGraphInfo();
 
 private:
     size_t m_maxFrameProfiles;
@@ -165,8 +202,10 @@ private:
     bool m_showFrameTime99Percentile;
     bool m_showFrameTime999Percentile;
     bool m_clearFrames;
+    bool m_compressDuplicatedTreePaths;
 
     GraphVisibilityMode m_graphVisibilityMode;
+    ProfileVisibilityMode m_profileVisibilityMode;
     ProfilerDisplayMode m_profilerDisplayMode;
 
     Performance::moment_t m_lastAverageAccumulationTime;
