@@ -75,7 +75,8 @@ class PerformanceGraphUI : public UI {
         float heightScaleMsec = 5.0F;
         bool forceShowRoot = false;
         uint32_t treeDepthLimit = UINT32_MAX;
-        std::unordered_map<uint32_t, LayerInstanceInfo> uniqueLayerInstanceInfo;
+        std::unordered_map<uint32_t, LayerInstanceInfo> uniqueLayerInstanceInfoMap;
+        std::unordered_map<uint32_t, LayerInstanceInfo> pathLayerInstanceInfoMap;
     };
 
     enum ProfileTreeSortOrder {
@@ -116,7 +117,7 @@ private:
 
     void drawProfileHotFunctionList(const double& dt);
 
-    void drawProfileHotFunctionListBody(const double& dt, const std::vector<ProfileData>& profileData, FrameGraphInfo& frameGraphInfo, const float& lineHeight);
+    void drawProfileHotFunctionListBody(const double& dt, const std::vector<ProfileData>& profileData, const std::unordered_map<uint32_t, LayerInstanceInfo>& layerInstanceInfoMap, const float& lineHeight);
 
     void drawFrameGraphs(const double& dt);
 

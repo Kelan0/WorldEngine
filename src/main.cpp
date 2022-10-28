@@ -302,7 +302,7 @@ class App : public Application {
         handleUserInput(dt);
         time += dt;
 
-        ImGui::ShowDemoWindow();
+//        ImGui::ShowDemoWindow();
 
         bool taaEnabled = Engine::reprojectionRenderer()->isTaaEnabled();
         float taaHistoryFadeFactor = Engine::reprojectionRenderer()->getTaaHistoryFactor();

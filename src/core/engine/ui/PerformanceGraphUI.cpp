@@ -83,7 +83,13 @@ void PerformanceGraphUI::update(const double& dt) {
     size_t popCount = 0;
 
     auto resetFrameGraphInfo = [](FrameGraphInfo& frameGraphInfo) {
-        for (auto& [layerIndex, layerInstanceInfo] : frameGraphInfo.uniqueLayerInstanceInfo) {
+        for (auto& [layerIndex, layerInstanceInfo] : frameGraphInfo.uniqueLayerInstanceInfoMap) {
+            layerInstanceInfo.accumulatedSelfTimeSum += layerInstanceInfo.accumulatedSelfTime;
+            layerInstanceInfo.accumulatedTotalTimeSum += layerInstanceInfo.accumulatedTotalTime;
+            layerInstanceInfo.accumulatedSelfTime = 0.0F;
+            layerInstanceInfo.accumulatedTotalTime = 0.0F;
+        }
+        for (auto& [layerIndex, layerInstanceInfo] : frameGraphInfo.pathLayerInstanceInfoMap) {
             layerInstanceInfo.accumulatedSelfTimeSum += layerInstanceInfo.accumulatedSelfTime;
             layerInstanceInfo.accumulatedTotalTimeSum += layerInstanceInfo.accumulatedTotalTime;
             layerInstanceInfo.accumulatedSelfTime = 0.0F;
@@ -177,9 +183,9 @@ void PerformanceGraphUI::update(const double& dt) {
 void PerformanceGraphUI::draw(const double& dt) {
     PROFILE_SCOPE("PerformanceGraphUI::draw")
 
-    ImGuiWindow* window = ImGui::GetCurrentWindow();
-    if (window->Size.x < 10 || window->Size.y < 10)
-        return;
+//    ImGuiWindow* window = ImGui::GetCurrentWindow();
+//    if (window->Size.x < 10 || window->Size.y < 10)
+//        return;
 
     if (!ImGui::Begin("Profiler")) {
         ImGui::End(); // Early exit - Window is not visible.
@@ -275,12 +281,13 @@ void PerformanceGraphUI::drawHeaderBar() {
         ImGui::SameLine(0.0F, 10.0F);
 
         itemWidth = 100.0F;
-        static const char* PROFILE_DISPLAY_MODE_OPTIONS[] = {"Show Call Stack", "Show Hot Functions"};
+        static const char* PROFILE_DISPLAY_MODE_OPTIONS[] = {"Show Call Stack", "Show Hot Functions", "Show Hot Paths"};
         for (const char* option : PROFILE_DISPLAY_MODE_OPTIONS) itemWidth = glm::max(itemWidth, ImGui::CalcTextSize(option).x);
         ImGui::PushItemWidth(itemWidth + 30.0F);
         if (ImGui::BeginCombo("##WhichDisplayMode", PROFILE_DISPLAY_MODE_OPTIONS[m_profilerDisplayMode], ImGuiComboFlags_PopupAlignLeft)) {
             if (ImGui::Selectable(PROFILE_DISPLAY_MODE_OPTIONS[ProfilerDisplayMode_CallStack], m_profilerDisplayMode == ProfilerDisplayMode_CallStack)) m_profilerDisplayMode = ProfilerDisplayMode_CallStack;
             if (ImGui::Selectable(PROFILE_DISPLAY_MODE_OPTIONS[ProfilerDisplayMode_HotFunctionList], m_profilerDisplayMode == ProfilerDisplayMode_HotFunctionList)) m_profilerDisplayMode = ProfilerDisplayMode_HotFunctionList;
+            if (ImGui::Selectable(PROFILE_DISPLAY_MODE_OPTIONS[ProfilerDisplayMode_HotPathList], m_profilerDisplayMode == ProfilerDisplayMode_HotPathList)) m_profilerDisplayMode = ProfilerDisplayMode_HotPathList;
             ImGui::EndCombo();
         }
         ImGui::PopItemWidth();
@@ -312,7 +319,7 @@ void PerformanceGraphUI::drawProfileContent(const double& dt) {
         {
             if (m_profilerDisplayMode == ProfilerDisplayMode_CallStack) {
                 drawProfileCallStackTree(dt);
-            } else if (m_profilerDisplayMode == ProfilerDisplayMode_HotFunctionList) {
+            } else if (m_profilerDisplayMode == ProfilerDisplayMode_HotFunctionList || m_profilerDisplayMode == ProfilerDisplayMode_HotPathList) {
                 drawProfileHotFunctionList(dt);
             }
 
@@ -444,13 +451,22 @@ void PerformanceGraphUI::drawProfileHotFunctionList(const double& dt) {
                     if (!allFrames.empty()) {
                         const FrameProfileData& currentFrame = allFrames.back();
                         FrameGraphInfo& threadInfo = m_threadFrameGraphInfo[threadId];
-                        drawProfileHotFunctionListBody(dt, currentFrame.profileData, threadInfo, lineHeight);
+
+                        if (m_profilerDisplayMode == ProfilerDisplayMode_HotFunctionList) {
+                            drawProfileHotFunctionListBody(dt, currentFrame.profileData, threadInfo.uniqueLayerInstanceInfoMap, lineHeight);
+                        } else if (m_profilerDisplayMode == ProfilerDisplayMode_HotPathList) {
+                            drawProfileHotFunctionListBody(dt, currentFrame.profileData, threadInfo.pathLayerInstanceInfoMap, lineHeight);
+                        }
                     }
                 }
             } else if (m_profileVisibilityMode == ProfileVisibilityMode_GPU) {
                 if (!m_gpuFrameProfileData.empty()) {
                     const FrameProfileData& currentFrame = m_gpuFrameProfileData.back();
-                    drawProfileHotFunctionListBody(dt, currentFrame.profileData, m_gpuFrameGraphInfo, lineHeight);
+                    if (m_profilerDisplayMode == ProfilerDisplayMode_HotFunctionList) {
+                        drawProfileHotFunctionListBody(dt, currentFrame.profileData, m_gpuFrameGraphInfo.uniqueLayerInstanceInfoMap, lineHeight);
+                    } else if (m_profilerDisplayMode == ProfilerDisplayMode_HotPathList) {
+                        drawProfileHotFunctionListBody(dt, currentFrame.profileData, m_gpuFrameGraphInfo.pathLayerInstanceInfoMap, lineHeight);
+                    }
                 }
             }
             PROFILE_END_REGION()
@@ -463,20 +479,22 @@ void PerformanceGraphUI::drawProfileHotFunctionList(const double& dt) {
     ImGui::EndChild();
 }
 
-void PerformanceGraphUI::drawProfileHotFunctionListBody(const double& dt, const std::vector<ProfileData>& profileData, FrameGraphInfo& frameGraphInfo, const float& lineHeight) {
+void PerformanceGraphUI::drawProfileHotFunctionListBody(const double& dt, const std::vector<ProfileData>& profileData, const std::unordered_map<uint32_t, LayerInstanceInfo>& layerInstanceInfoMap, const float& lineHeight) {
     PROFILE_SCOPE("PerformanceGraphUI::drawProfileHotFunctionListBody")
 
     const ProfileData& rootProfile = profileData[0];
-    LayerInstanceInfo* rootProfileLayerInstance = &frameGraphInfo.uniqueLayerInstanceInfo.at(rootProfile.layerIndex);
+    const uint32_t& rootLayerIndex = m_profilerDisplayMode == ProfilerDisplayMode_HotPathList ? rootProfile.pathIndex : rootProfile.layerIndex;
+    const LayerInstanceInfo* rootProfileLayerInstance = &layerInstanceInfoMap.at(rootLayerIndex);
 
     PROFILE_REGION("PerformanceGraphUI::drawProfileHotFunctionListBody - Get layers")
-    std::vector<LayerInstanceInfo*> layerInstances;
-    layerInstances.reserve(frameGraphInfo.uniqueLayerInstanceInfo.size());
+    std::vector<const LayerInstanceInfo*> layerInstances;
+    layerInstances.reserve(layerInstanceInfoMap.size());
 
-    layerInstances.emplace_back(&frameGraphInfo.uniqueLayerInstanceInfo[rootProfile.layerIndex]);
 
-    for (auto& [layerIndex, layerInstanceInfo] : frameGraphInfo.uniqueLayerInstanceInfo) {
-        if (layerIndex == rootProfile.layerIndex)
+    layerInstances.emplace_back(&layerInstanceInfoMap.at(rootLayerIndex));
+
+    for (auto& [layerIndex, layerInstanceInfo] : layerInstanceInfoMap) {
+        if (layerIndex == rootLayerIndex)
             continue; // Skip root, it was inserted first
         if (!m_profileNameFilterSearchTerms.empty() && !matchSearchTerms(m_layers[layerIndex].layerName, m_profileNameFilterSearchTerms))
             continue;
@@ -516,8 +534,7 @@ void PerformanceGraphUI::drawProfileHotFunctionListBody(const double& dt, const 
     float invRootPercentDivisor = 1.0F / (rootProfileLayerInstance->accumulatedTotalTimeAvg * 0.01F);
 
     for (size_t i = 0; i < layerInstances.size(); ++i) {
-//                    const size_t& layerIndex = uniqueLayerIndices[i];
-        LayerInstanceInfo*& layerInstance = layerInstances[i];
+        const LayerInstanceInfo*& layerInstance = layerInstances[i];
         ProfileLayer& uniqueLayer = m_layers[layerInstance->layerIndex];
 
         // The first layer is always for the root level, so we want to show the total frame time here.
@@ -1166,25 +1183,27 @@ void PerformanceGraphUI::updateFrameGraphLayerInstances(const std::vector<Profil
         if (isProfileHidden(profile))
             continue;
 
-        LayerInstanceInfo& uniqueLayerInstanceInfo = Util::mapInsertIfAbsent(frameGraphInfo.uniqueLayerInstanceInfo, profile.layerIndex, [](const uint32_t& layerIndex) {
+        LayerInstanceInfo& uniqueLayerInstanceInfo = Util::mapInsertIfAbsent(frameGraphInfo.uniqueLayerInstanceInfoMap, profile.layerIndex, [](const uint32_t& layerIndex) {
             return LayerInstanceInfo{ .layerIndex = layerIndex };
         });
         uniqueLayerInstanceInfo.accumulatedTotalTime += profile.elapsedMillis;
         uniqueLayerInstanceInfo.accumulatedSelfTime += profile.elapsedMillis;
 
-//        ProfileLayer& pathLayer = m_layers[profile.pathIndex];
-//        pathLayer.accumulatedTotalTime += profile.elapsedMillis;
-//        pathLayer.accumulatedSelfTime += profile.elapsedMillis;
+        LayerInstanceInfo& pathLayerInstanceInfo = Util::mapInsertIfAbsent(frameGraphInfo.pathLayerInstanceInfoMap, profile.pathIndex, [](const uint32_t& pathIndex) {
+            return LayerInstanceInfo{ .layerIndex = pathIndex };
+        });
+        pathLayerInstanceInfo.accumulatedTotalTime += profile.elapsedMillis;
+        pathLayerInstanceInfo.accumulatedSelfTime += profile.elapsedMillis;
 
         if (profile.parentOffset != 0) {
             // accumulatedTotalTime includes all the time of a profile and its children. accumulatedSelfTime excludes the time of a profiles
             // children, and only includes its own time. Therefor we must subtract this profiles time from its parents self time.
             const ProfileData& parentProfile = profileData[i - profile.parentOffset];
-            LayerInstanceInfo& parentUniqueLayerInstanceInfo = frameGraphInfo.uniqueLayerInstanceInfo.at(parentProfile.layerIndex); // Parent is guaranteed to be before its children, therefor map::at is safe
+            LayerInstanceInfo& parentUniqueLayerInstanceInfo = frameGraphInfo.uniqueLayerInstanceInfoMap.at(parentProfile.layerIndex); // Parent is guaranteed to be before its children, therefor map::at is safe
             parentUniqueLayerInstanceInfo.accumulatedSelfTime -= profile.elapsedMillis;
 
-//            ProfileLayer& parentPathLayer = m_layers[parentProfile.pathIndex];
-//            parentPathLayer.accumulatedSelfTime -= profile.elapsedMillis;
+            LayerInstanceInfo& parentPathLayerInstanceInfo = frameGraphInfo.pathLayerInstanceInfoMap.at(parentProfile.pathIndex);
+            parentPathLayerInstanceInfo.accumulatedSelfTime -= profile.elapsedMillis;
         }
     }
 }
@@ -1252,14 +1271,23 @@ void PerformanceGraphUI::updateAccumulatedAverages() {
 
         // This should be inlined.
         auto updateFrameGraphAccumulatedAverages = [&](FrameGraphInfo& frameGraphInfo) {
-            for (auto& [layerIndex, layerInstanceInfo] : frameGraphInfo.uniqueLayerInstanceInfo) {
-                newAverage = layerInstanceInfo.accumulatedSelfTimeSum * invAverageDivisor;
-                layerInstanceInfo.accumulatedSelfTimeAvg = glm::lerp(newAverage, layerInstanceInfo.accumulatedSelfTimeAvg, m_rollingAverageUpdateFactor);
-                layerInstanceInfo.accumulatedSelfTimeSum = 0.0F;
+            for (auto& [layerIndex, uniqueLayerInstanceInfo] : frameGraphInfo.uniqueLayerInstanceInfoMap) {
+                newAverage = uniqueLayerInstanceInfo.accumulatedSelfTimeSum * invAverageDivisor;
+                uniqueLayerInstanceInfo.accumulatedSelfTimeAvg = glm::lerp(newAverage, uniqueLayerInstanceInfo.accumulatedSelfTimeAvg, m_rollingAverageUpdateFactor);
+                uniqueLayerInstanceInfo.accumulatedSelfTimeSum = 0.0F;
 
-                newAverage = layerInstanceInfo.accumulatedTotalTimeSum * invAverageDivisor;
-                layerInstanceInfo.accumulatedTotalTimeAvg = glm::lerp(newAverage, layerInstanceInfo.accumulatedTotalTimeAvg, m_rollingAverageUpdateFactor);
-                layerInstanceInfo.accumulatedTotalTimeSum = 0.0F;
+                newAverage = uniqueLayerInstanceInfo.accumulatedTotalTimeSum * invAverageDivisor;
+                uniqueLayerInstanceInfo.accumulatedTotalTimeAvg = glm::lerp(newAverage, uniqueLayerInstanceInfo.accumulatedTotalTimeAvg, m_rollingAverageUpdateFactor);
+                uniqueLayerInstanceInfo.accumulatedTotalTimeSum = 0.0F;
+            }
+            for (auto& [pathIndex, pathLayerInstanceInfo] : frameGraphInfo.pathLayerInstanceInfoMap) {
+                newAverage = pathLayerInstanceInfo.accumulatedSelfTimeSum * invAverageDivisor;
+                pathLayerInstanceInfo.accumulatedSelfTimeAvg = glm::lerp(newAverage, pathLayerInstanceInfo.accumulatedSelfTimeAvg, m_rollingAverageUpdateFactor);
+                pathLayerInstanceInfo.accumulatedSelfTimeSum = 0.0F;
+
+                newAverage = pathLayerInstanceInfo.accumulatedTotalTimeSum * invAverageDivisor;
+                pathLayerInstanceInfo.accumulatedTotalTimeAvg = glm::lerp(newAverage, pathLayerInstanceInfo.accumulatedTotalTimeAvg, m_rollingAverageUpdateFactor);
+                pathLayerInstanceInfo.accumulatedTotalTimeSum = 0.0F;
             }
         };
 
