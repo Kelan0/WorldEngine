@@ -99,6 +99,10 @@ bool ReprojectionRenderer::init() {
     return true;
 }
 
+void ReprojectionRenderer::preRender(const double& dt) {
+    swapFrames();
+}
+
 void ReprojectionRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("ReprojectionRenderer::render")
 
@@ -142,7 +146,6 @@ void ReprojectionRenderer::render(const double& dt, const vk::CommandBuffer& com
 
     m_resources->frame.rendered = true;
 
-    swapFrames();
 }
 
 void ReprojectionRenderer::beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents) {
@@ -233,10 +236,12 @@ void ReprojectionRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
         m_resources[i]->updateDescriptorSet = true;
     }
 
+    bool success;
+
     if (CONCURRENT_FRAMES == 1) {
         // Allocate frame date for the previous frame if there is only one concurrent frame. Otherwise, m_previousFrame
         // simply contains the existing pointers of the frame data at the index of the previous frame
-        bool success = createFramebuffer(&m_previousFrame);
+        success = createFramebuffer(&m_previousFrame);
         assert(success);
     } else {
         m_previousFrame.image = nullptr;
@@ -245,7 +250,8 @@ void ReprojectionRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
         m_previousFrame.rendered = false;
     }
 
-    createReprojectionGraphicsPipeline();
+    success = createReprojectionGraphicsPipeline();
+    assert(success);
     m_frameIndices.clear();
 }
 

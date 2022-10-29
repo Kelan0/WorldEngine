@@ -5,6 +5,7 @@
 const float PI = 3.14159265359;
 const float SQRT2 = 1.4142135623730951;
 const vec2 invAtan = vec2(0.15915494309, 0.31830988618);
+const vec3 RGB_LUMINANCE = vec3(0.2126, 0.7152, 0.0722);
 
 const float VELOCITY_PRECISION_SCALE = 100.0;
 

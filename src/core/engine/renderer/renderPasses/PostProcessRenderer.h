@@ -17,13 +17,20 @@ struct RecreateSwapchainEvent;
 class PostProcessRenderer {
 private:
     struct PostProcessUniformData {
-        int32_t temp;
+        bool bloomEnabled;
+        float bloomIntensity;
+    };
+
+    struct BloomBlurPushConstantData {
+        glm::vec2 texelSize;
+        uint32_t passIndex;
+        uint32_t _pad0;
     };
 
     struct BloomBlurUniformData {
-        glm::vec2 texelSize;
         float filterRadius;
-        uint32_t textureIndex;
+        float threshold;
+        float softThreshold;
     };
 
     struct RenderResources {
@@ -34,8 +41,12 @@ private:
         std::vector<DescriptorSet*> bloomBlurDescriptorSets;
         std::vector<Framebuffer*> bloomBlurMipFramebuffers;
         std::vector<ImageView*> bloomBlurMipImageViews;
+        ImageView* bloomTextureImageView = nullptr;
         Image2D* bloomBlurImage = nullptr;
         bool updateInputImage = true;
+        bool postProcessUniformDataChanged = true;
+        bool bloomBlurUniformDataChanged = true;
+        uint32_t bloomBlurIterations = 0;
     };
 
 public:
@@ -50,6 +61,32 @@ public:
     void render(const double& dt, const vk::CommandBuffer& commandBuffer);
 
     void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
+
+    bool isBloomEnabled() const;
+
+    void setBloomEnabled(const bool& bloomEnabled);
+
+    float getBloomIntensity() const;
+
+    void setBloomIntensity(const float& bloomIntensity);
+
+    float getBloomBlurFilterRadius() const;
+
+    void setBloomBlurFilterRadius(const float& bloomBlurFilterRadius);
+
+    float getBloomThreshold() const;
+
+    void setBloomThreshold(const float& bloomThreshold);
+
+    float getBloomSoftThreshold() const;
+
+    void setBloomSoftThreshold(const float& bloomSoftThreshold);
+
+    uint32_t getMaxBloomBlurIterations() const;
+
+    uint32_t getBloomBlurIterations() const;
+
+    void setBloomBlurIterations(const uint32_t& bloomBlurIterations);
 
 private:
     void recreateSwapchain(RecreateSwapchainEvent* event);
@@ -74,8 +111,9 @@ private:
     FrameResource<RenderResources> m_resources;
     std::shared_ptr<Sampler> m_frameSampler;
     PostProcessUniformData m_postProcessUniformData;
-    uint32_t m_bloomBlurImageMipLevels;
-    uint32_t m_bloomBlurImageMaxMipLevels;
+    BloomBlurUniformData m_bloomBlurUniformData;
+    uint32_t m_bloomBlurIterations;
+    uint32_t m_bloomBlurMaxIterations;
 };
 
 #endif //WORLDENGINE_POSTPROCESSRENDERER_H

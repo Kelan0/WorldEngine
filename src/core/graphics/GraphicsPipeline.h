@@ -45,10 +45,13 @@ struct GraphicsPipelineConfiguration {
     vk::Viewport viewport;
     uint32_t subpass = 0;
     std::optional<std::string> vertexShader;
+    std::string vertexShaderEntryPoint;
     std::optional<std::string> fragmentShader;
+    std::string fragmentShaderEntryPoint;
     std::vector<vk::VertexInputBindingDescription> vertexInputBindings;
     std::vector<vk::VertexInputAttributeDescription> vertexInputAttributes;
     std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
+    std::vector<vk::PushConstantRange> pushConstantRanges;
     vk::PolygonMode polygonMode = vk::PolygonMode::eFill;
     vk::CullModeFlags cullMode = vk::CullModeFlagBits::eBack;
     DepthBias depthBias;
@@ -84,6 +87,10 @@ struct GraphicsPipelineConfiguration {
     void setDescriptorSetLayouts(const vk::ArrayProxy<const vk::DescriptorSetLayout>& descriptorSetLayouts);
 
     void setDescriptorSetLayouts(const vk::ArrayProxy<const DescriptorSetLayout*>& descriptorSetLayouts);
+
+    void addPushConstantRange(const vk::PushConstantRange& pushConstantRange);
+
+    void addPushConstantRange(const vk::ShaderStageFlags& stageFlags, const uint32_t& offset, const uint32_t& size);
 
     void setDynamicState(const vk::DynamicState& dynamicState, const bool& isDynamic);
 

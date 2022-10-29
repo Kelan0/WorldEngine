@@ -27,6 +27,8 @@ public:
 
     ~FrameResource();
 
+    void initDefault();
+
     const Type& operator*() const;
 
     const Type& operator->() const;
@@ -94,6 +96,13 @@ inline FrameResource<T, is_ptr>::FrameResource():
 template<typename T, bool is_ptr>
 inline FrameResource<T, is_ptr>::~FrameResource() {
     reset();
+}
+
+template<typename T, bool is_ptr>
+void FrameResource<T, is_ptr>::initDefault() {
+    for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
+        set(i, new T());
+    }
 }
 
 template<typename T, bool is_ptr>
@@ -210,4 +219,5 @@ inline bool FrameResource<T, is_ptr>::create(FrameResource<T, is_ptr>& outResour
     outResource = resource;
     return true;
 }
+
 #endif //WORLDENGINE_FRAMERESOURCE_H

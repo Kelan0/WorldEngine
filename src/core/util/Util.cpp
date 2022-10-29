@@ -42,12 +42,12 @@ std::string Util::trimLeftCpy(std::string str) {
     return str;
 }
 
-std::string Util::trimRightCpy(std::string& str) {
+std::string Util::trimRightCpy(std::string str) {
     trimRight(str);
     return str;
 }
 
-std::string Util::trimCpy(std::string& str) {
+std::string Util::trimCpy(std::string str) {
     trim(str);
     return str;
 }

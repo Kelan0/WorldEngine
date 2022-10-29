@@ -982,6 +982,7 @@ void GraphicsManager::endFrame() {
         m_flushRendering = false;
         Engine::graphics()->getDevice()->waitIdle();
         FlushRenderingEvent event{};
+//        printf("======== ======== DISPATCH FlushRenderingEvent ======== ========\n\n");
         Engine::eventDispatcher()->trigger(&event);
     }
 }

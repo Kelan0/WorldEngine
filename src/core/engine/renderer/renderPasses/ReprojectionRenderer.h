@@ -58,6 +58,8 @@ public:
 
     bool init();
 
+    void preRender(const double& dt);
+
     void render(const double& dt, const vk::CommandBuffer& commandBuffer);
 
     void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);

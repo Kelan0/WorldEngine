@@ -6,6 +6,7 @@
 #include "core/graphics/ShaderUtils.h"
 #include "core/application/Engine.h"
 #include "core/util/Profiler.h"
+#include "core/util/Util.h"
 
 
 std::unordered_map<size_t, ComputePipeline*> ComputePipeline::s_cachedComputePipelines;
@@ -91,10 +92,16 @@ bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipeli
     const vk::Device& device = **m_device;
     vk::Result result;
 
+    ComputePipelineConfiguration pipelineConfig(computePipelineConfiguration);
+
     cleanup();
 
+    Util::trim(pipelineConfig.computeShaderEntryPoint);
+    if (pipelineConfig.computeShaderEntryPoint.empty())
+        pipelineConfig.computeShaderEntryPoint = "main";
+
     vk::ShaderModule computeShaderModule = VK_NULL_HANDLE;
-    if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_ComputeShader, device, computePipelineConfiguration.computeShader, &computeShaderModule)) {
+    if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_ComputeShader, device, pipelineConfig.computeShader, pipelineConfig.computeShaderEntryPoint, &computeShaderModule)) {
         printf("Unable to create ComputePipeline: Failed to load shader module\n");
         return false;
     }
@@ -102,13 +109,13 @@ bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipeli
     vk::PipelineShaderStageCreateInfo computeShaderStageCreateInfo{};
     computeShaderStageCreateInfo.setStage(vk::ShaderStageFlagBits::eCompute);
     computeShaderStageCreateInfo.setModule(computeShaderModule);
-    computeShaderStageCreateInfo.setPName(computePipelineConfiguration.computeStageEntryFunctionName.c_str());
+//    computeShaderStageCreateInfo.setPName(computeShaderEntryPoint.c_str());
+    computeShaderStageCreateInfo.setPName("main");
     computeShaderStageCreateInfo.setPSpecializationInfo(nullptr); // TODO
 
     vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
-    pipelineLayoutCreateInfo.setSetLayouts(computePipelineConfiguration.descriptorSetLayouts);
-    pipelineLayoutCreateInfo.setPushConstantRangeCount(0);
-    pipelineLayoutCreateInfo.setPushConstantRanges(computePipelineConfiguration.pushConstantRanges);
+    pipelineLayoutCreateInfo.setSetLayouts(pipelineConfig.descriptorSetLayouts);
+    pipelineLayoutCreateInfo.setPushConstantRanges(pipelineConfig.pushConstantRanges);
 
     result = device.createPipelineLayout(&pipelineLayoutCreateInfo, nullptr, &m_pipelineLayout);
     if (result != vk::Result::eSuccess) {
@@ -134,7 +141,7 @@ bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipeli
     device.destroyShaderModule(computeShaderModule);
 
     m_pipeline = computePipeline;
-    m_config = computePipelineConfiguration;
+    m_config = pipelineConfig;
     return true;
 }
 

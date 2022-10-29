@@ -29,6 +29,7 @@
 #include "core/engine/renderer/LightComponent.h"
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/renderer/renderPasses/ReprojectionRenderer.h"
+#include "core/engine/renderer/renderPasses/PostProcessRenderer.h"
 #include "extern/imgui/imgui.h"
 
 #include <iostream>
@@ -310,16 +311,23 @@ class App : public Application {
         bool useCatmullRomFilter = Engine::reprojectionRenderer()->getTaaUseCatmullRomFilter();
         bool useMitchellFilter = Engine::reprojectionRenderer()->getTaaUseMitchellFilter();
         glm::vec2 mitchellCoeffs = Engine::reprojectionRenderer()->getTaaMitchellFilterCoefficients();
+        const char* taaColourClippingModeNames[3] = { "Clamp", "Fast Clipping", "Accurate Clipping" };
 
-        const char* colourClippingModeNames[3] = { "Clamp", "Fast Clipping", "Accurate Clipping" };
+        bool bloomEnabled = Engine::postProcessingRenderer()->isBloomEnabled();
+        float bloomBlurFilterRadius = Engine::postProcessingRenderer()->getBloomBlurFilterRadius();
+        float bloomIntensity = Engine::postProcessingRenderer()->getBloomIntensity();
+        float bloomThreshold = Engine::postProcessingRenderer()->getBloomThreshold();
+        float bloomSoftThreshold = Engine::postProcessingRenderer()->getBloomSoftThreshold();
+        int bloomBlurIterations = (int)Engine::postProcessingRenderer()->getBloomBlurIterations() - 1;
+        int bloomBlurMaxIterations = (int)Engine::postProcessingRenderer()->getMaxBloomBlurIterations() - 1;
 
         ImGui::Begin("Test");
         if (ImGui::CollapsingHeader("Temporal AA")) {
             ImGui::Checkbox("Enabled", &taaEnabled);
             ImGui::BeginDisabled(!taaEnabled);
-            if (ImGui::BeginCombo("Colour clipping mode", colourClippingModeNames[colourClippingMode])) {
+            if (ImGui::BeginCombo("Colour clipping mode", taaColourClippingModeNames[colourClippingMode])) {
                 for (uint32_t i = 0; i < 3; ++i)
-                    if (ImGui::Selectable(colourClippingModeNames[i], colourClippingMode == i))
+                    if (ImGui::Selectable(taaColourClippingModeNames[i], colourClippingMode == i))
                         colourClippingMode = i;
                 ImGui::EndCombo();
             }
@@ -331,6 +339,16 @@ class App : public Application {
             ImGui::SliderFloat("Mitchell C", &mitchellCoeffs[1], 0.0F, +4.0F);
             ImGui::EndDisabled();
             ImGui::SliderFloat("History Fade Factor", &taaHistoryFadeFactor, 0.0F, 1.0F);
+            ImGui::EndDisabled();
+        }
+        if (ImGui::CollapsingHeader("Bloom")) {
+            ImGui::Checkbox("Enabled", &bloomEnabled);
+            ImGui::BeginDisabled(!bloomEnabled);
+            ImGui::SliderFloat("Filter radius", &bloomBlurFilterRadius, 0.0F, 30.0F, "%.5f");
+            ImGui::SliderFloat("Intensity", &bloomIntensity, 0.0F, 1.0F, "%.5f");
+            ImGui::SliderFloat("Threshold", &bloomThreshold, 0.0F, 30.0F, "%.5f");
+            ImGui::SliderFloat("Soft Threshold", &bloomSoftThreshold, 0.0F, 1.0F, "%.5f");
+            ImGui::SliderInt("Iterations", &bloomBlurIterations, 1, bloomBlurMaxIterations);
             ImGui::EndDisabled();
         }
         if (ImGui::CollapsingHeader("Misc")) {
@@ -351,6 +369,13 @@ class App : public Application {
         Engine::reprojectionRenderer()->setTaaColourClippingMode((ReprojectionRenderer::ColourClippingMode)colourClippingMode);
         Engine::reprojectionRenderer()->setTaaUseMitchellFilter(useMitchellFilter);
         Engine::reprojectionRenderer()->setTaaMitchellFilterCoefficients(mitchellCoeffs[0], mitchellCoeffs[1]);
+
+        Engine::postProcessingRenderer()->setBloomEnabled(bloomEnabled);
+        Engine::postProcessingRenderer()->setBloomBlurFilterRadius(bloomBlurFilterRadius);
+        Engine::postProcessingRenderer()->setBloomIntensity(bloomIntensity);
+        Engine::postProcessingRenderer()->setBloomThreshold(bloomThreshold);
+        Engine::postProcessingRenderer()->setBloomSoftThreshold(bloomSoftThreshold);
+        Engine::postProcessingRenderer()->setBloomBlurIterations(bloomBlurIterations + 1);
 
         Entity mainCamera = Engine::scene()->getMainCameraEntity();
         Transform& cameraTransform = mainCamera.getComponent<Transform>();

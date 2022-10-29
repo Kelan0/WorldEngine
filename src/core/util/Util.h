@@ -131,9 +131,9 @@ namespace Util {
 
     std::string trimLeftCpy(std::string str);
 
-    std::string trimRightCpy(std::string& str);
+    std::string trimRightCpy(std::string str);
 
-    std::string trimCpy(std::string& str);
+    std::string trimCpy(std::string str);
 
     void splitString(const std::string_view& str, char separator, std::vector<std::string_view>& outSplitString);
     void splitString(const std::string_view& str, char separator, std::vector<std::string>& outSplitString);

@@ -154,6 +154,7 @@ void DeferredRenderer::preRender(const double& dt) {
 //    } else {
 //        swapFrameImage(m_prevFrameImage, &m_resources->frameImage);
 //    }
+    swapFrame();
 }
 
 void DeferredRenderer::renderGeometryPass(const double& dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera) {
@@ -264,7 +265,6 @@ void DeferredRenderer::render(const double& dt, const vk::CommandBuffer& command
     PROFILE_END_GPU_CMD(commandBuffer);
 
     m_resources->frame.rendered = true;
-    swapFrame();
 }
 
 void DeferredRenderer::presentDirect(const vk::CommandBuffer& commandBuffer) {
@@ -361,14 +361,15 @@ vk::Format DeferredRenderer::getOutputColourFormat() const {
 }
 
 void DeferredRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
+    bool success;
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_resources[i]->updateDescriptorSet = true;
-        bool success = createFramebuffer(&m_resources[i]->frame);
+        success = createFramebuffer(&m_resources[i]->frame);
         assert(success);
     }
 
     if (CONCURRENT_FRAMES == 1) {
-        bool success = createFramebuffer(&m_previousFrame);
+        success = createFramebuffer(&m_previousFrame);
         assert(success);
     } else {
         m_previousFrame.images = {};
@@ -377,8 +378,10 @@ void DeferredRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
         m_previousFrame.rendered = false;
     }
 
-    createGeometryGraphicsPipeline();
-    createLightingGraphicsPipeline();
+    success = createGeometryGraphicsPipeline();
+    assert(success);
+    success = createLightingGraphicsPipeline();
+    assert(success);
     m_frameIndices.clear();
 }
 

@@ -12,7 +12,7 @@ class DescriptorSetLayout;
 struct ComputePipelineConfiguration {
     std::weak_ptr<vkr::Device> device;
     std::string computeShader;
-    std::string computeStageEntryFunctionName = "main";
+    std::string computeShaderEntryPoint;
     std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
     std::vector<vk::PushConstantRange> pushConstantRanges;
 
@@ -86,7 +86,7 @@ namespace std {
         size_t operator()(const ComputePipelineConfiguration& computePipelineConfiguration) const {
             size_t hash = 0;
             std::hash_combine(hash, computePipelineConfiguration.computeShader);
-            std::hash_combine(hash, computePipelineConfiguration.computeStageEntryFunctionName);
+            std::hash_combine(hash, computePipelineConfiguration.computeShaderEntryPoint);
             for (const auto &descriptorSetLayout : computePipelineConfiguration.descriptorSetLayouts)
                 std::hash_combine(hash, (void*)((VkDescriptorSetLayout)descriptorSetLayout));
             return hash;

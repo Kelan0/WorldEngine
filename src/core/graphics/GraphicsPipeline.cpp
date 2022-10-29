@@ -7,6 +7,7 @@
 #include "core/graphics/ShaderUtils.h"
 #include "core/engine/event/EventDispatcher.h"
 #include "core/engine/event/GraphicsEvents.h"
+#include "core/util/Util.h"
 
 
 AttachmentBlendState::AttachmentBlendState(const bool& blendEnable, const vk::ColorComponentFlags& colourWriteMask):
@@ -101,6 +102,14 @@ void GraphicsPipelineConfiguration::setDescriptorSetLayouts(const vk::ArrayProxy
     this->descriptorSetLayouts.clear();
     for (const auto& descriptorSetLayout : descriptorSetLayouts)
         addDescriptorSetLayout(descriptorSetLayout);
+}
+
+void GraphicsPipelineConfiguration::addPushConstantRange(const vk::PushConstantRange& pushConstantRange) {
+    pushConstantRanges.emplace_back(pushConstantRange);
+}
+
+void GraphicsPipelineConfiguration::addPushConstantRange(const vk::ShaderStageFlags& stageFlags, const uint32_t& offset, const uint32_t& size) {
+    addPushConstantRange(vk::PushConstantRange(stageFlags, offset, size));
 }
 
 void GraphicsPipelineConfiguration::setDynamicState(const vk::DynamicState& dynamicState, const bool& isDynamic) {
@@ -217,34 +226,42 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
             device.destroyShaderModule(shaderModule);
     };
 
-
+    // pipelineConfig is a copy
+    Util::trim(pipelineConfig.vertexShaderEntryPoint);
+    Util::trim(pipelineConfig.fragmentShaderEntryPoint);
 
     m_renderPass = std::shared_ptr<RenderPass>(pipelineConfig.renderPass);
 
     std::vector<vk::PipelineShaderStageCreateInfo> pipelineShaderStages;
 
     if (pipelineConfig.vertexShader.has_value()) {
+        if (pipelineConfig.vertexShaderEntryPoint.empty())
+            pipelineConfig.vertexShaderEntryPoint = "main";
         vk::ShaderModule& vertexShaderModule = allShaderModules.emplace_back(VK_NULL_HANDLE);
-        if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_VertexShader, device, pipelineConfig.vertexShader.value(), &vertexShaderModule)) {
+        if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_VertexShader, device, pipelineConfig.vertexShader.value(), pipelineConfig.vertexShaderEntryPoint, &vertexShaderModule)) {
             cleanupShaderModules();
             return false;
         }
         vk::PipelineShaderStageCreateInfo& vertexShaderStageCreateInfo = pipelineShaderStages.emplace_back();
         vertexShaderStageCreateInfo.setStage(vk::ShaderStageFlagBits::eVertex);
         vertexShaderStageCreateInfo.setModule(vertexShaderModule);
-        vertexShaderStageCreateInfo.setPName("main");
+//        vertexShaderStageCreateInfo.setPName(vertexShaderEntryPoint.c_str());
+        vertexShaderStageCreateInfo.setPName("main"); // For GLSL, the entry point is redefined as "main" with a macro
         vertexShaderStageCreateInfo.setPSpecializationInfo(nullptr); // TODO
     }
 
     if (pipelineConfig.fragmentShader.has_value()) {
+        if (pipelineConfig.fragmentShaderEntryPoint.empty())
+            pipelineConfig.fragmentShaderEntryPoint = "main";
         vk::ShaderModule& fragmentShaderModule = allShaderModules.emplace_back(VK_NULL_HANDLE);
-        if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_FragmentShader, device, pipelineConfig.fragmentShader.value(), &fragmentShaderModule)) {
+        if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_FragmentShader, device, pipelineConfig.fragmentShader.value(), pipelineConfig.fragmentShaderEntryPoint, &fragmentShaderModule)) {
             cleanupShaderModules();
             return false;
         }
         vk::PipelineShaderStageCreateInfo& fragmentShaderStageCreateInfo = pipelineShaderStages.emplace_back();
         fragmentShaderStageCreateInfo.setStage(vk::ShaderStageFlagBits::eFragment);
         fragmentShaderStageCreateInfo.setModule(fragmentShaderModule);
+//        fragmentShaderStageCreateInfo.setPName(fragmentShaderEntryPoint.c_str());
         fragmentShaderStageCreateInfo.setPName("main");
         fragmentShaderStageCreateInfo.setPSpecializationInfo(nullptr); // TODO
     }
@@ -325,7 +342,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
 
     vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
     pipelineLayoutCreateInfo.setSetLayouts(pipelineConfig.descriptorSetLayouts);
-    pipelineLayoutCreateInfo.setPushConstantRangeCount(0);
+    pipelineLayoutCreateInfo.setPushConstantRanges(pipelineConfig.pushConstantRanges);
 
     result = device.createPipelineLayout(&pipelineLayoutCreateInfo, nullptr, &m_pipelineLayout);
     if (result != vk::Result::eSuccess) {
@@ -656,20 +673,18 @@ void GraphicsPipeline::validateDynamicState(const vk::DynamicState& dynamicState
 void GraphicsPipeline::onShaderLoaded(ShaderLoadedEvent* event) {
     bool doRecreate = false;
 
-    if (m_config.vertexShader.has_value() && m_config.vertexShader.value() == event->filePath) {
-        printf("Vertex shader reloaded for GraphicsPipeline %s\n", m_name);
-        doRecreate = true;
+    if (m_config.vertexShader.has_value() && m_config.vertexShader.value() == event->filePath && m_config.vertexShaderEntryPoint == event->entryPoint) {
+        printf("Vertex shader %s for GraphicsPipeline %s\n", event->reloaded ? "reloaded" : "loaded", m_name);
+        doRecreate = event->reloaded;
     }
 
-    if (m_config.fragmentShader.has_value() && m_config.fragmentShader.value() == event->filePath) {
-        printf("Fragment shader reloaded for GraphicsPipeline %s\n", m_name);
-        doRecreate = true;
+    if (m_config.fragmentShader.has_value() && m_config.fragmentShader.value() == event->filePath && m_config.fragmentShaderEntryPoint == event->entryPoint) {
+        printf("Fragment shader %s for GraphicsPipeline %s\n",  event->reloaded ? "reloaded" : "loaded", m_name);
+        doRecreate = event->reloaded;
     }
 
     if (doRecreate) {
         Engine::graphics()->flushRendering();
-
-        GraphicsPipeline* pipeline = this;
 
         Engine::eventDispatcher()->connect(CallbackWrapper<FlushRenderingEvent>([this](FlushRenderingEvent* event) {
             recreate(m_config, m_name);

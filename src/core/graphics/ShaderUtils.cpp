@@ -13,9 +13,9 @@
 #define GLSL_COMPILER_EXECUTABLE "C:/VulkanSDK/1.3.224.1/Bin/glslc.exe"
 #endif
 
-
 struct LoadedShaderInfo {
     std::string filePath;
+    std::string entryPoint;
     std::vector<char> bytecode;
     ShaderUtils::ShaderStage stage;
     std::filesystem::file_time_type fileLoadedTime;
@@ -33,12 +33,14 @@ private:
 public:
     static ShaderLoadingUpdater* instance();
 
-    LoadedShaderInfo* notifyShaderLoaded(const LoadedShaderInfo& shaderInfo);
+    LoadedShaderInfo* notifyShaderLoaded(const LoadedShaderInfo& shaderInfo, const bool& reloaded);
 
-    LoadedShaderInfo* getLoadedShaderInfo(const std::string& filePath);
+    LoadedShaderInfo* getLoadedShaderInfo(const std::string& filePath, const std::string& entryPoint);
 
 private:
     void checkModifiedShaders();
+
+    std::string getShaderKey(const std::string& filePath, const std::string& entryPoint);
 
 private:
     std::unordered_map<std::string, LoadedShaderInfo> m_loadedShaders;
@@ -60,54 +62,76 @@ ShaderLoadingUpdater* ShaderLoadingUpdater::instance() {
     return s_instance;
 }
 
-LoadedShaderInfo* ShaderLoadingUpdater::notifyShaderLoaded(const LoadedShaderInfo& shaderInfo) {
-    auto [it, inserted] = m_loadedShaders.insert(std::make_pair(shaderInfo.filePath, shaderInfo));
+LoadedShaderInfo* ShaderLoadingUpdater::notifyShaderLoaded(const LoadedShaderInfo& shaderInfo, const bool& reloaded) {
+    std::string key = getShaderKey(shaderInfo.filePath, shaderInfo.entryPoint);
+    auto [it, inserted] = m_loadedShaders.insert(std::make_pair(key, shaderInfo));
     LoadedShaderInfo* newShaderInfo = &it->second;
     if (!inserted) {
         // This shouldn't happen, but if it does, the existing entry is updated with the new data.
         newShaderInfo->filePath = shaderInfo.filePath;
+        newShaderInfo->entryPoint = shaderInfo.entryPoint;
         newShaderInfo->bytecode = shaderInfo.bytecode;
         newShaderInfo->stage = shaderInfo.stage;
         newShaderInfo->fileLoadedTime = shaderInfo.fileLoadedTime;
     }
-    newShaderInfo->shouldReload = false;
     ShaderLoadedEvent event{};
     event.filePath = newShaderInfo->filePath;
+    event.entryPoint = newShaderInfo->entryPoint;
+    event.reloaded = reloaded;
+//    printf("======== ======== DISPATCH ShaderLoadedEvent %s@%s (%s)======== ========\n\n", event.filePath.c_str(), event.entryPoint.c_str(), reloaded ? "reloaded" : "first loaded");
     Engine::eventDispatcher()->trigger(&event);
+
+    newShaderInfo->shouldReload = false;
     return newShaderInfo;
 }
 
-LoadedShaderInfo* ShaderLoadingUpdater::getLoadedShaderInfo(const std::string& filePath) {
-    auto it = m_loadedShaders.find(filePath);
+LoadedShaderInfo* ShaderLoadingUpdater::getLoadedShaderInfo(const std::string& filePath, const std::string& entryPoint) {
+    std::string key = getShaderKey(filePath, entryPoint);
+    auto it = m_loadedShaders.find(key);
     return it == m_loadedShaders.end() ? nullptr : &it->second;
 }
 
 void ShaderLoadingUpdater::checkModifiedShaders() {
-    for (auto& [filePath, shaderInfo] : m_loadedShaders) {
-        if (std::filesystem::last_write_time(filePath) < shaderInfo.fileLoadedTime) {
+    for (auto& [key, shaderInfo] : m_loadedShaders) {
+        if (std::filesystem::last_write_time(shaderInfo.filePath) < shaderInfo.fileLoadedTime) {
             continue; // Shader was previously loaded after it was previously modified
         }
 
-        printf("Reloading shader %s\n", filePath.c_str());
+        printf("Reloading shader %s@%s\n", shaderInfo.filePath.c_str(), shaderInfo.entryPoint.c_str());
         shaderInfo.shouldReload = true;
 
-        if (!ShaderUtils::loadShaderStage(shaderInfo.stage, filePath, nullptr)) {
-            printf("Failed to reload shader %s\n", filePath.c_str());
+        if (!ShaderUtils::loadShaderStage(shaderInfo.stage, shaderInfo.filePath, shaderInfo.entryPoint, nullptr)) {
+            printf("Failed to reload shader %s@%s\n", shaderInfo.filePath.c_str(), shaderInfo.entryPoint.c_str());
             continue;
         }
     }
 }
 
+std::string ShaderLoadingUpdater::getShaderKey(const std::string& filePath, const std::string& entryPoint) {
+    return filePath + '@' + entryPoint;
+}
 
 
 
 
 
 
-bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string filePath, std::vector<char>* bytecode) {
+
+bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string filePath, std::string entryPoint, std::vector<char>* bytecode) {
 
     Util::trim(filePath);
-    LoadedShaderInfo* loadedShaderInfo = ShaderLoadingUpdater::instance()->getLoadedShaderInfo(filePath);
+    Util::trim(entryPoint);
+    if (entryPoint.empty()) {
+        printf("Cannot compile shader \"%s\": Entry point is not specified\n", filePath.c_str());
+        return false;
+    }
+
+    if (entryPoint.find(' ') != std::string::npos) {
+        printf("Cannot compile shader \"%s\" with specified entry point \"%s\": The entry point must not contain spaces\n", filePath.c_str(), entryPoint.c_str());
+        return false;
+    }
+
+    LoadedShaderInfo* loadedShaderInfo = ShaderLoadingUpdater::instance()->getLoadedShaderInfo(filePath, entryPoint);
     if (loadedShaderInfo != nullptr && !loadedShaderInfo->shouldReload) {
         if (bytecode != nullptr)
             *bytecode = loadedShaderInfo->bytecode; // copy assignment
@@ -160,7 +184,7 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
         }
 
         if (shouldCompile) {
-            printf("Compiling shader file \"%s\"\n", filePath.c_str());
+            printf("Compiling shader: %s@%s\n", filePath.c_str(), entryPoint.c_str());
 
             std::string command(GLSL_COMPILER_EXECUTABLE);
 
@@ -171,6 +195,9 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
                     shaderStage == ShaderStage_TessellationEvaluationShader ? " -fshader-stage=tese" :
                     shaderStage == ShaderStage_GeometryShader ? " -fshader-stage=geom" :
                     shaderStage == ShaderStage_ComputeShader ? " -fshader-stage=comp" : "";
+
+            command += " -D" + entryPoint + "=main";
+//            command += " -fentry-point=" + entryPoint;
 
             command += std::string(" \"") + filePath + "\" -o \"" + outputFilePath + "\"";
 
@@ -194,6 +221,7 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
         LoadedShaderInfo newShaderInfo{};
         newShaderInfo.stage = shaderStage;
         newShaderInfo.filePath = filePath;
+        newShaderInfo.entryPoint = entryPoint;
         newShaderInfo.fileLoadedTime = std::chrono::file_clock::now();
         newShaderInfo.bytecode.resize(file.tellg());
         newShaderInfo.isValidShader = isValidShader;
@@ -204,7 +232,7 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
         if (bytecode != nullptr)
             *bytecode = newShaderInfo.bytecode; // copy assignment
 
-        ShaderLoadingUpdater::instance()->notifyShaderLoaded(newShaderInfo);
+        ShaderLoadingUpdater::instance()->notifyShaderLoaded(newShaderInfo, loadedShaderInfo != nullptr && loadedShaderInfo->shouldReload);
 
     } else if (loadedShaderInfo != nullptr) {
         // This shader was reloaded, but was not valid. Don't keep trying to reload it.
@@ -216,11 +244,11 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
     return isValidShader;
 }
 
-bool ShaderUtils::loadShaderModule(const ShaderStage& shaderStage, const vk::Device& device, const std::string& filePath, vk::ShaderModule* outShaderModule) {
+bool ShaderUtils::loadShaderModule(const ShaderStage& shaderStage, const vk::Device& device, const std::string& filePath, const std::string& entryPoint, vk::ShaderModule* outShaderModule) {
 
     std::vector<char> bytecode;
-    if (!ShaderUtils::loadShaderStage(shaderStage, filePath, &bytecode)) {
-        printf("Failed to load shader stage bytecode from file \"%s\"\n", filePath.c_str());
+    if (!ShaderUtils::loadShaderStage(shaderStage, filePath, entryPoint, &bytecode)) {
+        printf("Failed to load shader stage bytecode from file \"%s\" with entry point \"%s\"\n", filePath.c_str(), entryPoint.c_str());
         return false;
     }
 
@@ -229,7 +257,7 @@ bool ShaderUtils::loadShaderModule(const ShaderStage& shaderStage, const vk::Dev
     shaderModuleCreateInfo.setPCode(reinterpret_cast<const uint32_t*>(bytecode.data()));
     vk::Result result = device.createShaderModule(&shaderModuleCreateInfo, nullptr, outShaderModule);
     if (result != vk::Result::eSuccess) {
-        printf("Failed to load shader module (file %s): %s\n", filePath.c_str(), vk::to_string(result).c_str());
+        printf("Failed to load shader module (file %s, entryPoint %s): %s\n", filePath.c_str(), entryPoint.c_str(), vk::to_string(result).c_str());
         return false;
     }
     Engine::graphics()->setObjectName(device, (uint64_t)(VkShaderModule)(*outShaderModule), vk::ObjectType::eShaderModule, filePath.c_str());

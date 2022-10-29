@@ -217,6 +217,7 @@ void Engine::render(const double& dt) {
     m_lightRenderer->render(dt, commandBuffer, m_renderCamera);
 
     m_deferredRenderer->preRender(dt);
+    m_reprojectionRenderer->preRender(dt);
 
     m_deferredRenderer->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredRenderer->beginGeometrySubpass(commandBuffer, vk::SubpassContents::eInline);
