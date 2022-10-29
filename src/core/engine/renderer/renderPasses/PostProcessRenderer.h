@@ -20,9 +20,22 @@ private:
         int32_t temp;
     };
 
+    struct BloomBlurUniformData {
+        glm::vec2 texelSize;
+        float filterRadius;
+        uint32_t textureIndex;
+    };
+
     struct RenderResources {
-        Buffer* uniformBuffer = nullptr;
-        DescriptorSet* descriptorSet = nullptr;
+        Buffer* postProcessUniformBuffer = nullptr;
+        DescriptorSet* postProcessDescriptorSet = nullptr;
+        Buffer* bloomBlurUniformBuffer = nullptr;
+        DescriptorSet* bloomBlurInputDescriptorSet = nullptr;
+        std::vector<DescriptorSet*> bloomBlurDescriptorSets;
+        std::vector<Framebuffer*> bloomBlurMipFramebuffers;
+        std::vector<ImageView*> bloomBlurMipImageViews;
+        Image2D* bloomBlurImage = nullptr;
+        bool updateInputImage = true;
     };
 
 public:
@@ -32,6 +45,8 @@ public:
 
     bool init();
 
+    void renderBloomBlur(const double& dt, const vk::CommandBuffer& commandBuffer);
+
     void render(const double& dt, const vk::CommandBuffer& commandBuffer);
 
     void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
@@ -39,20 +54,28 @@ public:
 private:
     void recreateSwapchain(RecreateSwapchainEvent* event);
 
-//    bool createFramebuffer(FrameImage* frameImage);
+    bool createBloomBlurFramebuffer(RenderResources* resources);
 
-    bool createGraphicsPipeline();
+    bool createDownsampleGraphicsPipeline();
 
-//    bool createRenderPass();
+    bool createUpsampleGraphicsPipeline();
+
+    bool createPostProcessGraphicsPipeline();
+
+    bool createBloomBlurRenderPass();
 
 private:
-    std::shared_ptr<RenderPass> m_renderPass;
-    std::shared_ptr<GraphicsPipeline> m_graphicsPipeline;
+    std::shared_ptr<RenderPass> m_bloomBlurRenderPass;
+    std::shared_ptr<GraphicsPipeline> m_downsampleGraphicsPipeline;
+    std::shared_ptr<GraphicsPipeline> m_upsampleGraphicsPipeline;
+    std::shared_ptr<GraphicsPipeline> m_postProcessGraphicsPipeline;
+    std::shared_ptr<DescriptorSetLayout> m_postProcessDescriptorSetLayout;
+    std::shared_ptr<DescriptorSetLayout> m_bloomBlurDescriptorSetLayout;
     FrameResource<RenderResources> m_resources;
-    std::vector<ImageView*> m_frameTextureImageViews;
-    std::shared_ptr<DescriptorSetLayout> m_postProcessingDescriptorSetLayout;
     std::shared_ptr<Sampler> m_frameSampler;
-    PostProcessUniformData m_uniformData;
+    PostProcessUniformData m_postProcessUniformData;
+    uint32_t m_bloomBlurImageMipLevels;
+    uint32_t m_bloomBlurImageMaxMipLevels;
 };
 
 #endif //WORLDENGINE_POSTPROCESSRENDERER_H

@@ -1035,6 +1035,11 @@ const vk::PhysicalDeviceLimits& GraphicsManager::getPhysicalDeviceLimits() const
     return m_device.physicalDeviceProperties.limits;
 }
 
+vk::DeviceSize GraphicsManager::getAlignedUniformBufferOffset(const vk::DeviceSize& offset) {
+    const vk::DeviceSize& minOffsetAlignment = Engine::graphics()->getPhysicalDeviceLimits().minUniformBufferOffsetAlignment;
+    return ROUND_TO_MULTIPLE(offset, minOffsetAlignment);
+}
+
 uint32_t GraphicsManager::getPreviousFrameIndex() const {
     return (m_swapchain.currentFrameIndex + CONCURRENT_FRAMES - 1) % CONCURRENT_FRAMES;
 }

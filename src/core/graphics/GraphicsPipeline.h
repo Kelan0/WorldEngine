@@ -53,6 +53,8 @@ struct GraphicsPipelineConfiguration {
     vk::CullModeFlags cullMode = vk::CullModeFlagBits::eBack;
     DepthBias depthBias;
     bool depthBiasEnable = false;
+    bool depthTestEnabled = true;
+    bool depthWriteEnabled = true;
     vk::FrontFace frontFace = vk::FrontFace::eClockwise;
     vk::PrimitiveTopology primitiveTopology = vk::PrimitiveTopology::eTriangleList;
     std::vector<AttachmentBlendState> attachmentBlendStates;
@@ -122,12 +124,14 @@ public:
     void setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const uint32_t& viewportCount, const vk::Viewport* viewports);
     void setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const std::vector<vk::Viewport>& viewports);
     void setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const vk::Viewport& viewport);
-    void setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const float& x, const float& y, const float& width, const float& height, const float& minDepth, const float& maxDepth);
+    void setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const float& width, const float& height, const float& x = 0.0F, const float& y = 0.0F, const float& minDepth = 0.0F, const float& maxDepth = 1.0F);
+    void setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const glm::vec2& size, const glm::vec2& offset = glm::vec2(0.0F), const float& minDepth = 0.0F, const float& maxDepth = 1.0F);
 
     void setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const uint32_t& scissorCount, const vk::Rect2D* scissorRects);
     void setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const std::vector<vk::Rect2D>& scissorRects);
     void setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const vk::Rect2D& scissorRect);
     void setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height);
+    void setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const glm::ivec2& offset, const glm::uvec2& size);
 
     void setLineWidth(const vk::CommandBuffer& commandBuffer, const float& lineWidth);
 
@@ -188,6 +192,10 @@ public:
     void setPrimitiveRestartEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled);
 
     void setColourWriteEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled);
+
+    static vk::Viewport getScreenViewport(const vk::Viewport& viewport);
+    static vk::Viewport getScreenViewport(const float& width, const float& height, const float& x = 0.0F, const float& y = 0.0F, const float& minDepth = 0.0F, const float& maxDepth = 1.0F);
+    static vk::Viewport getScreenViewport(const glm::vec2& size, const glm::vec2& offset = glm::vec2(0.0F), const float& minDepth = 0.0F, const float& maxDepth = 1.0F);
 
 private:
     void cleanup();

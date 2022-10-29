@@ -337,11 +337,8 @@ void LightRenderer::render(const double& dt, const vk::CommandBuffer& commandBuf
         PROFILE_BEGIN_GPU_CMD("LightRenderer::render/ShadowMapRenderPass", commandBuffer);
         ShadowMap* shadowMap = m_visibleShadowMaps[i];
 
-        uint32_t w = shadowMap->getResolution().x;
-        uint32_t h = shadowMap->getResolution().y;
-
-        m_shadowGraphicsPipeline->setViewport(commandBuffer, 0, 0.0F, 0.0F, (float) w, (float) h, 0.0F, 1.0F);
-        m_shadowGraphicsPipeline->setScissor(commandBuffer, 0, 0, 0, w, h);
+        m_shadowGraphicsPipeline->setViewport(commandBuffer, 0, shadowMap->getResolution());
+        m_shadowGraphicsPipeline->setScissor(commandBuffer, 0, glm::ivec2(0, 0), shadowMap->getResolution());
 
         std::array<vk::DescriptorSet, 2> descriptorSets = {
                 m_shadowRenderPassResources->descriptorSet->getDescriptorSet(),

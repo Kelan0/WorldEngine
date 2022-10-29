@@ -162,6 +162,8 @@ public:
 
     const vk::PhysicalDeviceLimits& getPhysicalDeviceLimits() const;
 
+    vk::DeviceSize getAlignedUniformBufferOffset(const vk::DeviceSize& offset);
+
     uint32_t getPreviousFrameIndex() const;
 
     const uint32_t& getCurrentFrameIndex() const;

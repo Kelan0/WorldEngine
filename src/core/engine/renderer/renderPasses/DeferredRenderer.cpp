@@ -363,11 +363,13 @@ vk::Format DeferredRenderer::getOutputColourFormat() const {
 void DeferredRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_resources[i]->updateDescriptorSet = true;
-        createFramebuffer(&m_resources[i]->frame);
+        bool success = createFramebuffer(&m_resources[i]->frame);
+        assert(success);
     }
 
     if (CONCURRENT_FRAMES == 1) {
-        createFramebuffer(&m_previousFrame);
+        bool success = createFramebuffer(&m_previousFrame);
+        assert(success);
     } else {
         m_previousFrame.images = {};
         m_previousFrame.imageViews = {};
@@ -446,14 +448,15 @@ bool DeferredRenderer::createFramebuffer(FrameImages* frame) {
 //        imageViewConfig.aspectMask |= vk::ImageAspectFlagBits::eStencil;
     imageViewConfig.setImage(frame->images[Attachment_Depth]);
     frame->imageViews[Attachment_Depth] = ImageView::create(imageViewConfig, "DeferredRenderer-GBufferDepthImageView");
+
     // Lighting output image
     imageConfig.format = getAttachmentFormat(Attachment_LightingRGB);
     imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;
-    frame->images[Attachment_LightingRGB] = Image2D::create(imageConfig, "DeferredRenderer-GBufferVelocityXYImage");
+    frame->images[Attachment_LightingRGB] = Image2D::create(imageConfig, "DeferredRenderer-HDRLightingOutputImage");
     imageViewConfig.format = imageConfig.format;
     imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
     imageViewConfig.setImage(frame->images[Attachment_LightingRGB]);
-    frame->imageViews[Attachment_LightingRGB] = ImageView::create(imageViewConfig, "DeferredRenderer-GBufferVelocityXYImageView");
+    frame->imageViews[Attachment_LightingRGB] = ImageView::create(imageViewConfig, "DeferredRenderer-HDRLightingOutputImageView");
 
     // Framebuffer
     FramebufferConfiguration framebufferConfig{};
@@ -474,6 +477,7 @@ bool DeferredRenderer::createGeometryGraphicsPipeline() {
     pipelineConfig.renderPass = m_renderPass;
     pipelineConfig.subpass = 0;
     pipelineConfig.setViewport(Engine::graphics()->getResolution());
+    pipelineConfig.depthTestEnabled = true;
     pipelineConfig.vertexShader = "res/shaders/main.vert";
     pipelineConfig.fragmentShader = "res/shaders/main.frag";
     pipelineConfig.vertexInputBindings = MeshUtils::getVertexBindingDescriptions<Vertex>();
@@ -493,6 +497,7 @@ bool DeferredRenderer::createLightingGraphicsPipeline() {
     pipelineConfig.renderPass = m_renderPass;
     pipelineConfig.subpass = 1;
     pipelineConfig.setViewport(Engine::graphics()->getResolution());
+    pipelineConfig.depthTestEnabled = false;
     pipelineConfig.vertexShader = "res/shaders/screen/fullscreen_quad.vert";
     pipelineConfig.fragmentShader = "res/shaders/deferred/lighting.frag";
     pipelineConfig.addDescriptorSetLayout(m_lightingDescriptorSetLayout.get());

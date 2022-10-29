@@ -11,10 +11,12 @@ layout(set = 0, binding = 0) uniform UBO1 {
 };
 
 layout(set = 0, binding = 1) uniform sampler2D frameTexture;
+layout(set = 0, binding = 2) uniform sampler2D bloomTexture;
 
 void main() {
     vec3 finalColour = texture(frameTexture, fs_texture).rgb;
-
+    vec3 bloomColour = textureLod(bloomTexture, fs_texture, 0).rgb;
+    finalColour = mix(finalColour, bloomColour, 0.05);
 
     finalColour = finalColour / (finalColour + vec3(1.0));
     finalColour = pow(finalColour, vec3(1.0 / 2.2));

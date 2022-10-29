@@ -189,14 +189,9 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     scissor.extent.width = (uint32_t)viewport.width;
     scissor.extent.height = (uint32_t)viewport.height;
 
-    if (Application::instance()->isViewportInverted()) {
-        viewport.y += viewport.height;
-        viewport.height *= -1;
-        if (frontFace == vk::FrontFace::eClockwise)
-            frontFace = vk::FrontFace::eCounterClockwise;
-        else
-            frontFace = vk::FrontFace::eClockwise;
-    }
+    viewport = GraphicsPipeline::getScreenViewport(viewport);
+    if (Application::instance()->isViewportInverted())
+        frontFace = frontFace == vk::FrontFace::eClockwise ? vk::FrontFace::eCounterClockwise : frontFace = vk::FrontFace::eClockwise;
 
 
     if (!pipelineConfig.vertexShader.has_value()) {
@@ -293,8 +288,8 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     multisampleStateCreateInfo.setAlphaToOneEnable(false);
 
     vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo;
-    depthStencilStateCreateInfo.setDepthTestEnable(true);
-    depthStencilStateCreateInfo.setDepthWriteEnable(true);
+    depthStencilStateCreateInfo.setDepthTestEnable(pipelineConfig.depthTestEnabled);
+    depthStencilStateCreateInfo.setDepthWriteEnable(pipelineConfig.depthWriteEnabled);
     depthStencilStateCreateInfo.setDepthCompareOp(vk::CompareOp::eLess);
     depthStencilStateCreateInfo.setDepthBoundsTestEnable(false);
     depthStencilStateCreateInfo.setMinDepthBounds(0.0F);
@@ -420,8 +415,12 @@ void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, const
     setViewport(commandBuffer, firstViewport, 1, &viewport);
 }
 
-void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const float& x, const float& y, const float& width, const float& height, const float& minDepth, const float& maxDepth) {
+void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const float& width, const float& height, const float& x, const float& y, const float& minDepth, const float& maxDepth) {
     setViewport(commandBuffer, firstViewport, vk::Viewport(x, y, width, height, minDepth, maxDepth));
+}
+
+void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const glm::vec2& size, const glm::vec2& offset, const float& minDepth, const float& maxDepth) {
+    setViewport(commandBuffer, firstViewport, vk::Viewport(offset.x, offset.y, size.x, size.y, minDepth, maxDepth));
 }
 
 void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const uint32_t& scissorCount, const vk::Rect2D* scissorRects) {
@@ -439,6 +438,10 @@ void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, const 
 
 void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height) {
     setScissor(commandBuffer, firstScissor, vk::Rect2D(vk::Offset2D(x, y), vk::Extent2D(width, height)));
+}
+
+void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const glm::ivec2& offset, const glm::uvec2& size) {
+    setScissor(commandBuffer, firstScissor, vk::Rect2D(vk::Offset2D(offset.x, offset.y), vk::Extent2D(size.x, size.y)));
 }
 
 void GraphicsPipeline::setLineWidth(const vk::CommandBuffer& commandBuffer, const float& lineWidth) {
@@ -612,6 +615,20 @@ void GraphicsPipeline::setPrimitiveRestartEnabled(const vk::CommandBuffer& comma
 void GraphicsPipeline::setColourWriteEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled) {
     validateDynamicState(vk::DynamicState::eColorWriteEnableEXT);
     commandBuffer.setColorWriteEnableEXT(enabled);
+}
+
+vk::Viewport GraphicsPipeline::getScreenViewport(const vk::Viewport& viewport) {
+    if (Application::instance()->isViewportInverted())
+        return vk::Viewport(viewport.x, viewport.y + viewport.height, viewport.width, viewport.height * -1, viewport.minDepth, viewport.maxDepth);
+    return viewport;
+}
+
+vk::Viewport GraphicsPipeline::getScreenViewport(const float& width, const float& height, const float& x, const float& y, const float& minDepth, const float& maxDepth) {
+    return getScreenViewport(vk::Viewport(x, y, width, height, minDepth, maxDepth));
+}
+
+vk::Viewport GraphicsPipeline::getScreenViewport(const glm::vec2& size, const glm::vec2& offset, const float& minDepth, const float& maxDepth) {
+    return getScreenViewport(vk::Viewport(offset.x, offset.y, size.x, size.y, minDepth, maxDepth));
 }
 
 void GraphicsPipeline::cleanup() {

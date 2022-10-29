@@ -86,7 +86,7 @@ bool ReprojectionRenderer::init() {
     samplerConfig.magFilter = vk::Filter::eLinear;
     samplerConfig.wrapU = vk::SamplerAddressMode::eMirroredRepeat;
     samplerConfig.wrapV = vk::SamplerAddressMode::eMirroredRepeat;
-    m_frameSampler = Sampler::get(samplerConfig, "PostProcess-FrameSampler");
+    m_frameSampler = Sampler::get(samplerConfig, "Reprojection-FrameSampler");
 
     if (!createRenderPass()) {
         printf("Failed to create ReprojectionRenderer RenderPass\n");
@@ -228,14 +228,16 @@ void ReprojectionRenderer::setTaaJitterSampleCount(const uint32_t& sampleCount) 
 
 void ReprojectionRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
-        createFramebuffer(&m_resources[i]->frame);
+        bool success = createFramebuffer(&m_resources[i]->frame);
+        assert(success);
         m_resources[i]->updateDescriptorSet = true;
     }
 
     if (CONCURRENT_FRAMES == 1) {
         // Allocate frame date for the previous frame if there is only one concurrent frame. Otherwise, m_previousFrame
         // simply contains the existing pointers of the frame data at the index of the previous frame
-        createFramebuffer(&m_previousFrame);
+        bool success = createFramebuffer(&m_previousFrame);
+        assert(success);
     } else {
         m_previousFrame.image = nullptr;
         m_previousFrame.imageView = nullptr;
@@ -292,6 +294,7 @@ bool ReprojectionRenderer::createReprojectionGraphicsPipeline() {
     pipelineConfig.renderPass = m_renderPass;
     pipelineConfig.subpass = 0;
     pipelineConfig.setViewport(Engine::graphics()->getResolution());
+    pipelineConfig.depthTestEnabled = false;
     pipelineConfig.vertexShader = "res/shaders/screen/fullscreen_quad.vert";
     pipelineConfig.fragmentShader = "res/shaders/postprocess/reprojection.frag";
     pipelineConfig.addDescriptorSetLayout(m_reprojectionDescriptorSetLayout.get());
