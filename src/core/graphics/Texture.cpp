@@ -3,8 +3,8 @@
 
 std::unordered_map<Sampler::Key, std::weak_ptr<Sampler>, Sampler::KeyHasher> Sampler::s_cachedSamplers;
 
-Sampler::Sampler(const std::weak_ptr<vkr::Device>& device, vk::Sampler sampler):
-        m_device(device),
+Sampler::Sampler(const WeakResource<vkr::Device>& device, const vk::Sampler& sampler, const std::string& name):
+        m_device(device, name),
         m_sampler(sampler) {
     //printf("Create sampler\n");
 }
@@ -14,9 +14,9 @@ Sampler::~Sampler() {
     (**m_device).destroySampler(m_sampler);
 }
 
-Sampler* Sampler::create(const SamplerConfiguration& samplerConfiguration, const char* name) {
+Sampler* Sampler::create(const SamplerConfiguration& samplerConfiguration, const std::string& name) {
 
-    const vk::Device& device = **samplerConfiguration.device.lock();
+    const vk::Device& device = **samplerConfiguration.device.lock(name);
 
     vk::SamplerCreateInfo samplerCreateInfo;
     samplerCreateInfo.setMagFilter(samplerConfiguration.magFilter);
@@ -46,10 +46,10 @@ Sampler* Sampler::create(const SamplerConfiguration& samplerConfiguration, const
     Engine::graphics()->setObjectName(device, (uint64_t)(VkSampler)sampler, vk::ObjectType::eSampler, name);
 
 
-    return new Sampler(samplerConfiguration.device, sampler);
+    return new Sampler(samplerConfiguration.device, sampler, name);
 }
 
-std::shared_ptr<Sampler> Sampler::get(const SamplerConfiguration& samplerConfiguration, const char* name) {
+std::shared_ptr<Sampler> Sampler::get(const SamplerConfiguration& samplerConfiguration, const std::string& name) {
     Key key(samplerConfiguration);
     auto it = s_cachedSamplers.find(key);
 
@@ -64,7 +64,7 @@ std::shared_ptr<Sampler> Sampler::get(const SamplerConfiguration& samplerConfigu
     }
 }
 
-std::shared_ptr<vkr::Device> Sampler::getDevice() const {
+const SharedResource<vkr::Device>& Sampler::getDevice() const {
     return m_device;
 }
 
@@ -94,7 +94,7 @@ Sampler::Key::Key(const SamplerConfiguration& rhs) {
 #define F2I(x) ((uint64_t)((double)x * 100000))
 
 bool Sampler::Key::operator==(const Key& rhs) const {
-    if ((VkDevice)(**device.lock()) != (VkDevice)(**rhs.device.lock())) return false;
+    if ((VkDevice)(**device.lock("Sampler::Key")) != (VkDevice)(**rhs.device.lock("Sampler::Key"))) return false;
     if (magFilter != rhs.magFilter) return false;
     if (minFilter != rhs.minFilter) return false;
     if (mipmapMode != rhs.mipmapMode) return false;
@@ -115,7 +115,7 @@ bool Sampler::Key::operator==(const Key& rhs) const {
 
 size_t Sampler::KeyHasher::operator()(const Key& samplerKey) const {
     size_t s = 0;
-    std::hash_combine(s, (VkDevice)(**samplerKey.device.lock()));
+    std::hash_combine(s, (VkDevice)(**samplerKey.device.lock("Sampler::KeyHasher")));
     std::hash_combine(s, samplerKey.magFilter);
     std::hash_combine(s, samplerKey.minFilter);
     std::hash_combine(s, samplerKey.mipmapMode);
@@ -134,9 +134,9 @@ size_t Sampler::KeyHasher::operator()(const Key& samplerKey) const {
     return s;
 }
 
-Texture::Texture(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler):
-        m_imageView(std::move(image)),
-        m_sampler(std::move(sampler)),
+Texture::Texture(const std::weak_ptr<ImageView>& image, const std::weak_ptr<Sampler>& sampler):
+        m_imageView(image),
+        m_sampler(sampler),
         m_resourceId(GraphicsManager::nextResourceId()) {
 }
 
@@ -145,27 +145,27 @@ Texture::~Texture() {
     m_imageView.reset();
 }
 
-Texture* Texture::create(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler, const char* name) {
-    return new Texture(std::move(image), std::move(sampler));
+Texture* Texture::create(const std::weak_ptr<ImageView>& image, const std::weak_ptr<Sampler>& sampler, const std::string& name) {
+    return new Texture(image, sampler);
 }
 
-Texture* Texture::create(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration, const char* name) {
+Texture* Texture::create(const std::weak_ptr<ImageView>& image, const SamplerConfiguration& samplerConfiguration, const std::string& name) {
     std::shared_ptr<Sampler> sampler = Sampler::get(samplerConfiguration, name);
     if (sampler == nullptr)
         return nullptr;
 
-    return new Texture(std::move(image), sampler);
+    return new Texture(image, sampler);
 }
 
-Texture* Texture::create(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler, const char* name) {
+Texture* Texture::create(const ImageViewConfiguration& imageViewConfiguration, const std::weak_ptr<Sampler>& sampler, const std::string& name) {
     ImageView* rawImageView = ImageView::create(imageViewConfiguration, name);
     if (rawImageView == nullptr)
         return nullptr;
 
-    return new Texture(std::shared_ptr<ImageView>(rawImageView), std::move(sampler));
+    return new Texture(std::shared_ptr<ImageView>(rawImageView), sampler);
 }
 
-Texture* Texture::create(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration, const char* name) {
+Texture* Texture::create(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration, const std::string& name) {
     ImageView* rawImageView = ImageView::create(imageViewConfiguration, name);
     if (rawImageView == nullptr)
         return nullptr;

@@ -131,12 +131,12 @@ private:
     void swapFrame();
 
 private:
-    std::shared_ptr<RenderPass> m_renderPass;
+    SharedResource<RenderPass> m_renderPass;
     std::shared_ptr<GraphicsPipeline> m_geometryGraphicsPipeline;
     std::shared_ptr<GraphicsPipeline> m_lightingGraphicsPipeline;
     FrameResource<RenderResources> m_resources;
-    std::shared_ptr<DescriptorSetLayout> m_globalDescriptorSetLayout;
-    std::shared_ptr<DescriptorSetLayout> m_lightingDescriptorSetLayout;
+    SharedResource<DescriptorSetLayout> m_globalDescriptorSetLayout;
+    SharedResource<DescriptorSetLayout> m_lightingDescriptorSetLayout;
     std::shared_ptr<Sampler> m_attachmentSampler;
     std::shared_ptr<Sampler> m_depthSampler;
     std::unordered_map<ImageView*, int32_t> m_frameIndices;

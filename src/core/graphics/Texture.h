@@ -8,7 +8,7 @@
 #include "core/graphics/Image2D.h"
 
 struct SamplerConfiguration {
-    std::weak_ptr<vkr::Device> device;
+    WeakResource<vkr::Device> device;
     vk::Filter magFilter = vk::Filter::eLinear;
     vk::Filter minFilter = vk::Filter::eLinear;
     vk::SamplerMipmapMode mipmapMode = vk::SamplerMipmapMode::eLinear;
@@ -29,16 +29,16 @@ struct SamplerConfiguration {
 class Sampler {
     NO_COPY(Sampler)
 private:
-    Sampler(const std::weak_ptr<vkr::Device>& device, vk::Sampler sampler);
+    Sampler(const WeakResource<vkr::Device>& device, const vk::Sampler& sampler, const std::string& name);
 
 public:
     ~Sampler();
 
-    static Sampler* create(const SamplerConfiguration& samplerConfiguration, const char* name);
+    static Sampler* create(const SamplerConfiguration& samplerConfiguration, const std::string& name);
 
-    static std::shared_ptr<Sampler> get(const SamplerConfiguration& samplerConfiguration, const char* name);
+    static std::shared_ptr<Sampler> get(const SamplerConfiguration& samplerConfiguration, const std::string& name);
 
-    std::shared_ptr<vkr::Device> getDevice() const;
+    const SharedResource<vkr::Device>& getDevice() const;
 
     const vk::Sampler& getSampler() const;
 
@@ -53,7 +53,7 @@ private:
         size_t operator()(const Key& samplerKey) const;
     };
 private:
-    std::shared_ptr<vkr::Device> m_device;
+    SharedResource<vkr::Device> m_device;
     vk::Sampler m_sampler;
 
     static std::unordered_map<Key, std::weak_ptr<Sampler>, KeyHasher> s_cachedSamplers;
@@ -61,17 +61,17 @@ private:
 
 class Texture {
 public:
-    Texture(std::weak_ptr<ImageView> imageView, std::weak_ptr<Sampler> sampler);
+    Texture(const std::weak_ptr<ImageView>& imageView, const std::weak_ptr<Sampler>& sampler);
 
     ~Texture();
 
-    static Texture* create(std::weak_ptr<ImageView> image, std::weak_ptr<Sampler> sampler, const char* name);
+    static Texture* create(const std::weak_ptr<ImageView>& image, const std::weak_ptr<Sampler>& sampler, const std::string& name);
 
-    static Texture* create(std::weak_ptr<ImageView> image, const SamplerConfiguration& samplerConfiguration, const char* name);
+    static Texture* create(const std::weak_ptr<ImageView>& image, const SamplerConfiguration& samplerConfiguration, const std::string& name);
 
-    static Texture* create(const ImageViewConfiguration& imageViewConfiguration, std::weak_ptr<Sampler> sampler, const char* name);
+    static Texture* create(const ImageViewConfiguration& imageViewConfiguration, const std::weak_ptr<Sampler>& sampler, const std::string& name);
 
-    static Texture* create(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration, const char* name);
+    static Texture* create(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration, const std::string& name);
 
     const vk::ImageViewType& getType() const;
 

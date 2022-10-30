@@ -107,12 +107,12 @@ private:
     bool createBloomBlurRenderPass();
 
 private:
-    std::shared_ptr<RenderPass> m_bloomBlurRenderPass;
+    SharedResource<RenderPass> m_bloomBlurRenderPass;
     std::shared_ptr<GraphicsPipeline> m_downsampleGraphicsPipeline;
     std::shared_ptr<GraphicsPipeline> m_upsampleGraphicsPipeline;
     std::shared_ptr<GraphicsPipeline> m_postProcessGraphicsPipeline;
-    std::shared_ptr<DescriptorSetLayout> m_postProcessDescriptorSetLayout;
-    std::shared_ptr<DescriptorSetLayout> m_bloomBlurDescriptorSetLayout;
+    SharedResource<DescriptorSetLayout> m_postProcessDescriptorSetLayout;
+    SharedResource<DescriptorSetLayout> m_bloomBlurDescriptorSetLayout;
     FrameResource<RenderResources> m_resources;
     std::shared_ptr<Sampler> m_frameSampler;
     PostProcessUniformData m_postProcessUniformData;

@@ -108,7 +108,7 @@ ImmediateRenderer::~ImmediateRenderer() {
 
 bool ImmediateRenderer::init() {
 
-    std::shared_ptr<DescriptorPool> descriptorPool = Engine::graphics()->descriptorPool();
+    const SharedResource<DescriptorPool>& descriptorPool = Engine::graphics()->descriptorPool();
 
     m_descriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
             .addUniformBuffer(0, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, true)
@@ -551,7 +551,7 @@ void ImmediateRenderer::uploadBuffers() {
         uniformBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         uniformBufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer;
 
-        std::shared_ptr<DescriptorPool> descriptorPool = Engine::graphics()->descriptorPool();
+        const SharedResource<DescriptorPool>& descriptorPool = Engine::graphics()->descriptorPool();
 
         delete m_resources->uniformBuffer;
         m_resources->uniformBuffer = Buffer::create(uniformBufferConfig, "ImmediateRenderer-UniformBuffer");
@@ -716,7 +716,7 @@ bool ImmediateRenderer::createRenderPass() {
     renderPassConfig.setSubpassDependencies(dependencies);
 //    renderPassConfig.setClearColour(0, glm::vec4(0.0F, 0.0F, 0.0F, 1.0F));
 
-    m_renderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig, "PostProcessRenderer-BloomBlurRenderPass"));
+    m_renderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "PostProcessRenderer-BloomBlurRenderPass"), "PostProcessRenderer-BloomBlurRenderPass");
     return (bool)m_renderPass;
 }
 

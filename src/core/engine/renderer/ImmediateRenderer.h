@@ -206,9 +206,9 @@ private:
     Buffer* m_vertexBuffer;
     Buffer* m_indexBuffer;
     FrameResource<RenderResources> m_resources;
-    std::shared_ptr<DescriptorSetLayout> m_descriptorSetLayout;
+    SharedResource<DescriptorSetLayout> m_descriptorSetLayout;
 
-    std::shared_ptr<RenderPass> m_renderPass;
+    SharedResource<RenderPass> m_renderPass;
     std::unordered_map<size_t, GraphicsPipeline*> m_graphicsPipelines;
 };
 

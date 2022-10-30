@@ -43,8 +43,8 @@ Engine::~Engine() {
     delete m_reprojectionRenderer;
     delete m_deferredRenderer;
     delete m_postProcessingRenderer;
-    delete m_graphics;
     delete m_eventDispatcher;
+    delete m_graphics;
 
     delete m_renderCamera;
 }
@@ -258,6 +258,10 @@ void Engine::render(const double& dt) {
     PROFILE_END_GPU_CMD(commandBuffer);
 
     ++m_currentFrameCount;
+}
+
+void Engine::cleanup() {
+    m_graphics->shutdownGraphics();
 }
 
 void Engine::destroy() {

@@ -159,7 +159,7 @@ bool LightRenderer::init() {
     renderPassConfig.setClearColour(0, glm::vec4(1.0F));
     renderPassConfig.setClearDepth(1, 1.0F);
 
-    m_shadowRenderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig, "LightRenderer-ShadowRenderPass"));
+    m_shadowRenderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "LightRenderer-ShadowRenderPass"), "LightRenderer-ShadowRenderPass");
     if (!m_shadowRenderPass) {
         printf("LightRenderer::init - Failed to create render pass\n");
         return false;
@@ -385,7 +385,7 @@ void LightRenderer::render(const double& dt, const vk::CommandBuffer& commandBuf
     PROFILE_END_GPU_CMD(commandBuffer);
 }
 
-const std::shared_ptr<RenderPass>& LightRenderer::getRenderPass() const {
+const SharedResource<RenderPass>& LightRenderer::getRenderPass() const {
     return m_shadowRenderPass;
 }
 
@@ -393,7 +393,7 @@ const std::shared_ptr<Texture>& LightRenderer::getEmptyShadowMap() const {
     return m_emptyShadowMap;
 }
 
-const std::shared_ptr<DescriptorSetLayout>& LightRenderer::getLightingRenderPassDescriptorSetLayout() const {
+const SharedResource<DescriptorSetLayout>& LightRenderer::getLightingRenderPassDescriptorSetLayout() const {
     return m_lightingRenderPassDescriptorSetLayout;
 }
 
@@ -401,11 +401,11 @@ DescriptorSet* LightRenderer::getLightingRenderPassDescriptorSet() const {
     return m_lightingRenderPassResources->descriptorSet;
 }
 
-std::shared_ptr<DescriptorSetLayout> LightRenderer::getVsmBlurComputeDescriptorSetLayout() const {
+const SharedResource<DescriptorSetLayout>& LightRenderer::getVsmBlurComputeDescriptorSetLayout() const {
     return m_vsmBlurXComputeDescriptorSetLayout;
 }
 
-std::shared_ptr<Sampler> LightRenderer::getVsmShadowMapSampler() const {
+const std::shared_ptr<Sampler>& LightRenderer::getVsmShadowMapSampler() const {
     return m_vsmShadowMapSampler;
 }
 

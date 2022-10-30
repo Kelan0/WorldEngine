@@ -22,15 +22,15 @@ void ComputePipelineConfiguration::addDescriptorSetLayout(const DescriptorSetLay
     addDescriptorSetLayout(descriptorSetLayout->getDescriptorSetLayout());
 }
 
-void ComputePipelineConfiguration::setDescriptorSetLayouts(const vk::ArrayProxy<const vk::DescriptorSetLayout>& descriptorSetLayouts) {
-    this->descriptorSetLayouts.clear();
-    for (const auto& descriptorSetLayout : descriptorSetLayouts)
+void ComputePipelineConfiguration::setDescriptorSetLayouts(const vk::ArrayProxy<const vk::DescriptorSetLayout>& p_descriptorSetLayouts) {
+    descriptorSetLayouts.clear();
+    for (const auto& descriptorSetLayout : p_descriptorSetLayouts)
         addDescriptorSetLayout(descriptorSetLayout);
 }
 
-void ComputePipelineConfiguration::setDescriptorSetLayouts(const vk::ArrayProxy<const DescriptorSetLayout*>& descriptorSetLayouts) {
-    this->descriptorSetLayouts.clear();
-    for (const auto& descriptorSetLayout : descriptorSetLayouts)
+void ComputePipelineConfiguration::setDescriptorSetLayouts(const vk::ArrayProxy<const DescriptorSetLayout*>& p_descriptorSetLayouts) {
+    descriptorSetLayouts.clear();
+    for (const auto& descriptorSetLayout : p_descriptorSetLayouts)
         addDescriptorSetLayout(descriptorSetLayout);
 }
 
@@ -42,15 +42,16 @@ void ComputePipelineConfiguration::addPushConstantRange(const vk::ShaderStageFla
     addPushConstantRange(vk::PushConstantRange(stageFlags, offset, size));
 }
 
-ComputePipeline::ComputePipeline(const std::weak_ptr<vkr::Device>& device):
-    m_device(device) {
+ComputePipeline::ComputePipeline(const WeakResource<vkr::Device>& device, const std::string& name):
+    m_device(device, name) {
 }
 
-ComputePipeline::ComputePipeline(const std::weak_ptr<vkr::Device>& device,
+ComputePipeline::ComputePipeline(const WeakResource<vkr::Device>& device,
                                    vk::Pipeline& pipeline,
                                    vk::PipelineLayout& pipelineLayout,
-                                   ComputePipelineConfiguration config):
-        m_device(device),
+                                   ComputePipelineConfiguration config,
+                                   const std::string& name):
+        m_device(device, name),
         m_pipeline(pipeline),
         m_pipelineLayout(pipelineLayout),
         m_config(std::move(config)) {
@@ -60,12 +61,12 @@ ComputePipeline::~ComputePipeline() {
     cleanup();
 }
 
-ComputePipeline* ComputePipeline::create(const std::weak_ptr<vkr::Device>& device) {
-    return new ComputePipeline(device.lock());
+ComputePipeline* ComputePipeline::create(const WeakResource<vkr::Device>& device, const std::string& name) {
+    return new ComputePipeline(device, name);
 }
 
-ComputePipeline* ComputePipeline::create(const ComputePipelineConfiguration& computePipelineConfiguration, const char* name) {
-    ComputePipeline* computePipeline = create(computePipelineConfiguration.device);
+ComputePipeline* ComputePipeline::create(const ComputePipelineConfiguration& computePipelineConfiguration, const std::string& name) {
+    ComputePipeline* computePipeline = create(computePipelineConfiguration.device, name);
 
     if (!computePipeline->recreate(computePipelineConfiguration, name)) {
         delete computePipeline;
@@ -75,7 +76,7 @@ ComputePipeline* ComputePipeline::create(const ComputePipelineConfiguration& com
     return computePipeline;
 }
 
-ComputePipeline* ComputePipeline::getComputePipeline(const ComputePipelineConfiguration& computePipelineConfiguration, const char* name) {
+ComputePipeline* ComputePipeline::getComputePipeline(const ComputePipelineConfiguration& computePipelineConfiguration, const std::string& name) {
     size_t hash = std::hash<ComputePipelineConfiguration>()(computePipelineConfiguration);
     auto it = s_cachedComputePipelines.find(hash);
     if (it == s_cachedComputePipelines.end()) {
@@ -88,7 +89,7 @@ ComputePipeline* ComputePipeline::getComputePipeline(const ComputePipelineConfig
     }
 }
 
-bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipelineConfiguration, const char* name) {
+bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipelineConfiguration, const std::string& name) {
     const vk::Device& device = **m_device;
     vk::Result result;
 

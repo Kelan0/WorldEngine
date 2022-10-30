@@ -62,7 +62,7 @@ namespace Performance {
 class Profiler {
 private:
     struct GPUQueryPool {
-        std::weak_ptr<vkr::Device> device;
+        WeakResource<vkr::Device> device;
         vk::QueryPool pool = VK_NULL_HANDLE;
         uint32_t capacity = 0;
         uint32_t size = 0;

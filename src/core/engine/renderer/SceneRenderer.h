@@ -86,9 +86,9 @@ public:
 
     Scene* getScene() const;
 
-    const std::shared_ptr<DescriptorSetLayout>& getObjectDescriptorSetLayout() const;
+    const SharedResource<DescriptorSetLayout>& getObjectDescriptorSetLayout() const;
 
-    const std::shared_ptr<DescriptorSetLayout>& getMaterialDescriptorSetLayout() const;
+    const SharedResource<DescriptorSetLayout>& getMaterialDescriptorSetLayout() const;
 
     DescriptorSet* getObjectDescriptorSet() const;
 
@@ -154,8 +154,8 @@ private:
 
     FrameResource<RenderResources> m_resources;
 
-    std::shared_ptr<DescriptorSetLayout> m_objectDescriptorSetLayout;
-    std::shared_ptr<DescriptorSetLayout> m_materialDescriptorSetLayout;
+    SharedResource<DescriptorSetLayout> m_objectDescriptorSetLayout;
+    SharedResource<DescriptorSetLayout> m_materialDescriptorSetLayout;
 
     std::shared_ptr<Image2D> m_missingTextureImage;
     std::shared_ptr<Material> m_missingTextureMaterial;

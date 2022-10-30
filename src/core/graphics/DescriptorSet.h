@@ -14,7 +14,7 @@ class DescriptorSet;
 class DescriptorPool;
 
 struct DescriptorPoolConfiguration {
-    std::weak_ptr<vkr::Device> device;
+    WeakResource<vkr::Device> device;
     vk::DescriptorPoolCreateFlags flags;
     uint32_t maxSets = 1000;
 
@@ -54,25 +54,25 @@ public:
         size_t operator()(const Key& descriptorSetLayoutKey) const;
     };
 
-    typedef std::unordered_map<Key, std::weak_ptr<DescriptorSetLayout>, KeyHasher> Cache;
+    typedef std::unordered_map<Key, WeakResource<DescriptorSetLayout>, KeyHasher> Cache;
 
 private:
-    DescriptorSetLayout(const std::weak_ptr<vkr::Device>& device, const vk::DescriptorSetLayout& descriptorSetLayout, Key key);
+    DescriptorSetLayout(const WeakResource<vkr::Device>& device, const vk::DescriptorSetLayout& descriptorSetLayout, Key key, const std::string& name);
 
 public:
     ~DescriptorSetLayout();
 
-    static std::shared_ptr<DescriptorSetLayout> get(const std::weak_ptr<vkr::Device>& device, const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, const char* name);
+    static SharedResource<DescriptorSetLayout> get(const WeakResource<vkr::Device>& device, const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, const std::string& name);
 
     static void clearCache();
 
-    DescriptorSet* createDescriptorSet(const std::shared_ptr<DescriptorPool>& descriptorPool, const char* name);
+    DescriptorSet* createDescriptorSet(const SharedResource<DescriptorPool>& descriptorPool, const std::string& name);
 
-    bool createDescriptorSets(const std::shared_ptr<DescriptorPool>& descriptorPool, const uint32_t& count, DescriptorSet** outDescriptorSets, const char* name);
+    bool createDescriptorSets(const SharedResource<DescriptorPool>& descriptorPool, const uint32_t& count, DescriptorSet** outDescriptorSets, const std::string& name);
 
-    bool createDescriptorSets(const std::shared_ptr<DescriptorPool>& descriptorPool, const uint32_t& count, std::shared_ptr<DescriptorSet>* outDescriptorSets, const char* name);
+    bool createDescriptorSets(const SharedResource<DescriptorPool>& descriptorPool, const uint32_t& count, SharedResource<DescriptorSet>* outDescriptorSets, const std::string& name);
 
-    const std::shared_ptr<vkr::Device>& getDevice() const;
+    const SharedResource<vkr::Device>& getDevice() const;
 
     const vk::DescriptorSetLayout& getDescriptorSetLayout() const;
 
@@ -95,9 +95,10 @@ public:
     const GraphicsResource& getResourceId() const;
 
 private:
-    std::shared_ptr<vkr::Device> m_device;
+    SharedResource<vkr::Device> m_device;
     vk::DescriptorSetLayout m_descriptorSetLayout;
     Key m_key;
+    std::string m_name;
 
     GraphicsResource m_resourceId;
 
@@ -109,7 +110,7 @@ private:
 class DescriptorSetLayoutBuilder {
     NO_COPY(DescriptorSetLayoutBuilder);
 public:
-    explicit DescriptorSetLayoutBuilder(const std::weak_ptr<vkr::Device>& device, const vk::DescriptorSetLayoutCreateFlags& flags = {});
+    explicit DescriptorSetLayoutBuilder(const WeakResource<vkr::Device>& device, const vk::DescriptorSetLayoutCreateFlags& flags = {});
 
     explicit DescriptorSetLayoutBuilder(const vk::DescriptorSetLayoutCreateFlags& flags = {});
 
@@ -131,12 +132,12 @@ public:
 
     DescriptorSetLayoutBuilder& addStorageImage(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const uint32_t& arraySize = 1);
 
-    std::shared_ptr<DescriptorSetLayout> build(const char* name);
+    SharedResource<DescriptorSetLayout> build(const std::string& name);
 
-    DescriptorSetLayoutBuilder& reset(vk::DescriptorSetLayoutCreateFlags flags = {});
+    DescriptorSetLayoutBuilder& reset(const vk::DescriptorSetLayoutCreateFlags& flags = {});
 
 private:
-    std::weak_ptr<vkr::Device> m_device;
+    WeakResource<vkr::Device> m_device;
     vk::DescriptorSetLayoutCreateFlags m_flags;
     std::unordered_map<uint32_t, vk::DescriptorSetLayoutBinding> m_bindings;
 };
@@ -145,14 +146,14 @@ private:
 class DescriptorPool {
     NO_COPY(DescriptorPool);
 private:
-    DescriptorPool(const std::weak_ptr<vkr::Device>& device, vk::DescriptorPool descriptorPool, bool canFreeDescriptorSets);
+    DescriptorPool(const WeakResource<vkr::Device>& device, vk::DescriptorPool descriptorPool, bool canFreeDescriptorSets, const std::string& name);
 
 public:
     ~DescriptorPool();
 
-    static DescriptorPool* create(const DescriptorPoolConfiguration& descriptorPoolConfiguration, const char* name);
+    static DescriptorPool* create(const DescriptorPoolConfiguration& descriptorPoolConfiguration, const std::string& name);
 
-    const std::shared_ptr<vkr::Device>& getDevice() const;
+    const SharedResource<vkr::Device>& getDevice() const;
 
     const vk::DescriptorPool& getDescriptorPool() const;
 
@@ -165,7 +166,7 @@ public:
     const GraphicsResource& getResourceId() const;
 
 private:
-    std::shared_ptr<vkr::Device> m_device;
+    SharedResource<vkr::Device> m_device;
     vk::DescriptorPool m_descriptorPool;
     bool m_canFreeDescriptorSets;
 
@@ -177,31 +178,31 @@ private:
 class DescriptorSet {
     NO_COPY(DescriptorSet);
 private:
-    DescriptorSet(const std::weak_ptr<vkr::Device>& device, const std::weak_ptr<DescriptorPool>& pool, const std::weak_ptr<DescriptorSetLayout>& layout, const vk::DescriptorSet& descriptorSet);
+    DescriptorSet(const WeakResource<vkr::Device>& device, const WeakResource<DescriptorPool>& pool, const WeakResource<DescriptorSetLayout>& layout, const vk::DescriptorSet& descriptorSet, const std::string& name);
 
 public:
     DescriptorSet(DescriptorSet&& move) noexcept;
 
     ~DescriptorSet();
 
-    static DescriptorSet* create(const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, const std::weak_ptr<DescriptorPool>& descriptorPool, const char* name, const char* layoutName);
+    static DescriptorSet* create(const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, const WeakResource<DescriptorPool>& descriptorPool, const std::string& name, const std::string& layoutName);
 
-    static DescriptorSet* create(const std::weak_ptr<DescriptorSetLayout>& descriptorSetLayout, const std::weak_ptr<DescriptorPool>& descriptorPool, const char* name);
+    static DescriptorSet* create(const WeakResource<DescriptorSetLayout>& descriptorSetLayout, const WeakResource<DescriptorPool>& descriptorPool, const std::string& name);
 
     const vk::DescriptorSet& getDescriptorSet() const;
 
-    const std::shared_ptr<vkr::Device>& getDevice() const;
+    const SharedResource<vkr::Device>& getDevice() const;
 
-    const std::shared_ptr<DescriptorPool>& getPool() const;
+    const SharedResource<DescriptorPool>& getPool() const;
 
-    const std::shared_ptr<DescriptorSetLayout>& getLayout() const;
+    const SharedResource<DescriptorSetLayout>& getLayout() const;
 
     const GraphicsResource& getResourceId() const;
 
 private:
-    std::shared_ptr<vkr::Device> m_device;
-    std::shared_ptr<DescriptorPool> m_pool;
-    std::shared_ptr<DescriptorSetLayout> m_layout;
+    SharedResource<vkr::Device> m_device;
+    SharedResource<DescriptorPool> m_pool;
+    SharedResource<DescriptorSetLayout> m_layout;
     vk::DescriptorSet m_descriptorSet;
     GraphicsResource m_resourceId;
 };
@@ -212,9 +213,9 @@ class DescriptorSetWriter {
 public:
     explicit DescriptorSetWriter(DescriptorSet* descriptorSet);
 
-    explicit DescriptorSetWriter(const std::shared_ptr<DescriptorSet>& descriptorSet);
+    explicit DescriptorSetWriter(const SharedResource<DescriptorSet>& descriptorSet);
 
-    explicit DescriptorSetWriter(const std::weak_ptr<DescriptorSet>& descriptorSet);
+    explicit DescriptorSetWriter(const WeakResource<DescriptorSet>& descriptorSet);
 
     ~DescriptorSetWriter();
 

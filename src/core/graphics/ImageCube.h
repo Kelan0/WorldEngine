@@ -46,7 +46,7 @@ struct ImageCubeSource {
 };
 
 struct ImageCubeConfiguration {
-    std::weak_ptr<vkr::Device> device;
+    WeakResource<vkr::Device> device;
     ImageCubeSource imageSource = {};
     uint32_t size = 0;
     uint32_t mipLevels = 1;
@@ -62,12 +62,12 @@ struct ImageCubeConfiguration {
 class ImageCube {
     NO_COPY(ImageCube);
 private:
-    ImageCube(const std::weak_ptr<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& size, const uint32_t& mipLevelCount, const vk::Format& format);
+    ImageCube(const WeakResource<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& size, const uint32_t& mipLevelCount, const vk::Format& format, const std::string& name);
 
 public:
     ~ImageCube();
 
-    static ImageCube* create(const ImageCubeConfiguration& imageCubeConfiguration, const char* name);
+    static ImageCube* create(const ImageCubeConfiguration& imageCubeConfiguration, const std::string& name);
 
     static bool uploadFace(ImageCube* dstImage, const ImageCubeFace& face, void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
 
@@ -81,7 +81,7 @@ public:
 
     bool generateMipmap(const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState);
 
-    std::shared_ptr<vkr::Device> getDevice() const;
+    const SharedResource<vkr::Device>& getDevice() const;
 
     const vk::Image& getImage() const;
 
@@ -111,7 +111,7 @@ private:
     static void onCleanupGraphics(ShutdownGraphicsEvent* event);
 
 private:
-    std::shared_ptr<vkr::Device> m_device;
+    SharedResource<vkr::Device> m_device;
     vk::Image m_image;
     DeviceMemoryBlock* m_memory;
     uint32_t m_size;

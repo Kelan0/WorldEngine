@@ -13,7 +13,7 @@ class DeviceMemoryBlock;
 
 
 struct DeviceMemoryConfiguration {
-    std::weak_ptr<vkr::Device> device;
+    WeakResource<vkr::Device> device;
     vk::DeviceSize size;
     vk::MemoryPropertyFlags memoryProperties;
     uint32_t memoryTypeFlags;
@@ -23,7 +23,7 @@ struct DeviceMemoryConfiguration {
 
 class DeviceMemoryManager {
 public:
-    DeviceMemoryManager(const std::weak_ptr<vkr::Device>& device);
+    DeviceMemoryManager(const WeakResource<vkr::Device>& device);
 
     ~DeviceMemoryManager();
 
@@ -41,7 +41,7 @@ private:
 private:
     std::unordered_map<uint32_t, std::vector<DeviceMemoryHeap*>> m_memoryHeaps;
     vk::DeviceSize m_heapGenSizeBytes;
-    std::shared_ptr<vkr::Device> m_device;
+    SharedResource<vkr::Device> m_device;
 };
 
 
@@ -58,14 +58,14 @@ public:
     };
 
 private:
-    DeviceMemoryHeap(const std::weak_ptr<vkr::Device>& device, const vk::DeviceMemory& deviceMemory, const vk::DeviceSize& size);
+    DeviceMemoryHeap(const WeakResource<vkr::Device>& device, const vk::DeviceMemory& deviceMemory, const vk::DeviceSize& size);
 
 public:
     ~DeviceMemoryHeap();
 
     static DeviceMemoryHeap* create(const DeviceMemoryConfiguration& deviceMemoryConfiguration);
 
-    std::shared_ptr<vkr::Device> getDevice() const;
+    const SharedResource<vkr::Device>& getDevice() const;
 
     const vk::DeviceMemory& getDeviceMemory();
 
@@ -115,7 +115,7 @@ private:
     void unmap(DeviceMemoryBlock* block);
 
 private:
-    std::shared_ptr<vkr::Device> m_device;
+    SharedResource<vkr::Device> m_device;
     vk::DeviceMemory m_deviceMemory;
     vk::DeviceSize m_size;
 

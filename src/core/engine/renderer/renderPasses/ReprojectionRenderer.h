@@ -112,9 +112,9 @@ private:
     void swapFrames();
 
 private:
-    std::shared_ptr<RenderPass> m_renderPass;
+    SharedResource<RenderPass> m_renderPass;
     std::shared_ptr<GraphicsPipeline> m_reprojectionGraphicsPipeline;
-    std::shared_ptr<DescriptorSetLayout> m_reprojectionDescriptorSetLayout;
+    SharedResource<DescriptorSetLayout> m_reprojectionDescriptorSetLayout;
     FrameResource<RenderResources> m_resources;
     std::unordered_map<ImageView*, int32_t> m_frameIndices;
     std::shared_ptr<Sampler> m_frameSampler;

@@ -44,7 +44,7 @@ struct DepthBias {
 };
 
 struct GraphicsPipelineConfiguration {
-    std::weak_ptr<vkr::Device> device;
+    WeakResource<vkr::Device> device;
     vk::Viewport viewport;
     uint32_t subpass = 0;
     std::optional<std::string> vertexShader;
@@ -64,7 +64,7 @@ struct GraphicsPipelineConfiguration {
     vk::FrontFace frontFace = vk::FrontFace::eClockwise;
     vk::PrimitiveTopology primitiveTopology = vk::PrimitiveTopology::eTriangleList;
     std::vector<AttachmentBlendState> attachmentBlendStates;
-    std::weak_ptr<RenderPass> renderPass;
+    WeakResource<RenderPass> renderPass;
     std::unordered_map<vk::DynamicState, bool> dynamicStates;
 
     void setViewport(const vk::Viewport& viewport);
@@ -118,22 +118,24 @@ class GraphicsPipeline {
     NO_COPY(GraphicsPipeline);
 
 private:
-    explicit GraphicsPipeline(const std::weak_ptr<vkr::Device>& device);
+    explicit GraphicsPipeline(const WeakResource<vkr::Device>& device, const std::string& name);
 
 public:
     ~GraphicsPipeline();
 
-    static GraphicsPipeline* create(const std::weak_ptr<vkr::Device>& device);
+    static GraphicsPipeline* create(const WeakResource<vkr::Device>& device, const std::string& name);
 
-    static GraphicsPipeline* create(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration, const char* name);
+    static GraphicsPipeline* create(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration, const std::string& name);
 
-    bool recreate(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration, const char* name);
+    bool recreate(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration, const std::string& name);
 
     void bind(const vk::CommandBuffer& commandBuffer) const;
 
     const vk::Pipeline& getPipeline() const;
 
-    std::shared_ptr<RenderPass> getRenderPass() const;
+    const SharedResource<vkr::Device>& getDevice() const;
+
+    const SharedResource<RenderPass>& getRenderPass() const;
 
     const vk::PipelineLayout& getPipelineLayout() const;
 
@@ -229,12 +231,12 @@ private:
 #endif
 
 private:
-    std::shared_ptr<vkr::Device> m_device;
+    SharedResource<vkr::Device> m_device;
     vk::Pipeline m_pipeline;
     vk::PipelineLayout m_pipelineLayout;
-    std::shared_ptr<RenderPass> m_renderPass;
+    SharedResource<RenderPass> m_renderPass;
     GraphicsPipelineConfiguration m_config;
-    const char* m_name;
+    std::string m_name;
 };
 
 

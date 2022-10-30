@@ -1,7 +1,7 @@
 #include "core/graphics/CommandPool.h"
 
-CommandPool::CommandPool(const std::weak_ptr<vkr::Device>& device, const vk::CommandPool& commandPool):
-        m_device(device),
+CommandPool::CommandPool(const WeakResource<vkr::Device>& device, const vk::CommandPool& commandPool, const std::string& name):
+        m_device(device, name),
         m_commandPool(commandPool),
         m_resourceId(GraphicsManager::nextResourceId()) {
 }
@@ -26,7 +26,7 @@ CommandPool::~CommandPool() {
     (**m_device).destroyCommandPool(m_commandPool);
 }
 
-CommandPool* CommandPool::create(const CommandPoolConfiguration& commandPoolConfiguration, const char* name) {
+CommandPool* CommandPool::create(const CommandPoolConfiguration& commandPoolConfiguration, const std::string& name) {
     vk::CommandPoolCreateInfo commandPoolCreateInfo;
     commandPoolCreateInfo.setQueueFamilyIndex(commandPoolConfiguration.queueFamilyIndex);
     if (commandPoolConfiguration.transient)
@@ -37,7 +37,7 @@ CommandPool* CommandPool::create(const CommandPoolConfiguration& commandPoolConf
 //    const std::shared_ptr<vkr::Device> device = commandPoolConfiguration.device.lock();
 //    std::unique_ptr<vkr::CommandPool> commandPool = std::make_unique<vkr::CommandPool>(*device, commandPoolCreateInfo);
 
-    const vk::Device& device = **commandPoolConfiguration.device.lock();
+    const vk::Device& device = **commandPoolConfiguration.device.lock(name);
     vk::CommandPool commandPool = VK_NULL_HANDLE;
     vk::Result result = device.createCommandPool(&commandPoolCreateInfo, nullptr, &commandPool);
 
@@ -48,7 +48,7 @@ CommandPool* CommandPool::create(const CommandPoolConfiguration& commandPoolConf
 
     Engine::graphics()->setObjectName(device, (uint64_t)(VkCommandPool)commandPool, vk::ObjectType::eCommandPool, name);
 
-    return new CommandPool(commandPoolConfiguration.device, commandPool);
+    return new CommandPool(commandPoolConfiguration.device, commandPool, name);
 }
 
 

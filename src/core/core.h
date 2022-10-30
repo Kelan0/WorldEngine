@@ -54,6 +54,7 @@
 
 #include "hash.h"
 #include "util/Exception.h"
+#include "core/graphics/GraphicsResource.h"
 
 namespace vkr = vk::raii;
 
@@ -62,7 +63,8 @@ namespace vkr = vk::raii;
 	ClassName& operator=(const ClassName&) = delete;
 
 #define NO_MOVE(ClassName) \
-    ClassName(ClassName&&) = delete;
+    ClassName(ClassName&&) = delete; \
+    ClassName& operator=(ClassName&&) = delete;
 
 #define INT_DIV_CEIL(num, denom) (((num) + (denom) - 1) / (denom))
 #define CEIL_TO_MULTIPLE(value, multiple) (INT_DIV_CEIL(value, multiple) * multiple)

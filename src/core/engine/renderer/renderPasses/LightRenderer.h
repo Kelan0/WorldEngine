@@ -40,17 +40,17 @@ public:
 
     void render(const double& dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera);
 
-    [[nodiscard]] const std::shared_ptr<RenderPass>& getRenderPass() const;
+    const SharedResource<RenderPass>& getRenderPass() const;
 
-    [[nodiscard]] const std::shared_ptr<Texture>& getEmptyShadowMap() const;
+    const std::shared_ptr<Texture>& getEmptyShadowMap() const;
 
-    [[nodiscard]] const std::shared_ptr<DescriptorSetLayout>& getLightingRenderPassDescriptorSetLayout() const;
+    const SharedResource<DescriptorSetLayout>& getLightingRenderPassDescriptorSetLayout() const;
 
-    [[nodiscard]] DescriptorSet* getLightingRenderPassDescriptorSet() const;
+    DescriptorSet* getLightingRenderPassDescriptorSet() const;
 
-    std::shared_ptr<DescriptorSetLayout> getVsmBlurComputeDescriptorSetLayout() const;
+    const SharedResource<DescriptorSetLayout>& getVsmBlurComputeDescriptorSetLayout() const;
 
-    std::shared_ptr<Sampler> getVsmShadowMapSampler() const;
+    const std::shared_ptr<Sampler>& getVsmShadowMapSampler() const;
 
 
 private:
@@ -100,13 +100,13 @@ private:
     };
 
     std::shared_ptr<GraphicsPipeline> m_shadowGraphicsPipeline;
-    std::shared_ptr<RenderPass> m_shadowRenderPass;
-    std::shared_ptr<DescriptorSetLayout> m_shadowRenderPassDescriptorSetLayout;
-    std::shared_ptr<DescriptorSetLayout> m_lightingRenderPassDescriptorSetLayout;
+    SharedResource<RenderPass> m_shadowRenderPass;
+    SharedResource<DescriptorSetLayout> m_shadowRenderPassDescriptorSetLayout;
+    SharedResource<DescriptorSetLayout> m_lightingRenderPassDescriptorSetLayout;
 
     std::shared_ptr<ComputePipeline> m_vsmBlurComputePipeline;
 //    std::shared_ptr<DescriptorSetLayout> m_vsmBlurComputeDescriptorSetLayout;
-    std::shared_ptr<DescriptorSetLayout> m_vsmBlurXComputeDescriptorSetLayout;
+    SharedResource<DescriptorSetLayout> m_vsmBlurXComputeDescriptorSetLayout;
     uint32_t m_blurElementArrayIndex;
 
     FrameResource<VSMBlurResources> m_vsmBlurResources;

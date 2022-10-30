@@ -16,8 +16,8 @@ void MeshConfiguration::setPrimitiveType(const MeshPrimitiveType& primitiveType)
 
 
 
-Mesh::Mesh(const std::weak_ptr<vkr::Device>& device):
-        m_device(device),
+Mesh::Mesh(const WeakResource<vkr::Device>& device, const std::string& name):
+        m_device(device, name),
         m_resourceId(GraphicsManager::nextResourceId()),
         m_vertexSize(0),
         m_indexSize(0),
@@ -33,7 +33,7 @@ Mesh::~Mesh() {
 
 Mesh* Mesh::create(const MeshConfiguration& meshConfiguration) {
 
-    Mesh* mesh = new Mesh(meshConfiguration.device);
+    Mesh* mesh = new Mesh(meshConfiguration.device, "Mesh");
 
     if (meshConfiguration.vertexCount > 0) {
         if (!mesh->uploadVertices(meshConfiguration.vertices, meshConfiguration.vertexSize, meshConfiguration.vertexCount)) {

@@ -88,6 +88,8 @@ private:
 
     void render(const double& dt);
 
+    void cleanup();
+
     static void destroy();
 
 private:

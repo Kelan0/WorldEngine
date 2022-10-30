@@ -116,7 +116,7 @@ void EnvironmentMap::update() {
             }
         }
 
-        const std::shared_ptr<CommandPool>& commandPool = Engine::graphics()->commandPool();
+        const SharedResource<CommandPool>& commandPool = Engine::graphics()->commandPool();
         const vk::CommandBuffer& commandBuffer = **commandPool->getOrCreateCommandBuffer("compute_main", { vk::CommandBufferLevel::ePrimary });
         const vk::Queue& computeQueue = **Engine::graphics()->getQueue(QUEUE_COMPUTE_MAIN);
 
@@ -314,7 +314,7 @@ void EnvironmentMap::calculateBRDFIntegrationMap(const vk::CommandBuffer& comman
         assert(s_BRDFIntegrationMap != nullptr);
 
         if (s_BRDFIntegrationMapDescriptorSet == nullptr) {
-            std::shared_ptr<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
+            SharedResource<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
                     .addStorageImage(0, vk::ShaderStageFlagBits::eCompute)
                     .build("EnvironmentMap-BRDFIntegrationMapDescriptorSetLayout");
             s_BRDFIntegrationMapDescriptorSet = DescriptorSet::create(descriptorSetLayout,Engine::graphics()->descriptorPool(), "EnvironmentMap-BRDFIntegrationMapDescriptorSet");
@@ -367,7 +367,7 @@ void EnvironmentMap::calculateBRDFIntegrationMap(const vk::CommandBuffer& comman
 
 DescriptorSet* EnvironmentMap::getDiffuseIrradianceComputeDescriptorSet() {
     if (s_diffuseIrradianceConvolutionDescriptorSet == nullptr) {
-        std::shared_ptr<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
+        SharedResource<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
                 .addUniformBuffer(0, vk::ShaderStageFlagBits::eCompute)
                 .addCombinedImageSampler(1, vk::ShaderStageFlagBits::eCompute)
                 .addStorageImage(2, vk::ShaderStageFlagBits::eCompute)
@@ -403,7 +403,7 @@ ComputePipeline* EnvironmentMap::getDiffuseIrradianceComputePipeline() {
 
 DescriptorSet* EnvironmentMap::getPrefilteredEnvironmentComputeDescriptorSet() {
     if (s_prefilteredEnvironmentDescriptorSet == nullptr) {
-        std::shared_ptr<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
+        SharedResource<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
                 .addCombinedImageSampler(0, vk::ShaderStageFlagBits::eCompute)
                 .addStorageImage(1, vk::ShaderStageFlagBits::eCompute, MAX_SPECULAR_MIP_LEVELS)
                 .build("EnvironmentMap-PrefilteredEnvironmentDescriptorSetLayout");

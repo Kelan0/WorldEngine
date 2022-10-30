@@ -9,7 +9,7 @@
 struct ShutdownGraphicsEvent;
 
 struct BufferConfiguration {
-    std::weak_ptr<vkr::Device> device;
+    WeakResource<vkr::Device> device;
     vk::BufferUsageFlags usage;
     vk::MemoryPropertyFlags memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
     vk::DeviceSize size;
@@ -20,14 +20,14 @@ struct BufferConfiguration {
 class Buffer {
     NO_COPY(Buffer)
 private:
-    Buffer(const std::weak_ptr<vkr::Device>& device, const vk::Buffer& buffer, DeviceMemoryBlock* memory, const vk::DeviceSize& size, const vk::MemoryPropertyFlags& memoryProperties, const GraphicsResource& resourceId);
+    Buffer(const WeakResource<vkr::Device>& device, const vk::Buffer& buffer, DeviceMemoryBlock* memory, const vk::DeviceSize& size, const vk::MemoryPropertyFlags& memoryProperties, const GraphicsResource& resourceId, const std::string& name);
 
 public:
     //Buffer(Buffer&& buffer);
 
     ~Buffer();
 
-    static Buffer* create(const BufferConfiguration& bufferConfiguration, const char* name);
+    static Buffer* create(const BufferConfiguration& bufferConfiguration, const std::string& name);
 
     static bool copy(Buffer* srcBuffer, Buffer* dstBuffer, const vk::DeviceSize& size, const vk::DeviceSize& srcOffset = 0, const vk::DeviceSize& dstOffset = 0);
 
@@ -39,7 +39,7 @@ public:
 
     bool upload(const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data, const vk::DeviceSize& srcStride = 0, const vk::DeviceSize& dstStride = 0, const vk::DeviceSize& elementSize = 0);
 
-    std::shared_ptr<vkr::Device> getDevice() const;
+    const SharedResource<vkr::Device>& getDevice() const;
 
     const vk::Buffer& getBuffer() const;
 
@@ -65,14 +65,14 @@ public:
     static bool mappedUpload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data, const vk::DeviceSize& srcStride = 0, const vk::DeviceSize& dstStride = 0, const vk::DeviceSize& elementSize = 0);
 
 private:
-    static void resizeStagingBuffer(const std::weak_ptr<vkr::Device>& device, const vk::DeviceSize& size);
+    static void resizeStagingBuffer(const WeakResource<vkr::Device>& device, const vk::DeviceSize& size);
 
-    static void reserveStagingBuffer(const std::weak_ptr<vkr::Device>& device, const vk::DeviceSize& size);
+    static void reserveStagingBuffer(const WeakResource<vkr::Device>& device, const vk::DeviceSize& size);
 
     static void onCleanupGraphics(ShutdownGraphicsEvent* event);
 
 private:
-    std::shared_ptr<vkr::Device> m_device;
+    SharedResource<vkr::Device> m_device;
     vk::Buffer m_buffer;
     DeviceMemoryBlock* m_memory;
     vk::MemoryPropertyFlags m_memoryProperties;

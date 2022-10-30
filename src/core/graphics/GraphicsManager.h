@@ -71,7 +71,7 @@ struct QueueDetails {
 
 struct DeviceDetails {
     std::unique_ptr<vkr::PhysicalDevice> physicalDevice;
-    std::shared_ptr<vkr::Device> device;
+    SharedResource<vkr::Device> device;
     vk::PhysicalDeviceMemoryProperties memoryProperties;
     vk::PhysicalDeviceProperties physicalDeviceProperties;
 };
@@ -141,6 +141,8 @@ private:
 
     bool createRenderPass();
 
+    void shutdownGraphics();
+
 public:
     bool beginFrame();
 
@@ -152,7 +154,7 @@ public:
 
     const vk::Instance& getInstance() const;
 
-    const std::shared_ptr<vkr::Device>& getDevice() const;
+    const SharedResource<vkr::Device>& getDevice() const;
 
     const vk::PhysicalDevice& getPhysicalDevice() const;
 
@@ -190,11 +192,11 @@ public:
     void endOneTimeCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Queue& queue);
     void endOneTimeCommandBuffer(const vk::CommandBuffer& commandBuffer, const std::shared_ptr<vkr::Queue>& queue);
 
-    std::shared_ptr<RenderPass> renderPass();
+    const SharedResource<RenderPass>& renderPass();
 
-    std::shared_ptr<CommandPool> commandPool();
+    const SharedResource<CommandPool>& commandPool();
 
-    std::shared_ptr<DescriptorPool> descriptorPool();
+    const SharedResource<DescriptorPool>& descriptorPool();
 
     DeviceMemoryManager& memory();
 
@@ -252,9 +254,9 @@ private:
     QueueDetails m_queues;
     SurfaceDetails m_surface;
     SwapchainDetails m_swapchain;
-    std::shared_ptr<RenderPass> m_renderPass;
-    std::shared_ptr<CommandPool> m_commandPool;
-    std::shared_ptr<DescriptorPool> m_descriptorPool;
+    SharedResource<RenderPass> m_renderPass;
+    SharedResource<CommandPool> m_commandPool;
+    SharedResource<DescriptorPool> m_descriptorPool;
     DeviceMemoryManager* m_memory;
 
     std::unique_ptr<vkr::DebugUtilsMessengerEXT> m_debugMessenger;

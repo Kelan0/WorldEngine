@@ -27,7 +27,7 @@ struct SubpassConfiguration {
 };
 
 struct RenderPassConfiguration {
-    std::weak_ptr<vkr::Device> device;
+    WeakResource<vkr::Device> device;
     std::vector<vk::AttachmentDescription> renderPassAttachments;
     std::vector<SubpassConfiguration> subpassConfigurations;
     std::vector<vk::SubpassDependency> subpassDependencies;
@@ -57,12 +57,12 @@ struct RenderPassConfiguration {
 class RenderPass {
     NO_COPY(RenderPass)
 private:
-    RenderPass(std::weak_ptr<vkr::Device> device, vk::RenderPass renderPass, const RenderPassConfiguration& config);
+    RenderPass(const WeakResource<vkr::Device>& device, vk::RenderPass renderPass, const RenderPassConfiguration& config, const std::string& name);
 
 public:
     ~RenderPass();
 
-    static RenderPass* create(const RenderPassConfiguration& renderPassConfiguration, const char* name);
+    static RenderPass* create(const RenderPassConfiguration& renderPassConfiguration, const std::string& name);
 
     void begin(const vk::CommandBuffer& commandBuffer, const vk::Framebuffer& framebuffer, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height, const vk::SubpassContents& subpassContents) const;
     void begin(const vk::CommandBuffer& commandBuffer, const Framebuffer* framebuffer, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height, const vk::SubpassContents& subpassContents) const;
@@ -89,7 +89,7 @@ public:
     void setClearStencil(const uint32_t attachment, const uint32_t& stencil);
 
 private:
-    std::shared_ptr<vkr::Device> m_device;
+    SharedResource<vkr::Device> m_device;
     vk::RenderPass m_renderPass;
     RenderPassConfiguration m_config;
 };

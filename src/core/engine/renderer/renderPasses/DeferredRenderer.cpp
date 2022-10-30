@@ -61,10 +61,10 @@ DeferredRenderer::~DeferredRenderer() {
 }
 
 bool DeferredRenderer::init() {
-    m_geometryGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice()));
-    m_lightingGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice()));
+    m_geometryGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice(), "DeferredRenderer-GeometryGraphicsPipeline"));
+    m_lightingGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice(), "DeferredRenderer-LightingGraphicsPipeline"));
 
-    std::shared_ptr<DescriptorPool> descriptorPool = Engine::graphics()->descriptorPool();
+    const SharedResource<DescriptorPool>& descriptorPool = Engine::graphics()->descriptorPool();
 
     m_globalDescriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
             .addUniformBuffer(0, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
@@ -626,7 +626,7 @@ bool DeferredRenderer::createRenderPass() {
     renderPassConfig.setClearStencil(Attachment_Depth, 0);
     renderPassConfig.setClearColour(Attachment_LightingRGB, glm::vec4(0.0F, 0.0F, 1.0F, 0.0F));
 
-    m_renderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig, "DeferredRenderer-GBufferRenderPass"));
+    m_renderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "DeferredRenderer-GBufferRenderPass"), "DeferredRenderer-GBufferRenderPass");
     return (bool)m_renderPass;
 }
 

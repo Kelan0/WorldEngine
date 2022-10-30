@@ -261,7 +261,7 @@ add_executable(${PROJECT_NAME}
         src/core/engine/ui/PerformanceGraphUI.cpp
         src/core/engine/ui/PerformanceGraphUI.h
         src/core/engine/ui/UI.cpp
-        src/core/engine/ui/UI.h src/core/engine/renderer/renderPasses/PostProcessRenderer.cpp src/core/engine/renderer/renderPasses/PostProcessRenderer.h src/core/engine/renderer/renderPasses/ReprojectionRenderer.cpp src/core/engine/renderer/renderPasses/ReprojectionRenderer.h src/core/engine/event/GraphicsEvents.cpp src/core/engine/event/GraphicsEvents.h src/core/engine/event/ApplicationEvents.cpp src/core/engine/event/ApplicationEvents.h)
+        src/core/engine/ui/UI.h src/core/engine/renderer/renderPasses/PostProcessRenderer.cpp src/core/engine/renderer/renderPasses/PostProcessRenderer.h src/core/engine/renderer/renderPasses/ReprojectionRenderer.cpp src/core/engine/renderer/renderPasses/ReprojectionRenderer.h src/core/engine/event/GraphicsEvents.cpp src/core/engine/event/GraphicsEvents.h src/core/engine/event/ApplicationEvents.cpp src/core/engine/event/ApplicationEvents.h src/core/graphics/GraphicsResource.cpp src/core/graphics/GraphicsResource.h)
 
 target_link_libraries(${PROJECT_NAME}
         ${Vulkan_LIBRARIES}

@@ -45,9 +45,6 @@ GraphicsManager::GraphicsManager():
 GraphicsManager::~GraphicsManager() {
     printf("Uninitializing graphics engine\n");
 
-    ShutdownGraphicsEvent event{};
-    Engine::eventDispatcher()->trigger(&event);
-
     //DescriptorSetLayout::clearCache();
     //Buffer::resetStagingBuffer();
 
@@ -56,6 +53,10 @@ GraphicsManager::~GraphicsManager() {
     m_swapchain.commandBuffers.clear();
     m_swapchain.framebuffers.clear();
     m_swapchain.imageViews.clear();
+
+    if (m_renderPass.use_count() > 1)
+        printf("Destroyed GraphicsManager but RenderPass has %llu external references\n", (uint64_t)m_renderPass.use_count() - 1);
+    m_renderPass.reset();
 
     if (m_descriptorPool.use_count() > 1)
         printf("Destroyed GraphicsManager but DescriptorPool has %llu external references\n", (uint64_t)m_descriptorPool.use_count() - 1);
@@ -162,12 +163,12 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
     commandPoolConfig.queueFamilyIndex = m_queues.queueFamilies.graphicsQueueFamilyIndex.value();
     commandPoolConfig.resetCommandBuffer = true;
     commandPoolConfig.transient = false;
-    m_commandPool = std::shared_ptr<CommandPool>(CommandPool::create(commandPoolConfig, "GraphicsManager-DefaultCommandPool"));
+    m_commandPool = SharedResource<CommandPool>(CommandPool::create(commandPoolConfig, "GraphicsManager-DefaultCommandPool"), "GraphicsManager-DefaultCommandPool");
 
     DescriptorPoolConfiguration descriptorPoolConfig{};
     descriptorPoolConfig.device = m_device.device;
     //descriptorPoolConfig.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
-    m_descriptorPool = std::shared_ptr<DescriptorPool>(DescriptorPool::create(descriptorPoolConfig, "GraphicsManager-DefaultDescriptorPool"));
+    m_descriptorPool = SharedResource<DescriptorPool>(DescriptorPool::create(descriptorPoolConfig, "GraphicsManager-DefaultDescriptorPool"), "GraphicsManager-DefaultDescriptorPool");
 
     m_commandPool->allocateCommandBuffer("transfer_buffer", { vk::CommandBufferLevel::ePrimary });
 
@@ -595,7 +596,7 @@ bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enable
     createInfo.setPEnabledLayerNames(enabledLayers);
     createInfo.setPEnabledExtensionNames(enabledExtensions);
     createInfo.setPEnabledFeatures(enabledFeatures);
-    m_device.device = std::make_shared<vkr::Device>(*m_device.physicalDevice, createInfo);
+    m_device.device = SharedResource<vkr::Device>(new vkr::Device(*m_device.physicalDevice, createInfo), "GraphicsManager-Device");
 
     for (auto& entry : queueIndexMap) {
         uint32_t queueFamilyIndex = entry.first;
@@ -837,8 +838,13 @@ bool GraphicsManager::createRenderPass() {
     renderPassConfig.addSubpass(subpassConfiguration);
     renderPassConfig.setSubpassDependencies(subpassDependencies);
 
-    m_renderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig, "PresentRenderPass"));
+    m_renderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "GraphicsManager-PresentRenderPass"), "GraphicsManager-PresentRenderPass");
     return m_renderPass != nullptr;
+}
+
+void GraphicsManager::shutdownGraphics() {
+    ShutdownGraphicsEvent event{};
+    Engine::eventDispatcher()->trigger(&event);
 }
 
 bool GraphicsManager::beginFrame() {
@@ -1019,7 +1025,7 @@ const vk::Instance& GraphicsManager::getInstance() const {
     return **m_instance;
 }
 
-const std::shared_ptr<vkr::Device>& GraphicsManager::getDevice() const {
+const SharedResource<vkr::Device>& GraphicsManager::getDevice() const {
     return m_device.device;
 }
 
@@ -1174,15 +1180,15 @@ GraphicsResource GraphicsManager::nextResourceId() {
     return ++s_nextResourceID;
 }
 
-std::shared_ptr<RenderPass> GraphicsManager::renderPass() {
+const SharedResource<RenderPass>& GraphicsManager::renderPass() {
     return m_renderPass;
 }
 
-std::shared_ptr<CommandPool> GraphicsManager::commandPool() {
+const SharedResource<CommandPool>& GraphicsManager::commandPool() {
     return m_commandPool;
 }
 
-std::shared_ptr<DescriptorPool> GraphicsManager::descriptorPool() {
+const SharedResource<DescriptorPool>& GraphicsManager::descriptorPool() {
     return m_descriptorPool;
 }
 

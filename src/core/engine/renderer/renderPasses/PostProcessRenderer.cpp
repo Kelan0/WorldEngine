@@ -55,11 +55,11 @@ PostProcessRenderer::~PostProcessRenderer() {
 }
 
 bool PostProcessRenderer::init() {
-    m_postProcessGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice()));
-    m_downsampleGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice()));
-    m_upsampleGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice()));
+    m_postProcessGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice(), "PostProcessRenderer-PostProcessGraphicsPipeline"));
+    m_downsampleGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice(), "PostProcessRenderer-DownsampleGraphicsPipeline"));
+    m_upsampleGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice(), "PostProcessRenderer-UpsampleGraphicsPipeline"));
 
-    std::shared_ptr<DescriptorPool> descriptorPool = Engine::graphics()->descriptorPool();
+    const SharedResource<DescriptorPool>& descriptorPool = Engine::graphics()->descriptorPool();
 
     m_postProcessDescriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
             .addUniformBuffer(POSTPROCESS_UNIFORM_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment)
@@ -504,6 +504,6 @@ bool PostProcessRenderer::createBloomBlurRenderPass() {
     renderPassConfig.setSubpassDependencies(dependencies);
 //    renderPassConfig.setClearColour(0, glm::vec4(0.0F, 0.0F, 0.0F, 1.0F));
 
-    m_bloomBlurRenderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig, "PostProcessRenderer-BloomBlurRenderPass"));
+    m_bloomBlurRenderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "PostProcessRenderer-BloomBlurRenderPass"), "PostProcessRenderer-BloomBlurRenderPass");
     return (bool)m_bloomBlurRenderPass;
 }

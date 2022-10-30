@@ -11,10 +11,11 @@
 DescriptorSetLayout::Cache DescriptorSetLayout::s_descriptorSetLayoutCache;
 
 
-DescriptorSetLayout::DescriptorSetLayout(const std::weak_ptr<vkr::Device>& device, const vk::DescriptorSetLayout& descriptorSetLayout, Key key):
-        m_device(device),
+DescriptorSetLayout::DescriptorSetLayout(const WeakResource<vkr::Device>& device, const vk::DescriptorSetLayout& descriptorSetLayout, Key key, const std::string& name):
+        m_device(device, name),
         m_descriptorSetLayout(descriptorSetLayout),
         m_key(std::move(key)),
+        m_name(name),
         m_resourceId(GraphicsManager::nextResourceId()) {
     //printf("Create DescriptorSetLayout\n");
 }
@@ -24,7 +25,7 @@ DescriptorSetLayout::~DescriptorSetLayout() {
     (**m_device).destroyDescriptorSetLayout(m_descriptorSetLayout);
 }
 
-std::shared_ptr<DescriptorSetLayout> DescriptorSetLayout::get(const std::weak_ptr<vkr::Device>& device, const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, const char* name) {
+SharedResource<DescriptorSetLayout> DescriptorSetLayout::get(const WeakResource<vkr::Device>& device, const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, const std::string& name) {
     Key key(descriptorSetLayoutCreateInfo);
 
 #if _DEBUG
@@ -43,7 +44,7 @@ std::shared_ptr<DescriptorSetLayout> DescriptorSetLayout::get(const std::weak_pt
     auto it = s_descriptorSetLayoutCache.find(key);
     if (it == s_descriptorSetLayoutCache.end() || it->second.expired()) {
         vk::DescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-        const vk::Device& dvc = **device.lock();
+        const vk::Device& dvc = **device.lock(name);
         vk::Result result = dvc.createDescriptorSetLayout(&descriptorSetLayoutCreateInfo, nullptr, &descriptorSetLayout);
         if (result != vk::Result::eSuccess) {
             printf("Failed to create descriptor set layout: %s\n", vk::to_string(result).c_str());
@@ -51,12 +52,12 @@ std::shared_ptr<DescriptorSetLayout> DescriptorSetLayout::get(const std::weak_pt
         }
         Engine::graphics()->setObjectName(dvc, (uint64_t)(VkDescriptorSetLayout)descriptorSetLayout, vk::ObjectType::eDescriptorSetLayout, name);
 
-        std::shared_ptr<DescriptorSetLayout> retDescriptorSetLayout(new DescriptorSetLayout(device, descriptorSetLayout, key));
-        s_descriptorSetLayoutCache.insert(std::make_pair(key, std::weak_ptr<DescriptorSetLayout>(retDescriptorSetLayout)));
+        SharedResource<DescriptorSetLayout> retDescriptorSetLayout(new DescriptorSetLayout(device, descriptorSetLayout, key, name), name);
+        s_descriptorSetLayoutCache.insert(std::make_pair(key, WeakResource<DescriptorSetLayout>(retDescriptorSetLayout)));
         return retDescriptorSetLayout;
 
     } else {
-        return std::shared_ptr<DescriptorSetLayout>(it->second);
+        return SharedResource<DescriptorSetLayout>(it->second, name);
     }
 }
 
@@ -79,17 +80,17 @@ void DescriptorSetLayout::clearCache() {
     s_descriptorSetLayoutCache.clear();
 }
 
-DescriptorSet* DescriptorSetLayout::createDescriptorSet(const std::shared_ptr<DescriptorPool>& descriptorPool, const char* name) {
+DescriptorSet* DescriptorSetLayout::createDescriptorSet(const SharedResource<DescriptorPool>& descriptorPool, const std::string& name) {
     DescriptorSet* descriptorSet = nullptr;
     if (!createDescriptorSets(descriptorPool, 1, &descriptorSet, name))
         return nullptr;
     return descriptorSet;
 }
 
-bool DescriptorSetLayout::createDescriptorSets(const std::shared_ptr<DescriptorPool>& descriptorPool, const uint32_t& count, DescriptorSet** outDescriptorSets, const char* name) {
+bool DescriptorSetLayout::createDescriptorSets(const SharedResource<DescriptorPool>& descriptorPool, const uint32_t& count, DescriptorSet** outDescriptorSets, const std::string& name) {
     assert(descriptorPool->getDevice() == m_device);
 
-    std::shared_ptr<DescriptorSetLayout> selfPointer = DescriptorSetLayout::get(m_device, m_key, nullptr); // shared_ptr from this
+    SharedResource<DescriptorSetLayout> selfPointer = DescriptorSetLayout::get(m_device, m_key, m_name); // shared_ptr from this
     assert(selfPointer.get() == this); // Sanity check
 
     for (uint32_t i = 0; i < count; ++i) {
@@ -106,7 +107,7 @@ bool DescriptorSetLayout::createDescriptorSets(const std::shared_ptr<DescriptorP
     return true;
 }
 
-bool DescriptorSetLayout::createDescriptorSets(const std::shared_ptr<DescriptorPool>& descriptorPool, const uint32_t& count, std::shared_ptr<DescriptorSet>* outDescriptorSets, const char* name) {
+bool DescriptorSetLayout::createDescriptorSets(const SharedResource<DescriptorPool>& descriptorPool, const uint32_t& count, SharedResource<DescriptorSet>* outDescriptorSets, const std::string& name) {
     DescriptorSet** tempDescriptorSets = new DescriptorSet*[count];
 
     if (!createDescriptorSets(descriptorPool, count, tempDescriptorSets, name)) {
@@ -115,13 +116,13 @@ bool DescriptorSetLayout::createDescriptorSets(const std::shared_ptr<DescriptorP
     }
 
     for (uint32_t i = 0; i < count; ++i) {
-        outDescriptorSets[i] = std::shared_ptr<DescriptorSet>(tempDescriptorSets[i]);
+        outDescriptorSets[i] = SharedResource<DescriptorSet>(tempDescriptorSets[i], name);
     }
     delete[] tempDescriptorSets;
     return true;
 }
 
-const std::shared_ptr<vkr::Device>& DescriptorSetLayout::getDevice() const {
+const SharedResource<vkr::Device>& DescriptorSetLayout::getDevice() const {
     return m_device;
 }
 
@@ -179,8 +180,8 @@ const GraphicsResource& DescriptorSetLayout::getResourceId() const {
 
 
 
-DescriptorPool::DescriptorPool(const std::weak_ptr<vkr::Device>& device, vk::DescriptorPool descriptorPool, bool canFreeDescriptorSets):
-        m_device(device),
+DescriptorPool::DescriptorPool(const WeakResource<vkr::Device>& device, vk::DescriptorPool descriptorPool, bool canFreeDescriptorSets, const std::string& name):
+        m_device(device, name),
         m_descriptorPool(descriptorPool),
         m_canFreeDescriptorSets(canFreeDescriptorSets),
         m_resourceId(GraphicsManager::nextResourceId()) {
@@ -196,7 +197,7 @@ DescriptorPool::~DescriptorPool() {
     (**m_device).destroyDescriptorPool(m_descriptorPool);
 }
 
-DescriptorPool* DescriptorPool::create(const DescriptorPoolConfiguration& descriptorPoolConfiguration, const char* name) {
+DescriptorPool* DescriptorPool::create(const DescriptorPoolConfiguration& descriptorPoolConfiguration, const std::string& name) {
     std::vector<vk::DescriptorPoolSize> poolSizes;
 
     for (const auto& entry : descriptorPoolConfiguration.poolSizes) {
@@ -215,17 +216,17 @@ DescriptorPool* DescriptorPool::create(const DescriptorPoolConfiguration& descri
 
     bool canFreeDescriptorSets = (bool)(createInfo.flags & vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 
-    const vk::Device& device = **descriptorPoolConfiguration.device.lock();
+    const vk::Device& device = **descriptorPoolConfiguration.device.lock(name);
 
     vk::DescriptorPool descriptorPool = device.createDescriptorPool(createInfo);
 
     Engine::graphics()->setObjectName(device, (uint64_t)(VkDescriptorPool)descriptorPool, vk::ObjectType::eDescriptorPool, name);
 
-    return new DescriptorPool(descriptorPoolConfiguration.device, descriptorPool, canFreeDescriptorSets);
+    return new DescriptorPool(descriptorPoolConfiguration.device, descriptorPool, canFreeDescriptorSets, name);
 
 }
 
-const std::shared_ptr<vkr::Device>& DescriptorPool::getDevice() const {
+const SharedResource<vkr::Device>& DescriptorPool::getDevice() const {
     return m_device;
 }
 
@@ -258,10 +259,10 @@ const GraphicsResource& DescriptorPool::getResourceId() const {
 
 
 
-DescriptorSet::DescriptorSet(const std::weak_ptr<vkr::Device>& device, const std::weak_ptr<DescriptorPool>& pool, const std::weak_ptr<DescriptorSetLayout>& layout, const vk::DescriptorSet& descriptorSet):
-        m_device(device),
-        m_pool(pool),
-        m_layout(layout),
+DescriptorSet::DescriptorSet(const WeakResource<vkr::Device>& device, const WeakResource<DescriptorPool>& pool, const WeakResource<DescriptorSetLayout>& layout, const vk::DescriptorSet& descriptorSet, const std::string& name):
+        m_device(device, name),
+        m_pool(pool, name),
+        m_layout(layout, name),
         m_descriptorSet(descriptorSet),
         m_resourceId(GraphicsManager::nextResourceId()) {
     //printf("Create DescriptorSet\n");
@@ -282,19 +283,19 @@ DescriptorSet::~DescriptorSet() {
     }
 }
 
-DescriptorSet* DescriptorSet::create(const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, const std::weak_ptr<DescriptorPool>& descriptorPool, const char* name, const char* layoutName) {
+DescriptorSet* DescriptorSet::create(const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, const WeakResource<DescriptorPool>& descriptorPool, const std::string& name, const std::string& layoutName) {
     assert(!descriptorPool.expired());
-    std::shared_ptr<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayout::get(descriptorPool.lock()->getDevice(), descriptorSetLayoutCreateInfo, layoutName);
+    const SharedResource<DescriptorSetLayout>& descriptorSetLayout = DescriptorSetLayout::get(descriptorPool.lock(name)->getDevice(), descriptorSetLayoutCreateInfo, layoutName);
     return DescriptorSet::create(descriptorSetLayout, descriptorPool, name);
 }
 
-DescriptorSet* DescriptorSet::create(const std::weak_ptr<DescriptorSetLayout>& descriptorSetLayout, const std::weak_ptr<DescriptorPool>& descriptorPool, const char* name) {
+DescriptorSet* DescriptorSet::create(const WeakResource<DescriptorSetLayout>& descriptorSetLayout, const WeakResource<DescriptorPool>& descriptorPool, const std::string& name) {
     assert(!descriptorSetLayout.expired() && !descriptorPool.expired());
-    std::shared_ptr<DescriptorSetLayout> descriptorSetLayoutPtr = descriptorSetLayout.lock();
-    std::shared_ptr<DescriptorPool> descriptorPoolPtr = descriptorPool.lock();
+    SharedResource<DescriptorSetLayout> descriptorSetLayoutPtr = descriptorSetLayout.lock(name);
+    SharedResource<DescriptorPool> descriptorPoolPtr = descriptorPool.lock(name);
     assert(descriptorSetLayoutPtr->getDevice() == descriptorPoolPtr->getDevice());
 
-    const std::shared_ptr<vkr::Device>& device = descriptorPoolPtr->getDevice();
+    const SharedResource<vkr::Device>& device = descriptorPoolPtr->getDevice();
 
     vk::DescriptorSet descriptorSet = VK_NULL_HANDLE;
     bool allocated = descriptorPoolPtr->allocate(descriptorSetLayoutPtr->getDescriptorSetLayout(), descriptorSet);
@@ -303,22 +304,22 @@ DescriptorSet* DescriptorSet::create(const std::weak_ptr<DescriptorSetLayout>& d
 
     assert(allocated && descriptorSet);
 
-    return new DescriptorSet(device, descriptorPool, descriptorSetLayout, descriptorSet);
+    return new DescriptorSet(device, descriptorPool, descriptorSetLayout, descriptorSet, name);
 }
 
 const vk::DescriptorSet& DescriptorSet::getDescriptorSet() const {
     return m_descriptorSet;
 }
 
-const std::shared_ptr<vkr::Device>& DescriptorSet::getDevice() const {
+const SharedResource<vkr::Device>& DescriptorSet::getDevice() const {
     return m_device;
 }
 
-const std::shared_ptr<DescriptorPool>& DescriptorSet::getPool() const {
+const SharedResource<DescriptorPool>& DescriptorSet::getPool() const {
     return m_pool;
 }
 
-const std::shared_ptr<DescriptorSetLayout>& DescriptorSet::getLayout() const {
+const SharedResource<DescriptorSetLayout>& DescriptorSet::getLayout() const {
     return m_layout;
 }
 
@@ -332,12 +333,12 @@ DescriptorSetWriter::DescriptorSetWriter(DescriptorSet* descriptorSet) :
         m_descriptorSet(descriptorSet) {
 }
 
-DescriptorSetWriter::DescriptorSetWriter(const std::shared_ptr<DescriptorSet>& descriptorSet) :
+DescriptorSetWriter::DescriptorSetWriter(const SharedResource<DescriptorSet>& descriptorSet) :
         m_descriptorSet(descriptorSet.get()) {
 }
 
-DescriptorSetWriter::DescriptorSetWriter(const std::weak_ptr<DescriptorSet>& descriptorSet):
-        m_descriptorSet(descriptorSet.lock().get()) {
+DescriptorSetWriter::DescriptorSetWriter(const WeakResource<DescriptorSet>& descriptorSet):
+        m_descriptorSet(descriptorSet.lock("DescriptorSetWriter").get()) {
 }
 
 DescriptorSetWriter::~DescriptorSetWriter() = default;
@@ -637,7 +638,7 @@ size_t DescriptorSetLayout::KeyHasher::operator()(const DescriptorSetLayout::Key
     return s;
 }
 
-DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(const std::weak_ptr<vkr::Device>& device, const vk::DescriptorSetLayoutCreateFlags& flags):
+DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(const WeakResource<vkr::Device>& device, const vk::DescriptorSetLayoutCreateFlags& flags):
         m_device(device),
         m_flags(flags) {
 }
@@ -802,7 +803,7 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageImage(const ui
     return *this;
 }
 
-std::shared_ptr<DescriptorSetLayout> DescriptorSetLayoutBuilder::build(const char* name) {
+SharedResource<DescriptorSetLayout> DescriptorSetLayoutBuilder::build(const std::string& name) {
     assert(!m_device.expired());
 
     std::vector<vk::DescriptorSetLayoutBinding> bindings;
@@ -820,7 +821,7 @@ std::shared_ptr<DescriptorSetLayout> DescriptorSetLayoutBuilder::build(const cha
     return DescriptorSetLayout::get(m_device, createInfo, name);
 }
 
-DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::reset(vk::DescriptorSetLayoutCreateFlags flags) {
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::reset(const vk::DescriptorSetLayoutCreateFlags& flags) {
     m_flags = flags;
     m_bindings.clear();
     return *this;

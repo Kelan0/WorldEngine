@@ -19,8 +19,8 @@ void BufferViewConfiguration::setOffsetRange(const vk::DeviceSize& offset, const
     this->range = range;
 }
 
-BufferView::BufferView(std::weak_ptr<vkr::Device> device, const vk::BufferView& bufferView, const vk::Format& format, const vk::DeviceSize& offset, const vk::DeviceSize& range):
-    m_device(device),
+BufferView::BufferView(const WeakResource<vkr::Device>& device, const vk::BufferView& bufferView, const vk::Format& format, const vk::DeviceSize& offset, const vk::DeviceSize& range, const std::string& name):
+    m_device(device, name),
     m_bufferView(bufferView),
     m_format(format),
     m_offset(offset),
@@ -31,14 +31,14 @@ BufferView::~BufferView() {
     (**m_device).destroyBufferView(m_bufferView);
 }
 
-BufferView* BufferView::create(const BufferViewConfiguration& bufferViewConfiguration, const char* name) {
+BufferView* BufferView::create(const BufferViewConfiguration& bufferViewConfiguration, const std::string& name) {
     vk::BufferViewCreateInfo bufferViewCreateInfo;
     bufferViewCreateInfo.buffer = bufferViewConfiguration.buffer;
     bufferViewCreateInfo.format = bufferViewConfiguration.format;
     bufferViewCreateInfo.offset = bufferViewConfiguration.offset;
     bufferViewCreateInfo.range = bufferViewConfiguration.range;
 
-    const vk::Device& device = **bufferViewConfiguration.device.lock();
+    const vk::Device& device = **bufferViewConfiguration.device.lock(name);
 
     vk::BufferView bufferView = VK_NULL_HANDLE;
     vk::Result result = device.createBufferView(&bufferViewCreateInfo, nullptr, &bufferView);
@@ -49,10 +49,10 @@ BufferView* BufferView::create(const BufferViewConfiguration& bufferViewConfigur
 
     Engine::graphics()->setObjectName(device, (uint64_t)(VkBufferView)bufferView, vk::ObjectType::eBufferView, name);
 
-    return new BufferView(bufferViewConfiguration.device, bufferView, bufferViewConfiguration.format, bufferViewConfiguration.offset, bufferViewConfiguration.range);
+    return new BufferView(bufferViewConfiguration.device, bufferView, bufferViewConfiguration.format, bufferViewConfiguration.offset, bufferViewConfiguration.range, name);
 }
 
-const std::shared_ptr<vkr::Device>& BufferView::getDevice() const {
+const SharedResource<vkr::Device>& BufferView::getDevice() const {
     return m_device;
 }
 

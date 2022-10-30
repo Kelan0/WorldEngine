@@ -9,7 +9,7 @@ class DeviceMemoryBlock;
 
 
 struct Image2DConfiguration {
-    std::weak_ptr<vkr::Device> device;
+    WeakResource<vkr::Device> device;
     const ImageData* imageData = nullptr;
     std::string filePath = "";
     uint32_t width = 0;
@@ -35,12 +35,12 @@ struct Image2DConfiguration {
 class Image2D {
     NO_COPY(Image2D);
 private:
-    Image2D(const std::weak_ptr<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& width, const uint32_t& height, const uint32_t& mipLevelCount, const vk::Format& format);
+    Image2D(const WeakResource<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& width, const uint32_t& height, const uint32_t& mipLevelCount, const vk::Format& format, const std::string& name);
 
 public:
     ~Image2D();
 
-    static Image2D* create(const Image2DConfiguration& image2DConfiguration, const char* name);
+    static Image2D* create(const Image2DConfiguration& image2DConfiguration, const std::string& name);
 
     static bool upload(Image2D* dstImage, void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
 
@@ -50,7 +50,7 @@ public:
 
     bool generateMipmap(const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState);
 
-    std::shared_ptr<vkr::Device> getDevice() const;
+    const SharedResource<vkr::Device>& getDevice() const;
 
     const vk::Image& getImage() const;
 
@@ -70,7 +70,7 @@ private:
     static bool validateImageRegion(const Image2D* image, ImageRegion& imageRegion);
 
 private:
-    std::shared_ptr<vkr::Device> m_device;
+    SharedResource<vkr::Device> m_device;
     vk::Image m_image;
     DeviceMemoryBlock* m_memory;
     uint32_t m_width;

@@ -126,8 +126,8 @@ void RenderPassConfiguration::setClearStencil(const uint32_t attachment, const u
 
 
 
-RenderPass::RenderPass(std::weak_ptr<vkr::Device> device, vk::RenderPass renderPass, const RenderPassConfiguration& config):
-    m_device(device),
+RenderPass::RenderPass(const WeakResource<vkr::Device>& device, vk::RenderPass renderPass, const RenderPassConfiguration& config, const std::string& name):
+    m_device(device, name),
     m_renderPass(renderPass),
     m_config(config) {
 }
@@ -136,9 +136,9 @@ RenderPass::~RenderPass() {
     (**m_device).destroyRenderPass(m_renderPass);
 }
 
-RenderPass* RenderPass::create(const RenderPassConfiguration& renderPassConfiguration, const char* name) {
+RenderPass* RenderPass::create(const RenderPassConfiguration& renderPassConfiguration, const std::string& name) {
 
-    const vk::Device& device = **renderPassConfiguration.device.lock();
+    const vk::Device& device = **renderPassConfiguration.device.lock(name);
 
     std::vector<vk::AttachmentReference> allSubpassAttachmentRefs;
     std::vector<vk::SubpassDescription> subpasses;
@@ -200,7 +200,7 @@ RenderPass* RenderPass::create(const RenderPassConfiguration& renderPassConfigur
 
     Engine::graphics()->setObjectName(device, (uint64_t)(VkRenderPass)renderPass, vk::ObjectType::eRenderPass, name);
 
-    return new RenderPass(renderPassConfiguration.device, renderPass, renderPassConfiguration);
+    return new RenderPass(renderPassConfiguration.device, renderPass, renderPassConfiguration, name);
 }
 
 void RenderPass::begin(const vk::CommandBuffer& commandBuffer, const vk::Framebuffer& framebuffer, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height, const vk::SubpassContents& subpassContents) const {

@@ -7,7 +7,7 @@ class ImageView;
 class RenderPass;
 
 struct FramebufferConfiguration {
-    std::weak_ptr<vkr::Device> device;
+    WeakResource<vkr::Device> device;
     vk::RenderPass renderPass = VK_NULL_HANDLE;
     std::vector<vk::ImageView> attachments;
     uint32_t width;
@@ -35,12 +35,12 @@ struct FramebufferConfiguration {
 
 class Framebuffer {
 private:
-    Framebuffer(std::weak_ptr<vkr::Device> device, const vk::Framebuffer& framebuffer, const glm::uvec2& resolution);
+    Framebuffer(const WeakResource<vkr::Device>& device, const vk::Framebuffer& framebuffer, const glm::uvec2& resolution, const std::string& name);
 
 public:
     ~Framebuffer();
 
-    static Framebuffer* create(const FramebufferConfiguration& framebufferConfiguration, const char* name);
+    static Framebuffer* create(const FramebufferConfiguration& framebufferConfiguration, const std::string& name);
 
     const vk::Framebuffer& getFramebuffer() const;
 
@@ -51,7 +51,7 @@ public:
     const uint32_t& getHeight() const;
 
 private:
-    std::shared_ptr<vkr::Device> m_device;
+    SharedResource<vkr::Device> m_device;
     vk::Framebuffer m_framebuffer;
     glm::uvec2 m_resolution;
 };

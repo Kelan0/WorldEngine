@@ -78,6 +78,7 @@ bool Application::initInternal() {
 }
 
 void Application::cleanupInternal() {
+    Engine::instance()->cleanup();
     cleanup();
 }
 
@@ -308,7 +309,7 @@ void Application::start() {
 
     Engine::graphics()->getDevice()->waitIdle();
 
-    cleanup();
+    cleanupInternal();
 }
 
 Application* Application::instance() {

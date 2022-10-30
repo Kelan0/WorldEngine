@@ -78,7 +78,7 @@ SceneRenderer::~SceneRenderer() {
 bool SceneRenderer::init() {
     initMissingTextureMaterial();
 
-    std::shared_ptr<DescriptorPool> descriptorPool = Engine::graphics()->descriptorPool();
+    const SharedResource<DescriptorPool>& descriptorPool = Engine::graphics()->descriptorPool();
 
     DescriptorSetLayoutBuilder builder(descriptorPool->getDevice());
 
@@ -159,11 +159,11 @@ Scene* SceneRenderer::getScene() const {
     return m_scene;
 }
 
-const std::shared_ptr<DescriptorSetLayout>& SceneRenderer::getObjectDescriptorSetLayout() const {
+const SharedResource<DescriptorSetLayout>& SceneRenderer::getObjectDescriptorSetLayout() const {
     return m_objectDescriptorSetLayout;
 }
 
-const std::shared_ptr<DescriptorSetLayout>& SceneRenderer::getMaterialDescriptorSetLayout() const {
+const SharedResource<DescriptorSetLayout>& SceneRenderer::getMaterialDescriptorSetLayout() const {
     return m_materialDescriptorSetLayout;
 }
 

@@ -49,9 +49,9 @@ ReprojectionRenderer::~ReprojectionRenderer() {
 }
 
 bool ReprojectionRenderer::init() {
-    m_reprojectionGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice()));
+    m_reprojectionGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice(), "ReprojectionRenderer-ReprojectionGraphicsPipeline"));
 
-    std::shared_ptr<DescriptorPool> descriptorPool = Engine::graphics()->descriptorPool();
+    const SharedResource<DescriptorPool>& descriptorPool = Engine::graphics()->descriptorPool();
 
     m_reprojectionDescriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
             .addUniformBuffer(UNIFORM_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment)
@@ -349,7 +349,7 @@ bool ReprojectionRenderer::createRenderPass() {
     renderPassConfig.setSubpassDependencies(dependencies);
     renderPassConfig.setClearColour(0, glm::vec4(0.0F, 0.0F, 0.0F, 0.0F));
 
-    m_renderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig, "ReprojectionRenderer-RenderPass"));
+    m_renderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "ReprojectionRenderer-RenderPass"), "ReprojectionRenderer-RenderPass");
     return (bool)m_renderPass;
 }
 

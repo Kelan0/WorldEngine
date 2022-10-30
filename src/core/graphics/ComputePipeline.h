@@ -10,7 +10,7 @@ class DescriptorSetLayout;
 
 
 struct ComputePipelineConfiguration {
-    std::weak_ptr<vkr::Device> device;
+    WeakResource<vkr::Device> device;
     std::string computeShader;
     std::string computeShaderEntryPoint;
     std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
@@ -33,23 +33,23 @@ class ComputePipeline {
     NO_COPY(ComputePipeline);
 
 private:
-    explicit ComputePipeline(const std::weak_ptr<vkr::Device>& device);
+    explicit ComputePipeline(const WeakResource<vkr::Device>& device, const std::string& name);
 
-    ComputePipeline(const std::weak_ptr<vkr::Device>& device,
+    ComputePipeline(const WeakResource<vkr::Device>& device,
                      vk::Pipeline& pipeline,
                      vk::PipelineLayout& pipelineLayout,
-                     ComputePipelineConfiguration  config);
+                     ComputePipelineConfiguration config, const std::string& name);
 
 public:
     ~ComputePipeline();
 
-    static ComputePipeline* create(const std::weak_ptr<vkr::Device>& device);
+    static ComputePipeline* create(const WeakResource<vkr::Device>& device, const std::string& name);
 
-    static ComputePipeline* create(const ComputePipelineConfiguration& computePipelineConfiguration, const char* name);
+    static ComputePipeline* create(const ComputePipelineConfiguration& computePipelineConfiguration, const std::string& name);
 
-    static ComputePipeline* getComputePipeline(const ComputePipelineConfiguration& computePipelineConfiguration, const char* name);
+    static ComputePipeline* getComputePipeline(const ComputePipelineConfiguration& computePipelineConfiguration, const std::string& name);
 
-    bool recreate(const ComputePipelineConfiguration& computePipelineConfiguration, const char* name);
+    bool recreate(const ComputePipelineConfiguration& computePipelineConfiguration, const std::string& name);
 
     void bind(const vk::CommandBuffer& commandBuffer) const;
 
@@ -69,7 +69,7 @@ private:
     void cleanup();
 
 private:
-    std::shared_ptr<vkr::Device> m_device;
+    SharedResource<vkr::Device> m_device;
     vk::Pipeline m_pipeline;
     vk::PipelineLayout m_pipelineLayout;
     ComputePipelineConfiguration m_config;

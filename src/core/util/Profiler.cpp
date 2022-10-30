@@ -572,7 +572,7 @@ bool Profiler::getNextQueryPool(GPUQueryPool** queryPool) {
     }
 
     if (selectedQueryPool == nullptr) {
-        std::shared_ptr<vkr::Device> device = Engine::graphics()->getDevice();
+        const SharedResource<vkr::Device>& device = Engine::graphics()->getDevice();
 
         vk::QueryPool queryPoolHandle = VK_NULL_HANDLE;
         if (!createGpuTimestampQueryPool(**device, ctx.minQueryPoolSize, &queryPoolHandle)) {
@@ -613,7 +613,7 @@ bool Profiler::createGpuTimestampQueryPool(const vk::Device& device, const uint3
 }
 
 void Profiler::destroyQueryPool(GPUQueryPool* queryPool) {
-    const vk::Device& device = **queryPool->device.lock();
+    const vk::Device& device = **queryPool->device.get();
     device.destroyQueryPool(queryPool->pool, nullptr);
     delete queryPool;
 }

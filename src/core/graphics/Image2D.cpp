@@ -8,9 +8,9 @@
 
 
 
-void Image2DConfiguration::setSize(const uint32_t& width, const uint32_t& height) {
-    this->width = width;
-    this->height = height;
+void Image2DConfiguration::setSize(const uint32_t& p_width, const uint32_t& p_height) {
+    width = p_width;
+    height = p_height;
 }
 
 void Image2DConfiguration::setSize(const glm::uvec2& size) {
@@ -21,18 +21,18 @@ void Image2DConfiguration::setSize(const vk::Extent2D& size) {
     setSize(size.width, size.height);
 }
 
-void Image2DConfiguration::setSource(const ImageData* imageData) {
-    this->imageData = imageData;
-    this->filePath = "";
+void Image2DConfiguration::setSource(const ImageData* p_imageData) {
+    imageData = p_imageData;
+    filePath = "";
 }
 
-void Image2DConfiguration::setSource(const std::string& filePath) {
-    this->imageData = nullptr;
-    this->filePath = filePath;
+void Image2DConfiguration::setSource(const std::string& p_filePath) {
+    imageData = nullptr;
+    filePath = p_filePath;
 }
 
-Image2D::Image2D(const std::weak_ptr<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& width, const uint32_t& height, const uint32_t& mipLevelCount, const vk::Format& format):
-        m_device(device),
+Image2D::Image2D(const WeakResource<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& width, const uint32_t& height, const uint32_t& mipLevelCount, const vk::Format& format, const std::string& name):
+        m_device(device, name),
         m_image(image),
         m_memory(memory),
         m_width(width),
@@ -49,8 +49,8 @@ Image2D::~Image2D() {
     vfree(m_memory);
 }
 
-Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration, const char* name) {
-    const vk::Device& device = **image2DConfiguration.device.lock();
+Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration, const std::string& name) {
+    const vk::Device& device = **image2DConfiguration.device.lock(name);
 
     vk::Result result;
 
@@ -138,7 +138,7 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration, const
 
     memory->bindImage(image);
 
-    Image2D* returnImage = new Image2D(image2DConfiguration.device, image, memory, width, height, mipLevels, imageCreateInfo.format);
+    Image2D* returnImage = new Image2D(image2DConfiguration.device, image, memory, width, height, mipLevels, imageCreateInfo.format, name);
 
     if (imageData != nullptr) {
         ImageRegion uploadRegion;
@@ -235,7 +235,7 @@ bool Image2D::generateMipmap(const vk::Filter& filter, const vk::ImageAspectFlag
     return Image2D::generateMipmap(this, filter, aspectMask, mipLevels, dstState);
 }
 
-std::shared_ptr<vkr::Device> Image2D::getDevice() const {
+const SharedResource<vkr::Device>& Image2D::getDevice() const {
     return m_device;
 }
 

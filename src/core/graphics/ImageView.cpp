@@ -28,8 +28,8 @@ void ImageViewConfiguration::setSwizzle(const vk::ComponentSwizzle& p_redSwizzle
     alphaSwizzle = p_alphaSwizzle;
 }
 
-ImageView::ImageView(const std::weak_ptr<vkr::Device>& device, const vk::ImageView& imageView, const vk::Image& image, const vk::ImageViewType& type):
-        m_device(device),
+ImageView::ImageView(const WeakResource<vkr::Device>& device, const vk::ImageView& imageView, const vk::Image& image, const vk::ImageViewType& type, const std::string& name):
+        m_device(device, name),
         m_imageView(imageView),
         m_image(image),
         m_type(type),
@@ -40,8 +40,8 @@ ImageView::~ImageView() {
     (**m_device).destroyImageView(m_imageView);
 }
 
-ImageView* ImageView::create(const ImageViewConfiguration& imageViewConfiguration, const char* name) {
-    const vk::Device& device = **imageViewConfiguration.device.lock();
+ImageView* ImageView::create(const ImageViewConfiguration& imageViewConfiguration, const std::string& name) {
+    const vk::Device& device = **imageViewConfiguration.device.lock(name);
 
     if (!imageViewConfiguration.image) {
         printf("Unable to create %s ImageView: Image is NULL\n", vk::to_string(imageViewConfiguration.imageViewType).c_str());
@@ -75,10 +75,10 @@ ImageView* ImageView::create(const ImageViewConfiguration& imageViewConfiguratio
 
     Engine::graphics()->setObjectName(device, (uint64_t)(VkImageView)imageView, vk::ObjectType::eImageView, name);
 
-    return new ImageView(imageViewConfiguration.device, imageView, imageViewConfiguration.image, imageViewConfiguration.imageViewType);
+    return new ImageView(imageViewConfiguration.device, imageView, imageViewConfiguration.image, imageViewConfiguration.imageViewType, name);
 }
 
-const std::shared_ptr<vkr::Device>& ImageView::getDevice() const {
+const SharedResource<vkr::Device>& ImageView::getDevice() const {
     return m_device;
 }
 

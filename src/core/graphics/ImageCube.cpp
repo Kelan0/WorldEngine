@@ -84,8 +84,8 @@ bool ImageCubeSource::isEquirectangular() const {
 
 
 
-ImageCube::ImageCube(const std::weak_ptr<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& size, const uint32_t& mipLevelCount, const vk::Format& format):
-        m_device(device),
+ImageCube::ImageCube(const WeakResource<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& size, const uint32_t& mipLevelCount, const vk::Format& format, const std::string& name):
+        m_device(device, name),
         m_image(image),
         m_memory(memory),
         m_size(size),
@@ -99,8 +99,8 @@ ImageCube::~ImageCube() {
     vfree(m_memory);
 }
 
-ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguration, const char* name) {
-    const vk::Device& device = **imageCubeConfiguration.device.lock();
+ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguration, const std::string& name) {
+    const vk::Device& device = **imageCubeConfiguration.device.lock(name);
 
     vk::Result result;
     uint32_t size;
@@ -232,7 +232,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
 
     memory->bindImage(image);
 
-    ImageCube* returnImage = new ImageCube(imageCubeConfiguration.device, image, memory, size, mipLevels, imageCreateInfo.format);
+    ImageCube* returnImage = new ImageCube(imageCubeConfiguration.device, image, memory, size, mipLevels, imageCreateInfo.format, name);
 
     if (suppliedEquirectangularData) {
         ImageTransitionState dstState = ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader);
@@ -522,7 +522,7 @@ bool ImageCube::generateMipmap(const vk::Filter& filter, const vk::ImageAspectFl
 }
 
 
-std::shared_ptr<vkr::Device> ImageCube::getDevice() const {
+const SharedResource<vkr::Device>& ImageCube::getDevice() const {
     return m_device;
 }
 
@@ -662,7 +662,7 @@ ComputePipeline* ImageCube::getEquirectangularComputePipeline() {
 DescriptorSet* ImageCube::getEquirectangularComputeDescriptorSet() {
 
     if (s_computeEquirectangularDescriptorSet == nullptr) {
-        std::shared_ptr<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
+        SharedResource<DescriptorSetLayout> descriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
                 .addUniformBuffer(0, vk::ShaderStageFlagBits::eCompute)
                 .addStorageTexelBuffer(1, vk::ShaderStageFlagBits::eCompute)
                 .addStorageTexelBuffer(2, vk::ShaderStageFlagBits::eCompute)

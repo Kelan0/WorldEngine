@@ -7,7 +7,7 @@ class Image2D;
 class ImageCube;
 
 struct ImageViewConfiguration {
-    std::weak_ptr<vkr::Device> device;
+    WeakResource<vkr::Device> device;
     vk::ImageViewType imageViewType = vk::ImageViewType::e2D;
     vk::Image image;
     vk::Format format;
@@ -33,14 +33,14 @@ struct ImageViewConfiguration {
 class ImageView {
     NO_COPY(ImageView)
 private:
-    ImageView(const std::weak_ptr<vkr::Device>& device, const vk::ImageView& imageView, const vk::Image& image, const vk::ImageViewType& type);
+    ImageView(const WeakResource<vkr::Device>& device, const vk::ImageView& imageView, const vk::Image& image, const vk::ImageViewType& type, const std::string& name);
 
 public:
     ~ImageView();
 
-    static ImageView* create(const ImageViewConfiguration& imageViewConfiguration, const char* name);
+    static ImageView* create(const ImageViewConfiguration& imageViewConfiguration, const std::string& name);
 
-    const std::shared_ptr<vkr::Device>& getDevice() const;
+    const SharedResource<vkr::Device>& getDevice() const;
 
     const vk::ImageView& getImageView() const;
 
@@ -51,7 +51,7 @@ public:
     const GraphicsResource& getResourceId() const;
 
 private:
-    std::shared_ptr<vkr::Device> m_device;
+    SharedResource<vkr::Device> m_device;
     vk::ImageView m_imageView;
     vk::Image m_image;
     vk::ImageViewType m_type;

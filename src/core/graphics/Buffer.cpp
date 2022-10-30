@@ -8,8 +8,8 @@
 FrameResource<Buffer> Buffer::s_stagingBuffer = nullptr;
 vk::DeviceSize Buffer::s_maxStagingBufferSize = 128 * 1024 * 1024; // 128 MiB
 
-Buffer::Buffer(const std::weak_ptr<vkr::Device>& device, const vk::Buffer& buffer, DeviceMemoryBlock* memory, const vk::DeviceSize& size, const vk::MemoryPropertyFlags& memoryProperties, const GraphicsResource& resourceId):
-        m_device(device),
+Buffer::Buffer(const WeakResource<vkr::Device>& device, const vk::Buffer& buffer, DeviceMemoryBlock* memory, const vk::DeviceSize& size, const vk::MemoryPropertyFlags& memoryProperties, const GraphicsResource& resourceId, const std::string& name):
+        m_device(device, name),
         m_buffer(buffer),
         m_memory(memory),
         m_size(size),
@@ -23,10 +23,10 @@ Buffer::~Buffer() {
     vfree(m_memory);
 }
 
-Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration, const char* name) {
+Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration, const std::string& name) {
     vk::BufferUsageFlags usage = bufferConfiguration.usage;
 
-    const vk::Device& device = **bufferConfiguration.device.lock();
+    const vk::Device& device = **bufferConfiguration.device.lock(name);
 
 #if _DEBUG
     if (bufferConfiguration.size <= 0) {
@@ -69,7 +69,7 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration, const cha
 
     memory->bindBuffer(buffer);
 
-    Buffer* returnBuffer = new Buffer(bufferConfiguration.device, buffer, memory, bufferConfiguration.size, bufferConfiguration.memoryProperties, GraphicsManager::nextResourceId());
+    Buffer* returnBuffer = new Buffer(bufferConfiguration.device, buffer, memory, bufferConfiguration.size, bufferConfiguration.memoryProperties, GraphicsManager::nextResourceId(), name);
 
     if (bufferConfiguration.data != nullptr) {
         if (!returnBuffer->upload(0, bufferConfiguration.size, bufferConfiguration.data)) {
@@ -221,7 +221,7 @@ bool Buffer::upload(const vk::DeviceSize& offset, const vk::DeviceSize& size, co
     return Buffer::upload(this, offset, size, data, srcStride, dstStride, elementSize);
 }
 
-std::shared_ptr<vkr::Device> Buffer::getDevice() const {
+const SharedResource<vkr::Device>& Buffer::getDevice() const {
     return m_device;
 }
 
@@ -347,7 +347,7 @@ bool Buffer::mappedUpload(Buffer* dstBuffer, const vk::DeviceSize& offset, const
     return true;
 }
 
-void Buffer::resizeStagingBuffer(const std::weak_ptr<vkr::Device>& device, const vk::DeviceSize& size) {
+void Buffer::resizeStagingBuffer(const WeakResource<vkr::Device>& device, const vk::DeviceSize& size) {
     vk::DeviceSize stagingBufferSize = glm::min(size, s_maxStagingBufferSize);
 
     if (!s_stagingBuffer) {
@@ -375,7 +375,7 @@ void Buffer::resizeStagingBuffer(const std::weak_ptr<vkr::Device>& device, const
     assert(!!s_stagingBuffer);
 }
 
-void Buffer::reserveStagingBuffer(const std::weak_ptr<vkr::Device>& device, const vk::DeviceSize& size) {
+void Buffer::reserveStagingBuffer(const WeakResource<vkr::Device>& device, const vk::DeviceSize& size) {
     if (!s_stagingBuffer || size > s_stagingBuffer->getSize()) {
         Buffer::resizeStagingBuffer(device, size);
     }

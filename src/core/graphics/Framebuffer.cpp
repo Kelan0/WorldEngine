@@ -6,14 +6,14 @@
 #include "core/application/Engine.h"
 
 
-void FramebufferConfiguration::setRenderPass(const vk::RenderPass& renderPass) {
-    assert(renderPass);
-    this->renderPass = renderPass;
+void FramebufferConfiguration::setRenderPass(const vk::RenderPass& p_renderPass) {
+    assert(p_renderPass);
+    renderPass = p_renderPass;
 }
 
-void FramebufferConfiguration::setRenderPass(const RenderPass* renderPass) {
-    assert(renderPass != nullptr);
-    setRenderPass(renderPass->getRenderPass());
+void FramebufferConfiguration::setRenderPass(const RenderPass* p_renderPass) {
+    assert(p_renderPass != nullptr);
+    setRenderPass(p_renderPass->getRenderPass());
 }
 
 void FramebufferConfiguration::addAttachment(const vk::ImageView& imageView) {
@@ -38,9 +38,9 @@ void FramebufferConfiguration::setAttachments(const vk::ArrayProxy<ImageView*>& 
         addAttachment(imageView);
 }
 
-void FramebufferConfiguration::setSize(const uint32_t& width, const uint32_t& height) {
-    this->width = width;
-    this->height = height;
+void FramebufferConfiguration::setSize(const uint32_t& p_width, const uint32_t& p_height) {
+    width = p_width;
+    height = p_height;
 }
 
 void FramebufferConfiguration::setSize(const glm::uvec2& size) {
@@ -53,8 +53,8 @@ void FramebufferConfiguration::setSize(const vk::Extent2D& size) {
 
 
 
-Framebuffer::Framebuffer(std::weak_ptr<vkr::Device> device, const vk::Framebuffer& framebuffer, const glm::uvec2& resolution):
-    m_device(device),
+Framebuffer::Framebuffer(const WeakResource<vkr::Device>& device, const vk::Framebuffer& framebuffer, const glm::uvec2& resolution, const std::string& name):
+    m_device(device, name),
     m_framebuffer(framebuffer),
     m_resolution(resolution) {
 }
@@ -64,8 +64,8 @@ Framebuffer::~Framebuffer() {
     m_framebuffer = VK_NULL_HANDLE;
 }
 
-Framebuffer* Framebuffer::create(const FramebufferConfiguration& framebufferConfiguration, const char* name) {
-    const vk::Device& device = **framebufferConfiguration.device.lock();
+Framebuffer* Framebuffer::create(const FramebufferConfiguration& framebufferConfiguration, const std::string& name) {
+    const vk::Device& device = **framebufferConfiguration.device.lock(name);
 
     if (!framebufferConfiguration.renderPass) {
         printf("Unable to create Framebuffer: RenderPass is NULL\n");
@@ -101,7 +101,7 @@ Framebuffer* Framebuffer::create(const FramebufferConfiguration& framebufferConf
 
     Engine::graphics()->setObjectName(device, (uint64_t)(VkFramebuffer)framebuffer, vk::ObjectType::eFramebuffer, name);
 
-    return new Framebuffer(framebufferConfiguration.device, framebuffer, glm::uvec2(framebufferConfiguration.width, framebufferConfiguration.height));
+    return new Framebuffer(framebufferConfiguration.device, framebuffer, glm::uvec2(framebufferConfiguration.width, framebufferConfiguration.height), name);
 }
 
 const vk::Framebuffer& Framebuffer::getFramebuffer() const {

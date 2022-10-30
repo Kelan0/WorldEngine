@@ -172,9 +172,9 @@ void GraphicsPipelineConfiguration::setAttachmentAlphaBlendMode(const size_t& at
     attachmentBlendState(attachmentIndex).setAlphaBlendMode(src, dst, op);
 }
 
-GraphicsPipeline::GraphicsPipeline(const std::weak_ptr<vkr::Device>& device):
-        m_device(device),
-        m_name(nullptr),
+GraphicsPipeline::GraphicsPipeline(const WeakResource<vkr::Device>& device, const std::string& name):
+        m_device(device, name),
+        m_name(std::string{}),
         m_config(GraphicsPipelineConfiguration{}) {
 
 #if ENABLE_SHADER_HOT_RELOAD
@@ -190,12 +190,12 @@ GraphicsPipeline::~GraphicsPipeline() {
     cleanup();
 }
 
-GraphicsPipeline* GraphicsPipeline::create(const std::weak_ptr<vkr::Device>& device) {
-    return new GraphicsPipeline(device.lock());
+GraphicsPipeline* GraphicsPipeline::create(const WeakResource<vkr::Device>& device, const std::string& name) {
+    return new GraphicsPipeline(device, name);
 }
 
-GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration, const char* name) {
-    GraphicsPipeline* graphicsPipeline = create(graphicsPipelineConfiguration.device);
+GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration, const std::string& name) {
+    GraphicsPipeline* graphicsPipeline = create(graphicsPipelineConfiguration.device, name);
 
     if (!graphicsPipeline->recreate(graphicsPipelineConfiguration, name)) {
         delete graphicsPipeline;
@@ -205,8 +205,8 @@ GraphicsPipeline* GraphicsPipeline::create(const GraphicsPipelineConfiguration& 
     return graphicsPipeline;
 }
 
-bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration, const char* name) {
-    assert(!graphicsPipelineConfiguration.device.expired() && graphicsPipelineConfiguration.device.lock() == m_device);
+bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPipelineConfiguration, const std::string& name) {
+    assert(!graphicsPipelineConfiguration.device.expired() && graphicsPipelineConfiguration.device.get() == m_device.get());
 
     const vk::Device& device = **m_device;
 
@@ -258,7 +258,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
 //        return false;
 //    }
 
-    if (pipelineConfig.renderPass.expired() || pipelineConfig.renderPass.lock() == nullptr) {
+    if (pipelineConfig.renderPass.expired() || pipelineConfig.renderPass.get() == nullptr) {
         printf("Unable to create graphics pipeline with NULL RenderPass\n");
         return false;
     }
@@ -275,7 +275,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     Util::trim(pipelineConfig.vertexShaderEntryPoint);
     Util::trim(pipelineConfig.fragmentShaderEntryPoint);
 
-    m_renderPass = std::shared_ptr<RenderPass>(pipelineConfig.renderPass);
+    m_renderPass.set(pipelineConfig.renderPass, name + "-RenderPass");
 
     std::vector<vk::PipelineShaderStageCreateInfo> pipelineShaderStages;
 
@@ -446,7 +446,11 @@ const vk::Pipeline& GraphicsPipeline::getPipeline() const {
     return m_pipeline;
 }
 
-std::shared_ptr<RenderPass> GraphicsPipeline::getRenderPass() const {
+const SharedResource<vkr::Device>& GraphicsPipeline::getDevice() const {
+    return m_device;
+}
+
+const SharedResource<RenderPass>& GraphicsPipeline::getRenderPass() const {
     return m_renderPass;
 }
 
@@ -723,12 +727,12 @@ void GraphicsPipeline::onShaderLoaded(ShaderLoadedEvent* event) {
     bool doRecreate = false;
 
     if (m_config.vertexShader.has_value() && m_config.vertexShader.value() == event->filePath && m_config.vertexShaderEntryPoint == event->entryPoint) {
-        printf("Vertex shader %s for GraphicsPipeline %s\n", event->reloaded ? "reloaded" : "loaded", m_name);
+        printf("Vertex shader %s for GraphicsPipeline %s\n", event->reloaded ? "reloaded" : "loaded", m_name.c_str());
         doRecreate = event->reloaded;
     }
 
     if (m_config.fragmentShader.has_value() && m_config.fragmentShader.value() == event->filePath && m_config.fragmentShaderEntryPoint == event->entryPoint) {
-        printf("Fragment shader %s for GraphicsPipeline %s\n",  event->reloaded ? "reloaded" : "loaded", m_name);
+        printf("Fragment shader %s for GraphicsPipeline %s\n",  event->reloaded ? "reloaded" : "loaded", m_name.c_str());
         doRecreate = event->reloaded;
     }
 
@@ -739,15 +743,15 @@ void GraphicsPipeline::onShaderLoaded(ShaderLoadedEvent* event) {
 
             vk::Pipeline backupPipeline = std::exchange(m_pipeline, VK_NULL_HANDLE);
             vk::PipelineLayout backupPipelineLayout = std::exchange(m_pipelineLayout, VK_NULL_HANDLE);
-            std::shared_ptr<RenderPass> backupRenderPass = std::exchange(m_renderPass, nullptr);
+            SharedResource<RenderPass> backupRenderPass = std::exchange(m_renderPass, nullptr);
             GraphicsPipelineConfiguration backupConfig(m_config); // Copy
 
             bool success = recreate(m_config, m_name);
             if (!success) {
-                printf("Shader %s@%s was reloaded, but reconstructing pipeline %s failed. The pipeline will remain unchanged\n", event->filePath.c_str(), event->entryPoint.c_str(), m_name);
+                printf("Shader %s@%s was reloaded, but reconstructing pipeline %s failed. The pipeline will remain unchanged\n", event->filePath.c_str(), event->entryPoint.c_str(), m_name.c_str());
                 m_pipeline = backupPipeline;
                 m_pipelineLayout = backupPipelineLayout;
-                m_renderPass = backupRenderPass;
+                m_renderPass = std::move(backupRenderPass);
                 m_config = backupConfig;
             } else {
                 (**m_device).destroyPipelineLayout(backupPipelineLayout);

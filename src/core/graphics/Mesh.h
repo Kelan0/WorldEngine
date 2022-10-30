@@ -10,7 +10,7 @@
 
 
 struct MeshConfiguration {
-    std::weak_ptr<vkr::Device> device;
+    WeakResource<vkr::Device> device;
     const void* vertices = nullptr;
     size_t vertexCount = 0;
     size_t vertexSize = 0;
@@ -37,7 +37,7 @@ struct MeshConfiguration {
 class Mesh {
     NO_COPY(Mesh);
 private:
-    explicit Mesh(const std::weak_ptr<vkr::Device> &device);
+    explicit Mesh(const WeakResource<vkr::Device>& device, const std::string& name);
 
 public:
     ~Mesh();
@@ -73,7 +73,7 @@ public:
     const GraphicsResource& getResourceId() const;
 
 private:
-    std::shared_ptr<vkr::Device> m_device;
+    SharedResource<vkr::Device> m_device;
     Buffer* m_vertexBuffer;
     Buffer* m_indexBuffer;
     vk::DeviceSize m_vertexSize;
@@ -81,7 +81,6 @@ private:
     MeshPrimitiveType m_primitiveType;
     GraphicsResource m_resourceId;
 };
-
 
 
 template<typename Vertex_t>
@@ -110,8 +109,6 @@ void MeshConfiguration::setMeshData(MeshData<Vertex_t>* meshData) {
     setVertices<Vertex_t>(meshData->getVertices());
     setIndices<Vertex_t>(meshData->getIndices());
 }
-
-
 
 
 template<typename Vertex_t>

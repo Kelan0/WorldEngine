@@ -7,7 +7,7 @@
 class Buffer;
 
 struct BufferViewConfiguration {
-    std::weak_ptr<vkr::Device> device;
+    WeakResource<vkr::Device> device;
     vk::Buffer buffer = VK_NULL_HANDLE;
     vk::Format format = vk::Format::eUndefined;
     vk::DeviceSize offset = 0;
@@ -25,14 +25,14 @@ struct BufferViewConfiguration {
 class BufferView {
     NO_COPY(BufferView)
 private:
-    BufferView(std::weak_ptr<vkr::Device> device, const vk::BufferView& bufferView, const vk::Format& format, const vk::DeviceSize& offset, const vk::DeviceSize& range);
+    BufferView(const WeakResource<vkr::Device>& device, const vk::BufferView& bufferView, const vk::Format& format, const vk::DeviceSize& offset, const vk::DeviceSize& range, const std::string& name);
 
 public:
     ~BufferView();
 
-    static BufferView* create(const BufferViewConfiguration& bufferViewConfiguration, const char* name);
+    static BufferView* create(const BufferViewConfiguration& bufferViewConfiguration, const std::string& name);
 
-    const std::shared_ptr<vkr::Device>& getDevice() const;
+    const SharedResource<vkr::Device>& getDevice() const;
 
     const vk::BufferView& getBufferView() const;
 
@@ -43,7 +43,7 @@ public:
     const vk::DeviceSize& getRange() const;
 
 private:
-    std::shared_ptr<vkr::Device> m_device;
+    SharedResource<vkr::Device> m_device;
     vk::BufferView m_bufferView;
     vk::Format m_format;
     vk::DeviceSize m_offset;
