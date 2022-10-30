@@ -410,6 +410,7 @@ bool PostProcessRenderer::createDownsampleGraphicsPipeline() {
     pipelineConfig.fragmentShaderEntryPoint = "downsampleStage";
     pipelineConfig.addDescriptorSetLayout(m_bloomBlurDescriptorSetLayout.get());
     pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eFragment, 0, sizeof(BloomBlurPushConstantData));
+    pipelineConfig.setAttachmentBlendEnabled(0, false);
     return m_downsampleGraphicsPipeline->recreate(pipelineConfig, "PostProcessRenderer-DownsampleGraphicsPipeline");
 }
 
@@ -425,6 +426,8 @@ bool PostProcessRenderer::createUpsampleGraphicsPipeline() {
     pipelineConfig.fragmentShaderEntryPoint = "upsampleStage";
     pipelineConfig.addDescriptorSetLayout(m_bloomBlurDescriptorSetLayout.get());
     pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eFragment, 0, sizeof(BloomBlurPushConstantData));
+    pipelineConfig.setAttachmentBlendEnabled(0, false);
+    pipelineConfig.setAttachmentColourBlendMode(0, vk::BlendFactor::eOne, vk::BlendFactor::eOne, vk::BlendOp::eAdd);
     return m_upsampleGraphicsPipeline->recreate(pipelineConfig, "PostProcessRenderer-UpsampleGraphicsPipeline");
 }
 

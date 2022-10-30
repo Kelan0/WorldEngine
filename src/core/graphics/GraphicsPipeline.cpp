@@ -11,12 +11,23 @@
 
 
 AttachmentBlendState::AttachmentBlendState(const bool& blendEnable, const vk::ColorComponentFlags& colourWriteMask):
-    blendEnable(blendEnable),
-    colourWriteMask(colourWriteMask) {
+    blendEnable(blendEnable) {
+    setColourWriteMask(colourWriteMask);
 }
 
 AttachmentBlendState::AttachmentBlendState(const bool& blendEnable, const uint32_t& colourWriteMask):
     AttachmentBlendState(blendEnable, (vk::ColorComponentFlags)colourWriteMask) {
+}
+
+void AttachmentBlendState::setColourWriteMask(const vk::ColorComponentFlags& p_colourWriteMask) {
+//    constexpr uint32_t ValidColourBits = (VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT);
+    auto ValidColourBits = (vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA);
+    assert(!(p_colourWriteMask & (~ValidColourBits))); // Colour write mask must only contain R,G,B or A bits.
+    colourWriteMask = p_colourWriteMask;
+}
+
+void AttachmentBlendState::setColourWriteMask(const uint32_t& p_colourWriteMask) {
+    setColourWriteMask((vk::ColorComponentFlags)colourWriteMask);
 }
 
 void AttachmentBlendState::setColourBlendMode(const BlendMode& blendMode) {
@@ -42,8 +53,8 @@ void AttachmentBlendState::setAlphaBlendMode(const vk::BlendFactor& src, const v
 
 
 
-void GraphicsPipelineConfiguration::setViewport(const vk::Viewport& viewport) {
-    this->viewport = viewport;
+void GraphicsPipelineConfiguration::setViewport(const vk::Viewport& p_viewport) {
+    viewport = p_viewport;
 }
 
 void GraphicsPipelineConfiguration::setViewport(const glm::vec2& size, const glm::vec2& offset, const float& minDepth, const float& maxDepth) {
@@ -62,9 +73,9 @@ void GraphicsPipelineConfiguration::addVertexInputBinding(const uint32_t& bindin
     addVertexInputBinding(vk::VertexInputBindingDescription(binding, stride, vertexInputRate));
 }
 
-void GraphicsPipelineConfiguration::setVertexInputBindings(const vk::ArrayProxy<const vk::VertexInputBindingDescription>& vertexInputBindings) {
-    this->vertexInputBindings.clear();
-    for (const auto& vertexInputBinding : vertexInputBindings)
+void GraphicsPipelineConfiguration::setVertexInputBindings(const vk::ArrayProxy<const vk::VertexInputBindingDescription>& p_vertexInputBindings) {
+    vertexInputBindings.clear();
+    for (const auto& vertexInputBinding : p_vertexInputBindings)
         addVertexInputBinding(vertexInputBinding);
 }
 
@@ -76,9 +87,9 @@ void GraphicsPipelineConfiguration::addVertexInputAttribute(const uint32_t& loca
     addVertexInputAttribute(vk::VertexInputAttributeDescription(location, binding, format, offset));
 }
 
-void GraphicsPipelineConfiguration::setVertexInputAttribute(const vk::ArrayProxy<const vk::VertexInputAttributeDescription>& vertexInputAttributes) {
-    this->vertexInputAttributes.clear();
-    for (const auto& vertexInputAttribute : vertexInputAttributes)
+void GraphicsPipelineConfiguration::setVertexInputAttribute(const vk::ArrayProxy<const vk::VertexInputAttributeDescription>& p_vertexInputAttributes) {
+    vertexInputAttributes.clear();
+    for (const auto& vertexInputAttribute : p_vertexInputAttributes)
         addVertexInputAttribute(vertexInputAttribute);
 }
 
@@ -92,15 +103,15 @@ void GraphicsPipelineConfiguration::addDescriptorSetLayout(const DescriptorSetLa
     addDescriptorSetLayout(descriptorSetLayout->getDescriptorSetLayout());
 }
 
-void GraphicsPipelineConfiguration::setDescriptorSetLayouts(const vk::ArrayProxy<const vk::DescriptorSetLayout>& descriptorSetLayouts) {
-    this->descriptorSetLayouts.clear();
-    for (const auto& descriptorSetLayout : descriptorSetLayouts)
+void GraphicsPipelineConfiguration::setDescriptorSetLayouts(const vk::ArrayProxy<const vk::DescriptorSetLayout>& p_descriptorSetLayouts) {
+    descriptorSetLayouts.clear();
+    for (const auto& descriptorSetLayout : p_descriptorSetLayouts)
         addDescriptorSetLayout(descriptorSetLayout);
 }
 
-void GraphicsPipelineConfiguration::setDescriptorSetLayouts(const vk::ArrayProxy<const DescriptorSetLayout*>& descriptorSetLayouts) {
-    this->descriptorSetLayouts.clear();
-    for (const auto& descriptorSetLayout : descriptorSetLayouts)
+void GraphicsPipelineConfiguration::setDescriptorSetLayouts(const vk::ArrayProxy<const DescriptorSetLayout*>& p_descriptorSetLayouts) {
+    descriptorSetLayouts.clear();
+    for (const auto& descriptorSetLayout : p_descriptorSetLayouts)
         addDescriptorSetLayout(descriptorSetLayout);
 }
 
@@ -121,10 +132,43 @@ void GraphicsPipelineConfiguration::setDynamicStates(const vk::ArrayProxy<const 
         setDynamicState(state, isDynamic);
 }
 
-void GraphicsPipelineConfiguration::setAttachmentBlendState(const size_t& attachmentIndex, const AttachmentBlendState& attachmentBlendState) {
+AttachmentBlendState& GraphicsPipelineConfiguration::attachmentBlendState(const size_t& attachmentIndex) {
+//    assert(attachmentIndex < renderPass.lock()->getAttachmentCount());
     while (attachmentBlendStates.size() <= attachmentIndex)
         attachmentBlendStates.emplace_back();
-    attachmentBlendStates[attachmentIndex] = attachmentBlendState;
+    return attachmentBlendStates[attachmentIndex];
+}
+
+void GraphicsPipelineConfiguration::setAttachmentBlendState(const size_t& attachmentIndex, const AttachmentBlendState& p_attachmentBlendState) {
+    attachmentBlendState(attachmentIndex) = p_attachmentBlendState;
+}
+
+void GraphicsPipelineConfiguration::setAttachmentBlendEnabled(const size_t& attachmentIndex, const bool& blendEnabled) {
+    attachmentBlendState(attachmentIndex).blendEnable = blendEnabled;
+}
+
+void GraphicsPipelineConfiguration::setAttachmentColourWriteMask(const size_t& attachmentIndex, const vk::ColorComponentFlags& colourWriteMask) {
+    attachmentBlendState(attachmentIndex).setColourWriteMask(colourWriteMask);
+}
+
+void GraphicsPipelineConfiguration::setAttachmentColourWriteMask(const size_t& attachmentIndex, const uint32_t& colourWriteMask) {
+    attachmentBlendState(attachmentIndex).setColourWriteMask(colourWriteMask);
+}
+
+void GraphicsPipelineConfiguration::setAttachmentColourBlendMode(const size_t& attachmentIndex, const BlendMode& blendMode) {
+    attachmentBlendState(attachmentIndex).setColourBlendMode(blendMode);
+}
+
+void GraphicsPipelineConfiguration::setAttachmentColourBlendMode(const size_t& attachmentIndex, const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op) {
+    attachmentBlendState(attachmentIndex).setColourBlendMode(src, dst, op);
+}
+
+void GraphicsPipelineConfiguration::setAttachmentAlphaBlendMode(const size_t& attachmentIndex, const BlendMode& blendMode) {
+    attachmentBlendState(attachmentIndex).setAlphaBlendMode(blendMode);
+}
+
+void GraphicsPipelineConfiguration::setAttachmentAlphaBlendMode(const size_t& attachmentIndex, const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op) {
+    attachmentBlendState(attachmentIndex).setAlphaBlendMode(src, dst, op);
 }
 
 GraphicsPipeline::GraphicsPipeline(const std::weak_ptr<vkr::Device>& device):

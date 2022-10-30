@@ -27,6 +27,9 @@ struct AttachmentBlendState {
     AttachmentBlendState(const bool& blendEnable, const uint32_t& colourWriteMask);
     AttachmentBlendState() = default;
 
+    void setColourWriteMask(const vk::ColorComponentFlags& colourWriteMask);
+    void setColourWriteMask(const uint32_t& colourWriteMask);
+
     void setColourBlendMode(const BlendMode& blendMode);
     void setColourBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op);
 
@@ -96,7 +99,19 @@ struct GraphicsPipelineConfiguration {
 
     void setDynamicStates(const vk::ArrayProxy<const vk::DynamicState>& dynamicState, const bool& isDynamic);
 
+    AttachmentBlendState& attachmentBlendState(const size_t& attachmentIndex);
+
     void setAttachmentBlendState(const size_t& attachmentIndex, const AttachmentBlendState& attachmentBlendState);
+
+    void setAttachmentBlendEnabled(const size_t& attachmentIndex, const bool& blendEnabled);
+    void setAttachmentColourWriteMask(const size_t& attachmentIndex, const vk::ColorComponentFlags& colourWriteMask);
+    void setAttachmentColourWriteMask(const size_t& attachmentIndex, const uint32_t& colourWriteMask);
+
+    void setAttachmentColourBlendMode(const size_t& attachmentIndex, const BlendMode& blendMode);
+    void setAttachmentColourBlendMode(const size_t& attachmentIndex, const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op);
+
+    void setAttachmentAlphaBlendMode(const size_t& attachmentIndex, const BlendMode& blendMode);
+    void setAttachmentAlphaBlendMode(const size_t& attachmentIndex, const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op);
 };
 
 class GraphicsPipeline {
