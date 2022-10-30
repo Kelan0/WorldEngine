@@ -52,7 +52,7 @@ private:
         std::array<Image2D*, NumAttachments> images = {};
         std::array<ImageView*, NumAttachments> imageViews = {};
         Framebuffer* framebuffer = nullptr;
-        bool rendered;
+        bool rendered = false;
     };
 
     struct RenderResources {
@@ -115,6 +115,8 @@ public:
 
     vk::Format getOutputColourFormat() const;
 
+    const std::shared_ptr<Sampler>& getDepthSampler() const;
+
 private:
     void recreateSwapchain(RecreateSwapchainEvent* event);
 
@@ -135,9 +137,10 @@ private:
     FrameResource<RenderResources> m_resources;
     std::shared_ptr<DescriptorSetLayout> m_globalDescriptorSetLayout;
     std::shared_ptr<DescriptorSetLayout> m_lightingDescriptorSetLayout;
-    Sampler* m_attachmentSampler;
-    RenderCamera m_renderCamera;
+    std::shared_ptr<Sampler> m_attachmentSampler;
+    std::shared_ptr<Sampler> m_depthSampler;
     std::unordered_map<ImageView*, int32_t> m_frameIndices;
+    RenderCamera m_renderCamera;
     FrameImages m_previousFrame;
 };
 

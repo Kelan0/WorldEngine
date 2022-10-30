@@ -2,16 +2,20 @@
 #define WORLDENGINE_IMMEDIATERENDERER_H
 
 #include "core/core.h"
-#include "core/graphics/Mesh.h"
+#include "core/graphics/FrameResource.h"
 #include "core/graphics/GraphicsPipeline.h"
 #include "core/engine/geometry/MeshData.h"
-#include "core/engine/event/EventDispatcher.h"
 
 #define IMMEDIATE_MODE_VALIDATION 1
 
 class DescriptorSet;
 class DescriptorSetLayout;
 struct RecreateSwapchainEvent;
+class GraphicsPipeline;
+class RenderPass;
+class Framebuffer;
+class ImageView;
+class Image2D;
 
 enum MatrixMode {
     MatrixMode_ModelView = 0,
@@ -58,6 +62,7 @@ private:
     struct UniformBufferData {
         glm::mat4 modelViewMatrix;
         glm::mat4 projectionMatrix;
+        bool depthTestEnabled;
     };
 
     struct RenderState {
@@ -78,6 +83,17 @@ private:
         uint32_t indexCount;
     };
 
+    struct RenderResources {
+        Buffer* uniformBuffer = nullptr;
+        DescriptorSet* descriptorSet = nullptr;
+        Framebuffer* framebuffer = nullptr;
+        Image2D* frameColourImage = nullptr;
+        ImageView* frameColourImageView = nullptr;
+        Image2D* frameDepthImage = nullptr;
+        ImageView* frameDepthImageView = nullptr;
+        bool updateDescriptors = true;
+    };
+
 public:
     ImmediateRenderer();
 
@@ -85,7 +101,7 @@ public:
 
     bool init();
 
-    void render(const double& dt);
+    void render(const double& dt, const vk::CommandBuffer& commandBuffer);
 
     void begin(const MeshPrimitiveType& primitiveType);
 
@@ -141,6 +157,8 @@ public:
 
     void setLineWidth(const float& lineWidth);
 
+    ImageView* getOutputFrameImageView() const;
+
 private:
     void addVertex(const ColouredVertex& vertex);
 
@@ -155,6 +173,8 @@ private:
     void uploadBuffers();
 
     GraphicsPipeline* getGraphicsPipeline(const RenderCommand& renderCommand);
+
+    bool createRenderPass();
 
     void recreateSwapchain(RecreateSwapchainEvent* event);
 
@@ -185,10 +205,10 @@ private:
 
     Buffer* m_vertexBuffer;
     Buffer* m_indexBuffer;
-    FrameResource<Buffer> m_uniformBuffer;
-    FrameResource<DescriptorSet> m_descriptorSet;
+    FrameResource<RenderResources> m_resources;
     std::shared_ptr<DescriptorSetLayout> m_descriptorSetLayout;
 
+    std::shared_ptr<RenderPass> m_renderPass;
     std::unordered_map<size_t, GraphicsPipeline*> m_graphicsPipelines;
 };
 

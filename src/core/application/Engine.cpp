@@ -29,7 +29,8 @@ Engine::Engine():
     m_deferredRenderer(new DeferredRenderer()),
     m_postProcessingRenderer(new PostProcessRenderer()),
     m_renderCamera(new RenderCamera()),
-    m_currentFrameCount(0) {
+    m_currentFrameCount(0),
+    m_debugCompositeEnabled(true) {
 }
 
 Engine::~Engine() {
@@ -77,7 +78,7 @@ ImmediateRenderer* Engine::getImmediateRenderer() const {
     return m_immediateRenderer;
 }
 
-DeferredRenderer* Engine::getDeferredLightingPass() const {
+DeferredRenderer* Engine::getDeferredRenderer() const {
     return m_deferredRenderer;
 }
 
@@ -95,6 +96,14 @@ EventDispatcher* Engine::getEventDispatcher() const {
 
 const uint64_t& Engine::getCurrentFrameCount() const {
     return m_currentFrameCount;
+}
+
+const bool& Engine::isDebugCompositeEnabled() const {
+    return m_debugCompositeEnabled;
+}
+
+void Engine::setDebugCompositeEnabled(const bool& debugCompositeEnabled) {
+    m_debugCompositeEnabled = debugCompositeEnabled;
 }
 
 GraphicsManager* Engine::graphics() {
@@ -125,8 +134,8 @@ ReprojectionRenderer* Engine::reprojectionRenderer() {
     return instance()->getReprojectionRenderer();
 }
 
-DeferredRenderer* Engine::deferredLightingPass() {
-    return instance()->getDeferredLightingPass();
+DeferredRenderer* Engine::deferredRenderer() {
+    return instance()->getDeferredRenderer();
 }
 
 PostProcessRenderer* Engine::postProcessingRenderer() {
@@ -139,6 +148,10 @@ EventDispatcher* Engine::eventDispatcher() {
 
 const uint64_t& Engine::currentFrameCount() {
     return instance()->getCurrentFrameCount();
+}
+
+const bool& Engine::debugCompositeEnabled() {
+    return instance()->isDebugCompositeEnabled();
 }
 
 Engine* Engine::instance() {
@@ -222,10 +235,13 @@ void Engine::render(const double& dt) {
     m_deferredRenderer->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredRenderer->beginGeometrySubpass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredRenderer->renderGeometryPass(dt, commandBuffer, m_renderCamera);
-//    m_immediateRenderer->render(dt);
     m_deferredRenderer->beginLightingSubpass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredRenderer->render(dt, commandBuffer);
     commandBuffer.endRenderPass();
+
+    if (m_debugCompositeEnabled) {
+        m_immediateRenderer->render(dt, commandBuffer);
+    }
 
     m_reprojectionRenderer->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
     m_reprojectionRenderer->render(dt, commandBuffer);

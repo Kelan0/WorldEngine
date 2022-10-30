@@ -25,9 +25,9 @@ ReprojectionRenderer::ReprojectionRenderer():
     m_uniformData.taaCurrentJitterOffset = glm::vec2(0.0F, 0.0F);
     setTaaHistoryFactor(0.1F);
     setTaaUseCatmullRomFilter(true);
-    setTaaUseMitchellFilter(true);
+    setTaaUseMitchellFilter(false);
     setTaaColourClippingMode(ColourClippingMode_Accurate);
-    setTaaMitchellFilterCoefficients(0.0F, 0.5F);
+    setTaaMitchellFilterCoefficients(0.3F, 0.3F);
     setTaaEnabled(true);
 }
 
@@ -114,11 +114,11 @@ void ReprojectionRenderer::render(const double& dt, const vk::CommandBuffer& com
         m_uniformData.taaPreviousJitterOffset = m_uniformData.taaCurrentJitterOffset = glm::vec2(0.0F, 0.0F);
     }
 
-    ImageView* frameImageView = Engine::deferredLightingPass()->getOutputFrameImageView();
-    ImageView* velocityImageView = Engine::deferredLightingPass()->getVelocityImageView();
-    ImageView* depthImageView = Engine::deferredLightingPass()->getDepthImageView();
+    ImageView* frameImageView = Engine::deferredRenderer()->getOutputFrameImageView();
+    ImageView* velocityImageView = Engine::deferredRenderer()->getVelocityImageView();
+    ImageView* depthImageView = Engine::deferredRenderer()->getDepthImageView();
     ImageView* prevFrameImageView = getPreviousFrameImageView();
-    ImageView* prevVelocityImageView = Engine::deferredLightingPass()->getPreviousVelocityImageView();
+    ImageView* prevVelocityImageView = Engine::deferredRenderer()->getPreviousVelocityImageView();
 
     DescriptorSetWriter descriptorSetWriter(m_resources->reprojectionDescriptorSet);
     descriptorSetWriter.writeImage(FRAME_TEXTURE_BINDING, m_frameSampler.get(), frameImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
@@ -157,7 +157,7 @@ ImageView* ReprojectionRenderer::getOutputFrameImageView() const {
 }
 
 ImageView* ReprojectionRenderer::getPreviousFrameImageView() const {
-    return hasPreviousFrame() ? m_previousFrame.imageView : Engine::deferredLightingPass()->getAlbedoImageView();
+    return hasPreviousFrame() ? m_previousFrame.imageView : Engine::deferredRenderer()->getAlbedoImageView();
 }
 
 bool ReprojectionRenderer::hasPreviousFrame() const {
@@ -273,7 +273,7 @@ bool ReprojectionRenderer::createFramebuffer(FrameImages* frame) {
     imageViewConfig.device = Engine::graphics()->getDevice();
 
     // Input lighting RGB image
-    imageConfig.format = Engine::deferredLightingPass()->getOutputColourFormat();
+    imageConfig.format = Engine::deferredRenderer()->getOutputColourFormat();
     imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;
     frame->image = Image2D::create(imageConfig, "ReprojectionRenderer-FrameImage");
     imageViewConfig.format = imageConfig.format;
@@ -313,7 +313,7 @@ bool ReprojectionRenderer::createRenderPass() {
 
     std::array<vk::AttachmentDescription, 1> attachments;
 
-    attachments[0].setFormat(Engine::deferredLightingPass()->getOutputColourFormat());
+    attachments[0].setFormat(Engine::deferredRenderer()->getOutputColourFormat());
     attachments[0].setSamples(samples);
     attachments[0].setLoadOp(vk::AttachmentLoadOp::eClear); // could be eDontCare ?
     attachments[0].setStoreOp(vk::AttachmentStoreOp::eStore);

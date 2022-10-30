@@ -241,6 +241,10 @@ public:
     void beginCmdDebugLabel(const vk::CommandBuffer& commandBuffer, const char* name);
     void endCmdDebugLabel(const vk::CommandBuffer& commandBuffer);
 
+    bool doAbortOnVulkanError();
+
+    void setAbortOnVulkanError(const bool& abortOnVulkanError);
+
 private:
     vkr::Context m_context;
     std::unique_ptr<vkr::Instance> m_instance;
@@ -264,6 +268,7 @@ private:
     bool m_swapchainImageSampled;
     DebugUtils::RenderInfo m_debugInfo;
     bool m_flushRendering;
+    bool m_abortOnVulkanError;
 
     static uint64_t s_nextResourceID;
 };

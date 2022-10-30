@@ -361,7 +361,7 @@ void Profiler::endGraphicsFrame() {
     uint32_t requiredQueryCount = (uint32_t)requiredFrameCount * 2;
 //    printf("Required query count is %u, current minimum is %u\n", requiredQueryCount, ctx.minQueryPoolSize);
     if (requiredQueryCount >= ctx.minQueryPoolSize) {
-//        ctx.minQueryPoolSize = ROUND_TO_MULTIPLE(requiredQueryCount + ctx.minQueryPoolSize / 2, 500);
+//        ctx.minQueryPoolSize = CEIL_TO_MULTIPLE(requiredQueryCount + ctx.minQueryPoolSize / 2, 500);
         ctx.minQueryPoolSize = requiredQueryCount + ctx.minQueryPoolSize / 2;
 //        printf("Growing minQueryPoolSize to %u\n", ctx.minQueryPoolSize);
     }

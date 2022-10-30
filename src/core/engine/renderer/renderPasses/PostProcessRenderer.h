@@ -19,6 +19,7 @@ private:
     struct PostProcessUniformData {
         bool bloomEnabled;
         float bloomIntensity;
+        bool debugCompositeEnabled;
     };
 
     struct BloomBlurPushConstantData {
@@ -89,6 +90,10 @@ public:
     void setBloomBlurIterations(const uint32_t& bloomBlurIterations);
 
 private:
+    void setPostProcessUniformDataChanged(const bool& didChange);
+
+    void setBloomBlurUniformDataChanged(const bool& didChange);
+
     void recreateSwapchain(RecreateSwapchainEvent* event);
 
     bool createBloomBlurFramebuffer(RenderResources* resources);

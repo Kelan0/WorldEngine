@@ -31,13 +31,13 @@ public:
 
     static bool copy(Buffer* srcBuffer, Buffer* dstBuffer, const vk::DeviceSize& size, const vk::DeviceSize& srcOffset = 0, const vk::DeviceSize& dstOffset = 0);
 
-    static bool upload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data);
+    static bool upload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data, const vk::DeviceSize& srcStride = 0, const vk::DeviceSize& dstStride = 0, const vk::DeviceSize& elementSize = 0);
 
     bool copyFrom(Buffer* srcBuffer, const vk::DeviceSize& size, const vk::DeviceSize& srcOffset = 0, const vk::DeviceSize& dstOffset = 0);
 
     bool copyTo(Buffer* dstBuffer, const vk::DeviceSize& size, const vk::DeviceSize& srcOffset = 0, const vk::DeviceSize& dstOffset = 0);
 
-    bool upload(const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data);
+    bool upload(const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data, const vk::DeviceSize& srcStride = 0, const vk::DeviceSize& dstStride = 0, const vk::DeviceSize& elementSize = 0);
 
     std::shared_ptr<vkr::Device> getDevice() const;
 
@@ -60,9 +60,9 @@ public:
 public:
     static const Buffer* getStagingBuffer();
 
-    static bool stagedUpload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data);
+    static bool stagedUpload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data, const vk::DeviceSize& srcStride = 0, const vk::DeviceSize& dstStride = 0, const vk::DeviceSize& elementSize = 0);
 
-    static bool mappedUpload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data);
+    static bool mappedUpload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data, const vk::DeviceSize& srcStride = 0, const vk::DeviceSize& dstStride = 0, const vk::DeviceSize& elementSize = 0);
 
 private:
     static void resizeStagingBuffer(const std::weak_ptr<vkr::Device>& device, const vk::DeviceSize& size);

@@ -290,8 +290,10 @@ bool GraphicsManager::createDebugUtilsMessenger() {
             }
 
             if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-                throw std::runtime_error(pCallbackData->pMessage);
-                return true; // Abort erroneous method call
+                if (Engine::graphics()->doAbortOnVulkanError()) {
+                    throw std::runtime_error(pCallbackData->pMessage);
+                    return true; // Abort erroneous method call, Method will return eErrorValidationFailed and throw an exception
+                }
             }
 
             return false;
@@ -644,6 +646,7 @@ bool GraphicsManager::initSurfaceDetails() {
         printf("Preferred surface format and colour space was not found. Defaulting to first available option\n");
         m_surface.surfaceFormat = formats[0];
     }
+    printf("Using output render colour format %s with colour space %s\n", vk::to_string(m_surface.surfaceFormat.format).c_str(), vk::to_string(m_surface.surfaceFormat.colorSpace).c_str());
 
     std::vector<vk::PresentModeKHR> presentModes = m_device.physicalDevice->getSurfacePresentModesKHR(**m_surface.surface);
 
@@ -1038,7 +1041,7 @@ const vk::PhysicalDeviceLimits& GraphicsManager::getPhysicalDeviceLimits() const
 
 vk::DeviceSize GraphicsManager::getAlignedUniformBufferOffset(const vk::DeviceSize& offset) {
     const vk::DeviceSize& minOffsetAlignment = Engine::graphics()->getPhysicalDeviceLimits().minUniformBufferOffsetAlignment;
-    return ROUND_TO_MULTIPLE(offset, minOffsetAlignment);
+    return CEIL_TO_MULTIPLE(offset, minOffsetAlignment);
 }
 
 uint32_t GraphicsManager::getPreviousFrameIndex() const {
@@ -1285,4 +1288,12 @@ void GraphicsManager::beginCmdDebugLabel(const vk::CommandBuffer& commandBuffer,
 
 void GraphicsManager::endCmdDebugLabel(const vk::CommandBuffer& commandBuffer) {
     commandBuffer.endDebugUtilsLabelEXT();
+}
+
+bool GraphicsManager::doAbortOnVulkanError() {
+    return m_abortOnVulkanError;
+}
+
+void GraphicsManager::setAbortOnVulkanError(const bool& abortOnVulkanError) {
+    m_abortOnVulkanError = abortOnVulkanError;
 }

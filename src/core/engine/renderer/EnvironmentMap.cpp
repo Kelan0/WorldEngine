@@ -438,7 +438,7 @@ Buffer* EnvironmentMap::getUniformBuffer() {
         bufferConfig.device = Engine::graphics()->getDevice();
         bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         bufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst;
-        bufferConfig.size = ROUND_TO_MULTIPLE(sizeof(DiffuseIrradianceComputeUBO), 256);
+        bufferConfig.size = CEIL_TO_MULTIPLE(sizeof(DiffuseIrradianceComputeUBO), 256);
         delete s_uniformBuffer;
         s_uniformBuffer = Buffer::create(bufferConfig, "EnvironmentMap-UniformBuffer");
         assert(s_uniformBuffer != nullptr);

@@ -135,7 +135,7 @@ bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, const vk::DeviceSize& si
     return true;
 }
 
-bool Buffer::upload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data) {
+bool Buffer::upload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data, const vk::DeviceSize& srcStride, const vk::DeviceSize& dstStride, const vk::DeviceSize& elementSize) {
 #if _DEBUG
     if (dstBuffer == nullptr) {
 		printf("Cannot upload to NULL buffer\n");
@@ -153,9 +153,46 @@ bool Buffer::upload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::D
 		assert(false);
 		return false;
 	}
+    if (srcStride != 0 || dstStride != 0) {
+        if (elementSize == 0) {
+            printf("Unable to upload data to buffer: If srcStride or dstStride is non-zero, elementSize must be non-zero\n");
+            assert(false);
+            return false;
+        }
+        if (srcStride != 0) {
+            if (srcStride < elementSize) {
+                printf("Unable to upload data to buffer: srcStride (%llu bytes) must not be less than elementSize (%llu bytes)\n", srcStride, elementSize);
+                assert(false);
+                return false;
+            }
+        }
+        if (dstStride != 0) {
+            if (dstStride < elementSize) {
+                printf("Unable to upload data to buffer: dstStride (%llu bytes) must not be less than elementSize (%llu bytes)\n", dstStride, elementSize);
+                assert(false);
+                return false;
+            }
+        }
+    }
 #endif
 
-    vk::DeviceSize bufferSize = size == VK_WHOLE_SIZE ? (dstBuffer->getSize() - offset) : size;
+    vk::DeviceSize bufferSize = size;
+    if (bufferSize == VK_WHOLE_SIZE) {
+        // TODO: this is potentially unsafe, and should be disallowed.
+        bufferSize = dstBuffer->getSize() - offset;
+
+        if (srcStride != 0 || dstStride != 0) {
+            assert(elementSize != 0);
+            bufferSize = FLOOR_TO_MULTIPLE(bufferSize, elementSize);
+#if _DEBUG
+            if (bufferSize == 0) {
+                printf("Unable to upload data to buffer: elementSize (%llu bytes) is larger than the remaining buffer size (%llu bytes after offset %llu)\n", elementSize, dstBuffer->getSize() - offset, offset);
+                assert(false);
+                return false;
+            }
+#endif
+        }
+    }
 
 #if _DEBUG
     if (offset + bufferSize > dstBuffer->getSize()) {
@@ -166,9 +203,9 @@ bool Buffer::upload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::D
 #endif
 
     if (!dstBuffer->hasMemoryProperties(vk::MemoryPropertyFlagBits::eHostVisible)) {
-        return Buffer::stagedUpload(dstBuffer, offset, bufferSize, data);
+        return Buffer::stagedUpload(dstBuffer, offset, bufferSize, data, srcStride, dstStride, elementSize);
     } else {
-        return Buffer::mappedUpload(dstBuffer, offset, bufferSize, data);
+        return Buffer::mappedUpload(dstBuffer, offset, bufferSize, data, srcStride, dstStride, elementSize);
     }
 }
 
@@ -180,8 +217,8 @@ bool Buffer::copyTo(Buffer* dstBuffer, const vk::DeviceSize& size, const vk::Dev
     return Buffer::copy(this, dstBuffer, size, srcOffset, dstOffset);
 }
 
-bool Buffer::upload(const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data) {
-    return Buffer::upload(this, offset, size, data);
+bool Buffer::upload(const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data, const vk::DeviceSize& srcStride, const vk::DeviceSize& dstStride, const vk::DeviceSize& elementSize) {
+    return Buffer::upload(this, offset, size, data, srcStride, dstStride, elementSize);
 }
 
 std::shared_ptr<vkr::Device> Buffer::getDevice() const {
@@ -228,20 +265,35 @@ const Buffer* Buffer::getStagingBuffer() {
     return s_stagingBuffer.get();
 }
 
-bool Buffer::stagedUpload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data) {
+bool Buffer::stagedUpload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data, const vk::DeviceSize& srcStride, const vk::DeviceSize& dstStride, const vk::DeviceSize& elementSize) {
     if (size == 0) {
         return true; // We "successfully" uploaded nothing... This is valid
     }
-    reserveStagingBuffer(dstBuffer->getDevice(), size);
 
-    vk::DeviceSize stageSize = glm::min(s_stagingBuffer->getSize(), size);
+    vk::DeviceSize dstSize = size;
+    if (dstStride != 0) {
+        assert(elementSize != 0);
+        assert(dstStride >= elementSize);
+        vk::DeviceSize elementCount = size / elementSize;
+        assert(elementCount * elementSize == size); // if elementSize is provided, the size of the data buffer must be a multiple of elementSize
+        dstSize = elementCount * dstStride;
+    }
+    reserveStagingBuffer(dstBuffer->getDevice(), dstSize);
+
+    vk::DeviceSize stageSize = glm::min(s_stagingBuffer->getSize(), dstSize);
+    if (dstStride != 0) {
+        stageSize = FLOOR_TO_MULTIPLE(stageSize, dstStride);
+        assert(stageSize != 0);
+    }
+
     vk::DeviceSize stageOffset = 0;
     const uint8_t* stageData = static_cast<const uint8_t*>(data);
 
-    vk::DeviceSize stages = (size + stageSize - 1) / stageSize; // round-up integer division
 
-    for (vk::DeviceSize i = 0; i < stages; ++i) {
-        if (!Buffer::mappedUpload(s_stagingBuffer.get(), 0, stageSize, stageData)) {
+    vk::DeviceSize stages = INT_DIV_CEIL(dstSize, stageSize);
+
+    for (vk::DeviceSize i = 0; i < stages; ++i, stageOffset += stageSize) {
+        if (!Buffer::mappedUpload(s_stagingBuffer.get(), 0, stageSize, stageData + stageOffset, srcStride, dstStride, elementSize)) {
             printf("Failed to upload data to staging buffer\n");
             return false;
         }
@@ -250,14 +302,12 @@ bool Buffer::stagedUpload(Buffer* dstBuffer, const vk::DeviceSize& offset, const
             printf("Failed to copy data from staging buffer\n");
             return false;
         }
-
-        stageData += stageSize;
     }
 
     return true;
 }
 
-bool Buffer::mappedUpload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data) {
+bool Buffer::mappedUpload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data, const vk::DeviceSize& srcStride, const vk::DeviceSize& dstStride, const vk::DeviceSize& elementSize) {
     if (size == 0) {
         return true; // We "successfully" uploaded nothing... This is valid
     }
@@ -267,8 +317,31 @@ bool Buffer::mappedUpload(Buffer* dstBuffer, const vk::DeviceSize& offset, const
         return false;
     }
 
-    auto* dstBytes = static_cast<uint8_t*>(dstBuffer->m_memory->map());
-    memcpy(dstBytes + offset, data, size);
+    uint8_t* dstBytes = static_cast<uint8_t*>(dstBuffer->m_memory->map());
+    const uint8_t* srcBytes = static_cast<const uint8_t*>(data);
+
+    vk::DeviceSize srcOffset = 0;
+    vk::DeviceSize dstOffset = offset;
+
+    vk::DeviceSize srcIncr, dstIncr, cpySize;
+
+    if (srcStride != 0 || dstStride != 0) {
+        assert(elementSize != 0);
+        srcIncr = srcStride == 0 ? elementSize : srcStride;
+        dstIncr = dstStride == 0 ? elementSize : dstStride;
+        cpySize = elementSize;
+    } else {
+        srcIncr = dstIncr = cpySize = size;
+    }
+
+    while (srcOffset < size) {
+        assert(dstOffset + elementSize < dstBuffer->getSize());
+        memcpy(dstBytes + dstOffset, srcBytes + srcOffset, cpySize);
+        srcOffset += srcIncr;
+        dstOffset += dstIncr;
+    }
+
+//    memcpy(dstBytes + dstOffset, srcBytes + srcOffset, size);
     dstBuffer->m_memory->unmap();
 
     return true;

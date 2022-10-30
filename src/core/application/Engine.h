@@ -41,7 +41,7 @@ public:
 
     [[nodiscard]] ImmediateRenderer* getImmediateRenderer() const;
 
-    [[nodiscard]] DeferredRenderer* getDeferredLightingPass() const;
+    [[nodiscard]] DeferredRenderer* getDeferredRenderer() const;
 
     [[nodiscard]] ReprojectionRenderer* getReprojectionRenderer() const;
 
@@ -50,6 +50,10 @@ public:
     [[nodiscard]] EventDispatcher* getEventDispatcher() const;
 
     [[nodiscard]] const uint64_t& getCurrentFrameCount() const;
+
+    [[nodiscard]] const bool& isDebugCompositeEnabled() const;
+
+    void setDebugCompositeEnabled(const bool& debugCompositeEnabled);
 
     static GraphicsManager* graphics();
 
@@ -65,13 +69,15 @@ public:
 
     static ReprojectionRenderer* reprojectionRenderer();
 
-    static DeferredRenderer* deferredLightingPass();
+    static DeferredRenderer* deferredRenderer();
 
     static PostProcessRenderer* postProcessingRenderer();
 
     static EventDispatcher* eventDispatcher();
 
     static const uint64_t& currentFrameCount();
+
+    static const bool& debugCompositeEnabled();
 
     static Engine* instance();
 
@@ -98,6 +104,7 @@ private:
     PostProcessRenderer* m_postProcessingRenderer;
     EventDispatcher* m_eventDispatcher;
     uint64_t m_currentFrameCount;
+    bool m_debugCompositeEnabled;
 
     RenderCamera* m_renderCamera;
 };

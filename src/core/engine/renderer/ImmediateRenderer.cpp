@@ -1,8 +1,15 @@
 
 #include "core/engine/renderer/ImmediateRenderer.h"
+#include "core/engine/renderer/renderPasses/DeferredRenderer.h"
+#include "core/engine/event/EventDispatcher.h"
 #include "core/engine/event/GraphicsEvents.h"
 #include "core/application/Engine.h"
 #include "core/graphics/DescriptorSet.h"
+#include "core/graphics/RenderPass.h"
+#include "core/graphics/Framebuffer.h"
+#include "core/graphics/ImageView.h"
+#include "core/graphics/Image2D.h"
+#include "core/graphics/Mesh.h"
 #include "core/util/Profiler.h"
 #include "core/util/Util.h"
 
@@ -73,6 +80,8 @@ ImmediateRenderer::ImmediateRenderer():
     m_modelMatrixStack.push(glm::mat4(1.0F));
     m_projectionMatrixStack.push(glm::mat4(1.0F));
 
+    m_resources.initDefault();
+
     colour(glm::u8vec4(255, 255, 255, 255));
     normal(glm::vec3(0.0F, 0.0F, 0.0F));
     texture(glm::vec2(0.0F, 0.0F));
@@ -83,37 +92,65 @@ ImmediateRenderer::~ImmediateRenderer() {
     delete m_indexBuffer;
     for (auto it = m_graphicsPipelines.begin(); it != m_graphicsPipelines.end(); ++it)
         delete it->second;
+
+    for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i) {
+        delete m_resources[i]->descriptorSet;
+        delete m_resources[i]->uniformBuffer;
+        delete m_resources[i]->framebuffer;
+        delete m_resources[i]->frameColourImageView;
+        delete m_resources[i]->frameColourImage;
+        delete m_resources[i]->frameDepthImageView;
+        delete m_resources[i]->frameDepthImage;
+    }
+
+    Engine::eventDispatcher()->disconnect(&ImmediateRenderer::recreateSwapchain, this);
 }
 
 bool ImmediateRenderer::init() {
 
     std::shared_ptr<DescriptorPool> descriptorPool = Engine::graphics()->descriptorPool();
 
-    DescriptorSetLayoutBuilder builder(descriptorPool->getDevice());
-
-    m_descriptorSetLayout = builder.addUniformBuffer(0, vk::ShaderStageFlagBits::eVertex, true)
+    m_descriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
+            .addUniformBuffer(0, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, true)
+            .addCombinedImageSampler(1, vk::ShaderStageFlagBits::eFragment)
             .build("ImmediateRenderer-DescriptorSetLayout");
+
+    for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i) {
+        m_resources[i]->descriptorSet = DescriptorSet::create(m_descriptorSetLayout, descriptorPool, "ImmediateRenderer-DescriptorSet");
+        m_resources[i]->updateDescriptors = true;
+    }
 
     Engine::eventDispatcher()->connect(&ImmediateRenderer::recreateSwapchain, this);
 
+    if (!createRenderPass()) {
+        printf("Failed to create ImmediateRenderer RenderPass\n");
+        return false;
+    }
     return true;
 }
 
-void ImmediateRenderer::render(const double& dt) {
+void ImmediateRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("ImmediateRenderer::render");
+    PROFILE_BEGIN_GPU_CMD("ImmediateRenderer::render", commandBuffer)
+
+    if (m_resources->updateDescriptors && m_resources->descriptorSet != nullptr) {
+        m_resources->updateDescriptors = false;
+        DescriptorSetWriter(m_resources->descriptorSet)
+            .writeImage(1, Engine::deferredRenderer()->getDepthSampler().get(), Engine::deferredRenderer()->getDepthImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+            .write();
+    }
 
     uploadBuffers();
 
-    const vk::CommandBuffer& commandBuffer = Engine::graphics()->getCurrentCommandBuffer();
-
-    std::array<vk::DescriptorSet, 1> descriptorSets = { m_descriptorSet->getDescriptorSet() };
+    std::array<vk::DescriptorSet, 1> descriptorSets = { m_resources->descriptorSet->getDescriptorSet() };
 
     GraphicsPipeline* currentPipeline = nullptr;
 
     const RenderState* prevRenderState = nullptr;
 
+    m_renderPass->begin(commandBuffer, m_resources->framebuffer, vk::SubpassContents::eInline);
+
     for (size_t index = 0; index < m_renderCommands.size(); ++index) {
-        PROFILE_REGION("Execute render command");
 
         const auto& command = m_renderCommands[index];
 
@@ -137,7 +174,8 @@ void ImmediateRenderer::render(const double& dt) {
         vk::DeviceSize vertexBufferOffset = command.vertexOffset * sizeof(ColouredVertex);
         vk::DeviceSize indexBufferOffset = command.indexOffset * sizeof(uint32_t);
 
-        std::array<uint32_t, 1> dynamicOffsets = { (uint32_t)(index * sizeof(UniformBufferData)) };
+        vk::DeviceSize alignedUniformBufferSize = Engine::graphics()->getAlignedUniformBufferOffset(sizeof(UniformBufferData));
+        std::array<uint32_t, 1> dynamicOffsets = { (uint32_t)(index * alignedUniformBufferSize) };
 
         commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
         commandBuffer.bindVertexBuffers(0, 1, &m_vertexBuffer->getBuffer(), &vertexBufferOffset);
@@ -147,6 +185,9 @@ void ImmediateRenderer::render(const double& dt) {
         commandBuffer.drawIndexed(command.indexCount, 1, 0, 0, 0);
         prevRenderState = &command.state;
     }
+
+    commandBuffer.endRenderPass();
+    PROFILE_END_GPU_CMD(commandBuffer)
 
     m_renderCommands.clear();
     m_uniformBufferData.clear();
@@ -179,6 +220,7 @@ void ImmediateRenderer::begin(const MeshPrimitiveType& primitiveType) {
     UniformBufferData& uniformBufferData = m_uniformBufferData.emplace_back();
     uniformBufferData.modelViewMatrix = m_modelMatrixStack.top();
     uniformBufferData.projectionMatrix = m_projectionMatrixStack.top();
+    uniformBufferData.depthTestEnabled = m_renderState.depthTestEnabled;
 
 //    printf("Begin modelViewMatrix:\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n",
 //           m_currentCommand->modelViewMatrix[0][0], m_currentCommand->modelViewMatrix[1][0], m_currentCommand->modelViewMatrix[2][0], m_currentCommand->modelViewMatrix[3][0],
@@ -407,6 +449,10 @@ void ImmediateRenderer::setLineWidth(const float& lineWidth) {
     m_renderState.lineWidth = lineWidth;
 }
 
+ImageView* ImmediateRenderer::getOutputFrameImageView() const {
+    return m_resources->frameColourImageView;
+}
+
 
 void ImmediateRenderer::addVertex(const ColouredVertex& vertex) {
     PROFILE_SCOPE("ImmediateRenderer::addVertex");
@@ -494,23 +540,24 @@ void ImmediateRenderer::uploadBuffers() {
         m_indexBuffer = Buffer::create(indexBufferConfig, "ImmediateRenderer-IndexBuffer");
     }
 
-    const size_t uniformBufferCapacity = m_uniformBufferData.capacity() * sizeof(UniformBufferData);
-    if (m_uniformBuffer == nullptr || m_uniformBuffer->getSize() < uniformBufferCapacity) {
+    vk::DeviceSize alignedUniformBufferSize = Engine::graphics()->getAlignedUniformBufferOffset(sizeof(UniformBufferData));
+    const size_t uniformBufferCapacity = m_uniformBufferData.capacity() * alignedUniformBufferSize;
+    if (m_resources->uniformBuffer == nullptr || m_resources->uniformBuffer->getSize() < uniformBufferCapacity) {
         PROFILE_REGION("Recreate uniform buffer");
 
         BufferConfiguration uniformBufferConfig{};
         uniformBufferConfig.device = Engine::graphics()->getDevice();
-        uniformBufferConfig.size = glm::max(uniformBufferCapacity, sizeof(UniformBufferData) * 4);
+        uniformBufferConfig.size = glm::max(uniformBufferCapacity, alignedUniformBufferSize * 4);
         uniformBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         uniformBufferConfig.usage = vk::BufferUsageFlagBits::eUniformBuffer;
 
         std::shared_ptr<DescriptorPool> descriptorPool = Engine::graphics()->descriptorPool();
 
-        m_uniformBuffer = Buffer::create(uniformBufferConfig, "ImmediateRenderer-UniformBuffer");
-        m_descriptorSet = DescriptorSet::create(m_descriptorSetLayout, descriptorPool, "ImmediateRenderer-DescriptorSet");
+        delete m_resources->uniformBuffer;
+        m_resources->uniformBuffer = Buffer::create(uniformBufferConfig, "ImmediateRenderer-UniformBuffer");
 
-        DescriptorSetWriter(m_descriptorSet.get())
-                .writeBuffer(0, m_uniformBuffer.get(), 0, sizeof(UniformBufferData)).write();
+        DescriptorSetWriter(m_resources->descriptorSet)
+                .writeBuffer(0, m_resources->uniformBuffer, 0, alignedUniformBufferSize).write();
     }
 
     PROFILE_REGION("Upload vertices");
@@ -531,7 +578,7 @@ void ImmediateRenderer::uploadBuffers() {
 
     PROFILE_REGION("Upload uniforms");
     if (!m_uniformBufferData.empty()) {
-        m_uniformBuffer->upload(0, m_uniformBufferData.size() * sizeof(UniformBufferData), m_uniformBufferData.data());
+        m_resources->uniformBuffer->upload(0, m_uniformBufferData.size() * sizeof(UniformBufferData), m_uniformBufferData.data(), 0, alignedUniformBufferSize, sizeof(UniformBufferData));
     }
 }
 
@@ -563,7 +610,7 @@ GraphicsPipeline* ImmediateRenderer::getGraphicsPipeline(const RenderCommand& re
 
         GraphicsPipelineConfiguration pipelineConfiguration{};
         pipelineConfiguration.device = Engine::graphics()->getDevice();
-        pipelineConfiguration.renderPass = Engine::graphics()->renderPass();
+        pipelineConfiguration.renderPass = m_renderPass;
         pipelineConfiguration.setViewport(0, 0); // Default to full window resolution
 
         pipelineConfiguration.primitiveTopology = primitiveTopology;
@@ -618,11 +665,114 @@ GraphicsPipeline* ImmediateRenderer::getGraphicsPipeline(const RenderCommand& re
     return it->second;
 }
 
-void ImmediateRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
-    for (auto it = m_graphicsPipelines.begin(); it != m_graphicsPipelines.end(); ++it)
-        delete it->second; // Delete the existing pipelines.
+bool ImmediateRenderer::createRenderPass() {
+    vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1;
 
+    std::array<vk::AttachmentDescription, 2> attachments;
+
+    attachments[0].setFormat(Engine::graphics()->getColourFormat());
+    attachments[0].setSamples(samples);
+    attachments[0].setLoadOp(vk::AttachmentLoadOp::eClear); // could be eDontCare ?
+    attachments[0].setStoreOp(vk::AttachmentStoreOp::eStore);
+    attachments[0].setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+    attachments[0].setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+    attachments[0].setInitialLayout(vk::ImageLayout::eUndefined);
+    attachments[0].setFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+
+    attachments[1].setFormat(Engine::graphics()->getDepthFormat());
+    attachments[1].setSamples(samples);
+    attachments[1].setLoadOp(vk::AttachmentLoadOp::eClear);
+    attachments[1].setStoreOp(vk::AttachmentStoreOp::eStore); // could be eDontCare ?
+    attachments[1].setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+    attachments[1].setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+    attachments[1].setInitialLayout(vk::ImageLayout::eUndefined);
+    attachments[1].setFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal); // eDepthStencilAttachmentOptimal if we don't need to sample the depth buffer
+
+
+    std::array<SubpassConfiguration, 1> subpassConfigurations;
+    subpassConfigurations[0].addColourAttachment(0, vk::ImageLayout::eColorAttachmentOptimal);
+
+    std::array<vk::SubpassDependency, 2> dependencies;
+    dependencies[0].setSrcSubpass(VK_SUBPASS_EXTERNAL);
+    dependencies[0].setDstSubpass(0);
+    dependencies[0].setSrcStageMask(vk::PipelineStageFlagBits::eBottomOfPipe);
+    dependencies[0].setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+    dependencies[0].setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);
+    dependencies[0].setDstAccessMask(vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite);
+    dependencies[0].setDependencyFlags(vk::DependencyFlagBits::eByRegion);
+
+    dependencies[1].setSrcSubpass(0);
+    dependencies[1].setDstSubpass(VK_SUBPASS_EXTERNAL);
+    dependencies[1].setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+    dependencies[1].setDstStageMask(vk::PipelineStageFlagBits::eBottomOfPipe);
+    dependencies[1].setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite);
+    dependencies[1].setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
+    dependencies[1].setDependencyFlags(vk::DependencyFlagBits::eByRegion);
+
+    RenderPassConfiguration renderPassConfig{};
+    renderPassConfig.device = Engine::graphics()->getDevice();
+    renderPassConfig.setAttachments(attachments);
+    renderPassConfig.setSubpasses(subpassConfigurations);
+    renderPassConfig.setSubpassDependencies(dependencies);
+//    renderPassConfig.setClearColour(0, glm::vec4(0.0F, 0.0F, 0.0F, 1.0F));
+
+    m_renderPass = std::shared_ptr<RenderPass>(RenderPass::create(renderPassConfig, "PostProcessRenderer-BloomBlurRenderPass"));
+    return (bool)m_renderPass;
+}
+
+void ImmediateRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
+    for (auto& [key, graphicsPipeline] : m_graphicsPipelines)
+        delete graphicsPipeline; // Delete the existing pipelines.
     m_graphicsPipelines.clear();
+
+    for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i) {
+        m_resources[i]->updateDescriptors = true;
+        delete m_resources[i]->framebuffer;
+        delete m_resources[i]->frameColourImageView;
+        delete m_resources[i]->frameColourImage;
+        delete m_resources[i]->frameDepthImageView;
+        delete m_resources[i]->frameDepthImage;
+
+        vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1;
+
+        Image2DConfiguration imageConfig{};
+        imageConfig.device = Engine::graphics()->getDevice();
+        imageConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+        imageConfig.sampleCount = sampleCount;
+        imageConfig.setSize(Engine::graphics()->getResolution());
+
+        ImageViewConfiguration imageViewConfig{};
+        imageViewConfig.device = Engine::graphics()->getDevice();
+
+        // Colour Image
+        imageConfig.format = Engine::graphics()->getColourFormat();
+        imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;
+        m_resources[i]->frameColourImage = Image2D::create(imageConfig, "ImmediateRenderer-FrameColourImage");
+        imageViewConfig.format = imageConfig.format;
+        imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
+        imageViewConfig.setImage(m_resources[i]->frameColourImage);
+        m_resources[i]->frameColourImageView = ImageView::create(imageViewConfig, "ImmediateRenderer-FrameColourImageView");
+
+        // Depth Image
+        imageConfig.format = Engine::graphics()->getDepthFormat();
+        imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eDepthStencilAttachment;
+        m_resources[i]->frameDepthImage = Image2D::create(imageConfig, "ImmediateRenderer-FrameDepthImage");
+        imageViewConfig.format = imageConfig.format;
+        imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eDepth;
+        imageViewConfig.setImage(m_resources[i]->frameDepthImage);
+        m_resources[i]->frameDepthImageView = ImageView::create(imageViewConfig, "ImmediateRenderer-FrameDepthImageView");
+
+        // Framebuffer
+        FramebufferConfiguration framebufferConfig{};
+        framebufferConfig.device = Engine::graphics()->getDevice();
+        framebufferConfig.setSize(Engine::graphics()->getResolution());
+        framebufferConfig.setRenderPass(m_renderPass.get());
+        framebufferConfig.addAttachment(m_resources[i]->frameColourImageView);
+        framebufferConfig.addAttachment(m_resources[i]->frameDepthImageView);
+
+        m_resources[i]->framebuffer = Framebuffer::create(framebufferConfig, "ImmediateRenderer-Framebuffer");
+        assert(m_resources[i]->framebuffer != nullptr);
+    }
 }
 
 void ImmediateRenderer::validateCompleteCommand() const {

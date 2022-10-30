@@ -65,7 +65,8 @@ namespace vkr = vk::raii;
     ClassName(ClassName&&) = delete;
 
 #define INT_DIV_CEIL(num, denom) (((num) + (denom) - 1) / (denom))
-#define ROUND_TO_MULTIPLE(value, multiple) (INT_DIV_CEIL(value, multiple) * multiple)
+#define CEIL_TO_MULTIPLE(value, multiple) (INT_DIV_CEIL(value, multiple) * multiple)
+#define FLOOR_TO_MULTIPLE(value, multiple) ((value / multiple) * multiple)
 
 #ifndef ENABLE_SHADER_HOT_RELOAD
 #define ENABLE_SHADER_HOT_RELOAD 1

@@ -72,3 +72,18 @@ void Util::splitString(const std::string_view& str, char separator, std::vector<
             return;
     }
 }
+
+// https://github.com/microsoft/mimalloc/issues/201
+inline void Util::memcpy_sse(void* dst, void const* src, size_t size) {
+    // https://hero.handmade.network/forums/code-discussion/t/157-memory_bandwidth_+_implementing_memcpy
+    size_t stride = 2 * sizeof ( __m128 );
+    while ( size ) {
+        __m128 a = _mm_load_ps ( ( float * ) ( ( uint8_t const * ) src ) + 0 * sizeof ( __m128 ) );
+        __m128 b = _mm_load_ps ( ( float * ) ( ( ( uint8_t const * ) src ) + 1 * sizeof ( __m128 ) ) );
+        _mm_stream_ps ( ( float * ) ( ( ( uint8_t * ) dst ) + 0 * sizeof ( __m128 ) ), a );
+        _mm_stream_ps ( ( float * ) ( ( ( uint8_t * ) dst ) + 1 * sizeof ( __m128 ) ), b );
+        size -= stride;
+        src = ( ( uint8_t const * ) src ) + stride;
+        dst = ( ( uint8_t * ) dst ) + stride;
+    }
+}

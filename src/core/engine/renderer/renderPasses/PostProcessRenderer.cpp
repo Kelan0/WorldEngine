@@ -1,6 +1,7 @@
 #include "core/engine/renderer/renderPasses/PostProcessRenderer.h"
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/renderer/renderPasses/ReprojectionRenderer.h"
+#include "core/engine/renderer/ImmediateRenderer.h"
 #include "core/engine/event/EventDispatcher.h"
 #include "core/engine/event/GraphicsEvents.h"
 #include "core/graphics/GraphicsPipeline.h"
@@ -14,8 +15,10 @@
 #include "core/util/Profiler.h"
 
 #define POSTPROCESS_UNIFORM_BUFFER_BINDING 0
-#define POSTPROCESS_FRAME_TEXTURE_BINDING 1
-#define POSTPROCESS_BLOOM_TEXTURE_BINDING 2
+#define POSTPROCESS_FRAME_COLOUR_TEXTURE_BINDING 1
+#define POSTPROCESS_DEBUG_COMPOSITE_COLOUR_TEXTURE_BINDING 2
+#define POSTPROCESS_BLOOM_TEXTURE_BINDING 3
+
 #define BLOOM_BLUR_UNIFORM_BUFFER_BINDING 0
 #define BLOOM_BLUR_SRC_TEXTURE_BINDING 1
 
@@ -60,8 +63,9 @@ bool PostProcessRenderer::init() {
 
     m_postProcessDescriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
             .addUniformBuffer(POSTPROCESS_UNIFORM_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment)
-            .addCombinedImageSampler(POSTPROCESS_FRAME_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
+            .addCombinedImageSampler(POSTPROCESS_FRAME_COLOUR_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(POSTPROCESS_BLOOM_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
+            .addCombinedImageSampler(POSTPROCESS_DEBUG_COMPOSITE_COLOUR_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .build("PostProcessRenderer-PostProcessDescriptorSetLayout");
 
     m_bloomBlurDescriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
@@ -137,7 +141,7 @@ void PostProcessRenderer::renderBloomBlur(const double& dt, const vk::CommandBuf
         assert(success);
     }
 
-    ImageView* lightingOutputImageView = Engine::deferredLightingPass()->getOutputFrameImageView();
+    ImageView* lightingOutputImageView = Engine::deferredRenderer()->getOutputFrameImageView();
     if (m_resources->updateInputImage) {
         DescriptorSetWriter(m_resources->bloomBlurInputDescriptorSet)
                 .writeImage(BLOOM_BLUR_SRC_TEXTURE_BINDING, m_frameSampler.get(), lightingOutputImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
@@ -206,11 +210,23 @@ void PostProcessRenderer::render(const double& dt, const vk::CommandBuffer& comm
     PROFILE_SCOPE("PostProcessRenderer::render")
     PROFILE_BEGIN_GPU_CMD("PostProcessRenderer::render", commandBuffer)
 
+    if (m_postProcessUniformData.debugCompositeEnabled != Engine::debugCompositeEnabled()) {
+        m_postProcessUniformData.debugCompositeEnabled = Engine::debugCompositeEnabled();
+        setPostProcessUniformDataChanged(true);
+    }
+
     if (m_resources->updateInputImage) {
         ImageView* frameImageView = Engine::reprojectionRenderer()->getOutputFrameImageView();
+        ImageView* debugCompositeImageView = Engine::immediateRenderer()->getOutputFrameImageView();
+        if (debugCompositeImageView == nullptr)
+            debugCompositeImageView = frameImageView;
 
         DescriptorSetWriter(m_resources->postProcessDescriptorSet)
-                .writeImage(POSTPROCESS_FRAME_TEXTURE_BINDING, m_frameSampler.get(), frameImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+                .writeImage(POSTPROCESS_FRAME_COLOUR_TEXTURE_BINDING, m_frameSampler.get(), frameImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+                .write();
+
+        DescriptorSetWriter(m_resources->postProcessDescriptorSet)
+                .writeImage(POSTPROCESS_DEBUG_COMPOSITE_COLOUR_TEXTURE_BINDING, m_frameSampler.get(), debugCompositeImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
                 .write();
     }
 
@@ -245,8 +261,7 @@ bool PostProcessRenderer::isBloomEnabled() const {
 void PostProcessRenderer::setBloomEnabled(const bool& bloomEnabled) {
     if (m_postProcessUniformData.bloomEnabled != bloomEnabled) {
         m_postProcessUniformData.bloomEnabled = bloomEnabled;
-        for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i)
-            m_resources[i]->postProcessUniformDataChanged = true;
+        setPostProcessUniformDataChanged(true);
     }
 }
 
@@ -257,8 +272,7 @@ float PostProcessRenderer::getBloomIntensity() const {
 void PostProcessRenderer::setBloomIntensity(const float& bloomIntensity) {
     if (glm::notEqual(m_postProcessUniformData.bloomIntensity, bloomIntensity, 1e-5F)) {
         m_postProcessUniformData.bloomIntensity = bloomIntensity;
-        for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i)
-            m_resources[i]->postProcessUniformDataChanged = true;
+        setPostProcessUniformDataChanged(true);
     }
 }
 
@@ -269,8 +283,7 @@ float PostProcessRenderer::getBloomBlurFilterRadius() const {
 void PostProcessRenderer::setBloomBlurFilterRadius(const float& bloomBlurFilterRadius) {
     if (glm::notEqual(m_bloomBlurUniformData.filterRadius, bloomBlurFilterRadius, 1e-5F)) {
         m_bloomBlurUniformData.filterRadius = bloomBlurFilterRadius;
-        for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i)
-            m_resources[i]->bloomBlurUniformDataChanged = true;
+        setBloomBlurUniformDataChanged(true);
     }
 }
 
@@ -281,8 +294,7 @@ float PostProcessRenderer::getBloomThreshold() const {
 void PostProcessRenderer::setBloomThreshold(const float& bloomThreshold) {
     if (glm::notEqual(m_bloomBlurUniformData.threshold, bloomThreshold, 1e-5F)) {
         m_bloomBlurUniformData.threshold = bloomThreshold;
-        for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i)
-            m_resources[i]->bloomBlurUniformDataChanged = true;
+        setBloomBlurUniformDataChanged(true);
     }
 }
 
@@ -293,8 +305,7 @@ float PostProcessRenderer::getBloomSoftThreshold() const {
 void PostProcessRenderer::setBloomSoftThreshold(const float& bloomSoftThreshold) {
     if (glm::notEqual(m_bloomBlurUniformData.softThreshold, bloomSoftThreshold, 1e-5F)) {
         m_bloomBlurUniformData.softThreshold = bloomSoftThreshold;
-        for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i)
-            m_resources[i]->bloomBlurUniformDataChanged = true;
+        setBloomBlurUniformDataChanged(true);
     }
 }
 
@@ -308,6 +319,16 @@ uint32_t PostProcessRenderer::getBloomBlurIterations() const {
 
 void PostProcessRenderer::setBloomBlurIterations(const uint32_t& bloomBlurIterations) {
     m_bloomBlurIterations = glm::min(bloomBlurIterations, m_bloomBlurMaxIterations);
+}
+
+void PostProcessRenderer::setPostProcessUniformDataChanged(const bool& didChange) {
+    for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i)
+        m_resources[i]->postProcessUniformDataChanged = true;
+}
+
+void PostProcessRenderer::setBloomBlurUniformDataChanged(const bool& didChange) {
+    for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i)
+        m_resources[i]->bloomBlurUniformDataChanged = true;
 }
 
 void PostProcessRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
@@ -347,7 +368,7 @@ bool PostProcessRenderer::createBloomBlurFramebuffer(RenderResources* resources)
     imageConfig.setSize(Engine::graphics()->getResolution());
 
 
-    imageConfig.format = Engine::deferredLightingPass()->getOutputColourFormat();
+    imageConfig.format = Engine::deferredRenderer()->getOutputColourFormat();
     imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;
     resources->bloomBlurImage = Image2D::create(imageConfig, "PostProcessRenderer-BloomBlurImage");
 
@@ -447,7 +468,7 @@ bool PostProcessRenderer::createBloomBlurRenderPass() {
 
     std::array<vk::AttachmentDescription, 1> attachments;
 
-    attachments[0].setFormat(Engine::deferredLightingPass()->getOutputColourFormat());
+    attachments[0].setFormat(Engine::deferredRenderer()->getOutputColourFormat());
     attachments[0].setSamples(samples);
     attachments[0].setLoadOp(vk::AttachmentLoadOp::eClear); // could be eDontCare ?
     attachments[0].setStoreOp(vk::AttachmentStoreOp::eStore);

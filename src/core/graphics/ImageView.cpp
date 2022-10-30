@@ -5,27 +5,30 @@
 #include "core/graphics/GraphicsManager.h"
 
 
-void ImageViewConfiguration::setImage(const vk::Image& image, const vk::ImageViewType& imageViewType) {
-    this->image = image;
-    this->imageViewType = imageViewType;
+void ImageViewConfiguration::setImage(const vk::Image& p_image, const vk::ImageViewType& p_imageViewType) {
+    assert((bool)p_image);
+    image = p_image;
+    imageViewType = p_imageViewType;
 }
 
-void ImageViewConfiguration::setImage(const Image2D* image) {
-    setImage(image->getImage(), vk::ImageViewType::e2D);
+void ImageViewConfiguration::setImage(const Image2D* p_image) {
+    assert(p_image != nullptr);
+    setImage(p_image->getImage(), vk::ImageViewType::e2D);
 }
 
-void ImageViewConfiguration::setImage(const ImageCube* image) {
-    setImage(image->getImage(), vk::ImageViewType::eCube);
+void ImageViewConfiguration::setImage(const ImageCube* p_image) {
+    assert(p_image != nullptr);
+    setImage(p_image->getImage(), vk::ImageViewType::eCube);
 }
 
-void ImageViewConfiguration::setSwizzle(vk::ComponentSwizzle redSwizzle, vk::ComponentSwizzle greenSwizzle, vk::ComponentSwizzle blueSwizzle, vk::ComponentSwizzle alphaSwizzle) {
-    this->redSwizzle = redSwizzle;
-    this->greenSwizzle = greenSwizzle;
-    this->blueSwizzle = blueSwizzle;
-    this->alphaSwizzle = alphaSwizzle;
+void ImageViewConfiguration::setSwizzle(const vk::ComponentSwizzle& p_redSwizzle, const vk::ComponentSwizzle& p_greenSwizzle, const vk::ComponentSwizzle& p_blueSwizzle, const vk::ComponentSwizzle& p_alphaSwizzle) {
+    redSwizzle = p_redSwizzle;
+    greenSwizzle = p_greenSwizzle;
+    blueSwizzle = p_blueSwizzle;
+    alphaSwizzle = p_alphaSwizzle;
 }
 
-ImageView::ImageView(std::weak_ptr<vkr::Device> device, const vk::ImageView& imageView, const vk::Image& image, const vk::ImageViewType& type):
+ImageView::ImageView(const std::weak_ptr<vkr::Device>& device, const vk::ImageView& imageView, const vk::Image& image, const vk::ImageViewType& type):
         m_device(device),
         m_imageView(imageView),
         m_image(image),
@@ -75,7 +78,7 @@ ImageView* ImageView::create(const ImageViewConfiguration& imageViewConfiguratio
     return new ImageView(imageViewConfiguration.device, imageView, imageViewConfiguration.image, imageViewConfiguration.imageViewType);
 }
 
-std::shared_ptr<vkr::Device> ImageView::getDevice() const {
+const std::shared_ptr<vkr::Device>& ImageView::getDevice() const {
     return m_device;
 }
 

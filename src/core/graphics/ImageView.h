@@ -27,20 +27,20 @@ struct ImageViewConfiguration {
 
     void setImage(const ImageCube* image);
 
-    void setSwizzle(vk::ComponentSwizzle redSwizzle, vk::ComponentSwizzle greenSwizzle, vk::ComponentSwizzle blueSwizzle, vk::ComponentSwizzle alphaSwizzle);
+    void setSwizzle(const vk::ComponentSwizzle& redSwizzle, const vk::ComponentSwizzle& greenSwizzle, const vk::ComponentSwizzle& blueSwizzle, const vk::ComponentSwizzle& alphaSwizzle);
 };
 
 class ImageView {
     NO_COPY(ImageView)
 private:
-    ImageView(std::weak_ptr<vkr::Device> device, const vk::ImageView& imageView, const vk::Image& image, const vk::ImageViewType& type);
+    ImageView(const std::weak_ptr<vkr::Device>& device, const vk::ImageView& imageView, const vk::Image& image, const vk::ImageViewType& type);
 
 public:
     ~ImageView();
 
     static ImageView* create(const ImageViewConfiguration& imageViewConfiguration, const char* name);
 
-    std::shared_ptr<vkr::Device> getDevice() const;
+    const std::shared_ptr<vkr::Device>& getDevice() const;
 
     const vk::ImageView& getImageView() const;
 

@@ -35,7 +35,8 @@ EnvironmentMap* environmentMap = nullptr;
 
 
 DeferredRenderer::DeferredRenderer():
-    m_attachmentSampler(nullptr) {
+    m_renderCamera(RenderCamera{}),
+    m_previousFrame(FrameImages{}) {
 }
 
 DeferredRenderer::~DeferredRenderer() {
@@ -51,7 +52,8 @@ DeferredRenderer::~DeferredRenderer() {
         }
     }
 
-    delete m_attachmentSampler;
+//    delete m_attachmentSampler;
+//    delete m_depthSampler;
 
     delete environmentMap;
 
@@ -129,7 +131,8 @@ bool DeferredRenderer::init() {
     samplerConfig.magFilter = vk::Filter::eNearest;
     samplerConfig.wrapU = vk::SamplerAddressMode::eMirroredRepeat;
     samplerConfig.wrapV = vk::SamplerAddressMode::eMirroredRepeat;
-    m_attachmentSampler = Sampler::create(samplerConfig, "DeferredRenderer-GBufferAttachmentSampler");
+    m_attachmentSampler = Sampler::get(samplerConfig, "DeferredRenderer-GBufferAttachmentSampler");
+    m_depthSampler = m_attachmentSampler; // Nearest filtering.
 
     ImageCubeConfiguration imageCubeConfig{};
     imageCubeConfig.device = Engine::graphics()->getDevice();
@@ -235,11 +238,11 @@ void DeferredRenderer::render(const double& dt, const vk::CommandBuffer& command
 
     if (m_resources->updateDescriptorSet) {
         m_resources->updateDescriptorSet = false;
-        descriptorSetWriter.writeImage(ALBEDO_TEXTURE_BINDING, m_attachmentSampler, getAlbedoImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
-        descriptorSetWriter.writeImage(NORMAL_TEXTURE_BINDING, m_attachmentSampler, getNormalImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
-        descriptorSetWriter.writeImage(EMISSION_TEXTURE_BINDING, m_attachmentSampler, getEmissionImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
-        descriptorSetWriter.writeImage(VELOCITY_TEXTURE_BINDING, m_attachmentSampler, getVelocityImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
-        descriptorSetWriter.writeImage(DEPTH_TEXTURE_BINDING, m_attachmentSampler, getDepthImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+        descriptorSetWriter.writeImage(ALBEDO_TEXTURE_BINDING, m_attachmentSampler.get(), getAlbedoImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+        descriptorSetWriter.writeImage(NORMAL_TEXTURE_BINDING, m_attachmentSampler.get(), getNormalImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+        descriptorSetWriter.writeImage(EMISSION_TEXTURE_BINDING, m_attachmentSampler.get(), getEmissionImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+        descriptorSetWriter.writeImage(VELOCITY_TEXTURE_BINDING, m_attachmentSampler.get(), getVelocityImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+        descriptorSetWriter.writeImage(DEPTH_TEXTURE_BINDING, m_depthSampler.get(), getDepthImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
         descriptorSetWriter.writeImage(ENVIRONMENT_CUBEMAP_BINDING, environmentMap->getEnvironmentMapTexture().get(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
         descriptorSetWriter.writeImage(SPECULAR_REFLECTION_CUBEMAP_BINDING,environmentMap->getSpecularReflectionMapTexture().get(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
         descriptorSetWriter.writeImage(DIFFUSE_IRRADIANCE_CUBEMAP_BINDING, environmentMap->getDiffuseIrradianceMapTexture().get(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
@@ -358,6 +361,10 @@ vk::Format DeferredRenderer::getAttachmentFormat(const uint32_t& attachment) con
 vk::Format DeferredRenderer::getOutputColourFormat() const {
     return vk::Format::eR16G16B16A16Sfloat;
 //    return vk::Format::eR32G32B32A32Sfloat;
+}
+
+const std::shared_ptr<Sampler>& DeferredRenderer::getDepthSampler() const {
+    return m_depthSampler;
 }
 
 void DeferredRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {

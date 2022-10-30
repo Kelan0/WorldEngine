@@ -1,6 +1,7 @@
 #include "core/graphics/GraphicsPipeline.h"
 #include "core/application/Application.h"
 #include "core/application/Engine.h"
+#include "core/graphics/GraphicsManager.h"
 #include "core/graphics/RenderPass.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Buffer.h"
@@ -413,7 +414,11 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     graphicsPipelineCreateInfo.setBasePipelineHandle(VK_NULL_HANDLE);
     graphicsPipelineCreateInfo.setBasePipelineIndex(-1);
 
+    bool doAbort = Engine::graphics()->doAbortOnVulkanError();
+    Engine::graphics()->setAbortOnVulkanError(false);
     auto createGraphicsPipelineResult = device.createGraphicsPipeline(VK_NULL_HANDLE, graphicsPipelineCreateInfo);
+    Engine::graphics()->setAbortOnVulkanError(doAbort);
+
     if (createGraphicsPipelineResult.result != vk::Result::eSuccess) {
         printf("Failed to create GraphicsPipeline: %s\n", vk::to_string(createGraphicsPipelineResult.result).c_str());
         cleanupShaderModules();
@@ -730,8 +735,24 @@ void GraphicsPipeline::onShaderLoaded(ShaderLoadedEvent* event) {
     if (doRecreate) {
         Engine::graphics()->flushRendering();
 
-        Engine::eventDispatcher()->connect(CallbackWrapper<FlushRenderingEvent>([this](FlushRenderingEvent* event) {
-            recreate(m_config, m_name);
+        Engine::eventDispatcher()->connect(CallbackWrapper<FlushRenderingEvent>([&event, this](FlushRenderingEvent* event1) {
+
+            vk::Pipeline backupPipeline = std::exchange(m_pipeline, VK_NULL_HANDLE);
+            vk::PipelineLayout backupPipelineLayout = std::exchange(m_pipelineLayout, VK_NULL_HANDLE);
+            std::shared_ptr<RenderPass> backupRenderPass = std::exchange(m_renderPass, nullptr);
+            GraphicsPipelineConfiguration backupConfig(m_config); // Copy
+
+            bool success = recreate(m_config, m_name);
+            if (!success) {
+                printf("Shader %s@%s was reloaded, but reconstructing pipeline %s failed. The pipeline will remain unchanged\n", event->filePath.c_str(), event->entryPoint.c_str(), m_name);
+                m_pipeline = backupPipeline;
+                m_pipelineLayout = backupPipelineLayout;
+                m_renderPass = backupRenderPass;
+                m_config = backupConfig;
+            } else {
+                (**m_device).destroyPipelineLayout(backupPipelineLayout);
+                (**m_device).destroyPipeline(backupPipeline);
+            }
         }), true);
 
     }
