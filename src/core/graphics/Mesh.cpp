@@ -5,20 +5,13 @@
 #include <chrono>
 
 
-
-
-
-
-
-void MeshConfiguration::setPrimitiveType(const MeshPrimitiveType& primitiveType) {
-    this->primitiveType = primitiveType;
+void MeshConfiguration::setPrimitiveType(const MeshPrimitiveType& p_primitiveType) {
+    primitiveType = primitiveType;
 }
 
 
-
 Mesh::Mesh(const WeakResource<vkr::Device>& device, const std::string& name):
-        m_device(device, name),
-        m_resourceId(GraphicsManager::nextResourceId()),
+        GraphicsResource(ResourceType_Mesh, device, name),
         m_vertexSize(0),
         m_indexSize(0),
         m_vertexBuffer(nullptr),
@@ -157,8 +150,4 @@ uint32_t Mesh::getIndexCount() const {
 
 const MeshPrimitiveType& Mesh::getPrimitiveType() const {
     return m_primitiveType;
-}
-
-const GraphicsResource& Mesh::getResourceId() const {
-    return m_resourceId;
 }

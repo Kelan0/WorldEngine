@@ -54,7 +54,6 @@
 
 #include "hash.h"
 #include "util/Exception.h"
-#include "core/graphics/GraphicsResource.h"
 
 namespace vkr = vk::raii;
 
@@ -75,7 +74,5 @@ namespace vkr = vk::raii;
 #endif
 
 constexpr uint32_t CONCURRENT_FRAMES = 3;
-
-typedef uint64_t GraphicsResource;
 
 #endif //WORLDENGINE_CORE_H

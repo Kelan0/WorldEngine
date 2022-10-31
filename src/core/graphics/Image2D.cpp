@@ -6,8 +6,6 @@
 #include "core/application/Engine.h"
 
 
-
-
 void Image2DConfiguration::setSize(const uint32_t& p_width, const uint32_t& p_height) {
     width = p_width;
     height = p_height;
@@ -32,19 +30,16 @@ void Image2DConfiguration::setSource(const std::string& p_filePath) {
 }
 
 Image2D::Image2D(const WeakResource<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& width, const uint32_t& height, const uint32_t& mipLevelCount, const vk::Format& format, const std::string& name):
-        m_device(device, name),
+        GraphicsResource(ResourceType_Image2D, device, name),
         m_image(image),
         m_memory(memory),
         m_width(width),
         m_height(height),
         m_mipLevelCount(mipLevelCount),
-        m_format(format),
-        m_ResourceId(GraphicsManager::nextResourceId()) {
-    //printf("Create image\n");
+        m_format(format) {
 }
 
 Image2D::~Image2D() {
-    //printf("Destroying image\n");
     (**m_device).destroyImage(m_image);
     vfree(m_memory);
 }
@@ -235,10 +230,6 @@ bool Image2D::generateMipmap(const vk::Filter& filter, const vk::ImageAspectFlag
     return Image2D::generateMipmap(this, filter, aspectMask, mipLevels, dstState);
 }
 
-const SharedResource<vkr::Device>& Image2D::getDevice() const {
-    return m_device;
-}
-
 const vk::Image& Image2D::getImage() const {
     return m_image;
 }
@@ -261,10 +252,6 @@ const uint32_t Image2D::getMipLevelCount() const {
 
 const vk::Format& Image2D::getFormat() const {
     return m_format;
-}
-
-const GraphicsResource& Image2D::getResourceId() const {
-    return m_ResourceId;
 }
 
 bool Image2D::validateImageRegion(const Image2D* image, ImageRegion& imageRegion) {

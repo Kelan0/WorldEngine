@@ -29,11 +29,10 @@ void ImageViewConfiguration::setSwizzle(const vk::ComponentSwizzle& p_redSwizzle
 }
 
 ImageView::ImageView(const WeakResource<vkr::Device>& device, const vk::ImageView& imageView, const vk::Image& image, const vk::ImageViewType& type, const std::string& name):
-        m_device(device, name),
+        GraphicsResource(ResourceType_ImageView, device, name),
         m_imageView(imageView),
         m_image(image),
-        m_type(type),
-        m_resourceId(GraphicsManager::nextResourceId()) {
+        m_type(type) {
 }
 
 ImageView::~ImageView() {
@@ -78,10 +77,6 @@ ImageView* ImageView::create(const ImageViewConfiguration& imageViewConfiguratio
     return new ImageView(imageViewConfiguration.device, imageView, imageViewConfiguration.image, imageViewConfiguration.imageViewType, name);
 }
 
-const SharedResource<vkr::Device>& ImageView::getDevice() const {
-    return m_device;
-}
-
 const vk::ImageView& ImageView::getImageView() const {
     return m_imageView;
 }
@@ -94,6 +89,3 @@ const vk::ImageViewType& ImageView::getType() const {
     return m_type;
 }
 
-const GraphicsResource& ImageView::getResourceId() const {
-    return m_resourceId;
-}

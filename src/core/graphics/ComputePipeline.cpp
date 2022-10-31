@@ -43,15 +43,11 @@ void ComputePipelineConfiguration::addPushConstantRange(const vk::ShaderStageFla
 }
 
 ComputePipeline::ComputePipeline(const WeakResource<vkr::Device>& device, const std::string& name):
-    m_device(device, name) {
+        GraphicsResource(ResourceType_ComputePipeline, device, name) {
 }
 
-ComputePipeline::ComputePipeline(const WeakResource<vkr::Device>& device,
-                                   vk::Pipeline& pipeline,
-                                   vk::PipelineLayout& pipelineLayout,
-                                   ComputePipelineConfiguration config,
-                                   const std::string& name):
-        m_device(device, name),
+ComputePipeline::ComputePipeline(const WeakResource<vkr::Device>& device, vk::Pipeline& pipeline, vk::PipelineLayout& pipelineLayout, ComputePipelineConfiguration config, const std::string& name):
+        GraphicsResource(ResourceType_ComputePipeline, device, name),
         m_pipeline(pipeline),
         m_pipelineLayout(pipelineLayout),
         m_config(std::move(config)) {

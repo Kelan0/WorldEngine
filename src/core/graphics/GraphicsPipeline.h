@@ -3,6 +3,7 @@
 #define WORLDENGINE_GRAPHICSPIPELINE_H
 
 #include "core/core.h"
+#include "core/graphics/GraphicsResource.h"
 
 #define ALWAYS_RELOAD_SHADERS
 
@@ -114,14 +115,14 @@ struct GraphicsPipelineConfiguration {
     void setAttachmentAlphaBlendMode(const size_t& attachmentIndex, const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op);
 };
 
-class GraphicsPipeline {
+class GraphicsPipeline : public GraphicsResource {
     NO_COPY(GraphicsPipeline);
 
 private:
     explicit GraphicsPipeline(const WeakResource<vkr::Device>& device, const std::string& name);
 
 public:
-    ~GraphicsPipeline();
+    ~GraphicsPipeline() override;
 
     static GraphicsPipeline* create(const WeakResource<vkr::Device>& device, const std::string& name);
 
@@ -132,8 +133,6 @@ public:
     void bind(const vk::CommandBuffer& commandBuffer) const;
 
     const vk::Pipeline& getPipeline() const;
-
-    const SharedResource<vkr::Device>& getDevice() const;
 
     const SharedResource<RenderPass>& getRenderPass() const;
 
@@ -231,12 +230,10 @@ private:
 #endif
 
 private:
-    SharedResource<vkr::Device> m_device;
     vk::Pipeline m_pipeline;
     vk::PipelineLayout m_pipelineLayout;
     SharedResource<RenderPass> m_renderPass;
     GraphicsPipelineConfiguration m_config;
-    std::string m_name;
 };
 
 

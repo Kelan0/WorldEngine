@@ -20,11 +20,11 @@ void BufferViewConfiguration::setOffsetRange(const vk::DeviceSize& offset, const
 }
 
 BufferView::BufferView(const WeakResource<vkr::Device>& device, const vk::BufferView& bufferView, const vk::Format& format, const vk::DeviceSize& offset, const vk::DeviceSize& range, const std::string& name):
-    m_device(device, name),
-    m_bufferView(bufferView),
-    m_format(format),
-    m_offset(offset),
-    m_range(range) {
+        GraphicsResource(ResourceType_BufferView, device, name),
+        m_bufferView(bufferView),
+        m_format(format),
+        m_offset(offset),
+        m_range(range) {
 }
 
 BufferView::~BufferView() {
@@ -50,10 +50,6 @@ BufferView* BufferView::create(const BufferViewConfiguration& bufferViewConfigur
     Engine::graphics()->setObjectName(device, (uint64_t)(VkBufferView)bufferView, vk::ObjectType::eBufferView, name);
 
     return new BufferView(bufferViewConfiguration.device, bufferView, bufferViewConfiguration.format, bufferViewConfiguration.offset, bufferViewConfiguration.range, name);
-}
-
-const SharedResource<vkr::Device>& BufferView::getDevice() const {
-    return m_device;
 }
 
 const vk::BufferView& BufferView::getBufferView() const {

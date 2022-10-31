@@ -43,9 +43,6 @@ bool compareBlocks(const DeviceMemoryHeap::BlockRange& lhs, const DeviceMemoryHe
 }
 
 
-
-
-
 DeviceMemoryManager::DeviceMemoryManager(const WeakResource<vkr::Device>& device):
         m_device(device, "DeviceMemoryManager-Device"),
         m_heapGenSizeBytes(1024 * 1024 * 128) {
@@ -118,7 +115,7 @@ DeviceMemoryHeap* DeviceMemoryManager::getHeap(const vk::MemoryRequirements& req
         memoryConfiguration.memoryTypeFlags = requirements.memoryTypeBits;
         memoryConfiguration.size = INT_DIV_CEIL(requirements.size, m_heapGenSizeBytes) * m_heapGenSizeBytes;
 
-        DeviceMemoryHeap* heap = DeviceMemoryHeap::create(memoryConfiguration);
+        DeviceMemoryHeap* heap = DeviceMemoryHeap::create(memoryConfiguration, "DeviceMemoryManager-Heap-" + std::to_string(memoryTypeIndex) + "-" + std::to_string(heaps.size()));
         if (heap == nullptr)
             return nullptr;
 
@@ -130,12 +127,8 @@ DeviceMemoryHeap* DeviceMemoryManager::getHeap(const vk::MemoryRequirements& req
 }
 
 
-
-
-
-
-DeviceMemoryHeap::DeviceMemoryHeap(const WeakResource<vkr::Device>& device, const vk::DeviceMemory& deviceMemory, const vk::DeviceSize& size):
-        m_device(device, "DeviceMemoryHeap-Device"),
+DeviceMemoryHeap::DeviceMemoryHeap(const WeakResource<vkr::Device>& device, const vk::DeviceMemory& deviceMemory, const vk::DeviceSize& size, const std::string& name):
+        GraphicsResource(ResourceType_DeviceMemoryHeap, device, name),
         m_deviceMemory(deviceMemory),
         m_size(size) {
 
@@ -159,13 +152,13 @@ DeviceMemoryHeap::~DeviceMemoryHeap() {
     device.freeMemory(m_deviceMemory);
 }
 
-DeviceMemoryHeap* DeviceMemoryHeap::create(const DeviceMemoryConfiguration& deviceMemoryConfiguration) {
+DeviceMemoryHeap* DeviceMemoryHeap::create(const DeviceMemoryConfiguration& deviceMemoryConfiguration, const std::string& name) {
     assert(!deviceMemoryConfiguration.device.expired());
 
     char sizeLabel[6] = "";
-    printf("Allocating device memory heap: %.3f %s\n", Util::getMemorySizeMagnitude(deviceMemoryConfiguration.size, sizeLabel), sizeLabel);
+//    printf("Allocating device memory heap: %.3f %s\n", Util::getMemorySizeMagnitude(deviceMemoryConfiguration.size, sizeLabel), sizeLabel);
 
-    const vk::Device& device = **deviceMemoryConfiguration.device.lock("DeviceMemoryHeap-TempDevice");
+    const vk::Device& device = **deviceMemoryConfiguration.device.get();
 
     uint32_t memoryTypeIndex;
 
@@ -191,11 +184,7 @@ DeviceMemoryHeap* DeviceMemoryHeap::create(const DeviceMemoryConfiguration& devi
         return nullptr;
     }
 
-    return new DeviceMemoryHeap(deviceMemoryConfiguration.device, deviceMemory, deviceMemoryConfiguration.size);
-}
-
-const SharedResource<vkr::Device>& DeviceMemoryHeap::getDevice() const {
-    return m_device;
+    return new DeviceMemoryHeap(deviceMemoryConfiguration.device, deviceMemory, deviceMemoryConfiguration.size, name);
 }
 
 const vk::DeviceMemory& DeviceMemoryHeap::getDeviceMemory() {
@@ -339,7 +328,7 @@ size_t DeviceMemoryHeap::findBlockIndex(const vk::DeviceSize& size, const vk::De
     // // Assuming m_blocks is sorted, this should be the smallest such block.
     // return std::lower_bound(m_blocks.begin(), m_blocks.end(), size, findSmallestFreeBlock);
 
-    SizeAlignment alignedSize{ size, alignment };
+    SizeAlignment alignedSize{size, alignment};
     auto it = std::lower_bound(m_blockSizeSequence.begin(), m_blockSizeSequence.end(), alignedSize, [this](const size_t& blockIndex, const SizeAlignment& alignedSize) {
         return findSmallestFreeBlock(m_blocks[blockIndex], alignedSize);
     });

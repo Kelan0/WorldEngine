@@ -3,6 +3,7 @@
 #define WORLDENGINE_BUFFERVIEW_H
 
 #include "core/core.h"
+#include "core/graphics/GraphicsResource.h"
 
 class Buffer;
 
@@ -22,17 +23,16 @@ struct BufferViewConfiguration {
     void setOffsetRange(const vk::DeviceSize& offset, const vk::DeviceSize& range);
 };
 
-class BufferView {
+class BufferView : public GraphicsResource {
     NO_COPY(BufferView)
+
 private:
     BufferView(const WeakResource<vkr::Device>& device, const vk::BufferView& bufferView, const vk::Format& format, const vk::DeviceSize& offset, const vk::DeviceSize& range, const std::string& name);
 
 public:
-    ~BufferView();
+    ~BufferView() override;
 
     static BufferView* create(const BufferViewConfiguration& bufferViewConfiguration, const std::string& name);
-
-    const SharedResource<vkr::Device>& getDevice() const;
 
     const vk::BufferView& getBufferView() const;
 
@@ -43,7 +43,6 @@ public:
     const vk::DeviceSize& getRange() const;
 
 private:
-    SharedResource<vkr::Device> m_device;
     vk::BufferView m_bufferView;
     vk::Format m_format;
     vk::DeviceSize m_offset;

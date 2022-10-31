@@ -16,13 +16,13 @@ struct CommandBufferConfiguration {
     vk::CommandBufferLevel level = vk::CommandBufferLevel::ePrimary;
 };
 
-class CommandPool {
+class CommandPool : public GraphicsResource {
     NO_COPY(CommandPool);
 private:
     CommandPool(const WeakResource<vkr::Device>& device, const vk::CommandPool& commandPool, const std::string& name);
 
 public:
-    ~CommandPool();
+    ~CommandPool() override;
 
     static CommandPool* create(const CommandPoolConfiguration& commandPoolConfiguration, const std::string& name);
 
@@ -42,19 +42,14 @@ public:
 
     bool hasCommandBuffer(const std::string& name) const;
 
-    const GraphicsResource& getResourceId() const;
-
 private:
     void updateTemporaryCommandBuffers();
 
 private:
-    SharedResource<vkr::Device> m_device;
     vk::CommandPool m_commandPool;
     std::unordered_map<std::string, std::shared_ptr<vkr::CommandBuffer>> m_commandBuffers;
     std::unordered_map<vk::CommandBuffer, vk::Fence> m_temporaryCmdBufferFences;
     std::vector<vk::Fence> m_unusedFences;
-
-    GraphicsResource m_resourceId;
 };
 
 #endif //WORLDENGINE_COMMANDPOOL_H

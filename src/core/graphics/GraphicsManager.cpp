@@ -17,7 +17,6 @@
 uint64_t GraphicsManager::s_nextResourceID = 0;
 
 
-
 #define VK_PFN(funcName) PFN_ ## funcName
 #define VK_FUNC(funcName) ((VK_PFN(funcName))m_instance->getProcAddr(#funcName))
 
@@ -25,19 +24,19 @@ uint64_t GraphicsManager::s_nextResourceID = 0;
 QueueDetails::QueueDetails() {};
 
 GraphicsManager::GraphicsManager():
-    m_instance(nullptr),
-    m_renderPass(nullptr),
-    m_commandPool(nullptr),
-    m_descriptorPool(nullptr),
-    m_memory(nullptr),
-    m_debugMessenger(nullptr),
-    m_preferredPresentMode(vk::PresentModeKHR::eMailbox),
-    m_isInitialized(false),
-    m_recreateSwapchain(false),
-    m_resolutionChanged(false),
-    m_directImagePresentEnabled(false),
-    m_swapchainImageSampled(false),
-    m_swapchainBufferMode(SwapchainBufferMode_TripleBuffer) {
+        m_instance(nullptr),
+        m_renderPass(nullptr),
+        m_commandPool(nullptr),
+        m_descriptorPool(nullptr),
+        m_memory(nullptr),
+        m_debugMessenger(nullptr),
+        m_preferredPresentMode(vk::PresentModeKHR::eMailbox),
+        m_isInitialized(false),
+        m_recreateSwapchain(false),
+        m_resolutionChanged(false),
+        m_directImagePresentEnabled(false),
+        m_swapchainImageSampled(false),
+        m_swapchainBufferMode(SwapchainBufferMode_TripleBuffer) {
     m_swapchain.currentFrameIndex = 0;
     m_swapchain.currentImageIndex = UINT32_MAX;
 }
@@ -170,7 +169,7 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
     //descriptorPoolConfig.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
     m_descriptorPool = SharedResource<DescriptorPool>(DescriptorPool::create(descriptorPoolConfig, "GraphicsManager-DefaultDescriptorPool"), "GraphicsManager-DefaultDescriptorPool");
 
-    m_commandPool->allocateCommandBuffer("transfer_buffer", { vk::CommandBufferLevel::ePrimary });
+    m_commandPool->allocateCommandBuffer("transfer_buffer", {vk::CommandBufferLevel::ePrimary});
 
     m_isInitialized = true;
     m_recreateSwapchain = true;
@@ -543,7 +542,7 @@ bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enable
     std::vector<vk::QueueFamilyProperties> queueFamilyProperties = m_device.physicalDevice->getQueueFamilyProperties();
 
     // TODO: not this... need a way to actually give queues priorities
-    std::vector<float> queuePriorities = { 0.0F, 0.0F, 0.0F, 0.0F, 0.0F };
+    std::vector<float> queuePriorities = {0.0F, 0.0F, 0.0F, 0.0F, 0.0F};
 
     std::vector<vk::DeviceQueueCreateInfo> deviceQueueCreateInfos;
 
@@ -664,7 +663,7 @@ bool GraphicsManager::initSurfaceDetails() {
         printf("Preferred surface present mode %s was not found. Defaulting to %s\n", vk::to_string(m_preferredPresentMode).c_str(), vk::to_string(m_surface.presentMode).c_str());
     }
 
-    std::vector<vk::Format> depthFormats = { vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint, vk::Format::eD32Sfloat };
+    std::vector<vk::Format> depthFormats = {vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint, vk::Format::eD32Sfloat};
     m_surface.depthFormat = ImageUtil::selectSupportedFormat(getPhysicalDevice(), depthFormats, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
     if (m_surface.depthFormat == vk::Format::eUndefined) {
         std::string formatsStr = "";
@@ -717,7 +716,7 @@ bool GraphicsManager::recreateSwapchain() {
     createInfo.setImageArrayLayers(1);
     createInfo.setImageUsage(imageUsageFlags);
 
-    std::vector<uint32_t> queueFamilyIndices = { m_queues.queueFamilies.graphicsQueueFamilyIndex.value(), m_queues.queueFamilies.presentQueueFamilyIndex.value() };
+    std::vector<uint32_t> queueFamilyIndices = {m_queues.queueFamilies.graphicsQueueFamilyIndex.value(), m_queues.queueFamilies.presentQueueFamilyIndex.value()};
 
     if (m_queues.queueFamilies.graphicsQueueFamilyIndex != m_queues.queueFamilies.presentQueueFamilyIndex) {
         createInfo.setImageSharingMode(vk::SharingMode::eConcurrent);
@@ -745,7 +744,7 @@ bool GraphicsManager::recreateSwapchain() {
 
     m_swapchain.commandBuffers.resize(CONCURRENT_FRAMES);
     for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
-        std::shared_ptr<vkr::CommandBuffer> commandBuffer = m_commandPool->allocateCommandBuffer("swapchain_cmd" + std::to_string(i), { vk::CommandBufferLevel::ePrimary });
+        std::shared_ptr<vkr::CommandBuffer> commandBuffer = m_commandPool->allocateCommandBuffer("swapchain_cmd" + std::to_string(i), {vk::CommandBufferLevel::ePrimary});
         m_swapchain.commandBuffers[i] = std::move(commandBuffer);
     }
 
@@ -857,9 +856,9 @@ bool GraphicsManager::beginFrame() {
         bool recreated = recreateSwapchain();
 #if _DEBUG
         if (!recreated) {
-			printf("Failed to recreate swapchain\n");
-			assert(false);
-		}
+            printf("Failed to recreate swapchain\n");
+            assert(false);
+        }
 #endif
         return false; // Skip this frame
     }
@@ -871,7 +870,7 @@ bool GraphicsManager::beginFrame() {
     const vk::Fence& frameFence = **m_swapchain.inFlightFences[m_swapchain.currentFrameIndex];
     const vk::SwapchainKHR& swapchain = **m_swapchain.swapchain;
 
-    vk::Result result = m_device.device->waitForFences({ frameFence }, true, UINT64_MAX);
+    vk::Result result = m_device.device->waitForFences({frameFence}, true, UINT64_MAX);
     assert(result == vk::Result::eSuccess);
 
 //    PROFILE_REGION("Reset frame fence")
@@ -947,13 +946,13 @@ void GraphicsManager::endFrame() {
     m_swapchain.imagesInFlight[m_swapchain.currentImageIndex] = frameFence;
 
     PROFILE_REGION("Reset frame fence")
-    m_device.device->resetFences({ frameFence });
+    m_device.device->resetFences({frameFence});
 
     PROFILE_REGION("Submit queues")
 
-    vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+    vk::PipelineStageFlags waitStages[] = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
 
-    std::vector <vk::SubmitInfo> submitInfos;
+    std::vector<vk::SubmitInfo> submitInfos;
     vk::SubmitInfo& submitInfo = submitInfos.emplace_back();
     submitInfo.setWaitSemaphoreCount(1);
     submitInfo.setPWaitSemaphores(&imageAvailableSemaphore);
@@ -1176,7 +1175,7 @@ const DebugUtils::RenderInfo& GraphicsManager::getDebugInfo() const {
     return m_debugInfo;
 }
 
-GraphicsResource GraphicsManager::nextResourceId() {
+ResourceId GraphicsManager::nextResourceId() {
     return ++s_nextResourceID;
 }
 
@@ -1233,6 +1232,7 @@ void GraphicsManager::setObjectName(const vk::Device& device, const uint64_t& ob
         device.setDebugUtilsObjectNameEXT(objectNameInfo);
     }
 }
+
 void GraphicsManager::setObjectName(const vk::Device& device, const uint64_t& objectHandle, const vk::ObjectType& objectType, const std::string& objectName) {
     setObjectName(device, objectHandle, objectType, objectName.c_str());
 }

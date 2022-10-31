@@ -2,15 +2,17 @@
 #define WORLDENGINE_COMPUTEPIPELINE_H
 
 #include "core/core.h"
+#include "core/graphics/GraphicsResource.h"
 
 #define ALWAYS_RELOAD_SHADERS
 
 class Buffer;
+
 class DescriptorSetLayout;
 
 
 struct ComputePipelineConfiguration {
-    WeakResource<vkr::Device> device;
+    WeakResource <vkr::Device> device;
     std::string computeShader;
     std::string computeShaderEntryPoint;
     std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
@@ -29,21 +31,21 @@ struct ComputePipelineConfiguration {
     void addPushConstantRange(const vk::ShaderStageFlags& stageFlags, const uint32_t& offset, const uint32_t& size);
 };
 
-class ComputePipeline {
+class ComputePipeline : public GraphicsResource {
     NO_COPY(ComputePipeline);
 
 private:
-    explicit ComputePipeline(const WeakResource<vkr::Device>& device, const std::string& name);
+    explicit ComputePipeline(const WeakResource <vkr::Device>& device, const std::string& name);
 
-    ComputePipeline(const WeakResource<vkr::Device>& device,
-                     vk::Pipeline& pipeline,
-                     vk::PipelineLayout& pipelineLayout,
-                     ComputePipelineConfiguration config, const std::string& name);
+    ComputePipeline(const WeakResource <vkr::Device>& device,
+                    vk::Pipeline& pipeline,
+                    vk::PipelineLayout& pipelineLayout,
+                    ComputePipelineConfiguration config, const std::string& name);
 
 public:
-    ~ComputePipeline();
+    ~ComputePipeline() override;
 
-    static ComputePipeline* create(const WeakResource<vkr::Device>& device, const std::string& name);
+    static ComputePipeline* create(const WeakResource <vkr::Device>& device, const std::string& name);
 
     static ComputePipeline* create(const ComputePipelineConfiguration& computePipelineConfiguration, const std::string& name);
 
@@ -69,15 +71,12 @@ private:
     void cleanup();
 
 private:
-    SharedResource<vkr::Device> m_device;
     vk::Pipeline m_pipeline;
     vk::PipelineLayout m_pipelineLayout;
     ComputePipelineConfiguration m_config;
 
     static std::unordered_map<size_t, ComputePipeline*> s_cachedComputePipelines;
 };
-
-
 
 
 namespace std {
@@ -87,13 +86,12 @@ namespace std {
             size_t hash = 0;
             std::hash_combine(hash, computePipelineConfiguration.computeShader);
             std::hash_combine(hash, computePipelineConfiguration.computeShaderEntryPoint);
-            for (const auto &descriptorSetLayout : computePipelineConfiguration.descriptorSetLayouts)
+            for (const auto& descriptorSetLayout : computePipelineConfiguration.descriptorSetLayouts)
                 std::hash_combine(hash, (void*)((VkDescriptorSetLayout)descriptorSetLayout));
             return hash;
         }
     };
 }
-
 
 
 #endif //WORLDENGINE_COMPUTEPIPELINE_H

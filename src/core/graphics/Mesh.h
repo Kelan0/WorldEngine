@@ -34,13 +34,13 @@ struct MeshConfiguration {
     void setPrimitiveType(const MeshPrimitiveType& primitiveType);
 };
 
-class Mesh {
+class Mesh : public GraphicsResource {
     NO_COPY(Mesh);
 private:
     explicit Mesh(const WeakResource<vkr::Device>& device, const std::string& name);
 
 public:
-    ~Mesh();
+    ~Mesh() override;
 
     static Mesh* create(const MeshConfiguration& meshConfiguration);
 
@@ -70,16 +70,12 @@ public:
 
     const MeshPrimitiveType& getPrimitiveType() const;
 
-    const GraphicsResource& getResourceId() const;
-
 private:
-    SharedResource<vkr::Device> m_device;
     Buffer* m_vertexBuffer;
     Buffer* m_indexBuffer;
     vk::DeviceSize m_vertexSize;
     vk::DeviceSize m_indexSize;
     MeshPrimitiveType m_primitiveType;
-    GraphicsResource m_resourceId;
 };
 
 

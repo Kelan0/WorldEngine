@@ -3,14 +3,20 @@
 #define WORLDENGINE_DESCRIPTORSET_H
 
 #include "core/core.h"
+#include "core/graphics/GraphicsResource.h"
 
 class Buffer;
+
 class BufferView;
+
 class Sampler;
+
 class ImageView;
+
 class Texture;
 
 class DescriptorSet;
+
 class DescriptorPool;
 
 struct DescriptorPoolConfiguration {
@@ -19,22 +25,22 @@ struct DescriptorPoolConfiguration {
     uint32_t maxSets = 1000;
 
     std::unordered_map<vk::DescriptorType, uint32_t> poolSizes = {
-            { vk::DescriptorType::eSampler, 500 },
-            { vk::DescriptorType::eCombinedImageSampler, 4000 },
-            { vk::DescriptorType::eSampledImage, 4000 },
-            { vk::DescriptorType::eStorageImage, 1000 },
-            { vk::DescriptorType::eUniformTexelBuffer, 1000 },
-            { vk::DescriptorType::eStorageTexelBuffer, 1000 },
-            { vk::DescriptorType::eUniformBuffer, 2000 },
-            { vk::DescriptorType::eStorageBuffer, 2000 },
-            { vk::DescriptorType::eUniformBufferDynamic, 1000 },
-            { vk::DescriptorType::eStorageBufferDynamic, 1000 },
-            { vk::DescriptorType::eInputAttachment, 500 }
+            {vk::DescriptorType::eSampler,              500},
+            {vk::DescriptorType::eCombinedImageSampler, 4000},
+            {vk::DescriptorType::eSampledImage,         4000},
+            {vk::DescriptorType::eStorageImage,         1000},
+            {vk::DescriptorType::eUniformTexelBuffer,   1000},
+            {vk::DescriptorType::eStorageTexelBuffer,   1000},
+            {vk::DescriptorType::eUniformBuffer,        2000},
+            {vk::DescriptorType::eStorageBuffer,        2000},
+            {vk::DescriptorType::eUniformBufferDynamic, 1000},
+            {vk::DescriptorType::eStorageBufferDynamic, 1000},
+            {vk::DescriptorType::eInputAttachment,      500}
     };
 };
 
 
-class DescriptorSetLayout {
+class DescriptorSetLayout : public GraphicsResource {
     NO_COPY(DescriptorSetLayout);
 
 public:
@@ -43,7 +49,7 @@ public:
 
         Key(const Key& copy);
 
-        Key(Key&& move) noexcept ;
+        Key(Key&& move) noexcept;
 
         ~Key();
 
@@ -72,8 +78,6 @@ public:
 
     bool createDescriptorSets(const SharedResource<DescriptorPool>& descriptorPool, const uint32_t& count, SharedResource<DescriptorSet>* outDescriptorSets, const std::string& name);
 
-    const SharedResource<vkr::Device>& getDevice() const;
-
     const vk::DescriptorSetLayout& getDescriptorSetLayout() const;
 
     std::vector<vk::DescriptorSetLayoutBinding> getBindings() const;
@@ -92,19 +96,12 @@ public:
 
     bool operator!=(const DescriptorSetLayout& rhs) const;
 
-    const GraphicsResource& getResourceId() const;
-
 private:
-    SharedResource<vkr::Device> m_device;
     vk::DescriptorSetLayout m_descriptorSetLayout;
     Key m_key;
-    std::string m_name;
-
-    GraphicsResource m_resourceId;
 
     static Cache s_descriptorSetLayoutCache;
 };
-
 
 
 class DescriptorSetLayoutBuilder {
@@ -143,7 +140,7 @@ private:
 };
 
 
-class DescriptorPool {
+class DescriptorPool : public GraphicsResource {
     NO_COPY(DescriptorPool);
 private:
     DescriptorPool(const WeakResource<vkr::Device>& device, vk::DescriptorPool descriptorPool, bool canFreeDescriptorSets, const std::string& name);
@@ -153,8 +150,6 @@ public:
 
     static DescriptorPool* create(const DescriptorPoolConfiguration& descriptorPoolConfiguration, const std::string& name);
 
-    const SharedResource<vkr::Device>& getDevice() const;
-
     const vk::DescriptorPool& getDescriptorPool() const;
 
     bool allocate(const vk::DescriptorSetLayout& descriptorSetLayout, vk::DescriptorSet& outDescriptorSet) const;
@@ -163,19 +158,13 @@ public:
 
     const bool& canFreeDescriptorSets() const;
 
-    const GraphicsResource& getResourceId() const;
-
 private:
-    SharedResource<vkr::Device> m_device;
     vk::DescriptorPool m_descriptorPool;
     bool m_canFreeDescriptorSets;
-
-    GraphicsResource m_resourceId;
 };
 
 
-
-class DescriptorSet {
+class DescriptorSet : public GraphicsResource {
     NO_COPY(DescriptorSet);
 private:
     DescriptorSet(const WeakResource<vkr::Device>& device, const WeakResource<DescriptorPool>& pool, const WeakResource<DescriptorSetLayout>& layout, const vk::DescriptorSet& descriptorSet, const std::string& name);
@@ -191,20 +180,14 @@ public:
 
     const vk::DescriptorSet& getDescriptorSet() const;
 
-    const SharedResource<vkr::Device>& getDevice() const;
-
     const SharedResource<DescriptorPool>& getPool() const;
 
     const SharedResource<DescriptorSetLayout>& getLayout() const;
 
-    const GraphicsResource& getResourceId() const;
-
 private:
-    SharedResource<vkr::Device> m_device;
     SharedResource<DescriptorPool> m_pool;
     SharedResource<DescriptorSetLayout> m_layout;
     vk::DescriptorSet m_descriptorSet;
-    GraphicsResource m_resourceId;
 };
 
 

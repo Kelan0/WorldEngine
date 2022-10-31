@@ -1,11 +1,16 @@
 #ifndef WORLDENGINE_GRAPHICSRESOURCE_H
 #define WORLDENGINE_GRAPHICSRESOURCE_H
 
-#include <xmemory>
-#include <unordered_map>
-#include <string>
-#include <memory>
-#include <assert.h>
+//#include <xmemory>
+//#include <unordered_map>
+//#include <string>
+//#include <memory>
+//#include <cassert>
+#include "core/core.h"
+
+
+typedef uint64_t ResourceId;
+
 
 template<typename T>
 class SharedResource;
@@ -13,6 +18,7 @@ class SharedResource;
 template<typename T>
 class WeakResource;
 
+class GraphicsResource;
 
 template<typename T>
 class SharedResource {
@@ -162,6 +168,57 @@ private:
 };
 
 
+class GraphicsResource {
+    NO_COPY(GraphicsResource);
+public:
+    enum ResourceType {
+        ResourceType_None = 0,
+        ResourceType_Mesh = 1,
+        ResourceType_Buffer = 2,
+        ResourceType_BufferView = 3,
+        ResourceType_Texture = 4,
+        ResourceType_Sampler = 5,
+        ResourceType_Image2D = 6,
+        ResourceType_ImageCube = 7,
+        ResourceType_ImageView = 8,
+        ResourceType_Framebuffer = 9,
+        ResourceType_DescriptorPool = 10,
+        ResourceType_DescriptorSetLayout = 11,
+        ResourceType_DescriptorSet = 12,
+        ResourceType_RenderPass = 13,
+        ResourceType_GraphicsPipeline = 14,
+        ResourceType_ComputePipeline = 15,
+        ResourceType_CommandPool = 16,
+        ResourceType_DeviceMemoryHeap = 17,
+    };
+
+public:
+    GraphicsResource(const ResourceType& type, const WeakResource<vkr::Device>& device, const std::string& name);
+
+    GraphicsResource(GraphicsResource&& move) noexcept;
+
+    GraphicsResource& operator=(GraphicsResource&& move) noexcept;
+
+    virtual ~GraphicsResource() = 0;
+
+    const SharedResource<vkr::Device>& getDevice() const;
+
+    const std::string& getName() const;
+
+    const ResourceId& getResourceId() const;
+
+    const ResourceType& getResourceType() const;
+
+protected:
+    SharedResource<vkr::Device> m_device;
+    std::string m_name;
+
+private:
+    ResourceId m_resourceId;
+    ResourceType m_resourceType;
+};
+
+
 template<typename T>
 SharedResource<T>::Tracker::Tracker(const ptr_t& ptr):
         ptr(ptr),
@@ -224,7 +281,7 @@ SharedResource<T>::SharedResource():
 
 template<typename T>
 SharedResource<T>::SharedResource(std::nullptr_t):
-    SharedResource() {
+        SharedResource() {
 }
 
 template<typename T>
@@ -415,14 +472,14 @@ void SharedResource<T>::unregisterOwner() {
 
 template<typename T>
 WeakResource<T>::WeakResource():
-    m_tracker(nullptr),
-    m_ptr(nullptr) {
+        m_tracker(nullptr),
+        m_ptr(nullptr) {
 }
 
 template<typename T>
 WeakResource<T>::WeakResource(const SharedResource<T>& shared):
-    m_tracker(shared.m_tracker),
-    m_ptr(shared.m_ptr) {
+        m_tracker(shared.m_tracker),
+        m_ptr(shared.m_ptr) {
     incrRef();
 }
 
@@ -433,8 +490,8 @@ WeakResource<T>::WeakResource(const WeakResource<T>& copy) {
 
 template<typename T>
 WeakResource<T>::WeakResource(WeakResource<T>&& move):
-    m_tracker(std::exchange(move.m_tracker, nullptr)),
-    m_ptr(std::exchange(move.m_ptr, nullptr)) {
+        m_tracker(std::exchange(move.m_tracker, nullptr)),
+        m_ptr(std::exchange(move.m_ptr, nullptr)) {
 }
 
 template<typename T>

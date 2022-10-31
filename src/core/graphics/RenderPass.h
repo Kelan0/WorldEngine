@@ -2,6 +2,7 @@
 #define WORLDENGINE_RENDERPASS_H
 
 #include "core/core.h"
+#include "core/graphics/GraphicsResource.h"
 
 class Framebuffer;
 
@@ -14,15 +15,19 @@ struct SubpassConfiguration {
     // TODO: resolve attachments
 
     void addColourAttachment(const vk::AttachmentReference& attachmentReference);
+
     void addColourAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout);
 
     void addInputAttachment(const vk::AttachmentReference& attachmentReference);
+
     void addInputAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout);
 
     void addPreserveAttachment(const vk::AttachmentReference& attachmentReference);
+
     void addPreserveAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout);
 
     void setDepthStencilAttachment(const vk::AttachmentReference& attachmentReference);
+
     void setDepthStencilAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout);
 };
 
@@ -46,27 +51,35 @@ struct RenderPassConfiguration {
     void setSubpassDependencies(const vk::ArrayProxy<vk::SubpassDependency>& subpassDependencies);
 
     void setClearValues(const vk::ArrayProxy<vk::ClearValue>& clearValues);
+
     void setClearValues(const std::unordered_map<uint32_t, vk::ClearValue>& clearValues);
 
     void setClearValue(const uint32_t attachment, const vk::ClearValue& clearValue);
+
     void setClearColour(const uint32_t attachment, const glm::vec4& colour);
+
     void setClearDepth(const uint32_t attachment, const float& depth);
+
     void setClearStencil(const uint32_t attachment, const uint32_t& stencil);
 };
 
-class RenderPass {
+class RenderPass : public GraphicsResource {
     NO_COPY(RenderPass)
+
 private:
-    RenderPass(const WeakResource<vkr::Device>& device, vk::RenderPass renderPass, const RenderPassConfiguration& config, const std::string& name);
+    RenderPass(const WeakResource<vkr::Device>& device, const vk::RenderPass& renderPass, const RenderPassConfiguration& config, const std::string& name);
 
 public:
-    ~RenderPass();
+    ~RenderPass() override;
 
     static RenderPass* create(const RenderPassConfiguration& renderPassConfiguration, const std::string& name);
 
     void begin(const vk::CommandBuffer& commandBuffer, const vk::Framebuffer& framebuffer, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height, const vk::SubpassContents& subpassContents) const;
+
     void begin(const vk::CommandBuffer& commandBuffer, const Framebuffer* framebuffer, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height, const vk::SubpassContents& subpassContents) const;
+
     void begin(const vk::CommandBuffer& commandBuffer, const vk::Framebuffer& framebuffer, const vk::SubpassContents& subpassContents) const;
+
     void begin(const vk::CommandBuffer& commandBuffer, const Framebuffer* framebuffer, const vk::SubpassContents& subpassContents) const;
 
     const vk::RenderPass& getRenderPass() const;
@@ -84,12 +97,14 @@ public:
     bool hasDepthStencilAttachment(const uint32_t& subpass) const;
 
     void setClearValue(const uint32_t attachment, const vk::ClearValue& clearValue);
+
     void setClearColour(const uint32_t attachment, const glm::vec4& colour);
+
     void setClearDepth(const uint32_t attachment, const float& depth);
+
     void setClearStencil(const uint32_t attachment, const uint32_t& stencil);
 
 private:
-    SharedResource<vkr::Device> m_device;
     vk::RenderPass m_renderPass;
     RenderPassConfiguration m_config;
 };

@@ -3,12 +3,15 @@
 #define WORLDENGINE_DEVICEMEMORY_H
 
 #include "core/core.h"
+#include "core/graphics/GraphicsResource.h"
 
 class Buffer;
+
 class Image2D;
 
 
 class DeviceMemoryHeap;
+
 class DeviceMemoryBlock;
 
 
@@ -18,7 +21,6 @@ struct DeviceMemoryConfiguration {
     vk::MemoryPropertyFlags memoryProperties;
     uint32_t memoryTypeFlags;
 };
-
 
 
 class DeviceMemoryManager {
@@ -45,9 +47,7 @@ private:
 };
 
 
-
-
-class DeviceMemoryHeap {
+class DeviceMemoryHeap : public GraphicsResource {
     friend class DeviceMemoryBlock;
 
 public:
@@ -58,14 +58,12 @@ public:
     };
 
 private:
-    DeviceMemoryHeap(const WeakResource<vkr::Device>& device, const vk::DeviceMemory& deviceMemory, const vk::DeviceSize& size);
+    DeviceMemoryHeap(const WeakResource<vkr::Device>& device, const vk::DeviceMemory& deviceMemory, const vk::DeviceSize& size, const std::string& name);
 
 public:
-    ~DeviceMemoryHeap();
+    ~DeviceMemoryHeap() override;
 
-    static DeviceMemoryHeap* create(const DeviceMemoryConfiguration& deviceMemoryConfiguration);
-
-    const SharedResource<vkr::Device>& getDevice() const;
+    static DeviceMemoryHeap* create(const DeviceMemoryConfiguration& deviceMemoryConfiguration, const std::string& name);
 
     const vk::DeviceMemory& getDeviceMemory();
 
@@ -115,7 +113,6 @@ private:
     void unmap(DeviceMemoryBlock* block);
 
 private:
-    SharedResource<vkr::Device> m_device;
     vk::DeviceMemory m_deviceMemory;
     vk::DeviceSize m_size;
 
@@ -134,10 +131,12 @@ private:
 
 class DeviceMemoryBlock {
     friend class DeviceMemoryHeap;
+
 private:
     DeviceMemoryBlock(DeviceMemoryHeap* heap, const vk::DeviceSize& offset, const vk::DeviceSize& size, const vk::DeviceSize& alignment);
 
     ~DeviceMemoryBlock();
+
 public:
 
     DeviceMemoryHeap* getHeap() const;
@@ -167,8 +166,6 @@ private:
     vk::DeviceSize m_alignment;
     void* m_mappedPtr;
 };
-
-
 
 
 DeviceMemoryBlock* vmalloc(const vk::MemoryRequirements& requirements, const vk::MemoryPropertyFlags& memoryProperties);

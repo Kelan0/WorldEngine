@@ -4,10 +4,14 @@
 
 #include "core/core.h"
 #include "core/graphics/ImageData.h"
+#include "core/graphics/GraphicsResource.h"
 
 class DeviceMemoryBlock;
+
 class ComputePipeline;
+
 class DescriptorSet;
+
 struct ShutdownGraphicsEvent;
 
 enum ImageCubeFace {
@@ -21,11 +25,13 @@ enum ImageCubeFace {
 
 struct ImageSource {
     ImageData* imageData = nullptr;
-    std::string filePath = "";
+    std::string filePath;
     ImageData::ImageTransform* imageTransform = nullptr;
 
     void setImageData(ImageData* imageData, ImageData::ImageTransform* imageTransform = nullptr);
+
     void setFilePath(const std::string& filePath, ImageData::ImageTransform* imageTransform = nullptr);
+
     void setImageTransform(ImageData::ImageTransform* imageTransform);
 
     bool hasSource() const;
@@ -36,10 +42,15 @@ struct ImageCubeSource {
     ImageSource equirectangularImage = {};
 
     void setFaceSource(const ImageCubeFace& face, const ImageSource& imageSource);
+
     void setFaceSource(const ImageCubeFace& face, ImageData* imageData, ImageData::ImageTransform* imageTransform = nullptr);
+
     void setFaceSource(const ImageCubeFace& face, const std::string& filePath, ImageData::ImageTransform* imageTransform = nullptr);
+
     void setEquirectangularSource(const ImageSource& imageSource);
+
     void setEquirectangularSource(ImageData* imageData, ImageData::ImageTransform* imageTransform = nullptr);
+
     void setEquirectangularSource(const std::string& filePath, ImageData::ImageTransform* imageTransform = nullptr);
 
     bool isEquirectangular() const;
@@ -59,13 +70,13 @@ struct ImageCubeConfiguration {
     bool generateMipmap = false;
 };
 
-class ImageCube {
+class ImageCube : public GraphicsResource {
     NO_COPY(ImageCube);
 private:
     ImageCube(const WeakResource<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& size, const uint32_t& mipLevelCount, const vk::Format& format, const std::string& name);
 
 public:
-    ~ImageCube();
+    ~ImageCube() override;
 
     static ImageCube* create(const ImageCubeConfiguration& imageCubeConfiguration, const std::string& name);
 
@@ -81,8 +92,6 @@ public:
 
     bool generateMipmap(const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState);
 
-    const SharedResource<vkr::Device>& getDevice() const;
-
     const vk::Image& getImage() const;
 
     const uint32_t& getSize() const;
@@ -95,8 +104,6 @@ public:
 
     vk::Format getFormat() const;
 
-    const GraphicsResource& getResourceId() const;
-
     static std::array<bool, 6> loadCubeFacesImageData(const std::array<ImageSource, 6>& cubeFaceImageSources, const vk::Format& format, std::array<ImageData*, 6>& outImageData, std::vector<ImageData*>& allocatedImageData);
 
     static bool loadImageData(const ImageSource& imageSource, const vk::Format& format, ImageData*& outImageData, std::vector<ImageData*>& allocatedImageData);
@@ -107,17 +114,17 @@ private:
     static bool validateEquirectangularImageRegion(const ImageCube* image, ImageRegion& imageRegion);
 
     static ComputePipeline* getEquirectangularComputePipeline();
+
     static DescriptorSet* getEquirectangularComputeDescriptorSet();
+
     static void onCleanupGraphics(ShutdownGraphicsEvent* event);
 
 private:
-    SharedResource<vkr::Device> m_device;
     vk::Image m_image;
     DeviceMemoryBlock* m_memory;
     uint32_t m_size;
     uint32_t m_mipLevelCount;
     vk::Format m_format;
-    GraphicsResource m_ResourceId;
 
     static ComputePipeline* s_computeEquirectangularPipeline;
     static DescriptorSet* s_computeEquirectangularDescriptorSet;

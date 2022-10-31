@@ -4,6 +4,7 @@
 
 
 #include "core/core.h"
+#include "core/graphics/GraphicsResource.h"
 #include "core/graphics/ImageView.h"
 #include "core/graphics/Image2D.h"
 
@@ -26,19 +27,17 @@ struct SamplerConfiguration {
     bool unnormalizedCoordinates = false;
 };
 
-class Sampler {
+class Sampler : public GraphicsResource {
     NO_COPY(Sampler)
 private:
     Sampler(const WeakResource<vkr::Device>& device, const vk::Sampler& sampler, const std::string& name);
 
 public:
-    ~Sampler();
+    ~Sampler() override;
 
     static Sampler* create(const SamplerConfiguration& samplerConfiguration, const std::string& name);
 
     static std::shared_ptr<Sampler> get(const SamplerConfiguration& samplerConfiguration, const std::string& name);
-
-    const SharedResource<vkr::Device>& getDevice() const;
 
     const vk::Sampler& getSampler() const;
 
@@ -53,17 +52,16 @@ private:
         size_t operator()(const Key& samplerKey) const;
     };
 private:
-    SharedResource<vkr::Device> m_device;
     vk::Sampler m_sampler;
 
     static std::unordered_map<Key, std::weak_ptr<Sampler>, KeyHasher> s_cachedSamplers;
 };
 
-class Texture {
+class Texture : public GraphicsResource {
 public:
-    Texture(const std::weak_ptr<ImageView>& imageView, const std::weak_ptr<Sampler>& sampler);
+    Texture(const std::weak_ptr<ImageView>& imageView, const std::weak_ptr<Sampler>& sampler, const std::string& name);
 
-    ~Texture();
+    ~Texture() override;
 
     static Texture* create(const std::weak_ptr<ImageView>& image, const std::weak_ptr<Sampler>& sampler, const std::string& name);
 
@@ -79,12 +77,9 @@ public:
 
     std::shared_ptr<Sampler> getSampler() const;
 
-    const GraphicsResource& getResourceId() const;
-
 private:
     std::shared_ptr<ImageView> m_imageView;
     std::shared_ptr<Sampler> m_sampler;
-    GraphicsResource m_resourceId;
 };
 
 

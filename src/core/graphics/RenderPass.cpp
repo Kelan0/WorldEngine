@@ -82,6 +82,7 @@ void RenderPassConfiguration::setClearValues(const vk::ArrayProxy<vk::ClearValue
     if (attachmentClearValues.size() < renderPassAttachments.size())
         attachmentClearValues.resize(renderPassAttachments.size());
 }
+
 void RenderPassConfiguration::setClearValues(const std::unordered_map<uint32_t, vk::ClearValue>& clearValues) {
     for (auto it = clearValues.begin(); it != clearValues.end(); ++it)
         setClearValue(it->first, it->second);
@@ -95,10 +96,10 @@ void RenderPassConfiguration::setClearValue(const uint32_t attachment, const vk:
 
 void RenderPassConfiguration::setClearColour(const uint32_t attachment, const glm::vec4& colour) {
     if (attachment < attachmentClearValues.size()) {
-        attachmentClearValues[attachment].color.setFloat32({ colour.r, colour.g, colour.b, colour.a });
+        attachmentClearValues[attachment].color.setFloat32({colour.r, colour.g, colour.b, colour.a});
     } else {
         vk::ClearValue clearValue;
-        clearValue.color.setFloat32({ colour.r, colour.g, colour.b, colour.a });
+        clearValue.color.setFloat32({colour.r, colour.g, colour.b, colour.a});
         setClearValue(attachment, clearValue);
     }
 }
@@ -124,12 +125,10 @@ void RenderPassConfiguration::setClearStencil(const uint32_t attachment, const u
 }
 
 
-
-
-RenderPass::RenderPass(const WeakResource<vkr::Device>& device, vk::RenderPass renderPass, const RenderPassConfiguration& config, const std::string& name):
-    m_device(device, name),
-    m_renderPass(renderPass),
-    m_config(config) {
+RenderPass::RenderPass(const WeakResource<vkr::Device>& device, const vk::RenderPass& renderPass, const RenderPassConfiguration& config, const std::string& name):
+        GraphicsResource(ResourceType_RenderPass, device, name),
+        m_renderPass(renderPass),
+        m_config(config) {
 }
 
 RenderPass::~RenderPass() {
@@ -158,7 +157,7 @@ RenderPass* RenderPass::create(const RenderPassConfiguration& renderPassConfigur
 
         if (!subpassConfig.colourAttachments.empty()) {
             offset = allSubpassAttachmentRefs.size();
-            for (const auto& colourAttachmentIndex: subpassConfig.colourAttachments)
+            for (const auto& colourAttachmentIndex : subpassConfig.colourAttachments)
                 allSubpassAttachmentRefs.emplace_back(subpassConfig.attachmentReferences[colourAttachmentIndex]);
             subpassDescription.setPColorAttachments(&allSubpassAttachmentRefs[offset]);
             subpassDescription.setColorAttachmentCount((uint32_t)subpassConfig.colourAttachments.size());
@@ -166,7 +165,7 @@ RenderPass* RenderPass::create(const RenderPassConfiguration& renderPassConfigur
 
         if (!subpassConfig.inputAttachments.empty()) {
             offset = allSubpassAttachmentRefs.size();
-            for (const auto& inputAttachmentIndex: subpassConfig.inputAttachments)
+            for (const auto& inputAttachmentIndex : subpassConfig.inputAttachments)
                 allSubpassAttachmentRefs.emplace_back(subpassConfig.attachmentReferences[inputAttachmentIndex]);
             subpassDescription.setPInputAttachments(&allSubpassAttachmentRefs[offset]);
             subpassDescription.setInputAttachmentCount((uint32_t)subpassConfig.inputAttachments.size());

@@ -89,7 +89,7 @@ Profiler::ThreadContext::~ThreadContext() {
 
 Profiler::GPUContext::GPUContext() {
 #if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
-    printf("Creating GPUContext on thread (0x%016llx)\n", ThreadUtils::getCurrentThreadHashedId());
+    printf("Creating profiler GPUContext on thread (0x%016llx)\n", ThreadUtils::getCurrentThreadHashedId());
     Engine::eventDispatcher()->connect(&Profiler::onCleanupGraphics);
 #endif
 }

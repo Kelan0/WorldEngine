@@ -5,6 +5,7 @@
 #include "core/core.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/FrameResource.h"
+#include "core/graphics/GraphicsResource.h"
 
 struct ShutdownGraphicsEvent;
 
@@ -17,15 +18,16 @@ struct BufferConfiguration {
 };
 
 
-class Buffer {
+class Buffer : public GraphicsResource {
     NO_COPY(Buffer)
+
 private:
-    Buffer(const WeakResource<vkr::Device>& device, const vk::Buffer& buffer, DeviceMemoryBlock* memory, const vk::DeviceSize& size, const vk::MemoryPropertyFlags& memoryProperties, const GraphicsResource& resourceId, const std::string& name);
+    Buffer(const WeakResource<vkr::Device>& device, const vk::Buffer& buffer, DeviceMemoryBlock* memory, const vk::DeviceSize& size, const vk::MemoryPropertyFlags& memoryProperties, const ResourceId& resourceId, const std::string& name);
 
 public:
     //Buffer(Buffer&& buffer);
 
-    ~Buffer();
+    ~Buffer() override;
 
     static Buffer* create(const BufferConfiguration& bufferConfiguration, const std::string& name);
 
@@ -38,8 +40,6 @@ public:
     bool copyTo(Buffer* dstBuffer, const vk::DeviceSize& size, const vk::DeviceSize& srcOffset = 0, const vk::DeviceSize& dstOffset = 0);
 
     bool upload(const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data, const vk::DeviceSize& srcStride = 0, const vk::DeviceSize& dstStride = 0, const vk::DeviceSize& elementSize = 0);
-
-    const SharedResource<vkr::Device>& getDevice() const;
 
     const vk::Buffer& getBuffer() const;
 
@@ -54,8 +54,6 @@ public:
     void unmap();
 
     bool isMapped() const;
-
-    const GraphicsResource& getResourceId() const;
 
 public:
     static const Buffer* getStagingBuffer();
@@ -72,13 +70,10 @@ private:
     static void onCleanupGraphics(ShutdownGraphicsEvent* event);
 
 private:
-    SharedResource<vkr::Device> m_device;
     vk::Buffer m_buffer;
     DeviceMemoryBlock* m_memory;
     vk::MemoryPropertyFlags m_memoryProperties;
     vk::DeviceSize m_size;
-
-    GraphicsResource m_resourceId;
 
     static FrameResource<Buffer> s_stagingBuffer;
     static vk::DeviceSize s_maxStagingBufferSize;

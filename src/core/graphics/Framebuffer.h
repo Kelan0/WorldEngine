@@ -2,8 +2,10 @@
 #define WORLDENGINE_FRAMEBUFFER_H
 
 #include "core/core.h"
+#include "core/graphics/GraphicsResource.h"
 
 class ImageView;
+
 class RenderPass;
 
 struct FramebufferConfiguration {
@@ -33,12 +35,12 @@ struct FramebufferConfiguration {
     void setSize(const vk::Extent2D& size);
 };
 
-class Framebuffer {
+class Framebuffer : public GraphicsResource {
 private:
     Framebuffer(const WeakResource<vkr::Device>& device, const vk::Framebuffer& framebuffer, const glm::uvec2& resolution, const std::string& name);
 
 public:
-    ~Framebuffer();
+    ~Framebuffer() override;
 
     static Framebuffer* create(const FramebufferConfiguration& framebufferConfiguration, const std::string& name);
 
@@ -51,7 +53,6 @@ public:
     const uint32_t& getHeight() const;
 
 private:
-    SharedResource<vkr::Device> m_device;
     vk::Framebuffer m_framebuffer;
     glm::uvec2 m_resolution;
 };

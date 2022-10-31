@@ -4,6 +4,7 @@
 
 #include "core/core.h"
 #include "core/graphics/ImageData.h"
+#include "core/graphics/GraphicsResource.h"
 
 class DeviceMemoryBlock;
 
@@ -11,7 +12,7 @@ class DeviceMemoryBlock;
 struct Image2DConfiguration {
     WeakResource<vkr::Device> device;
     const ImageData* imageData = nullptr;
-    std::string filePath = "";
+    std::string filePath;
     uint32_t width = 0;
     uint32_t height = 0;
     uint32_t mipLevels = 1;
@@ -32,13 +33,13 @@ struct Image2DConfiguration {
     void setSource(const std::string& filePath);
 };
 
-class Image2D {
+class Image2D : public GraphicsResource {
     NO_COPY(Image2D);
 private:
     Image2D(const WeakResource<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& width, const uint32_t& height, const uint32_t& mipLevelCount, const vk::Format& format, const std::string& name);
 
 public:
-    ~Image2D();
+    ~Image2D() override;
 
     static Image2D* create(const Image2DConfiguration& image2DConfiguration, const std::string& name);
 
@@ -49,8 +50,6 @@ public:
     static bool generateMipmap(Image2D* image, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState);
 
     bool generateMipmap(const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState);
-
-    const SharedResource<vkr::Device>& getDevice() const;
 
     const vk::Image& getImage() const;
 
@@ -64,20 +63,16 @@ public:
 
     const vk::Format& getFormat() const;
 
-    const GraphicsResource& getResourceId() const;
-
 private:
     static bool validateImageRegion(const Image2D* image, ImageRegion& imageRegion);
 
 private:
-    SharedResource<vkr::Device> m_device;
     vk::Image m_image;
     DeviceMemoryBlock* m_memory;
     uint32_t m_width;
     uint32_t m_height;
     uint32_t m_mipLevelCount;
     vk::Format m_format;
-    GraphicsResource m_ResourceId;
 };
 
 

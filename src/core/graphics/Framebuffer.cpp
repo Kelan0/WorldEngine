@@ -52,11 +52,10 @@ void FramebufferConfiguration::setSize(const vk::Extent2D& size) {
 }
 
 
-
 Framebuffer::Framebuffer(const WeakResource<vkr::Device>& device, const vk::Framebuffer& framebuffer, const glm::uvec2& resolution, const std::string& name):
-    m_device(device, name),
-    m_framebuffer(framebuffer),
-    m_resolution(resolution) {
+        GraphicsResource(ResourceType_Framebuffer, device, name),
+        m_framebuffer(framebuffer),
+        m_resolution(resolution) {
 }
 
 Framebuffer::~Framebuffer() {

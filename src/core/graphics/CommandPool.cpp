@@ -1,9 +1,8 @@
 #include "core/graphics/CommandPool.h"
 
 CommandPool::CommandPool(const WeakResource<vkr::Device>& device, const vk::CommandPool& commandPool, const std::string& name):
-        m_device(device, name),
-        m_commandPool(commandPool),
-        m_resourceId(GraphicsManager::nextResourceId()) {
+        GraphicsResource(ResourceType_CommandPool, device, name),
+        m_commandPool(commandPool) {
 }
 
 CommandPool::~CommandPool() {
@@ -59,10 +58,10 @@ const vk::CommandPool& CommandPool::getCommandPool() const {
 std::shared_ptr<vkr::CommandBuffer> CommandPool::allocateCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration) {
 #if _DEBUG
     if (m_commandBuffers.find(name) != m_commandBuffers.end()) {
-		printf("Unable to create command buffer \"%s\", it already exists\n", name.c_str());
-		assert(false);
-		return nullptr;
-	}
+        printf("Unable to create command buffer \"%s\", it already exists\n", name.c_str());
+        assert(false);
+        return nullptr;
+    }
 #endif
 
     vk::CommandBufferAllocateInfo commandBufferAllocInfo;
@@ -98,16 +97,16 @@ std::shared_ptr<vkr::CommandBuffer> CommandPool::getCommandBuffer(const std::str
 void CommandPool::freeCommandBuffer(const std::string& name) {
 #if _DEBUG
     auto it = m_commandBuffers.find(name);
-	if (it == m_commandBuffers.end()) {
-		printf("Tried to free command buffer \"%s\" but it was already freed\n", name.c_str());
-		return;
-	}
+    if (it == m_commandBuffers.end()) {
+        printf("Tried to free command buffer \"%s\" but it was already freed\n", name.c_str());
+        return;
+    }
 
-	if (it->second.use_count() > 1) {
-		printf("Unable to free command buffer \"%s\" because it still has %llu references\n", name.c_str(), (uint64_t)(it->second.use_count() - 1));
-		assert(false);
-		return;
-	}
+    if (it->second.use_count() > 1) {
+        printf("Unable to free command buffer \"%s\" because it still has %llu references\n", name.c_str(), (uint64_t)(it->second.use_count() - 1));
+        assert(false);
+        return;
+    }
 #endif
     m_commandBuffers.erase(name);
 }
@@ -166,7 +165,7 @@ void CommandPool::updateTemporaryCommandBuffers() {
 
     vk::Result result;
 
-    for (auto it = m_temporaryCmdBufferFences.begin(); it != m_temporaryCmdBufferFences.end(); ) {
+    for (auto it = m_temporaryCmdBufferFences.begin(); it != m_temporaryCmdBufferFences.end();) {
         const vk::Fence& fence = it->second;
         result = device.waitForFences(1, &fence, VK_FALSE, 0);
         if (result == vk::Result::eSuccess) {
@@ -182,8 +181,4 @@ void CommandPool::updateTemporaryCommandBuffers() {
 
 bool CommandPool::hasCommandBuffer(const std::string& name) const {
     return m_commandBuffers.count(name) > 0;
-}
-
-const GraphicsResource& CommandPool::getResourceId() const {
-    return m_resourceId;
 }

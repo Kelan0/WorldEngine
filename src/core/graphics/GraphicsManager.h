@@ -4,6 +4,7 @@
 
 #include "core/core.h"
 #include "core/graphics/FrameResource.h"
+#include "core/graphics/GraphicsResource.h"
 #include "core/util/DebugUtils.h"
 #include <SDL2/SDL.h>
 #include <SDL_vulkan.h>
@@ -230,7 +231,7 @@ public:
 
     const DebugUtils::RenderInfo& getDebugInfo() const;
 
-    static GraphicsResource nextResourceId();
+    static ResourceId nextResourceId();
 
     void setObjectName(const vk::Device& device, const uint64_t& objectHandle, const vk::ObjectType& objectType, const char* objectName);
     void setObjectName(const vk::Device& device, const uint64_t& objectHandle, const vk::ObjectType& objectType, const std::string& objectName);

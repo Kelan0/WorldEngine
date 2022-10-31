@@ -2,8 +2,10 @@
 #define WORLDENGINE_IMAGEVIEW_H
 
 #include "core/core.h"
+#include "core/graphics/GraphicsResource.h"
 
 class Image2D;
+
 class ImageCube;
 
 struct ImageViewConfiguration {
@@ -30,17 +32,16 @@ struct ImageViewConfiguration {
     void setSwizzle(const vk::ComponentSwizzle& redSwizzle, const vk::ComponentSwizzle& greenSwizzle, const vk::ComponentSwizzle& blueSwizzle, const vk::ComponentSwizzle& alphaSwizzle);
 };
 
-class ImageView {
+class ImageView : public GraphicsResource {
     NO_COPY(ImageView)
+
 private:
     ImageView(const WeakResource<vkr::Device>& device, const vk::ImageView& imageView, const vk::Image& image, const vk::ImageViewType& type, const std::string& name);
 
 public:
-    ~ImageView();
+    ~ImageView() override;
 
     static ImageView* create(const ImageViewConfiguration& imageViewConfiguration, const std::string& name);
-
-    const SharedResource<vkr::Device>& getDevice() const;
 
     const vk::ImageView& getImageView() const;
 
@@ -48,14 +49,10 @@ public:
 
     const vk::ImageViewType& getType() const;
 
-    const GraphicsResource& getResourceId() const;
-
 private:
-    SharedResource<vkr::Device> m_device;
     vk::ImageView m_imageView;
     vk::Image m_image;
     vk::ImageViewType m_type;
-    GraphicsResource m_resourceId;
 };
 
 

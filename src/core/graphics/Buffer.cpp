@@ -8,15 +8,15 @@
 FrameResource<Buffer> Buffer::s_stagingBuffer = nullptr;
 vk::DeviceSize Buffer::s_maxStagingBufferSize = 128 * 1024 * 1024; // 128 MiB
 
-Buffer::Buffer(const WeakResource<vkr::Device>& device, const vk::Buffer& buffer, DeviceMemoryBlock* memory, const vk::DeviceSize& size, const vk::MemoryPropertyFlags& memoryProperties, const GraphicsResource& resourceId, const std::string& name):
-        m_device(device, name),
+Buffer::Buffer(const WeakResource<vkr::Device>& device, const vk::Buffer& buffer, DeviceMemoryBlock* memory, const vk::DeviceSize& size, const vk::MemoryPropertyFlags& memoryProperties, const ResourceId& resourceId, const std::string& name):
+        GraphicsResource(ResourceType_Buffer, device, name),
         m_buffer(buffer),
         m_memory(memory),
         m_size(size),
-        m_memoryProperties(memoryProperties),
-        m_resourceId(resourceId) {
+        m_memoryProperties(memoryProperties) {
     //printf("Create Buffer\n");
 }
+
 Buffer::~Buffer() {
     //printf("Destroy Buffer\n");
     (**m_device).destroyBuffer(m_buffer);
@@ -85,21 +85,21 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration, const std
 bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, const vk::DeviceSize& size, const vk::DeviceSize& srcOffset, const vk::DeviceSize& dstOffset) {
 #if _DEBUG
     if (srcBuffer == nullptr || dstBuffer == nullptr) {
-		printf("Unable to copy NULL buffers\n");
-		return false;
-	}
-	if (srcBuffer->m_device != dstBuffer->m_device) {
-		printf("Unable to copy data between buffers on different devices\n");
-		return false;
-	}
-	if (srcOffset + size > srcBuffer->m_size) {
-		printf("Copy range in source buffer is out of range\n");
-		return false;
-	}
-	if (dstOffset + size > srcBuffer->m_size) {
-		printf("Copy range in destination buffer is out of range\n");
-		return false;
-	}
+        printf("Unable to copy NULL buffers\n");
+        return false;
+    }
+    if (srcBuffer->m_device != dstBuffer->m_device) {
+        printf("Unable to copy data between buffers on different devices\n");
+        return false;
+    }
+    if (srcOffset + size > srcBuffer->m_size) {
+        printf("Copy range in source buffer is out of range\n");
+        return false;
+    }
+    if (dstOffset + size > srcBuffer->m_size) {
+        printf("Copy range in destination buffer is out of range\n");
+        return false;
+    }
 #endif
 
     if (size == 0) {
@@ -138,21 +138,21 @@ bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, const vk::DeviceSize& si
 bool Buffer::upload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data, const vk::DeviceSize& srcStride, const vk::DeviceSize& dstStride, const vk::DeviceSize& elementSize) {
 #if _DEBUG
     if (dstBuffer == nullptr) {
-		printf("Cannot upload to NULL buffer\n");
-		assert(false);
-		return false;
-	}
+        printf("Cannot upload to NULL buffer\n");
+        assert(false);
+        return false;
+    }
 
-	if (data == nullptr && size > 0) {
-		printf("Cannot upload NULL data to buffer\n");
-		assert(false);
-		return false;
-	}
-	if (offset > dstBuffer->getSize()) {
-		printf("Unable to upload data to buffer out of allocated range\n");
-		assert(false);
-		return false;
-	}
+    if (data == nullptr && size > 0) {
+        printf("Cannot upload NULL data to buffer\n");
+        assert(false);
+        return false;
+    }
+    if (offset > dstBuffer->getSize()) {
+        printf("Unable to upload data to buffer out of allocated range\n");
+        assert(false);
+        return false;
+    }
     if (srcStride != 0 || dstStride != 0) {
         if (elementSize == 0) {
             printf("Unable to upload data to buffer: If srcStride or dstStride is non-zero, elementSize must be non-zero\n");
@@ -196,10 +196,10 @@ bool Buffer::upload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::D
 
 #if _DEBUG
     if (offset + bufferSize > dstBuffer->getSize()) {
-		printf("Unable to upload data to buffer out of allocated range\n");
-		assert(false);
-		return false;
-	}
+        printf("Unable to upload data to buffer out of allocated range\n");
+        assert(false);
+        return false;
+    }
 #endif
 
     if (!dstBuffer->hasMemoryProperties(vk::MemoryPropertyFlagBits::eHostVisible)) {
@@ -219,10 +219,6 @@ bool Buffer::copyTo(Buffer* dstBuffer, const vk::DeviceSize& size, const vk::Dev
 
 bool Buffer::upload(const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data, const vk::DeviceSize& srcStride, const vk::DeviceSize& dstStride, const vk::DeviceSize& elementSize) {
     return Buffer::upload(this, offset, size, data, srcStride, dstStride, elementSize);
-}
-
-const SharedResource<vkr::Device>& Buffer::getDevice() const {
-    return m_device;
 }
 
 const vk::Buffer& Buffer::getBuffer() const {
@@ -255,10 +251,6 @@ void Buffer::unmap() {
 
 bool Buffer::isMapped() const {
     return m_memory->isMapped();
-}
-
-const GraphicsResource& Buffer::getResourceId() const {
-    return m_resourceId;
 }
 
 const Buffer* Buffer::getStagingBuffer() {

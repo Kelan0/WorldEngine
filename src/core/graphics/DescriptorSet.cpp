@@ -12,11 +12,9 @@ DescriptorSetLayout::Cache DescriptorSetLayout::s_descriptorSetLayoutCache;
 
 
 DescriptorSetLayout::DescriptorSetLayout(const WeakResource<vkr::Device>& device, const vk::DescriptorSetLayout& descriptorSetLayout, Key key, const std::string& name):
-        m_device(device, name),
+        GraphicsResource(ResourceType_DescriptorSetLayout, device, name),
         m_descriptorSetLayout(descriptorSetLayout),
-        m_key(std::move(key)),
-        m_name(name),
-        m_resourceId(GraphicsManager::nextResourceId()) {
+        m_key(std::move(key)) {
     //printf("Create DescriptorSetLayout\n");
 }
 
@@ -30,15 +28,15 @@ SharedResource<DescriptorSetLayout> DescriptorSetLayout::get(const WeakResource<
 
 #if _DEBUG
     // Check for duplicated bindings
-	int lastBinding = -1;
-	for (uint32_t i = 0; i < key.bindingCount; ++i) {
-		int binding = (int)key.pBindings[i].binding;
-		if (binding == lastBinding) {
-			printf("Descriptor set layout has duplicated bindings\n");
-			assert(false);
-			return nullptr;
-		}
-	}
+    int lastBinding = -1;
+    for (uint32_t i = 0; i < key.bindingCount; ++i) {
+        int binding = (int)key.pBindings[i].binding;
+        if (binding == lastBinding) {
+            printf("Descriptor set layout has duplicated bindings\n");
+            assert(false);
+            return nullptr;
+        }
+    }
 #endif
 
     auto it = s_descriptorSetLayoutCache.find(key);
@@ -65,16 +63,16 @@ void DescriptorSetLayout::clearCache() {
 #if _DEBUG
     int count = 0;
 
-	for (auto it = s_descriptorSetLayoutCache.begin(); it != s_descriptorSetLayoutCache.end(); ++it) {
-		auto& layoutPtr = it->second;
-		if (layoutPtr.use_count() > 1) {
-			++count;
-		}
-	}
+    for (auto it = s_descriptorSetLayoutCache.begin(); it != s_descriptorSetLayoutCache.end(); ++it) {
+        auto& layoutPtr = it->second;
+        if (layoutPtr.use_count() > 1) {
+            ++count;
+        }
+    }
 
-	if (count > 0) {
-		printf("Clearing descriptor set layout cache. %d descriptor set layouts have external references and will not be freed\n", count);
-	}
+    if (count > 0) {
+        printf("Clearing descriptor set layout cache. %d descriptor set layouts have external references and will not be freed\n", count);
+    }
 #endif
 
     s_descriptorSetLayoutCache.clear();
@@ -108,7 +106,7 @@ bool DescriptorSetLayout::createDescriptorSets(const SharedResource<DescriptorPo
 }
 
 bool DescriptorSetLayout::createDescriptorSets(const SharedResource<DescriptorPool>& descriptorPool, const uint32_t& count, SharedResource<DescriptorSet>* outDescriptorSets, const std::string& name) {
-    DescriptorSet** tempDescriptorSets = new DescriptorSet*[count];
+    DescriptorSet** tempDescriptorSets = new DescriptorSet* [count];
 
     if (!createDescriptorSets(descriptorPool, count, tempDescriptorSets, name)) {
         delete[] tempDescriptorSets;
@@ -120,10 +118,6 @@ bool DescriptorSetLayout::createDescriptorSets(const SharedResource<DescriptorPo
     }
     delete[] tempDescriptorSets;
     return true;
-}
-
-const SharedResource<vkr::Device>& DescriptorSetLayout::getDevice() const {
-    return m_device;
 }
 
 const vk::DescriptorSetLayout& DescriptorSetLayout::getDescriptorSetLayout() const {
@@ -171,20 +165,11 @@ bool DescriptorSetLayout::operator!=(const DescriptorSetLayout& rhs) const {
     return !(*this == rhs);
 }
 
-const GraphicsResource& DescriptorSetLayout::getResourceId() const {
-    return m_resourceId;
-}
-
-
-
-
-
 
 DescriptorPool::DescriptorPool(const WeakResource<vkr::Device>& device, vk::DescriptorPool descriptorPool, bool canFreeDescriptorSets, const std::string& name):
-        m_device(device, name),
+        GraphicsResource(ResourceType_DescriptorPool, device, name),
         m_descriptorPool(descriptorPool),
-        m_canFreeDescriptorSets(canFreeDescriptorSets),
-        m_resourceId(GraphicsManager::nextResourceId()) {
+        m_canFreeDescriptorSets(canFreeDescriptorSets) {
 }
 
 DescriptorPool::~DescriptorPool() {
@@ -223,11 +208,6 @@ DescriptorPool* DescriptorPool::create(const DescriptorPoolConfiguration& descri
     Engine::graphics()->setObjectName(device, (uint64_t)(VkDescriptorPool)descriptorPool, vk::ObjectType::eDescriptorPool, name);
 
     return new DescriptorPool(descriptorPoolConfiguration.device, descriptorPool, canFreeDescriptorSets, name);
-
-}
-
-const SharedResource<vkr::Device>& DescriptorPool::getDevice() const {
-    return m_device;
 }
 
 const vk::DescriptorPool& DescriptorPool::getDescriptorPool() const {
@@ -253,27 +233,20 @@ const bool& DescriptorPool::canFreeDescriptorSets() const {
     return m_canFreeDescriptorSets;
 }
 
-const GraphicsResource& DescriptorPool::getResourceId() const {
-    return m_resourceId;
-}
-
-
 
 DescriptorSet::DescriptorSet(const WeakResource<vkr::Device>& device, const WeakResource<DescriptorPool>& pool, const WeakResource<DescriptorSetLayout>& layout, const vk::DescriptorSet& descriptorSet, const std::string& name):
-        m_device(device, name),
+        GraphicsResource(ResourceType_DescriptorSet, device, name),
         m_pool(pool, name),
         m_layout(layout, name),
-        m_descriptorSet(descriptorSet),
-        m_resourceId(GraphicsManager::nextResourceId()) {
+        m_descriptorSet(descriptorSet) {
     //printf("Create DescriptorSet\n");
 }
 
 DescriptorSet::DescriptorSet(DescriptorSet&& move) noexcept :
-        m_device(std::exchange(move.m_device, nullptr)),
+        GraphicsResource(std::move(move)),
         m_pool(std::exchange(move.m_pool, nullptr)),
         m_layout(std::exchange(move.m_layout, nullptr)),
-        m_descriptorSet(std::exchange(move.m_descriptorSet, VK_NULL_HANDLE)),
-        m_resourceId(std::exchange(move.m_resourceId, GraphicsResource{})) {
+        m_descriptorSet(std::exchange(move.m_descriptorSet, VK_NULL_HANDLE)) {
 }
 
 DescriptorSet::~DescriptorSet() {
@@ -311,10 +284,6 @@ const vk::DescriptorSet& DescriptorSet::getDescriptorSet() const {
     return m_descriptorSet;
 }
 
-const SharedResource<vkr::Device>& DescriptorSet::getDevice() const {
-    return m_device;
-}
-
 const SharedResource<DescriptorPool>& DescriptorSet::getPool() const {
     return m_pool;
 }
@@ -323,17 +292,12 @@ const SharedResource<DescriptorSetLayout>& DescriptorSet::getLayout() const {
     return m_layout;
 }
 
-const GraphicsResource& DescriptorSet::getResourceId() const {
-    return m_resourceId;
-}
 
-
-
-DescriptorSetWriter::DescriptorSetWriter(DescriptorSet* descriptorSet) :
+DescriptorSetWriter::DescriptorSetWriter(DescriptorSet* descriptorSet):
         m_descriptorSet(descriptorSet) {
 }
 
-DescriptorSetWriter::DescriptorSetWriter(const SharedResource<DescriptorSet>& descriptorSet) :
+DescriptorSetWriter::DescriptorSetWriter(const SharedResource<DescriptorSet>& descriptorSet):
         m_descriptorSet(descriptorSet.get()) {
 }
 
@@ -480,6 +444,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, co
     delete[] imageInfos;
     return *this;
 }
+
 DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* sampler, const ImageView* const* imageViews, const vk::ImageLayout* imageLayouts, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
@@ -529,6 +494,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, co
     delete[] imageInfos;
     return *this;
 }
+
 DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Texture* const* textures, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
     assert(arrayCount > 0);
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
@@ -558,16 +524,15 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, co
 bool DescriptorSetWriter::write() {
     if (!m_writes.empty()) {
         const auto& device = m_descriptorSet->getDevice();
-        for (auto& write: m_writes) {
-            if (write.pImageInfo != nullptr) write.pImageInfo = &m_tempImageInfo[(size_t) write.pImageInfo - 1];
-            if (write.pBufferInfo != nullptr) write.pBufferInfo = &m_tempBufferInfo[(size_t) write.pBufferInfo - 1];
-            if (write.pTexelBufferView != nullptr) write.pTexelBufferView = &m_tempBufferViews[(size_t) write.pTexelBufferView - 1];
+        for (auto& write : m_writes) {
+            if (write.pImageInfo != nullptr) write.pImageInfo = &m_tempImageInfo[(size_t)write.pImageInfo - 1];
+            if (write.pBufferInfo != nullptr) write.pBufferInfo = &m_tempBufferInfo[(size_t)write.pBufferInfo - 1];
+            if (write.pTexelBufferView != nullptr) write.pTexelBufferView = &m_tempBufferViews[(size_t)write.pTexelBufferView - 1];
         }
         device->updateDescriptorSets(m_writes, {});
     }
     return true;
 }
-
 
 
 DescriptorSetLayout::Key::Key(const vk::DescriptorSetLayoutCreateInfo& rhs) {
@@ -600,7 +565,7 @@ DescriptorSetLayout::Key::Key(const vk::DescriptorSetLayoutCreateInfo& rhs) {
 }
 
 DescriptorSetLayout::Key::Key(const Key& copy):
-        Key(static_cast<vk::DescriptorSetLayoutCreateInfo>(copy)){
+        Key(static_cast<vk::DescriptorSetLayoutCreateInfo>(copy)) {
 }
 
 DescriptorSetLayout::Key::Key(Key&& move) noexcept {
@@ -653,9 +618,9 @@ DescriptorSetLayoutBuilder::~DescriptorSetLayoutBuilder() = default;
 DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const bool& dynamic) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
-		printf("Unable to add DescriptorSetLayout UniformBlock binding %d - The binding is already added\n", binding);
-		assert(false);
-	}
+        printf("Unable to add DescriptorSetLayout UniformBlock binding %d - The binding is already added\n", binding);
+        assert(false);
+    }
 #endif
     vk::DescriptorSetLayoutBinding bindingInfo;
     bindingInfo.setBinding(binding);
@@ -670,9 +635,9 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBuffer(const u
 DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const bool& dynamic) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
-		printf("Unable to add DescriptorSetLayout StorageBlock binding %d - The binding is already added\n", binding);
-		assert(false);
-	}
+        printf("Unable to add DescriptorSetLayout StorageBlock binding %d - The binding is already added\n", binding);
+        assert(false);
+    }
 #endif
     vk::DescriptorSetLayoutBinding bindingInfo;
     bindingInfo.setBinding(binding);
@@ -688,9 +653,9 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageBuffer(const u
 DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageTexelBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
-		printf("Unable to add DescriptorSetLayout StorageTexelBuffer binding %d - The binding is already added\n", binding);
-		assert(false);
-	}
+        printf("Unable to add DescriptorSetLayout StorageTexelBuffer binding %d - The binding is already added\n", binding);
+        assert(false);
+    }
 #endif
     vk::DescriptorSetLayoutBinding bindingInfo;
     bindingInfo.setBinding(binding);
@@ -705,13 +670,13 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageTexelBuffer(co
 DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampler(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const uint32_t& arraySize) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
-		printf("Unable to add DescriptorSetLayout Sampler binding %d - The binding is already added\n", binding);
-		assert(false);
-	}
-	if (arraySize == 0) {
-		printf("Unable to add DescriptorSetLayout Sampler binding %d - Array size must not be zero\n", binding);
-		assert(false);
-	}
+        printf("Unable to add DescriptorSetLayout Sampler binding %d - The binding is already added\n", binding);
+        assert(false);
+    }
+    if (arraySize == 0) {
+        printf("Unable to add DescriptorSetLayout Sampler binding %d - Array size must not be zero\n", binding);
+        assert(false);
+    }
 #endif
     vk::DescriptorSetLayoutBinding bindingInfo;
     bindingInfo.setBinding(binding);
@@ -726,13 +691,13 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampler(const uint32_
 DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampledImage(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const uint32_t& arraySize) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
-		printf("Unable to add DescriptorSetLayout SampledImage binding %d - The binding is already added\n", binding);
-		assert(false);
-	}
-	if (arraySize == 0) {
-		printf("Unable to add DescriptorSetLayout SampledImage binding %d - Array size must not be zero\n", binding);
-		assert(false);
-	}
+        printf("Unable to add DescriptorSetLayout SampledImage binding %d - The binding is already added\n", binding);
+        assert(false);
+    }
+    if (arraySize == 0) {
+        printf("Unable to add DescriptorSetLayout SampledImage binding %d - Array size must not be zero\n", binding);
+        assert(false);
+    }
 #endif
     vk::DescriptorSetLayoutBinding bindingInfo;
     bindingInfo.setBinding(binding);
@@ -747,13 +712,13 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampledImage(const ui
 DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addCombinedImageSampler(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const uint32_t& arraySize) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
-		printf("Unable to add DescriptorSetLayout CombinedImageSampler binding %d - The binding is already added\n", binding);
-		assert(false);
-	}
-	if (arraySize == 0) {
-		printf("Unable to add DescriptorSetLayout CombinedImageSampler binding %d - Array size must not be zero\n", binding);
-		assert(false);
-	}
+        printf("Unable to add DescriptorSetLayout CombinedImageSampler binding %d - The binding is already added\n", binding);
+        assert(false);
+    }
+    if (arraySize == 0) {
+        printf("Unable to add DescriptorSetLayout CombinedImageSampler binding %d - Array size must not be zero\n", binding);
+        assert(false);
+    }
 #endif
     vk::DescriptorSetLayoutBinding bindingInfo;
     bindingInfo.setBinding(binding);
@@ -768,9 +733,9 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addCombinedImageSampler(
 DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addInputAttachment(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const uint32_t& arraySize) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
-		printf("Unable to add DescriptorSetLayout InputAttachment binding %d - The binding is already added\n", binding);
-		assert(false);
-	}
+        printf("Unable to add DescriptorSetLayout InputAttachment binding %d - The binding is already added\n", binding);
+        assert(false);
+    }
 #endif
     vk::DescriptorSetLayoutBinding bindingInfo;
     bindingInfo.setBinding(binding);

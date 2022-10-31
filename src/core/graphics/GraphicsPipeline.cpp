@@ -173,8 +173,7 @@ void GraphicsPipelineConfiguration::setAttachmentAlphaBlendMode(const size_t& at
 }
 
 GraphicsPipeline::GraphicsPipeline(const WeakResource<vkr::Device>& device, const std::string& name):
-        m_device(device, name),
-        m_name(std::string{}),
+        GraphicsResource(ResourceType_GraphicsPipeline, device, name),
         m_config(GraphicsPipelineConfiguration{}) {
 
 #if ENABLE_SHADER_HOT_RELOAD
@@ -444,10 +443,6 @@ void GraphicsPipeline::bind(const vk::CommandBuffer& commandBuffer) const {
 
 const vk::Pipeline& GraphicsPipeline::getPipeline() const {
     return m_pipeline;
-}
-
-const SharedResource<vkr::Device>& GraphicsPipeline::getDevice() const {
-    return m_device;
 }
 
 const SharedResource<RenderPass>& GraphicsPipeline::getRenderPass() const {

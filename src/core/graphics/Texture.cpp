@@ -4,7 +4,7 @@
 std::unordered_map<Sampler::Key, std::weak_ptr<Sampler>, Sampler::KeyHasher> Sampler::s_cachedSamplers;
 
 Sampler::Sampler(const WeakResource<vkr::Device>& device, const vk::Sampler& sampler, const std::string& name):
-        m_device(device, name),
+        GraphicsResource(ResourceType_Sampler, device, name),
         m_sampler(sampler) {
     //printf("Create sampler\n");
 }
@@ -62,10 +62,6 @@ std::shared_ptr<Sampler> Sampler::get(const SamplerConfiguration& samplerConfigu
     } else {
         return std::shared_ptr<Sampler>(it->second);
     }
-}
-
-const SharedResource<vkr::Device>& Sampler::getDevice() const {
-    return m_device;
 }
 
 const vk::Sampler& Sampler::getSampler() const {
@@ -134,10 +130,11 @@ size_t Sampler::KeyHasher::operator()(const Key& samplerKey) const {
     return s;
 }
 
-Texture::Texture(const std::weak_ptr<ImageView>& image, const std::weak_ptr<Sampler>& sampler):
+Texture::Texture(const std::weak_ptr<ImageView>& image, const std::weak_ptr<Sampler>& sampler, const std::string& name):
+        GraphicsResource(ResourceType_Texture, image.lock()->getDevice(), name),
         m_imageView(image),
-        m_sampler(sampler),
-        m_resourceId(GraphicsManager::nextResourceId()) {
+        m_sampler(sampler) {
+    assert(m_imageView->getDevice() == m_sampler->getDevice());
 }
 
 Texture::~Texture() {
@@ -146,7 +143,7 @@ Texture::~Texture() {
 }
 
 Texture* Texture::create(const std::weak_ptr<ImageView>& image, const std::weak_ptr<Sampler>& sampler, const std::string& name) {
-    return new Texture(image, sampler);
+    return new Texture(image, sampler, name);
 }
 
 Texture* Texture::create(const std::weak_ptr<ImageView>& image, const SamplerConfiguration& samplerConfiguration, const std::string& name) {
@@ -154,7 +151,7 @@ Texture* Texture::create(const std::weak_ptr<ImageView>& image, const SamplerCon
     if (sampler == nullptr)
         return nullptr;
 
-    return new Texture(image, sampler);
+    return new Texture(image, sampler, name);
 }
 
 Texture* Texture::create(const ImageViewConfiguration& imageViewConfiguration, const std::weak_ptr<Sampler>& sampler, const std::string& name) {
@@ -162,7 +159,7 @@ Texture* Texture::create(const ImageViewConfiguration& imageViewConfiguration, c
     if (rawImageView == nullptr)
         return nullptr;
 
-    return new Texture(std::shared_ptr<ImageView>(rawImageView), sampler);
+    return new Texture(std::shared_ptr<ImageView>(rawImageView), sampler, name);
 }
 
 Texture* Texture::create(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration, const std::string& name) {
@@ -176,7 +173,7 @@ Texture* Texture::create(const ImageViewConfiguration& imageViewConfiguration, c
         return nullptr;
     }
 
-    return new Texture(imageView, sampler);
+    return new Texture(imageView, sampler, name);
 }
 
 const vk::ImageViewType& Texture::getType() const {
@@ -189,8 +186,4 @@ std::shared_ptr<ImageView> Texture::getImageView() const {
 
 std::shared_ptr<Sampler> Texture::getSampler() const {
     return m_sampler;
-}
-
-const GraphicsResource& Texture::getResourceId() const {
-    return m_resourceId;
 }
