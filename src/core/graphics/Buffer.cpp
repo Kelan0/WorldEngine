@@ -4,6 +4,7 @@
 #include "core/application/Engine.h"
 #include "core/engine/event/EventDispatcher.h"
 #include "core/engine/event/GraphicsEvents.h"
+#include "core/util/Util.h"
 
 FrameResource<Buffer> Buffer::s_stagingBuffer = nullptr;
 vk::DeviceSize Buffer::s_maxStagingBufferSize = 128 * 1024 * 1024; // 128 MiB
@@ -342,10 +343,8 @@ bool Buffer::mappedUpload(Buffer* dstBuffer, const vk::DeviceSize& offset, const
 void Buffer::resizeStagingBuffer(const WeakResource<vkr::Device>& device, const vk::DeviceSize& size) {
     vk::DeviceSize stagingBufferSize = glm::min(size, s_maxStagingBufferSize);
 
-    if (!s_stagingBuffer) {
+    if (!s_stagingBuffer)
         Engine::eventDispatcher()->connect(&Buffer::onCleanupGraphics);
-    }
-    std::string startSize = !s_stagingBuffer ? "UNALLOCATED" : std::to_string(s_stagingBuffer->getSize());
 
     if (s_stagingBuffer) {
         if (stagingBufferSize == s_stagingBuffer->getSize()) {
@@ -355,7 +354,8 @@ void Buffer::resizeStagingBuffer(const WeakResource<vkr::Device>& device, const 
         s_stagingBuffer.reset();
     }
 
-    printf("Resizing staging buffer from %s to %llu bytes\n", startSize.c_str(), stagingBufferSize);
+    char c1[6] = "";
+    printf("Resizing Buffer staging buffer to %.3f %s\n", Util::getMemorySizeMagnitude(stagingBufferSize, c1), c1);
 
     BufferConfiguration stagingBufferConfig{};
     stagingBufferConfig.device = device;
@@ -364,7 +364,7 @@ void Buffer::resizeStagingBuffer(const WeakResource<vkr::Device>& device, const 
     stagingBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
     FrameResource<Buffer>::create(s_stagingBuffer, stagingBufferConfig, "Buffer-UploadStagingBuffer");
     //s_stagingBuffer = std::unique_ptr<Buffer>(Buffer::create(stagingBufferConfig));
-    assert(!!s_stagingBuffer);
+    assert(s_stagingBuffer != nullptr);
 }
 
 void Buffer::reserveStagingBuffer(const WeakResource<vkr::Device>& device, const vk::DeviceSize& size) {
@@ -374,6 +374,5 @@ void Buffer::reserveStagingBuffer(const WeakResource<vkr::Device>& device, const
 }
 
 void Buffer::onCleanupGraphics(ShutdownGraphicsEvent* event) {
-    printf("Destroying staging buffer\n");
     s_stagingBuffer.reset();
 }

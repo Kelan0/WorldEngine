@@ -69,7 +69,7 @@ class App : public Application {
         imageViewConfig.baseMipLevel = 0;
         imageViewConfig.mipLevelCount = image->getMipLevelCount();
 
-        return std::shared_ptr<Texture>(Texture::create(imageViewConfig, sampler, imageViewName.c_str()));
+        return std::shared_ptr<Texture>(Texture::create(imageViewConfig, sampler, imageViewName));
     }
 
     void init() override {
@@ -85,18 +85,20 @@ class App : public Application {
         std::shared_ptr<Sampler> sampler = std::shared_ptr<Sampler>(Sampler::create(samplerConfig, "DemoMaterialSampler"));
 
         MaterialConfiguration floorMaterialConfig{};
+        floorMaterialConfig.device = Engine::graphics()->getDevice();
         floorMaterialConfig.setAlbedoMap(loadTexture("res/textures/blacktiles04/albedo.png", vk::Format::eR8G8B8A8Unorm, sampler));
         floorMaterialConfig.setRoughnessMap(loadTexture("res/textures/blacktiles04/roughness.png", vk::Format::eR8G8B8A8Unorm, sampler));
 //        floorMaterialConfig.setMetallicMap(loadTexture("res/textures/blacktiles04/metallic.png", vk::Format::eR8G8B8A8Unorm, sampler));
         floorMaterialConfig.setNormalMap(loadTexture("res/textures/blacktiles04/normal.png", vk::Format::eR8G8B8A8Unorm, sampler));
-        std::shared_ptr<Material> floorMaterial = std::shared_ptr<Material>(Material::create(floorMaterialConfig));
+        std::shared_ptr<Material> floorMaterial = std::shared_ptr<Material>(Material::create(floorMaterialConfig, "Demo-FloorMaterial"));
 
         MaterialConfiguration cubeMaterialConfig{};
+        cubeMaterialConfig.device = Engine::graphics()->getDevice();
         cubeMaterialConfig.setAlbedoMap(loadTexture("res/textures/mossybark02/albedo.png", vk::Format::eR8G8B8A8Unorm, sampler));
         cubeMaterialConfig.setRoughnessMap(loadTexture("res/textures/mossybark02/roughness.png", vk::Format::eR8G8B8A8Unorm, sampler));
 //        cubeMaterialConfig.setMetallicMap(loadTexture("res/textures/mossybark02/metallic.png", vk::Format::eR8G8B8A8Unorm, sampler));
         cubeMaterialConfig.setNormalMap(loadTexture("res/textures/mossybark02/normal.png", vk::Format::eR8G8B8A8Unorm, sampler));
-        std::shared_ptr<Material> cubeMaterial = std::shared_ptr<Material>(Material::create(cubeMaterialConfig));
+        std::shared_ptr<Material> cubeMaterial = std::shared_ptr<Material>(Material::create(cubeMaterialConfig, "Demo-CubeMaterial"));
 
         MeshData<Vertex> testMeshData;
         testMeshData.createCuboid(glm::vec3(-0.5, -0.5F, -0.5), glm::vec3(+0.5, +0.5F, +0.5));
@@ -142,9 +144,10 @@ class App : public Application {
         std::shared_ptr<Mesh> bunnyMesh = std::shared_ptr<Mesh>(Mesh::create(bunnyMeshConfig));
 //
         MaterialConfiguration bunnyMaterialConfig{};
+        bunnyMaterialConfig.device = Engine::graphics()->getDevice();
         bunnyMaterialConfig.setAlbedo(glm::vec3(0.8F, 0.7F, 0.6F));
         bunnyMaterialConfig.setRoughness(0.23F);
-        std::shared_ptr<Material> bunnyMaterial = std::shared_ptr<Material>(Material::create(bunnyMaterialConfig));
+        std::shared_ptr<Material> bunnyMaterial = std::shared_ptr<Material>(Material::create(bunnyMaterialConfig, "Demo-BunnyMaterial"));
 
         Entity bunnyEntity = EntityHierarchy::create(Engine::scene(), "bunnyEntity");
         bunnyEntity.addComponent<Transform>().translate(0.0, 0.0, 0.0);
@@ -159,22 +162,24 @@ class App : public Application {
         std::shared_ptr<Mesh> sphereMesh = std::shared_ptr<Mesh>(Mesh::create(sphereMeshConfig));
 
         MaterialConfiguration sphereMaterial0Config{};
+        sphereMaterial0Config.device = Engine::graphics()->getDevice();
         sphereMaterial0Config.setAlbedo(glm::vec3(0.2F));
         sphereMaterial0Config.setMetallic(0.9F);
         sphereMaterial0Config.setRoughness(0.4F);
-        std::shared_ptr<Material> sphereMaterial0 = std::shared_ptr<Material>(Material::create(sphereMaterial0Config));
+        std::shared_ptr<Material> sphereMaterial0 = std::shared_ptr<Material>(Material::create(sphereMaterial0Config, "Demo-SphereMaterial0"));
 
         Entity sphereEntity0 = EntityHierarchy::create(Engine::scene(), "sphereEntity0");
         sphereEntity0.addComponent<Transform>().translate(-0.9, 0.333, 0.3);
         sphereEntity0.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(sphereMaterial0);
 
         MaterialConfiguration christmasBallMaterialConfig{};
+        christmasBallMaterialConfig.device = Engine::graphics()->getDevice();
         christmasBallMaterialConfig.setAlbedoMap(loadTexture("res/textures/christmas_tree_ball/albedo.png", vk::Format::eR8G8B8A8Unorm, sampler));
         christmasBallMaterialConfig.setRoughnessMap(loadTexture("res/textures/christmas_tree_ball/roughness.png", vk::Format::eR8G8B8A8Unorm, sampler));
         christmasBallMaterialConfig.setMetallicMap(loadTexture("res/textures/christmas_tree_ball/metallic.png", vk::Format::eR8G8B8A8Unorm, sampler));
         christmasBallMaterialConfig.setNormalMap(loadTexture("res/textures/christmas_tree_ball/normal.png", vk::Format::eR8G8B8A8Unorm, sampler));
         christmasBallMaterialConfig.setDisplacementMap(loadTexture("res/textures/christmas_tree_ball/displacement.png", vk::Format::eR8G8B8A8Unorm, sampler));
-        std::shared_ptr<Material> christmasBallMaterial = std::shared_ptr<Material>(Material::create(christmasBallMaterialConfig));
+        std::shared_ptr<Material> christmasBallMaterial = std::shared_ptr<Material>(Material::create(christmasBallMaterialConfig, "Demo-ChristmasBallMaterial"));
 
         Entity christmasBallEntity = EntityHierarchy::create(Engine::scene(), "christmasBallEntity");
         christmasBallEntity.addComponent<Transform>().translate(-2.0, 0.6, 0.3).rotate(1.0F, 0.0F, 0.0F, glm::pi<float>() * 0.5F);
@@ -187,10 +192,11 @@ class App : public Application {
             for (size_t j = 0; j < numSpheresZ; ++j) {
 
                 MaterialConfiguration sphereMaterial1Config{};
+                sphereMaterial1Config.device = Engine::graphics()->getDevice();
                 sphereMaterial1Config.setAlbedo(glm::vec3(0.5F));
                 sphereMaterial1Config.setRoughness(1.0F - (((float)i + 0.5F) / (float)numSpheresX));
                 sphereMaterial1Config.setMetallic(1.0F - (((float)j + 0.5F) / (float)numSpheresX));
-                std::shared_ptr<Material> sphereMaterial1 = std::shared_ptr<Material> (Material::create(sphereMaterial1Config));
+                std::shared_ptr<Material> sphereMaterial1 = std::shared_ptr<Material> (Material::create(sphereMaterial1Config, "Demo-SphereMaterial1-" + std::to_string(i) + "-" + std::to_string(j)));
 
                 Entity sphereEntity1 = EntityHierarchy::create(Engine::scene(), "sphereEntity[" + std::to_string(i) + ", " + std::to_string(j) + "]");
                 sphereEntity1.addComponent<Transform>().translate(-4.0F + i * 0.26F, 0.333F, 2.0F + j * 0.26F).scale(0.5F);
@@ -199,6 +205,7 @@ class App : public Application {
         }
 
         MaterialConfiguration glowMaterialConfig{};
+        glowMaterialConfig.device = Engine::graphics()->getDevice();
         glowMaterialConfig.setAlbedo(glm::vec3(1.0F, 1.0F, 1.0F));
         glowMaterialConfig.setRoughness(1.0F);
         glowMaterialConfig.setMetallic(0.0F);
@@ -207,31 +214,31 @@ class App : public Application {
         lightEntity1.addComponent<Transform>().translate(3.0, 0.8, -1.0).scale(0.125F);
         lightEntity1.addComponent<LightComponent>().setType(LightType_Point).setIntensity(32.0, 8.0, 0.0);
         glowMaterialConfig.setEmission(glm::vec3(32.0, 8.0, 0.0));
-        lightEntity1.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig)));
+        lightEntity1.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig, "Demo-LightEntity1-GlowMaterial")));
 
         Entity lightEntity2 = EntityHierarchy::create(Engine::scene(), "lightEntity2");
         lightEntity2.addComponent<Transform>().translate(0.4, 1.3, 2.0).scale(0.125F);
         lightEntity2.addComponent<LightComponent>().setType(LightType_Point).setIntensity(32.0F, 32.0F, 32.0F);
         glowMaterialConfig.setEmission(glm::vec3(32.0F, 32.0F, 32.0F));
-        lightEntity2.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig)));
+        lightEntity2.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig, "Demo-LightEntity2-GlowMaterial")));
 
         Entity lightEntity3 = EntityHierarchy::create(Engine::scene(), "lightEntity3");
         lightEntity3.addComponent<Transform>().translate(-2.0, 1.1, -1.2).scale(0.125F);
         lightEntity3.addComponent<LightComponent>().setType(LightType_Point).setIntensity(0.8F, 6.4F, 32.0F);
         glowMaterialConfig.setEmission(glm::vec3(0.8, 6.4, 32.0));
-        lightEntity3.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig)));
+        lightEntity3.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig, "Demo-LightEntity3-GlowMaterial")));
 
         Entity lightEntity4 = EntityHierarchy::create(Engine::scene(), "lightEntity4");
         lightEntity4.addComponent<Transform>().translate(-2.1, 1.1, 2.3).scale(0.125F);
         lightEntity4.addComponent<LightComponent>().setType(LightType_Point).setIntensity(0.8F, 32.0F, 6.4F);
         glowMaterialConfig.setEmission(glm::vec3(0.8F, 32.0F, 6.4F));
-        lightEntity4.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig)));
+        lightEntity4.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig, "Demo-LightEntity4-GlowMaterial")));
 
         Entity lightEntity5 = EntityHierarchy::create(Engine::scene(), "lightEntity5");
         lightEntity5.addComponent<Transform>().translate(3.1, 1.1, 1.1).scale(0.125F);
         lightEntity5.addComponent<LightComponent>().setType(LightType_Point).setIntensity(0.8F, 32.0F, 41.0F);
         glowMaterialConfig.setEmission(glm::vec3(0.8F, 32.0F, 41.0F));
-        lightEntity5.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig)));
+        lightEntity5.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig, "Demo-LightEntity5-GlowMaterial")));
 
         Entity lightEntity6 = EntityHierarchy::create(Engine::scene(), "lightEntity6");
         lightEntity6.addComponent<Transform>().setRotation(glm::vec3(-1.0F, -1.3F, -1.0F), glm::vec3(0.0F, 1.0F, 0.0F), false);

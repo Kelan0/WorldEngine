@@ -121,7 +121,6 @@ const vk::CommandBuffer& CommandPool::getTemporaryCommandBuffer(const std::strin
     vk::Fence fence = VK_NULL_HANDLE;
 
     if (m_unusedFences.empty()) {
-        printf("CommandPool::getTemporaryCommandBuffer - creating fence\n");
         vk::FenceCreateInfo fenceCreateInfo{};
         result = device.createFence(&fenceCreateInfo, nullptr, &fence);
         assert(result == vk::Result::eSuccess && fence);

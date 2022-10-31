@@ -447,8 +447,6 @@ void LightRenderer::updateActiveShadowMaps() {
     for (auto& entry: m_activeShadowMaps)
         entry.second = false;
 
-    uint32_t numInactiveShadowMaps = (uint32_t)getNumInactiveShadowMaps();
-
     m_shadowCameraInfoBufferData.clear();
 
     const auto& lightEntities = Engine::scene()->registry()->group<LightComponent>(entt::get<Transform>);
@@ -488,13 +486,6 @@ void LightRenderer::updateActiveShadowMaps() {
         m_activeShadowMaps[lightComponent.getShadowMap()] = true;
     }
 
-    uint32_t newNumInactiveShadowMaps = (uint32_t)getNumInactiveShadowMaps();
-
-    if (numInactiveShadowMaps > newNumInactiveShadowMaps)
-        printf("%llu shadow maps became active\n", (uint64_t)numInactiveShadowMaps - (uint64_t)newNumInactiveShadowMaps);
-
-    numInactiveShadowMaps = newNumInactiveShadowMaps;
-
     // All shadow maps that remained inactive are moved from the active pool to the inactive pool.
     for (auto it = m_activeShadowMaps.begin(); it != m_activeShadowMaps.end(); ++it) {
         if (!it->second) {
@@ -502,9 +493,6 @@ void LightRenderer::updateActiveShadowMaps() {
             it = m_activeShadowMaps.erase(it);
         }
     }
-
-    if (numInactiveShadowMaps < newNumInactiveShadowMaps)
-        printf("%u shadow maps became inactive\n", newNumInactiveShadowMaps - numInactiveShadowMaps);
 }
 
 
@@ -530,7 +518,6 @@ ShadowMap* LightRenderer::getShadowMap(const uint32_t& width, const uint32_t& he
     ShadowMap* shadowMap = nullptr;
 
     if (it != inactiveShadowMaps.end()) {
-        printf("Repurposing existing inactive shadow map: [%llu x %llu]\n", (uint64_t)width, (uint64_t)height);
         shadowMap = *it;
         inactiveShadowMaps.erase(it);
         assert(shadowMap->getShadowType() == shadowType);
@@ -573,8 +560,6 @@ void LightRenderer::updateCameraInfoBuffer(size_t maxShadowLights) {
     if (m_shadowRenderPassResources->cameraInfoBuffer == nullptr || newBufferSize > m_shadowRenderPassResources->cameraInfoBuffer->getSize()) {
         PROFILE_SCOPE("Allocate CameraInfoBuffer");
 
-        printf("Allocating CameraInfoBuffer - %llu objects\n", maxShadowLights);
-
         BufferConfiguration bufferConfig{};
         bufferConfig.device = Engine::graphics()->getDevice();
         bufferConfig.size = newBufferSize;
@@ -603,8 +588,6 @@ void LightRenderer::updateLightInfoBuffer(size_t maxLights) {
     if (newBufferSize > 0) {
         if (m_lightingRenderPassResources->lightInfoBuffer == nullptr || newBufferSize > m_lightingRenderPassResources->lightInfoBuffer->getSize()) {
             PROFILE_SCOPE("Allocate updateLightInfoBuffer");
-
-            printf("Allocating LightInfoBuffer - %llu lights\n", maxLights);
 
             BufferConfiguration bufferConfig{};
             bufferConfig.device = Engine::graphics()->getDevice();
@@ -682,8 +665,6 @@ void LightRenderer::updateShadowMapInfoBuffer(size_t maxShadowLights) {
     if (newBufferSize > 0) {
         if (m_lightingRenderPassResources->shadowMapBuffer == nullptr || newBufferSize > m_lightingRenderPassResources->shadowMapBuffer->getSize()) {
             PROFILE_SCOPE("Allocate ShadowMapInfoBuffer");
-
-            printf("Allocating ShadowMapInfoBuffer - %llu lights\n", maxShadowLights);
 
             BufferConfiguration bufferConfig{};
             bufferConfig.device = Engine::graphics()->getDevice();

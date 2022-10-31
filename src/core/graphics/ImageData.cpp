@@ -117,7 +117,7 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
         return nullptr;
     }
 
-    printf("Loaded load image \"%s\"\n", filePath.c_str());
+    printf("Loaded image \"%s\"\n", filePath.c_str());
 
     ImageData* image = new ImageData(data, width, height, layout, format, AllocationType_Stbi);
 
@@ -1152,7 +1152,7 @@ Buffer* ImageUtil::getImageStagingBuffer(const ImageRegion::size_type& width, co
         delete g_imageStagingBuffer;
 
         char c1[6] = "";
-        printf("Resizing image staging buffer to %.3f %s\n", Util::getMemorySizeMagnitude(requiredSize, c1), c1);
+        printf("Resizing ImageData staging buffer to %.3f %s\n", Util::getMemorySizeMagnitude(requiredSize, c1), c1);
 
         BufferConfiguration bufferConfig{};
         bufferConfig.device = Engine::graphics()->getDevice();

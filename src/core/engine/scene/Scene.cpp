@@ -115,7 +115,6 @@ const Entity& Scene::getMainCameraEntity() const {
 }
 
 void Scene::onScreenResize(ScreenResizeEvent* event) {
-    printf("SCENE - screen resized\n");
     double aspectRatio = (double)event->newSize.x / (double)event->newSize.y;
     m_defaultCamera.getComponent<Camera>().setAspect(aspectRatio);
 }

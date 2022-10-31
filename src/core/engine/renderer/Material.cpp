@@ -162,20 +162,18 @@ void MaterialConfiguration::setDisplacementMap(const ImageViewConfiguration& ima
 }
 
 
-
-
-
-Material::Material():
-    m_albedo(uint8_t(0)),
-    m_emission(uint16_t(0)),
-    m_roughness(uint8_t(0)),
-    m_metallic(uint8_t(0)) {
+Material::Material(const WeakResource<vkr::Device>& device, const std::string& name):
+        GraphicsResource(ResourceType_Material, device, name),
+        m_albedo(uint8_t(0)),
+        m_emission(uint16_t(0)),
+        m_roughness(uint8_t(0)),
+        m_metallic(uint8_t(0)) {
 }
 
 Material::~Material() = default;
 
-Material* Material::create(const MaterialConfiguration& materialConfiguration) {
-    Material* material = new Material();
+Material* Material::create(const MaterialConfiguration& materialConfiguration, const std::string& name) {
+    Material* material = new Material(materialConfiguration.device, name);
     material->m_albedoMap = materialConfiguration.albedoMap;
     material->m_albedo = materialConfiguration.albedo;
     material->m_roughnessMap = materialConfiguration.roughnessMap;

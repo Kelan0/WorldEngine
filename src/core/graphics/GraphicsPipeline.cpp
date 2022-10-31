@@ -231,8 +231,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
         viewport.maxDepth = 1.0F;
     }
 
-    printf("Recreating graphics pipeline [%f x %f]\n", viewport.width, viewport.height);
-
+    printf("Recreating graphics pipeline \"%s\" [%g x %g]\n", name.c_str(), viewport.width, viewport.height);
 
     vk::FrontFace frontFace = pipelineConfig.frontFace;
 

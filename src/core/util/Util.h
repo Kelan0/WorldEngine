@@ -34,7 +34,7 @@ namespace Util {
     uint64_t nextPowerOf2(uint64_t v);
 
     template<size_t strLen>
-    double getMemorySizeMagnitude(uint64_t bytes, char(&sizeLabel)[strLen]) {
+    double getMemorySizeMagnitude(uint64_t bytes, char(& sizeLabel)[strLen]) {
         strcpy_s(sizeLabel, strLen, strLen >= 5 ? "bytes" : "B");
         double size = (double)bytes;
         if (size >= 1024) {
@@ -64,7 +64,7 @@ namespace Util {
     }
 
     template<class Map, class Key, typename Func>
-    typename Map::mapped_type & mapComputeIfAbsent(Map& map, Key const& key, Func computeFunc) {
+    typename Map::mapped_type& mapComputeIfAbsent(Map& map, Key const& key, Func computeFunc) {
         typedef typename Map::mapped_type value_t;
         std::pair<typename Map::iterator, bool> result = map.insert(typename Map::value_type(key, value_t{}));
         value_t& val = result.first->second;
@@ -74,7 +74,7 @@ namespace Util {
     }
 
     template<class Map, class Key, typename Func>
-    typename Map::mapped_type & mapInsertIfAbsent(Map& map, Key const& key, Func computeFunc) {
+    typename Map::mapped_type& mapInsertIfAbsent(Map& map, Key const& key, Func computeFunc) {
         typedef typename Map::mapped_type value_t;
         typename Map::iterator it = map.find(key);
         if (it == map.end()) {
@@ -94,7 +94,7 @@ namespace Util {
         if constexpr (std::is_floating_point<T>::value) {
             return std::uniform_real_distribution<T>(min, max)(rng());
         }
-        if constexpr(std::is_integral<T>::value) {
+        if constexpr (std::is_integral<T>::value) {
             return std::uniform_int_distribution<T>(min, max)(rng());
         }
         return (T)0;
@@ -123,6 +123,40 @@ namespace Util {
         return r;
     }
 
+    template<typename T>
+    void to_string(const T& obj, std::string& outString); /* {
+        printf("Util::to_string unimplemented for type: %s\n", typeid(T).name());
+        assert(false);
+    }*/
+
+    template<> // Stringify a string specialization. no-op
+    inline void Util::to_string<std::string>(const std::string& obj, std::string& outString) {
+        outString = obj;
+    }
+
+    template<typename T>
+    std::string to_string(const T& obj) {
+        std::string str;
+        Util::to_string(obj, str);
+        return str;
+    }
+
+    template<typename T>
+    void vector_to_string(std::vector<T>& vec, std::string& outString, const std::string& delimiter = ",") {
+        for (size_t i = 0; i < vec.size(); ++i) {
+            outString += Util::to_string(vec[i]);
+            if (i < vec.size() - 1)
+                outString += delimiter;
+        }
+    }
+
+    template<typename T>
+    std::string vector_to_string(std::vector<T>& vec, const std::string& delimiter = ",") {
+        std::string str;
+        Util::vector_to_string(vec, str, delimiter);
+        return str;
+    }
+
     void trimLeft(std::string& str);
 
     void trimRight(std::string& str);
@@ -136,6 +170,7 @@ namespace Util {
     std::string trimCpy(std::string str);
 
     void splitString(const std::string_view& str, char separator, std::vector<std::string_view>& outSplitString);
+
     void splitString(const std::string_view& str, char separator, std::vector<std::string>& outSplitString);
 
     // dst and src must be 16-byte aligned

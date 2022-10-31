@@ -48,6 +48,8 @@ private:
         void incrWeak();
 
         void decrWeak();
+
+        void getAllReferenceOwnerNames(std::vector<std::string>& outOwnerNames) const;
     };
 
 public:
@@ -76,6 +78,8 @@ public:
     SharedResource& operator=(SharedResource<T>&& move) noexcept;
 
     SharedResource& operator=(std::nullptr_t);
+
+    void getAllReferenceOwnerNames(std::vector<std::string>& outOwnerNames) const;
 
     size_t use_count() const;
 
@@ -190,6 +194,7 @@ public:
         ResourceType_ComputePipeline = 15,
         ResourceType_CommandPool = 16,
         ResourceType_DeviceMemoryHeap = 17,
+        ResourceType_Material = 18,
     };
 
 public:
@@ -269,6 +274,13 @@ void SharedResource<T>::Tracker::decrWeak() {
     if (weakRefCount == 0) {
         assert(strongRefCount == 0 && ptr == nullptr);
         delete this; // Object suicide. The last weak reference is itself, which was decremented upon the last strong reference reaching zero, therefor there are no external references and this is safe.
+    }
+}
+
+template<typename T>
+void SharedResource<T>::Tracker::getAllReferenceOwnerNames(std::vector<std::string>& outOwnerNames) const {
+    for (const auto& [sharedRes, ownerName] : m_ownerNames) {
+        outOwnerNames.emplace_back(ownerName);
     }
 }
 
@@ -364,6 +376,12 @@ template<typename T>
 SharedResource<T>& SharedResource<T>::operator=(std::nullptr_t) {
     SharedResource<T>(nullptr).swap(*this);
     return *this;
+}
+
+template<typename T>
+void SharedResource<T>::getAllReferenceOwnerNames(std::vector<std::string>& outOwnerNames) const {
+    if (m_tracker != nullptr)
+        m_tracker->getAllReferenceOwnerNames(outOwnerNames);
 }
 
 template<typename T>

@@ -141,6 +141,8 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration, const
         uploadRegion.height = imageData->getHeight();
         ImageTransitionState dstState = ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader);
 
+        printf("Uploading Image2D data [%d x %d]\n", (int32_t)uploadRegion.width, (int32_t)uploadRegion.height);
+
         if (!returnImage->upload(imageData->getData(), imageData->getPixelLayout(), imageData->getPixelFormat(), vk::ImageAspectFlagBits::eColor, uploadRegion, dstState)) {
             printf("Failed to upload buffer data\n");
             delete returnImage;
@@ -150,6 +152,8 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration, const
         if (generateMipmap) {
             returnImage->generateMipmap(vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor, image2DConfiguration.mipLevels, dstState);
         }
+    } else if (generateMipmap) {
+        printf("GenerateMipmap requested for Image2D \"%s\", but no source data was uploaded to generate from\n", name.c_str());
     }
 
     return returnImage;

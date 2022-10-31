@@ -5,6 +5,7 @@
 #include "core/core.h"
 #include "core/util/Profiler.h"
 #include "extern/entt/entt/signal/dispatcher.hpp"
+#include "core/engine/event/GraphicsEvents.h"
 
 class EventDispatcher;
 
@@ -301,6 +302,7 @@ inline void EventDispatcher::connect(void(T::* callback)(Event*), T* instance, c
 template<class Event>
 inline void EventDispatcher::disconnect(void(*callback)(Event*)) {
     PROFILE_SCOPE("EventDispatcher::disconnect")
+
     auto it = m_eventListeners.find(std::type_index(typeid(Event)));
     if (it == m_eventListeners.end())
         return;
@@ -490,14 +492,17 @@ inline void EventDispatcher::Listener<Event>::receive(Event& event) {
 template<class Event>
 inline size_t EventDispatcher::Listener<Event>::hash(void(*callback)(Event*)) {
     size_t s = 0;
-    union {
-        void(*funcPtr)(Event*);
-        uint8_t* funcPtrBytes;
-    };
-    funcPtr = callback;
-    size_t numBytes = sizeof(decltype(callback));
-    for (size_t i = 0; i < numBytes; ++i)
-        std::hash_combine(s, funcPtrBytes[i]);
+
+//    union {
+//        void(*funcPtr)(Event*);
+//        uint8_t* funcPtrBytes;
+//    };
+//    funcPtr = callback;
+//    size_t numBytes = sizeof(decltype(callback));
+//    for (size_t i = 0; i < numBytes; ++i)
+//        std::hash_combine(s, funcPtrBytes[i]);
+
+    std::hash_combine(s, (void*)callback);
 
     std::hash_combine(s, typeid(Event).hash_code());
 

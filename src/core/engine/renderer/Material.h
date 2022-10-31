@@ -8,6 +8,8 @@
 #include "core/graphics/Texture.h"
 
 struct MaterialConfiguration {
+    WeakResource<vkr::Device> device;
+
     std::shared_ptr<Texture> albedoMap;
     glm::u8vec3 albedo = glm::u8vec3(255, 255, 255);
 
@@ -70,14 +72,14 @@ struct MaterialConfiguration {
     void setDisplacementMap(const ImageViewConfiguration& imageViewConfiguration, const SamplerConfiguration& samplerConfiguration, const char* name);
 };
 
-class Material {
+class Material : public GraphicsResource {
 private:
-    Material();
+    Material(const WeakResource<vkr::Device>& device, const std::string& name);
 
 public:
-    ~Material();
+    ~Material() override;
 
-    static Material* create(const MaterialConfiguration& materialConfiguration);
+    static Material* create(const MaterialConfiguration& materialConfiguration, const std::string& name);
 
     [[nodiscard]] std::shared_ptr<Texture> getAlbedoMap() const;
 

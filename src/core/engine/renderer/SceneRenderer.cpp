@@ -263,10 +263,11 @@ void SceneRenderer::initMissingTextureMaterial() {
     missingTextureSamplerConfig.minFilter = vk::Filter::eNearest;
     missingTextureSamplerConfig.magFilter = vk::Filter::eNearest;
 
-    MaterialConfiguration materialConfig;
+    MaterialConfiguration materialConfig{};
+    materialConfig.device = Engine::graphics()->getDevice();
     materialConfig.setAlbedoMap(missingTextureImageViewConfig, missingTextureSamplerConfig, "SceneRenderer-MissingTexture");
 
-    m_missingTextureMaterial = std::shared_ptr<Material>(Material::create(materialConfig));
+    m_missingTextureMaterial = std::shared_ptr<Material>(Material::create(materialConfig, "SceneRenderer-MissingTextureMaterial"));
 
     // Missing texture needs to be at index 0
     m_materialBufferTextures.clear();
@@ -631,9 +632,6 @@ void SceneRenderer::updateMaterialsBuffer() {
     uint32_t descriptorCount = m_resources->materialDescriptorSet->getLayout()->findBinding(0).descriptorCount;
     uint32_t arrayCount = glm::min((uint32_t)(lastNewTextureIndex - firstNewTextureIndex), descriptorCount);
     if (arrayCount > 0) {
-        PROFILE_SCOPE("Write texture descriptors");
-
-        printf("Writing textures [%llu to %llu]\n", (size_t)firstNewTextureIndex, (size_t)lastNewTextureIndex);
         DescriptorSetWriter(m_resources->materialDescriptorSet)
                 .writeImage(0, &m_materialBufferTextures[firstNewTextureIndex], &m_materialBufferImageLayouts[firstNewTextureIndex], firstNewTextureIndex, arrayCount)
                 .write();
@@ -799,8 +797,6 @@ ObjectDataUBO* SceneRenderer::mappedWorldTransformsBuffer(size_t maxObjects) {
     if (m_resources->worldTransformBuffer == nullptr || newBufferSize > m_resources->worldTransformBuffer->getSize()) {
         PROFILE_SCOPE("Allocate WorldTransformBuffer");
 
-        printf("Allocating WorldTransformBuffer - %llu objects\n", maxObjects);
-
         m_textureDescriptorIndices.clear();
 
         m_resources->changedObjectTransforms.clear();
@@ -852,8 +848,6 @@ GPUMaterial* SceneRenderer::mappedMaterialDataBuffer(size_t maxObjects) {
 
     if (m_resources->materialDataBuffer == nullptr || newBufferSize > m_resources->materialDataBuffer->getSize()) {
         PROFILE_SCOPE("Allocate materialDataBuffer");
-
-        printf("Allocating materialDataBuffer - %llu objects\n", maxObjects);
 
         m_materialIndices.clear();
 

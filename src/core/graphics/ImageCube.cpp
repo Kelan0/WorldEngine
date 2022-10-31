@@ -129,10 +129,9 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         suppliedFaceData = loadedFaces[0];
 
         for (size_t i = 0; i < 6; ++i) {
-            if (
-                    (suppliedFaceData && !loadedFaces[i]) ||  // Either all faces must be loaded or unloaded. Cannot have some and not others.
-                    (!loadedFaces[i] && imageCubeConfiguration.imageSource.faceImages[i].hasSource()) // Check sources supplied were successfully loaded.
-                    ) {
+            if ((suppliedFaceData && !loadedFaces[i]) ||  // Either all faces must be loaded or unloaded. Cannot have some and not others.
+                (!loadedFaces[i] && imageCubeConfiguration.imageSource.faceImages[i].hasSource())) { // Check sources supplied were successfully loaded.
+
                 printf("Unable to create CubeImage: Failed to load all faces from supplied file paths\n");
                 for (const auto& imageData : allocatedImageData) delete imageData;
                 return nullptr;
@@ -145,7 +144,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
 
             for (size_t i = 0; i < 6; ++i) {
                 if (cubeFacesImageData[i]->getWidth() != cubeFacesImageData[i]->getHeight()) {
-                    printf("Unable to load CubeImage: Supplied image data is now square. Width must equal height for all faces\n");
+                    printf("Unable to load CubeImage: Supplied image data is not square. Width must equal height for all faces\n");
                     for (const auto& imageData : allocatedImageData) delete imageData;
                     return nullptr;
                 }
@@ -233,6 +232,8 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         region.width = equirectangularImageData->getWidth();
         region.height = equirectangularImageData->getHeight();
 
+        printf("Uploading ImageCube equirectangular data [%d x %d] with face size [%d x %d]\n", (int32_t)region.width, (int32_t)region.height, (int32_t)size, (int32_t)size);
+
         if (!returnImage->uploadEquirectangular(equirectangularImageData->getData(), equirectangularImageData->getPixelLayout(), equirectangularImageData->getPixelFormat(), vk::ImageAspectFlagBits::eColor, region, dstState)) {
             printf("Failed to upload buffer data\n");
             delete returnImage;
@@ -242,7 +243,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         if (generateMipmap) {
             auto t0 = Performance::now();
             returnImage->generateMipmap(vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor, mipLevels, dstState);
-            printf("Took %.2f msec to generate %d mipmap levels for ImageCube\n", Performance::milliseconds(t0), mipLevels);
+            printf("Took %.2f msec to generate %u mipmap levels for ImageCube\n", Performance::milliseconds(t0), mipLevels);
         }
 
     } else if (suppliedFaceData) {
@@ -250,6 +251,8 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         ImageRegion region;
         region.width = size;
         region.height = size;
+
+        printf("Uploading ImageCube face data with face size [%d x %d]\n", (int32_t)size, (int32_t)size);
 
         for (size_t i = 0; i < 6; ++i) {
             if (!returnImage->uploadFace((ImageCubeFace)i, cubeFacesImageData[i]->getData(), cubeFacesImageData[i]->getPixelLayout(), cubeFacesImageData[i]->getPixelFormat(), vk::ImageAspectFlagBits::eColor, region, dstState)) {
@@ -260,8 +263,12 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         }
 
         if (generateMipmap) {
+            auto t0 = Performance::now();
             returnImage->generateMipmap(vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor, mipLevels, dstState);
+            printf("Took %.2f msec to generate %u mipmap levels for ImageCube\n", Performance::milliseconds(t0), mipLevels);
         }
+    } else if (generateMipmap) {
+        printf("GenerateMipmap requested for ImageCube \"%s\", but no source data was uploaded to generate from\n", name.c_str());
     }
 
     for (const auto& imageData : allocatedImageData) delete imageData;

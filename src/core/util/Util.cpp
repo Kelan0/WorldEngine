@@ -87,3 +87,106 @@ inline void Util::memcpy_sse(void* dst, void const* src, size_t size) {
         dst = ( ( uint8_t * ) dst ) + stride;
     }
 }
+
+
+
+
+template<>
+inline void Util::to_string<int8_t>(const int8_t& obj, std::string& outString) {
+    outString = std::to_string(obj);
+}
+
+template<>
+inline void Util::to_string<uint8_t>(const uint8_t& obj, std::string& outString) {
+    outString = std::to_string(obj);
+}
+
+template<>
+inline void Util::to_string<int16_t>(const int16_t& obj, std::string& outString) {
+    outString = std::to_string(obj);
+}
+
+template<>
+inline void Util::to_string<uint16_t>(const uint16_t& obj, std::string& outString) {
+    outString = std::to_string(obj);
+}
+
+template<>
+inline void Util::to_string<int32_t>(const int32_t& obj, std::string& outString) {
+    outString = std::to_string(obj);
+}
+
+template<>
+inline void Util::to_string<uint32_t>(const uint32_t& obj, std::string& outString) {
+    outString = std::to_string(obj);
+}
+
+template<>
+inline void Util::to_string<int64_t>(const int64_t& obj, std::string& outString) {
+    outString = std::to_string(obj);
+}
+
+template<>
+inline void Util::to_string<uint64_t>(const uint64_t& obj, std::string& outString) {
+    outString = std::to_string(obj);
+}
+
+template<>
+inline void Util::to_string<glm::vec1>(const glm::vec1& obj, std::string& outString) {
+    outString = std::to_string(obj.x);
+}
+
+template<>
+inline void Util::to_string<glm::ivec1>(const glm::ivec1& obj, std::string& outString) {
+    outString = std::to_string(obj.x);
+}
+
+template<>
+inline void Util::to_string<glm::uvec1>(const glm::uvec1& obj, std::string& outString) {
+    outString = std::to_string(obj.x);
+}
+
+template<>
+inline void Util::to_string<glm::vec2>(const glm::vec2& obj, std::string& outString) {
+    outString = std::to_string(obj.x);
+}
+
+template<>
+inline void Util::to_string<glm::ivec2>(const glm::ivec2& obj, std::string& outString) {
+    outString = std::to_string(obj.x);
+}
+
+template<>
+inline void Util::to_string<glm::uvec2>(const glm::uvec2& obj, std::string& outString) {
+    outString = std::to_string(obj.x);
+}
+
+template<>
+inline void Util::to_string<glm::vec3>(const glm::vec3& obj, std::string& outString) {
+    outString = std::to_string(obj.x);
+}
+
+template<>
+inline void Util::to_string<glm::ivec3>(const glm::ivec3& obj, std::string& outString) {
+    outString = std::to_string(obj.x);
+}
+
+template<>
+inline void Util::to_string<glm::uvec3>(const glm::uvec3& obj, std::string& outString) {
+    outString = std::to_string(obj.x);
+}
+
+template<>
+inline void Util::to_string<glm::vec4>(const glm::vec4& obj, std::string& outString) {
+    outString = std::to_string(obj.x);
+}
+
+template<>
+inline void Util::to_string<glm::ivec4>(const glm::ivec4& obj, std::string& outString) {
+    outString = std::to_string(obj.x);
+}
+
+template<>
+inline void Util::to_string<glm::uvec4>(const glm::uvec4& obj, std::string& outString) {
+    outString = std::to_string(obj.x);
+}

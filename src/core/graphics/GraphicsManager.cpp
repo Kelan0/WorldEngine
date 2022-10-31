@@ -69,7 +69,9 @@ GraphicsManager::~GraphicsManager() {
     //delete m_pipeline;
 
     if (m_device.device.use_count() > 1) {
-        printf("Destroyed GraphicsManager but the logical device still has %llu external references\n", (uint64_t)m_device.device.use_count() - 1);
+        std::vector<std::string> ownerNames;
+        m_device.device.getAllReferenceOwnerNames(ownerNames);
+        printf("Destroyed GraphicsManager but the logical device still has %llu external references: [%s]\n", (uint64_t)m_device.device.use_count() - 1, Util::vector_to_string(ownerNames).c_str());
     }
 }
 

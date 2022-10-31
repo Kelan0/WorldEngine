@@ -498,7 +498,7 @@ bool DeferredRenderer::createGeometryGraphicsPipeline() {
     pipelineConfig.addDescriptorSetLayout(Engine::sceneRenderer()->getObjectDescriptorSetLayout()->getDescriptorSetLayout());
     pipelineConfig.addDescriptorSetLayout(Engine::sceneRenderer()->getMaterialDescriptorSetLayout()->getDescriptorSetLayout());
     //pipelineConfig.polygonMode = vk::PolygonMode::eLine;
-    return m_geometryGraphicsPipeline->recreate(pipelineConfig, "DeferredRenderer-GraphicsPipeline");
+    return m_geometryGraphicsPipeline->recreate(pipelineConfig, "DeferredRenderer-GeometryGraphicsPipeline");
 }
 
 bool DeferredRenderer::createLightingGraphicsPipeline() {
