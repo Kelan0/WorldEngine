@@ -309,6 +309,17 @@ void PostProcessRenderer::setBloomSoftThreshold(const float& bloomSoftThreshold)
     }
 }
 
+float PostProcessRenderer::getBloomMaxBrightness() const {
+    return m_bloomBlurUniformData.maxBrightness;
+}
+
+void PostProcessRenderer::setBloomMaxBrightness(const float& bloomMaxBrightness) {
+    if (glm::notEqual(m_bloomBlurUniformData.maxBrightness, bloomMaxBrightness, 1e-5F)) {
+        m_bloomBlurUniformData.maxBrightness = bloomMaxBrightness;
+        setBloomBlurUniformDataChanged(true);
+    }
+}
+
 uint32_t PostProcessRenderer::getMaxBloomBlurIterations() const {
     return m_bloomBlurMaxIterations;
 }

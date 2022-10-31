@@ -1,5 +1,7 @@
 #version 450
 
+#include "res/shaders/common/common.glsl"
+
 #extension GL_EXT_nonuniform_qualifier : enable
 
 layout(location = 0) in vec2 fs_texture;
@@ -21,7 +23,8 @@ void main() {
 
     if (bloomEnabled) {
         vec3 bloomColour = textureLod(bloomTexture, fs_texture, 0).rgb;
-        finalColour = mix(finalColour, bloomColour, bloomIntensity);
+//        finalColour = mix(finalColour, bloomColour, bloomIntensity);
+        finalColour = finalColour + bloomColour * bloomIntensity;
     }
 
     finalColour = finalColour / (finalColour + vec3(1.0));

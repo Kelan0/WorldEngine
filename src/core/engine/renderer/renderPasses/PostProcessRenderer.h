@@ -32,6 +32,7 @@ private:
         float filterRadius;
         float threshold;
         float softThreshold;
+        float maxBrightness;
     };
 
     struct RenderResources {
@@ -82,6 +83,10 @@ public:
     float getBloomSoftThreshold() const;
 
     void setBloomSoftThreshold(const float& bloomSoftThreshold);
+
+    float getBloomMaxBrightness() const;
+
+    void setBloomMaxBrightness(const float& bloomMaxBrightness);
 
     uint32_t getMaxBloomBlurIterations() const;
 

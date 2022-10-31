@@ -325,6 +325,7 @@ class App : public Application {
         float bloomIntensity = Engine::postProcessingRenderer()->getBloomIntensity();
         float bloomThreshold = Engine::postProcessingRenderer()->getBloomThreshold();
         float bloomSoftThreshold = Engine::postProcessingRenderer()->getBloomSoftThreshold();
+        float bloomBaxBrightness = Engine::postProcessingRenderer()->getBloomMaxBrightness();
         int bloomBlurIterations = (int)Engine::postProcessingRenderer()->getBloomBlurIterations() - 1;
         int bloomBlurMaxIterations = (int)Engine::postProcessingRenderer()->getMaxBloomBlurIterations() - 1;
 
@@ -355,6 +356,7 @@ class App : public Application {
             ImGui::SliderFloat("Intensity", &bloomIntensity, 0.0F, 1.0F, "%.5f");
             ImGui::SliderFloat("Threshold", &bloomThreshold, 0.0F, 30.0F, "%.5f");
             ImGui::SliderFloat("Soft Threshold", &bloomSoftThreshold, 0.0F, 1.0F, "%.5f");
+            ImGui::SliderFloat("Max Brightness", &bloomBaxBrightness, 0.0F, 20.0F, "%.5f");
             ImGui::SliderInt("Iterations", &bloomBlurIterations, 1, bloomBlurMaxIterations);
             ImGui::EndDisabled();
         }
@@ -382,6 +384,7 @@ class App : public Application {
         Engine::postProcessingRenderer()->setBloomIntensity(bloomIntensity);
         Engine::postProcessingRenderer()->setBloomThreshold(bloomThreshold);
         Engine::postProcessingRenderer()->setBloomSoftThreshold(bloomSoftThreshold);
+        Engine::postProcessingRenderer()->setBloomMaxBrightness(bloomBaxBrightness);
         Engine::postProcessingRenderer()->setBloomBlurIterations(bloomBlurIterations + 1);
 
         Entity mainCamera = Engine::scene()->getMainCameraEntity();

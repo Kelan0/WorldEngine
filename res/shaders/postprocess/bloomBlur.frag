@@ -18,6 +18,7 @@ layout(set = 0, binding = 0) uniform UBO1 {
     float filterRadius;
     float threshold;
     float softThreshold;
+    float maxBrightness;
 };
 
 layout(set = 0, binding = 1) uniform sampler2D srcTexture;
@@ -50,13 +51,6 @@ vec3 boxFilter(vec2 coord, float delta) {
     return colour * 0.25;
 }
 
-vec3 downsampleImpl2() {
-    vec3 colour = boxFilter(fs_texture, 1.0);
-    if (passIndex == 0) {
-        colour = applyBloomThreshold(colour);
-    }
-    return colour;
-}
 
 vec3 downsampleImpl1() {
     const vec2 r1 = texelSize;
@@ -102,32 +96,72 @@ vec3 downsampleImpl1() {
     return finalColour;
 }
 
+vec3 downsampleBox13Tap(in sampler2D tex, in vec2 coord, in vec2 texelSize) {
+    vec3 a = texture(tex, coord + texelSize * vec2(-1.0, -1.0)).rgb;
+    vec3 b = texture(tex, coord + texelSize * vec2( 0.0, -1.0)).rgb;
+    vec3 c = texture(tex, coord + texelSize * vec2( 1.0, -1.0)).rgb;
+    vec3 d = texture(tex, coord + texelSize * vec2(-0.5, -0.5)).rgb;
+    vec3 e = texture(tex, coord + texelSize * vec2( 0.5, -0.5)).rgb;
+    vec3 f = texture(tex, coord + texelSize * vec2(-1.0,  0.0)).rgb;
+    vec3 g = texture(tex, coord                               ).rgb;
+    vec3 h = texture(tex, coord + texelSize * vec2( 1.0,  0.0)).rgb;
+    vec3 i = texture(tex, coord + texelSize * vec2(-0.5,  0.5)).rgb;
+    vec3 j = texture(tex, coord + texelSize * vec2( 0.5,  0.5)).rgb;
+    vec3 k = texture(tex, coord + texelSize * vec2(-1.0,  1.0)).rgb;
+    vec3 l = texture(tex, coord + texelSize * vec2( 0.0,  1.0)).rgb;
+    vec3 m = texture(tex, coord + texelSize * vec2( 1.0,  1.0)).rgb;
+
+    vec2 div = (1.0 / 4.0) * vec2(0.5, 0.125);
+
+    vec3 o = (d + e + i + j) * div.x;
+    o += (a + b + g + f) * div.y;
+    o += (b + c + h + g) * div.y;
+    o += (f + g + l + k) * div.y;
+    o += (g + h + m + l) * div.y;
+    return o;
+}
+
+vec3 upsampleTent(in sampler2D tex, vec2 coord, vec2 texelSize, vec2 radius) {
+    vec4 d = texelSize.xyxy * vec4(1.0, 1.0, -1.0, 0.0) * radius.xyxy;
+
+    vec3 s;
+    s =  texture(tex, coord - d.xy).rgb;
+    s += texture(tex, coord - d.wy).rgb * 2.0;
+    s += texture(tex, coord - d.zy).rgb;
+
+    s += texture(tex, coord + d.zw).rgb * 2.0;
+    s += texture(tex, coord       ).rgb * 4.0;
+    s += texture(tex, coord + d.xw).rgb * 2.0;
+
+    s += texture(tex, coord + d.zy).rgb;
+    s += texture(tex, coord + d.wy).rgb * 2.0;
+    s += texture(tex, coord + d.xy).rgb;
+
+    return s * (1.0 / 16.0);
+}
+
+vec3 downsampleImpl2() {
+    vec3 finalColour = downsampleBox13Tap(srcTexture, fs_texture, 2 * texelSize);
+    if (passIndex == 0) {
+        finalColour = applyBloomThreshold(finalColour);
+        float luminance0 = dot(finalColour, RGB_LUMINANCE);
+        finalColour *= 1.0 / (1.0 + luminance0 * 1.0 / maxBrightness);
+//        finalColour = min(finalColour, maxBrightness);
+    }
+    return finalColour;
+}
+
 void downsampleStage() {
-    vec3 finalColour = downsampleImpl1();
-//    vec3 finalColour = downsampleImpl2();
+    vec3 finalColour;
+//    finalColour = downsampleImpl1();
+    finalColour = downsampleImpl2();
     outColor = vec4(finalColour, 1.0);
 }
 
 void upsampleStage() {
     vec3 finalColour;
-//
-    vec2 r = filterRadius * texelSize;
-    vec3 a = texture(srcTexture, vec2(fs_texture.x - r.x, fs_texture.y + r.y)).rgb;
-    vec3 b = texture(srcTexture, vec2(fs_texture.x,       fs_texture.y + r.y)).rgb;
-    vec3 c = texture(srcTexture, vec2(fs_texture.x + r.x, fs_texture.y + r.y)).rgb;
 
-    vec3 d = texture(srcTexture, vec2(fs_texture.x - r.x, fs_texture.y)).rgb;
-    vec3 e = texture(srcTexture, vec2(fs_texture.x,       fs_texture.y)).rgb;
-    vec3 f = texture(srcTexture, vec2(fs_texture.x + r.x, fs_texture.y)).rgb;
-
-    vec3 g = texture(srcTexture, vec2(fs_texture.x - r.x, fs_texture.y - r.y)).rgb;
-    vec3 h = texture(srcTexture, vec2(fs_texture.x,       fs_texture.y - r.y)).rgb;
-    vec3 i = texture(srcTexture, vec2(fs_texture.x + r.x, fs_texture.y - r.y)).rgb;
-
-    finalColour = e * 4.0 +
-    (b + d + f + h) * 2.0 +
-    (a + c + g + i);
-    finalColour *= 1.0 / 16.0;
+    finalColour = upsampleTent(srcTexture, fs_texture, texelSize, vec2(filterRadius));
 
     outColor = vec4(finalColour, 1.0);
 }
