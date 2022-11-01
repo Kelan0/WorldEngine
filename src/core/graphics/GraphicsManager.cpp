@@ -164,12 +164,12 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
     commandPoolConfig.queueFamilyIndex = m_queues.queueFamilies.graphicsQueueFamilyIndex.value();
     commandPoolConfig.resetCommandBuffer = true;
     commandPoolConfig.transient = false;
-    m_commandPool = SharedResource<CommandPool>(CommandPool::create(commandPoolConfig, "GraphicsManager-DefaultCommandPool"), "GraphicsManager-DefaultCommandPool");
+    m_commandPool = SharedResource<CommandPool>(CommandPool::create(commandPoolConfig, "GraphicsManager-DefaultCommandPool"));
 
     DescriptorPoolConfiguration descriptorPoolConfig{};
     descriptorPoolConfig.device = m_device.device;
     //descriptorPoolConfig.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
-    m_descriptorPool = SharedResource<DescriptorPool>(DescriptorPool::create(descriptorPoolConfig, "GraphicsManager-DefaultDescriptorPool"), "GraphicsManager-DefaultDescriptorPool");
+    m_descriptorPool = SharedResource<DescriptorPool>(DescriptorPool::create(descriptorPoolConfig, "GraphicsManager-DefaultDescriptorPool"));
 
     m_commandPool->allocateCommandBuffer("transfer_buffer", {vk::CommandBufferLevel::ePrimary});
 
@@ -839,7 +839,7 @@ bool GraphicsManager::createRenderPass() {
     renderPassConfig.addSubpass(subpassConfiguration);
     renderPassConfig.setSubpassDependencies(subpassDependencies);
 
-    m_renderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "GraphicsManager-PresentRenderPass"), "GraphicsManager-PresentRenderPass");
+    m_renderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "GraphicsManager-PresentRenderPass"));
     return m_renderPass != nullptr;
 }
 

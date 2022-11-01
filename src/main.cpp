@@ -106,7 +106,7 @@ class App : public Application {
         MeshConfiguration cubeMeshConfig{};
         cubeMeshConfig.device = Engine::graphics()->getDevice();
         cubeMeshConfig.setMeshData(&testMeshData);
-        std::shared_ptr<Mesh> cubeMesh = std::shared_ptr<Mesh>(Mesh::create(cubeMeshConfig));
+        std::shared_ptr<Mesh> cubeMesh = std::shared_ptr<Mesh>(Mesh::create(cubeMeshConfig, "Demo-CubeMesh"));
         Entity cubeEntity = EntityHierarchy::create(Engine::scene(), "cubeEntity");
         cubeEntity.addComponent<Transform>().translate(1.5F, 0.5F, 0);
         cubeEntity.addComponent<RenderComponent>().setMesh(cubeMesh).setMaterial(cubeMaterial);
@@ -122,7 +122,7 @@ class App : public Application {
         MeshConfiguration floorMeshConfig{};
         floorMeshConfig.device = Engine::graphics()->getDevice();
         floorMeshConfig.setMeshData(&testMeshData);
-        std::shared_ptr<Mesh> floorMesh = std::shared_ptr<Mesh>(Mesh::create(floorMeshConfig));
+        std::shared_ptr<Mesh> floorMesh = std::shared_ptr<Mesh>(Mesh::create(floorMeshConfig, "Demo-FloorMesh"));
 
         Entity floorEntity = EntityHierarchy::create(Engine::scene(), "floorEntity");
         floorEntity.addComponent<Transform>().translate(0.0, 0.0, 0.0);
@@ -141,7 +141,7 @@ class App : public Application {
         MeshConfiguration bunnyMeshConfig{};
         bunnyMeshConfig.device = Engine::graphics()->getDevice();
         bunnyMeshConfig.setMeshData(&testMeshData);
-        std::shared_ptr<Mesh> bunnyMesh = std::shared_ptr<Mesh>(Mesh::create(bunnyMeshConfig));
+        std::shared_ptr<Mesh> bunnyMesh = std::shared_ptr<Mesh>(Mesh::create(bunnyMeshConfig, "Demo-BunnyMesh"));
 //
         MaterialConfiguration bunnyMaterialConfig{};
         bunnyMaterialConfig.device = Engine::graphics()->getDevice();
@@ -159,7 +159,7 @@ class App : public Application {
         MeshConfiguration sphereMeshConfig{};
         sphereMeshConfig.device = Engine::graphics()->getDevice();
         sphereMeshConfig.setMeshData(&testMeshData);
-        std::shared_ptr<Mesh> sphereMesh = std::shared_ptr<Mesh>(Mesh::create(sphereMeshConfig));
+        std::shared_ptr<Mesh> sphereMesh = std::shared_ptr<Mesh>(Mesh::create(sphereMeshConfig, "Demo-SphereMesh"));
 
         MaterialConfiguration sphereMaterial0Config{};
         sphereMaterial0Config.device = Engine::graphics()->getDevice();

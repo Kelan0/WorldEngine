@@ -5,18 +5,13 @@
 #include <chrono>
 
 
-void MeshConfiguration::setPrimitiveType(const MeshPrimitiveType& p_primitiveType) {
-    primitiveType = primitiveType;
-}
-
 
 Mesh::Mesh(const WeakResource<vkr::Device>& device, const std::string& name):
         GraphicsResource(ResourceType_Mesh, device, name),
         m_vertexSize(0),
         m_indexSize(0),
         m_vertexBuffer(nullptr),
-        m_indexBuffer(nullptr),
-        m_primitiveType(PrimitiveType_Triangle) {
+        m_indexBuffer(nullptr) {
 }
 
 Mesh::~Mesh() {
@@ -24,13 +19,13 @@ Mesh::~Mesh() {
     delete m_indexBuffer;
 }
 
-Mesh* Mesh::create(const MeshConfiguration& meshConfiguration) {
+Mesh* Mesh::create(const MeshConfiguration& meshConfiguration, const std::string& name) {
 
-    Mesh* mesh = new Mesh(meshConfiguration.device, "Mesh");
+    Mesh* mesh = new Mesh(meshConfiguration.device, name);
 
     if (meshConfiguration.vertexCount > 0) {
         if (!mesh->uploadVertices(meshConfiguration.vertices, meshConfiguration.vertexSize, meshConfiguration.vertexCount)) {
-            printf("Unable to create mesh, failed to upload vertices\n");
+            printf("Unable to create mesh \"%s\": failed to upload vertices\n", name.c_str());
             delete mesh;
             return nullptr;
         }
@@ -38,7 +33,7 @@ Mesh* Mesh::create(const MeshConfiguration& meshConfiguration) {
 
     if (meshConfiguration.indexCount > 0) {
         if (!mesh->uploadIndices(meshConfiguration.indices, meshConfiguration.indexSize, meshConfiguration.indexCount)) {
-            printf("Unable to create mesh, failed to upload indices\n");
+            printf("Unable to create mesh \"%s\": failed to upload indices\n", name.c_str());
             delete mesh;
             return nullptr;
         }
@@ -50,6 +45,7 @@ Mesh* Mesh::create(const MeshConfiguration& meshConfiguration) {
 bool Mesh::uploadVertices(const void* vertices, const vk::DeviceSize& vertexSize, const size_t& vertexCount) {
     PROFILE_SCOPE("Mesh::uploadVertices")
     delete m_vertexBuffer;
+    m_vertexBuffer = nullptr;
 
     if (vertexCount <= 0) {
         // Valid to pass no vertices, we just deleted the buffer
@@ -65,11 +61,11 @@ bool Mesh::uploadVertices(const void* vertices, const vk::DeviceSize& vertexSize
     vertexBufferConfig.data = (void*)vertices;
     vertexBufferConfig.usage = vk::BufferUsageFlagBits::eVertexBuffer;
     vertexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-    m_vertexBuffer = Buffer::create(vertexBufferConfig, "Mesh-VertexBuffer");
+    m_vertexBuffer = Buffer::create(vertexBufferConfig, m_name + "MeshVertexBuffer");
     m_vertexSize = vertexSize;
 
     if (m_vertexBuffer == nullptr) {
-        printf("Failed to create vertex buffer\n");
+        printf("Failed to upload vertex buffer data for mesh \"%s\"\n", m_name.c_str());
         return false;
     }
 
@@ -79,6 +75,8 @@ bool Mesh::uploadVertices(const void* vertices, const vk::DeviceSize& vertexSize
 bool Mesh::uploadIndices(const void* indices, const vk::DeviceSize& indexSize, const size_t& indexCount) {
     PROFILE_SCOPE("Mesh::uploadIndices")
     delete m_indexBuffer;
+    m_indexBuffer = nullptr;
+    m_indexSize = 0;
 
     if (indexCount <= 0) {
         // Valid to pass no vertices, we just deleted the buffer
@@ -94,35 +92,36 @@ bool Mesh::uploadIndices(const void* indices, const vk::DeviceSize& indexSize, c
     indexBufferConfig.data = (void*)indices;
     indexBufferConfig.usage = vk::BufferUsageFlagBits::eIndexBuffer;
     indexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-    m_indexBuffer = Buffer::create(indexBufferConfig, "Mesh-IndexBuffer");
-    m_indexSize = indexSize;
+    m_indexBuffer = Buffer::create(indexBufferConfig, m_name + "-MeshIndexBuffer");
 
     if (m_indexBuffer == nullptr) {
-        printf("Failed to create vertex buffer\n");
+        printf("Failed to upload index buffer data for mesh \"%s\"\n", m_name.c_str());
         return false;
     }
 
+    m_indexSize = indexSize;
     return true;
-}
-
-void Mesh::setPrimitiveType(const MeshPrimitiveType& primitiveType) {
-    m_primitiveType = primitiveType;
 }
 
 void Mesh::draw(const vk::CommandBuffer& commandBuffer, const uint32_t& instanceCount, const uint32_t& firstInstance) {
     PROFILE_SCOPE("Mesh::draw")
 
-    const vk::Buffer& vertexBuffer = m_vertexBuffer->getBuffer();
-    const vk::DeviceSize offset = 0;
-
-    commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer, &offset);
-    commandBuffer.bindIndexBuffer(m_indexBuffer->getBuffer(), 0, vk::IndexType::eUint32);
-
 #if TRACK_DRAW_DEBUG_INFO
     auto start = std::chrono::high_resolution_clock::now();
 #endif
 
-    commandBuffer.drawIndexed(getIndexCount(), instanceCount, 0, 0, firstInstance);
+    assert(m_vertexBuffer != nullptr);
+
+    const vk::Buffer& vertexBuffer = m_vertexBuffer->getBuffer();
+    const vk::DeviceSize offset = 0;
+
+    commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer, &offset);
+    if (m_indexBuffer != nullptr) {
+        commandBuffer.bindIndexBuffer(m_indexBuffer->getBuffer(), 0, vk::IndexType::eUint32);
+        commandBuffer.drawIndexed(getIndexCount(), instanceCount, 0, 0, firstInstance);
+    } else {
+        commandBuffer.draw(getVertexCount(), instanceCount, 0, firstInstance);
+    }
 
 #if TRACK_DRAW_DEBUG_INFO
     auto end = std::chrono::high_resolution_clock::now();
@@ -140,6 +139,15 @@ void Mesh::draw(const vk::CommandBuffer& commandBuffer, const uint32_t& instance
 #endif
 }
 
+void Mesh::reset() {
+    delete m_vertexBuffer;
+    m_vertexBuffer = nullptr;
+    m_vertexSize = 0;
+    delete m_indexBuffer;
+    m_indexBuffer = nullptr;
+    m_indexSize = 0;
+}
+
 uint32_t Mesh::getVertexCount() const {
     return (uint32_t)(m_vertexBuffer->getSize() / m_vertexSize);
 }
@@ -148,6 +156,6 @@ uint32_t Mesh::getIndexCount() const {
     return (uint32_t)(m_indexBuffer->getSize() / m_indexSize);
 }
 
-const MeshPrimitiveType& Mesh::getPrimitiveType() const {
-    return m_primitiveType;
+bool Mesh::hasIndices() const {
+    return m_indexBuffer != nullptr;
 }

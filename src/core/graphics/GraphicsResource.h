@@ -59,7 +59,11 @@ public:
 
     SharedResource(const std::string& ownerName);
 
+    SharedResource(ptr_t&& ptr);
+
     SharedResource(ptr_t&& ptr, const std::string& ownerName);
+
+    SharedResource(const ptr_t& ptr);
 
     SharedResource(const ptr_t& ptr, const std::string& ownerName);
 
@@ -305,11 +309,32 @@ SharedResource<T>::SharedResource(const std::string& ownerName):
 }
 
 template<typename T>
+SharedResource<T>::SharedResource(ptr_t&& ptr):
+        m_tracker(new Tracker(ptr)),
+        m_ownerName(static_cast<GraphicsResource*>(ptr)->getName()),
+        m_ptr(ptr) {
+    // If owner name is not supplied, we take it from the GraphicsResource. This constructor is only valid for GraphicsResource
+    static_assert(std::is_base_of_v<GraphicsResource, T>);
+    ptr = nullptr;
+    registerOwner();
+}
+
+template<typename T>
 SharedResource<T>::SharedResource(ptr_t&& ptr, const std::string& ownerName):
         m_tracker(new Tracker(ptr)),
         m_ownerName(ownerName),
         m_ptr(ptr) {
     ptr = nullptr;
+    registerOwner();
+}
+
+template<typename T>
+SharedResource<T>::SharedResource(const ptr_t& ptr):
+        m_tracker(new Tracker(ptr)),
+        m_ownerName(static_cast<GraphicsResource*>(ptr)->getName()),
+        m_ptr(ptr) {
+    // If owner name is not supplied, we take it from the GraphicsResource. This constructor is only valid for GraphicsResource
+    static_assert(std::is_base_of_v<GraphicsResource, T>);
     registerOwner();
 }
 

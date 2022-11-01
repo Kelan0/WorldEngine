@@ -17,7 +17,6 @@ struct MeshConfiguration {
     const void* indices = nullptr;
     size_t indexCount = 0;
     size_t indexSize = 0;
-    MeshPrimitiveType primitiveType = PrimitiveType_Triangle;
 
     template<typename Vertex_t>
     void setVertices(const std::vector<typename MeshData<Vertex_t>::Vertex>& verticesArray);
@@ -42,7 +41,7 @@ private:
 public:
     ~Mesh() override;
 
-    static Mesh* create(const MeshConfiguration& meshConfiguration);
+    static Mesh* create(const MeshConfiguration& meshConfiguration, const std::string& name);
 
     bool uploadVertices(const void* vertices, const vk::DeviceSize& vertexSize, const size_t& vertexCount);
 
@@ -60,22 +59,21 @@ public:
     template<typename Vertex_t>
     bool uploadIndices(const std::vector<typename MeshData<Vertex_t>::Index>& indices);
 
-    void setPrimitiveType(const MeshPrimitiveType& primitiveType);
-
     void draw(const vk::CommandBuffer& commandBuffer, const uint32_t& instanceCount, const uint32_t& firstInstance);
+
+    void reset();
 
     uint32_t getVertexCount() const;
 
     uint32_t getIndexCount() const;
 
-    const MeshPrimitiveType& getPrimitiveType() const;
+    bool hasIndices() const;
 
 private:
     Buffer* m_vertexBuffer;
     Buffer* m_indexBuffer;
     vk::DeviceSize m_vertexSize;
     vk::DeviceSize m_indexSize;
-    MeshPrimitiveType m_primitiveType;
 };
 
 

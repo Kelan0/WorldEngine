@@ -349,7 +349,7 @@ bool ReprojectionRenderer::createRenderPass() {
     renderPassConfig.setSubpassDependencies(dependencies);
     renderPassConfig.setClearColour(0, glm::vec4(0.0F, 0.0F, 0.0F, 0.0F));
 
-    m_renderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "ReprojectionRenderer-RenderPass"), "ReprojectionRenderer-RenderPass");
+    m_renderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "ReprojectionRenderer-RenderPass"));
     return (bool)m_renderPass;
 }
 

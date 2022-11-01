@@ -65,6 +65,7 @@ struct GraphicsPipelineConfiguration {
     vk::FrontFace frontFace = vk::FrontFace::eClockwise;
     vk::PrimitiveTopology primitiveTopology = vk::PrimitiveTopology::eTriangleList;
     std::vector<AttachmentBlendState> attachmentBlendStates;
+    glm::vec4 blendConstants = glm::vec4(0.0F, 0.0F, 0.0F, 0.0F);
     WeakResource<RenderPass> renderPass;
     std::unordered_map<vk::DynamicState, bool> dynamicStates;
 

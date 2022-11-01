@@ -12,12 +12,12 @@
 
 
 AttachmentBlendState::AttachmentBlendState(const bool& blendEnable, const vk::ColorComponentFlags& colourWriteMask):
-    blendEnable(blendEnable) {
+        blendEnable(blendEnable) {
     setColourWriteMask(colourWriteMask);
 }
 
 AttachmentBlendState::AttachmentBlendState(const bool& blendEnable, const uint32_t& colourWriteMask):
-    AttachmentBlendState(blendEnable, (vk::ColorComponentFlags)colourWriteMask) {
+        AttachmentBlendState(blendEnable, (vk::ColorComponentFlags)colourWriteMask) {
 }
 
 void AttachmentBlendState::setColourWriteMask(const vk::ColorComponentFlags& p_colourWriteMask) {
@@ -51,7 +51,6 @@ void AttachmentBlendState::setAlphaBlendMode(const vk::BlendFactor& src, const v
     alphaBlendMode.dst = dst;
     alphaBlendMode.op = op;
 }
-
 
 
 void GraphicsPipelineConfiguration::setViewport(const vk::Viewport& p_viewport) {
@@ -336,8 +335,9 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     rasterizationStateCreateInfo.setLineWidth(1.0F);
 
     vk::PipelineRasterizationLineStateCreateInfoEXT lineRasterizationLineStateCreateInfo;
-    rasterizationStateCreateInfo.setPNext(&lineRasterizationLineStateCreateInfo);
 //    lineRasterizationLineStateCreateInfo.stippledLineEnable = true;
+    // TODO: line rasterization
+    rasterizationStateCreateInfo.setPNext(&lineRasterizationLineStateCreateInfo);
 
     vk::PipelineMultisampleStateCreateInfo multisampleStateCreateInfo;
     multisampleStateCreateInfo.setRasterizationSamples(vk::SampleCountFlagBits::e1);
@@ -374,11 +374,18 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
         colourBlendAttachmentState.setColorWriteMask(blendState.colourWriteMask);
     }
 
+    std::array<float, 4> blendConstants = {
+            pipelineConfig.blendConstants.r,
+            pipelineConfig.blendConstants.g,
+            pipelineConfig.blendConstants.b,
+            pipelineConfig.blendConstants.a
+    };
+
     vk::PipelineColorBlendStateCreateInfo colourBlendStateCreateInfo;
     colourBlendStateCreateInfo.setLogicOpEnable(false);
     colourBlendStateCreateInfo.setLogicOp(vk::LogicOp::eCopy);
     colourBlendStateCreateInfo.setAttachments(attachmentBlendStates);
-    colourBlendStateCreateInfo.setBlendConstants({ 0.0F, 0.0F, 0.0F, 0.0F });
+    colourBlendStateCreateInfo.setBlendConstants(blendConstants);
 
     vk::PipelineDynamicStateCreateInfo dynamicStateCreateInfo;
     dynamicStateCreateInfo.setDynamicStates(dynamicStates);
@@ -620,7 +627,6 @@ void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer,
 }
 
 
-
 void GraphicsPipeline::setDepthTestEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled) {
     validateDynamicState(vk::DynamicState::eDepthTestEnableEXT);
     commandBuffer.setDepthTestEnableEXT(enabled);
@@ -706,7 +712,7 @@ void GraphicsPipeline::cleanup() {
 void GraphicsPipeline::validateDynamicState(const vk::DynamicState& dynamicState) {
 #if _DEBUG || 1
     if (!isStateDynamic(dynamicState)) {
-        printf("Cannot set immutable pipeline state: %s\n", vk::to_string(dynamicState).c_str());
+        printf("Cannot set immutable pipeline state %s for pipeline \"%s\"\n", vk::to_string(dynamicState).c_str(), m_name.c_str());
         assert(false);
         return;
     }
@@ -714,8 +720,6 @@ void GraphicsPipeline::validateDynamicState(const vk::DynamicState& dynamicState
 }
 
 #if ENABLE_SHADER_HOT_RELOAD
-
-
 
 void GraphicsPipeline::onShaderLoaded(ShaderLoadedEvent* event) {
     bool doRecreate = false;
@@ -726,7 +730,7 @@ void GraphicsPipeline::onShaderLoaded(ShaderLoadedEvent* event) {
     }
 
     if (m_config.fragmentShader.has_value() && m_config.fragmentShader.value() == event->filePath && m_config.fragmentShaderEntryPoint == event->entryPoint) {
-        printf("Fragment shader %s for GraphicsPipeline %s\n",  event->reloaded ? "reloaded" : "loaded", m_name.c_str());
+        printf("Fragment shader %s for GraphicsPipeline %s\n", event->reloaded ? "reloaded" : "loaded", m_name.c_str());
         doRecreate = event->reloaded;
     }
 
@@ -755,4 +759,5 @@ void GraphicsPipeline::onShaderLoaded(ShaderLoadedEvent* event) {
 
     }
 }
+
 #endif

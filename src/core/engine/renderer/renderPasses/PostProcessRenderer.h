@@ -2,6 +2,7 @@
 #define WORLDENGINE_POSTPROCESSRENDERER_H
 
 #include "core/core.h"
+#include "core/graphics/GraphicsResource.h"
 #include "core/graphics/FrameResource.h"
 
 class Buffer;
@@ -13,6 +14,7 @@ class Image2D;
 class ImageView;
 class Framebuffer;
 struct RecreateSwapchainEvent;
+class HistogramRenderer;
 
 class PostProcessRenderer {
 private:
@@ -59,6 +61,8 @@ public:
     bool init();
 
     void renderBloomBlur(const double& dt, const vk::CommandBuffer& commandBuffer);
+
+    void renderHistogram(const double& dt, const vk::CommandBuffer& commandBuffer);
 
     void render(const double& dt, const vk::CommandBuffer& commandBuffer);
 
@@ -124,6 +128,7 @@ private:
     BloomBlurUniformData m_bloomBlurUniformData;
     uint32_t m_bloomBlurIterations;
     uint32_t m_bloomBlurMaxIterations;
+    HistogramRenderer* m_histogramRenderer;
 };
 
 #endif //WORLDENGINE_POSTPROCESSRENDERER_H

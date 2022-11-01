@@ -248,6 +248,7 @@ void Engine::render(const double& dt) {
     commandBuffer.endRenderPass();
 
     m_postProcessingRenderer->renderBloomBlur(dt, commandBuffer);
+    m_postProcessingRenderer->renderHistogram(dt, commandBuffer);
 
     m_postProcessingRenderer->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
     m_postProcessingRenderer->render(dt, commandBuffer);

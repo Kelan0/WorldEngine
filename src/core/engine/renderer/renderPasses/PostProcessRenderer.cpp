@@ -1,6 +1,7 @@
 #include "core/engine/renderer/renderPasses/PostProcessRenderer.h"
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/renderer/renderPasses/ReprojectionRenderer.h"
+#include "core/engine/renderer/renderPasses/HistogramRenderer.h"
 #include "core/engine/renderer/ImmediateRenderer.h"
 #include "core/engine/event/EventDispatcher.h"
 #include "core/engine/event/GraphicsEvents.h"
@@ -18,6 +19,7 @@
 #define POSTPROCESS_FRAME_COLOUR_TEXTURE_BINDING 1
 #define POSTPROCESS_DEBUG_COMPOSITE_COLOUR_TEXTURE_BINDING 2
 #define POSTPROCESS_BLOOM_TEXTURE_BINDING 3
+#define POSTPROCESS_HISTOGRAM_TEXTURE_BINDING 4
 
 #define BLOOM_BLUR_UNIFORM_BUFFER_BINDING 0
 #define BLOOM_BLUR_SRC_TEXTURE_BINDING 1
@@ -25,18 +27,22 @@
 PostProcessRenderer::PostProcessRenderer():
     m_postProcessUniformData(PostProcessUniformData{}),
     m_bloomBlurUniformData(BloomBlurUniformData{}),
-    m_bloomBlurMaxIterations(8) {
+    m_bloomBlurMaxIterations(10),
+    m_histogramRenderer(new HistogramRenderer()) {
     m_resources.initDefault();
     setBloomEnabled(true);
     setBloomBlurFilterRadius(8.0F);
     setBloomIntensity(0.05F);
     setBloomThreshold(1.0F);
     setBloomSoftThreshold(0.5F);
+    setBloomMaxBrightness(20.0F);
 //    setBloomBlurIterations(5);
     m_bloomBlurIterations = 4;
 }
 
 PostProcessRenderer::~PostProcessRenderer() {
+    Engine::eventDispatcher()->disconnect(&PostProcessRenderer::recreateSwapchain, this);
+
     for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         delete m_resources[i]->postProcessDescriptorSet;
         delete m_resources[i]->postProcessUniformBuffer;
@@ -51,10 +57,16 @@ PostProcessRenderer::~PostProcessRenderer() {
         delete m_resources[i]->bloomTextureImageView;
         delete m_resources[i]->bloomBlurImage;
     }
-    Engine::eventDispatcher()->disconnect(&PostProcessRenderer::recreateSwapchain, this);
+
+    delete m_histogramRenderer;
 }
 
 bool PostProcessRenderer::init() {
+    if (!m_histogramRenderer->init()) {
+        printf("Failed to initialize PostProcessRenderer HistogramRenderer\n");
+        return false;
+    }
+
     m_postProcessGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice(), "PostProcessRenderer-PostProcessGraphicsPipeline"));
     m_downsampleGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice(), "PostProcessRenderer-DownsampleGraphicsPipeline"));
     m_upsampleGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice(), "PostProcessRenderer-UpsampleGraphicsPipeline"));
@@ -65,6 +77,7 @@ bool PostProcessRenderer::init() {
             .addUniformBuffer(POSTPROCESS_UNIFORM_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(POSTPROCESS_FRAME_COLOUR_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(POSTPROCESS_BLOOM_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
+            .addCombinedImageSampler(POSTPROCESS_HISTOGRAM_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(POSTPROCESS_DEBUG_COMPOSITE_COLOUR_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .build("PostProcessRenderer-PostProcessDescriptorSetLayout");
 
@@ -123,6 +136,7 @@ bool PostProcessRenderer::init() {
     }
 
     Engine::eventDispatcher()->connect(&PostProcessRenderer::recreateSwapchain, this);
+
     return true;
 }
 
@@ -206,6 +220,10 @@ void PostProcessRenderer::renderBloomBlur(const double& dt, const vk::CommandBuf
     PROFILE_END_GPU_CMD(commandBuffer)
 }
 
+void PostProcessRenderer::renderHistogram(const double& dt, const vk::CommandBuffer& commandBuffer) {
+    m_histogramRenderer->render(dt, commandBuffer);
+}
+
 void PostProcessRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("PostProcessRenderer::render")
     PROFILE_BEGIN_GPU_CMD("PostProcessRenderer::render", commandBuffer)
@@ -229,6 +247,10 @@ void PostProcessRenderer::render(const double& dt, const vk::CommandBuffer& comm
                 .writeImage(POSTPROCESS_DEBUG_COMPOSITE_COLOUR_TEXTURE_BINDING, m_frameSampler.get(), debugCompositeImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
                 .write();
     }
+
+    DescriptorSetWriter(m_resources->postProcessDescriptorSet)
+            .writeImage(POSTPROCESS_HISTOGRAM_TEXTURE_BINDING, m_histogramRenderer->getSampler().get(), m_histogramRenderer->getHistogramImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+            .write();
 
     if (m_resources->postProcessUniformDataChanged) {
         m_resources->postProcessUniformBuffer->upload(0, sizeof(PostProcessUniformData), &m_postProcessUniformData);
@@ -458,7 +480,7 @@ bool PostProcessRenderer::createUpsampleGraphicsPipeline() {
     pipelineConfig.fragmentShaderEntryPoint = "upsampleStage";
     pipelineConfig.addDescriptorSetLayout(m_bloomBlurDescriptorSetLayout.get());
     pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eFragment, 0, sizeof(BloomBlurPushConstantData));
-    pipelineConfig.setAttachmentBlendEnabled(0, false);
+    pipelineConfig.setAttachmentBlendEnabled(0, true);
     pipelineConfig.setAttachmentColourBlendMode(0, vk::BlendFactor::eOne, vk::BlendFactor::eOne, vk::BlendOp::eAdd);
     return m_upsampleGraphicsPipeline->recreate(pipelineConfig, "PostProcessRenderer-UpsampleGraphicsPipeline");
 }
@@ -515,6 +537,6 @@ bool PostProcessRenderer::createBloomBlurRenderPass() {
     renderPassConfig.setSubpassDependencies(dependencies);
 //    renderPassConfig.setClearColour(0, glm::vec4(0.0F, 0.0F, 0.0F, 1.0F));
 
-    m_bloomBlurRenderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "PostProcessRenderer-BloomBlurRenderPass"), "PostProcessRenderer-BloomBlurRenderPass");
+    m_bloomBlurRenderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "PostProcessRenderer-BloomBlurRenderPass"));
     return (bool)m_bloomBlurRenderPass;
 }

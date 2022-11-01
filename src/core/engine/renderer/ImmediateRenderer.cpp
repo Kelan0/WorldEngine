@@ -716,7 +716,7 @@ bool ImmediateRenderer::createRenderPass() {
     renderPassConfig.setSubpassDependencies(dependencies);
 //    renderPassConfig.setClearColour(0, glm::vec4(0.0F, 0.0F, 0.0F, 1.0F));
 
-    m_renderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "PostProcessRenderer-BloomBlurRenderPass"), "PostProcessRenderer-BloomBlurRenderPass");
+    m_renderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "PostProcessRenderer-BloomBlurRenderPass"));
     return (bool)m_renderPass;
 }
 

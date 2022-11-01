@@ -159,7 +159,7 @@ bool LightRenderer::init() {
     renderPassConfig.setClearColour(0, glm::vec4(1.0F));
     renderPassConfig.setClearDepth(1, 1.0F);
 
-    m_shadowRenderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "LightRenderer-ShadowRenderPass"), "LightRenderer-ShadowRenderPass");
+    m_shadowRenderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "LightRenderer-ShadowRenderPass"));
     if (!m_shadowRenderPass) {
         printf("LightRenderer::init - Failed to create render pass\n");
         return false;

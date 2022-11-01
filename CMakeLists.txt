@@ -271,7 +271,7 @@ add_executable(${PROJECT_NAME}
         src/core/engine/event/ApplicationEvents.cpp
         src/core/engine/event/ApplicationEvents.h
         src/core/graphics/GraphicsResource.cpp
-        src/core/graphics/GraphicsResource.h)
+        src/core/graphics/GraphicsResource.h src/core/engine/renderer/renderPasses/HistogramRenderer.cpp src/core/engine/renderer/renderPasses/HistogramRenderer.h src/core/core.cpp)
 
 target_link_libraries(${PROJECT_NAME}
         ${Vulkan_LIBRARIES}

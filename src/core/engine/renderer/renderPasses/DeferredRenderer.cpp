@@ -626,7 +626,7 @@ bool DeferredRenderer::createRenderPass() {
     renderPassConfig.setClearStencil(Attachment_Depth, 0);
     renderPassConfig.setClearColour(Attachment_LightingRGB, glm::vec4(0.0F, 0.0F, 1.0F, 0.0F));
 
-    m_renderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "DeferredRenderer-GBufferRenderPass"), "DeferredRenderer-GBufferRenderPass");
+    m_renderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "DeferredRenderer-GBufferRenderPass"));
     return (bool)m_renderPass;
 }
 

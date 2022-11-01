@@ -8,6 +8,10 @@
 #include "core/graphics/GraphicsManager.h"
 #include <type_traits>
 
+// FrameResource holds CONCURRENT_FRAMES number of T pointers (or T references if is_ptr is false), and automatically
+// cycles through them on a frame-by-frame basis. Access via operator->(), operator*() or get() will access the resource
+// for the current frame according to GraphicsManager::getCurrentFrameIndex(). This is so that Vulkan may have multiple
+// frames in-flight simultaneously without them clashing over using the same resource. This class automates that.
 template<typename T, bool is_ptr = true>
 class FrameResource : protected std::array<std::conditional_t<is_ptr, T*, T>, CONCURRENT_FRAMES> {
     using Type = std::conditional_t<is_ptr, T*, T>;

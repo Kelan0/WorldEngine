@@ -141,7 +141,7 @@ vec3 upsampleTent(in sampler2D tex, vec2 coord, vec2 texelSize, vec2 radius) {
 }
 
 vec3 downsampleImpl2() {
-    vec3 finalColour = downsampleBox13Tap(srcTexture, fs_texture, 2 * texelSize);
+    vec3 finalColour = downsampleBox13Tap(srcTexture, fs_texture, texelSize * 1);
     if (passIndex == 0) {
         finalColour = applyBloomThreshold(finalColour);
         float luminance0 = dot(finalColour, RGB_LUMINANCE);
@@ -160,6 +160,7 @@ void downsampleStage() {
 
 void upsampleStage() {
     vec3 finalColour;
+//    finalColour = texture(srcTexture, fs_texture).rgb;
 
     finalColour = upsampleTent(srcTexture, fs_texture, texelSize, vec2(filterRadius));
 
