@@ -20,7 +20,7 @@ struct Image2DConfiguration {
     vk::Format format = vk::Format::eR8G8B8A8Srgb;
     vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1;
     vk::ImageUsageFlags usage = vk::ImageUsageFlagBits::eSampled;
-    bool enabledTexelAccess = false;
+    bool enabledTexelAccess = false; // Linear tiling
     bool preInitialized = false;
     vk::MemoryPropertyFlags memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
     bool generateMipmap = false;

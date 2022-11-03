@@ -19,7 +19,7 @@
 #define POSTPROCESS_FRAME_COLOUR_TEXTURE_BINDING 1
 #define POSTPROCESS_DEBUG_COMPOSITE_COLOUR_TEXTURE_BINDING 2
 #define POSTPROCESS_BLOOM_TEXTURE_BINDING 3
-#define POSTPROCESS_HISTOGRAM_TEXTURE_BINDING 4
+#define POSTPROCESS_HISTOGRAM_BUFFER_BINDING 4
 
 #define BLOOM_BLUR_UNIFORM_BUFFER_BINDING 0
 #define BLOOM_BLUR_SRC_TEXTURE_BINDING 1
@@ -76,9 +76,10 @@ bool PostProcessRenderer::init() {
     m_postProcessDescriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
             .addUniformBuffer(POSTPROCESS_UNIFORM_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(POSTPROCESS_FRAME_COLOUR_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
-            .addCombinedImageSampler(POSTPROCESS_BLOOM_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
-            .addCombinedImageSampler(POSTPROCESS_HISTOGRAM_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(POSTPROCESS_DEBUG_COMPOSITE_COLOUR_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
+            .addCombinedImageSampler(POSTPROCESS_BLOOM_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
+//            .addCombinedImageSampler(POSTPROCESS_HISTOGRAM_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment)
+            .addStorageBuffer(POSTPROCESS_HISTOGRAM_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment)
             .build("PostProcessRenderer-PostProcessDescriptorSetLayout");
 
     m_bloomBlurDescriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
@@ -228,6 +229,11 @@ void PostProcessRenderer::render(const double& dt, const vk::CommandBuffer& comm
     PROFILE_SCOPE("PostProcessRenderer::render")
     PROFILE_BEGIN_GPU_CMD("PostProcessRenderer::render", commandBuffer)
 
+    PostProcessPushConstantData pushConstantData{};
+    pushConstantData.deltaTime = (float)dt;
+    pushConstantData.time = (float)Engine::accumulatedTime();
+    pushConstantData.test = m_test;
+
     if (m_postProcessUniformData.debugCompositeEnabled != Engine::debugCompositeEnabled()) {
         m_postProcessUniformData.debugCompositeEnabled = Engine::debugCompositeEnabled();
         setPostProcessUniformDataChanged(true);
@@ -249,8 +255,18 @@ void PostProcessRenderer::render(const double& dt, const vk::CommandBuffer& comm
     }
 
     DescriptorSetWriter(m_resources->postProcessDescriptorSet)
-            .writeImage(POSTPROCESS_HISTOGRAM_TEXTURE_BINDING, m_histogramRenderer->getSampler().get(), m_histogramRenderer->getHistogramImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+//            .writeImage(POSTPROCESS_HISTOGRAM_BUFFER_BINDING, m_histogramRenderer->getSampler().get(), m_histogramRenderer->getHistogramImageView(), vk::ImageLayout::eGeneral, 0, 1)
+            .writeBuffer(POSTPROCESS_HISTOGRAM_BUFFER_BINDING, m_histogramRenderer->getHistogramBuffer())
             .write();
+
+    if (m_postProcessUniformData.histogramOffset != m_histogramRenderer->getOffset()) {
+        m_postProcessUniformData.histogramOffset = m_histogramRenderer->getOffset();
+        m_resources->postProcessUniformDataChanged = true;
+    }
+    if (m_postProcessUniformData.histogramScale != m_histogramRenderer->getScale()) {
+        m_postProcessUniformData.histogramScale = m_histogramRenderer->getScale();
+        m_resources->postProcessUniformDataChanged = true;
+    }
 
     if (m_resources->postProcessUniformDataChanged) {
         m_resources->postProcessUniformBuffer->upload(0, sizeof(PostProcessUniformData), &m_postProcessUniformData);
@@ -262,8 +278,10 @@ void PostProcessRenderer::render(const double& dt, const vk::CommandBuffer& comm
             m_resources->postProcessDescriptorSet->getDescriptorSet()
     };
 
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_postProcessGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, nullptr);
+    const vk::PipelineLayout& pipelineLayout = m_postProcessGraphicsPipeline->getPipelineLayout();
 
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, descriptorSets, nullptr);
+    commandBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eFragment, 0, sizeof(PostProcessPushConstantData), &pushConstantData);
     commandBuffer.draw(3, 1, 0, 0);
 
     PROFILE_END_GPU_CMD(commandBuffer)
@@ -352,6 +370,14 @@ uint32_t PostProcessRenderer::getBloomBlurIterations() const {
 
 void PostProcessRenderer::setBloomBlurIterations(const uint32_t& bloomBlurIterations) {
     m_bloomBlurIterations = glm::min(bloomBlurIterations, m_bloomBlurMaxIterations);
+}
+
+void PostProcessRenderer::setTest(const float& test) {
+    m_test = test;
+}
+
+HistogramRenderer* PostProcessRenderer::histogramRenderer() {
+    return m_histogramRenderer;
 }
 
 void PostProcessRenderer::setPostProcessUniformDataChanged(const bool& didChange) {
@@ -493,6 +519,7 @@ bool PostProcessRenderer::createPostProcessGraphicsPipeline() {
     pipelineConfig.vertexShader = "res/shaders/screen/fullscreen_quad.vert";
     pipelineConfig.fragmentShader = "res/shaders/postprocess/postprocess.frag";
     pipelineConfig.addDescriptorSetLayout(m_postProcessDescriptorSetLayout.get());
+    pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eFragment, 0, sizeof(PostProcessPushConstantData));
     return m_postProcessGraphicsPipeline->recreate(pipelineConfig, "PostProcessRenderer-PostProcessGraphicsPipeline");
 }
 

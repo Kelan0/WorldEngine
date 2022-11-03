@@ -1,6 +1,6 @@
 #version 450
 
-#include "res/shaders/common/common.glsl"
+#include "res/shaders/histogram/histogram.glsl"
 
 layout(location = 0) in vec2 position;
 
@@ -11,32 +11,34 @@ layout(push_constant) uniform PC1 {
     float maxBrightness;
     uint binCount;
     uint channel;
+    float offset;
+    float scale;
 };
 
 layout(set = 0, binding = 0) uniform sampler2D srcTexture;
 
 void main() {
     vec3 colour = texture(srcTexture, position).rgb;
-    colour = min(colour / maxBrightness, 1.0);
+//    colour = min(colour / 1.0, 1.0);
 
     float bin = -10.0; // Will be discard if not set
 
     switch (channel) {
     case 0:
-        fs_colour = vec4(1.0, 0.0, 0.0, 0.0);
-        bin = colour.r;
+//        fs_colour = vec4(1.0, 0.0, 0.0, 0.0);
+        bin = getHistogramBinFromLuminance(colour.r, offset, scale); // colour.r;
         break;
     case 1:
-        fs_colour = vec4(0.0, 1.0, 0.0, 0.0);
-        bin = colour.g;
+//        fs_colour = vec4(0.0, 1.0, 0.0, 0.0);
+        bin = getHistogramBinFromLuminance(colour.g, offset, scale); // colour.g;
         break;
     case 2:
-        fs_colour = vec4(0.0, 0.0, 1.0, 0.0);
-        bin = colour.b;
+//        fs_colour = vec4(0.0, 0.0, 1.0, 0.0);
+        bin = getHistogramBinFromLuminance(colour.b, offset, scale); // colour.b;
         break;
     case 3:
-        fs_colour = vec4(0.0, 0.0, 0.0, 1.0);
-        bin = dot(colour.rgb, RGB_LUMINANCE);
+//        fs_colour = vec4(0.0, 0.0, 0.0, 1.0);
+        bin = getHistogramBinFromLuminance(dot(colour.rgb, RGB_LUMINANCE), offset, scale); // dot(colour.rgb, RGB_LUMINANCE);
         break;
     }
 

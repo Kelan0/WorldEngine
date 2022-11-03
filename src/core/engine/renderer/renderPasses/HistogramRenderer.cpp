@@ -3,6 +3,7 @@
 #include "core/engine/event/GraphicsEvents.h"
 #include "core/engine/event/EventDispatcher.h"
 #include "core/graphics/GraphicsPipeline.h"
+#include "core/graphics/ComputePipeline.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Framebuffer.h"
 #include "core/graphics/RenderPass.h"
@@ -12,16 +13,30 @@
 #include "core/graphics/Buffer.h"
 #include "core/graphics/Mesh.h"
 #include "core/util/Profiler.h"
+#include "extern/imgui/imgui.h"
+#include "extern/imgui/implot.h"
 
 #define HISTOGRAM_INPUT_TEXTURE_BINDING 0
+#define HISTOGRAM_OUTPUT_BUFFER_BINDING 1
+
+constexpr bool UseVertexScattering = false;
 
 HistogramRenderer::HistogramRenderer():
-        m_histogramGraphicsPipeline(nullptr),
+        m_readbackBuffer(nullptr),
+        m_histogramVertexScatterGraphicsPipeline(nullptr),
+        m_histogramClearComputePipeline(nullptr),
+        m_histogramAccumulationComputePipeline(nullptr),
         m_recreateVertexScatterMesh(true),
+        m_readbackNextFrame(false),
         m_resolution(100, 100) {
     m_resources.initDefault();
     setDownsampleFactor(2);
     setBinCount(256);
+    setOffset(0.5F);
+    setScale(0.06F);
+    setMinBrightness(0.0F);
+    setMaxBrightness(16.0F);
+    setEnabledChannels(glm::bvec4(true, true, true, true));
 }
 
 HistogramRenderer::~HistogramRenderer() {
@@ -29,22 +44,45 @@ HistogramRenderer::~HistogramRenderer() {
 
     for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         delete m_resources[i]->descriptorSet;
-        delete m_resources[i]->framebuffer;
-        delete m_resources[i]->frameImageView;
-        delete m_resources[i]->frameImage;
+        if (UseVertexScattering) {
+            delete m_resources[i]->vertexScatterFramebuffer;
+            delete m_resources[i]->histogramImageView;
+            delete m_resources[i]->histogramImage;
+        } else {
+            delete m_resources[i]->histogramBuffer;
+        }
     }
 
-    delete m_histogramGraphicsPipeline;
+    if (UseVertexScattering) {
+        delete m_histogramVertexScatterGraphicsPipeline;
+    } else {
+        delete m_histogramClearComputePipeline;
+        delete m_histogramAccumulationComputePipeline;
+    }
+
+    delete m_readbackBuffer;
 }
 
 bool HistogramRenderer::init() {
     const SharedResource<DescriptorPool>& descriptorPool = Engine::graphics()->descriptorPool();
 
-    m_descriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
-            .addCombinedImageSampler(HISTOGRAM_INPUT_TEXTURE_BINDING, vk::ShaderStageFlagBits::eVertex)
-            .build("HistogramRenderer-DescriptorSetLayout");
+    if (UseVertexScattering) {
+        m_descriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
+                .addCombinedImageSampler(HISTOGRAM_INPUT_TEXTURE_BINDING, vk::ShaderStageFlagBits::eVertex)
+                .build("HistogramRenderer-VertexScatterDescriptorSetLayout");
+    } else {
+        m_descriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
+                .addCombinedImageSampler(HISTOGRAM_INPUT_TEXTURE_BINDING, vk::ShaderStageFlagBits::eCompute)
+                .addStorageBuffer(HISTOGRAM_OUTPUT_BUFFER_BINDING, vk::ShaderStageFlagBits::eCompute)
+                .build("HistogramRenderer-ComputeDescriptorSetLayout");
+    }
 
-    m_histogramGraphicsPipeline = GraphicsPipeline::create(Engine::graphics()->getDevice(), "HistogramRenderer-HistogramGraphicsPipeline");
+    if (UseVertexScattering) {
+        m_histogramVertexScatterGraphicsPipeline = GraphicsPipeline::create(Engine::graphics()->getDevice(), "HistogramRenderer-HistogramVertexScatterGraphicsPipeline");
+    } else {
+        m_histogramClearComputePipeline = ComputePipeline::create(Engine::graphics()->getDevice(), "HistogramRenderer-HistogramClearComputePipeline");
+        m_histogramAccumulationComputePipeline = ComputePipeline::create(Engine::graphics()->getDevice(), "HistogramRenderer-HistogramAccumulationComputePipeline");
+    }
 
     SamplerConfiguration samplerConfig{};
     samplerConfig.device = Engine::graphics()->getDevice();
@@ -54,16 +92,19 @@ bool HistogramRenderer::init() {
     samplerConfig.wrapV = vk::SamplerAddressMode::eClampToEdge;
     samplerConfig.minLod = 0.0F;
     samplerConfig.maxLod = 6.0F;
-    m_sampler = Sampler::get(samplerConfig, "PostProcess-FrameSampler");
+    m_inputFrameSampler = Sampler::get(samplerConfig, "PostProcess-FrameSampler");
 
     for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_resources[i]->descriptorSet = DescriptorSet::create(m_descriptorSetLayout, descriptorPool, "HistogramRenderer-DescriptorSet");
     }
 
-    if (!createRenderPass()) {
-        printf("Failed to create HistogramRenderer RenderPass\n");
-        return false;
+    if (UseVertexScattering) {
+        if (!createVertexScatterRenderPass()) {
+            printf("Failed to create HistogramRenderer RenderPass\n");
+            return false;
+        }
     }
+
 
     Engine::eventDispatcher()->connect(&HistogramRenderer::recreateSwapchain, this);
     return true;
@@ -73,49 +114,29 @@ void HistogramRenderer::render(const double& dt, const vk::CommandBuffer& comman
     PROFILE_SCOPE("HistogramRenderer::render");
     PROFILE_BEGIN_GPU_CMD("HistogramRenderer::render", commandBuffer);
 
-    if (m_resources->recreateFramebuffer)
-        createFramebuffer(m_resources.get());
-
-    if (m_recreateVertexScatterMesh)
-        createVertexScatterMesh();
-
-    if (m_resources->vertexScatterMesh != m_vertexScatterMesh)
-        m_resources->vertexScatterMesh = m_vertexScatterMesh; // shared_ptr will ensure the mesh being used by previous frames will remain allocated until that frame is done
-
-    HistogramPushConstantData pushConstantData{};
-    pushConstantData.resolution = m_resolution;
-    pushConstantData.maxBrightness = 5.0F;
-    pushConstantData.binCount = m_binCount;
+    updateReadbackBuffer();
 
     if (m_resources->frameTextureChanged) {
         m_resources->frameTextureChanged = false;
         ImageView* lightingFrameImageView = Engine::deferredRenderer()->getOutputFrameImageView();
 
         DescriptorSetWriter(m_resources->descriptorSet)
-                .writeImage(HISTOGRAM_INPUT_TEXTURE_BINDING, m_sampler.get(), lightingFrameImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+                .writeImage(HISTOGRAM_INPUT_TEXTURE_BINDING, m_inputFrameSampler.get(), lightingFrameImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
                 .write();
     }
 
-    Framebuffer* framebuffer = m_resources->framebuffer;
-    m_renderPass->begin(commandBuffer, framebuffer, vk::SubpassContents::eInline);
-
-    m_histogramGraphicsPipeline->setViewport(commandBuffer, 0, framebuffer->getResolution());
-    m_histogramGraphicsPipeline->bind(commandBuffer);
-
-    std::array<vk::DescriptorSet, 1> descriptorSets = {
-            m_resources->descriptorSet->getDescriptorSet()
-    };
-
-    const vk::PipelineLayout& pipelineLayout = m_histogramGraphicsPipeline->getPipelineLayout();
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, descriptorSets, nullptr);
-
-    for (uint32_t i = 0; i < 4; ++i) {
-        pushConstantData.channel = i;
-        commandBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(HistogramPushConstantData), &pushConstantData);
-        m_resources->vertexScatterMesh->draw(commandBuffer, 1, 0);
+    if (UseVertexScattering) {
+        renderVertexScatterHistogram(commandBuffer);
+    } else {
+        renderComputeHistogram(commandBuffer);
     }
 
-    commandBuffer.endRenderPass();
+
+    m_readbackData.clear();
+    if (m_readbackNextFrame) {
+        m_readbackNextFrame = false;
+        readback(commandBuffer);
+    }
 
     PROFILE_END_GPU_CMD(commandBuffer);
 }
@@ -128,8 +149,8 @@ void HistogramRenderer::setBinCount(const uint32_t& binCount) {
     uint32_t newBinCount = glm::clamp(binCount, (uint32_t)32, (uint32_t)8192);
     if (m_binCount != newBinCount) {
         m_binCount = newBinCount;
-        for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i)
-            m_resources[i]->recreateFramebuffer = true;
+//        for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i)
+//            m_resources[i]->binCountChanged = true;
     }
 }
 
@@ -141,36 +162,204 @@ void HistogramRenderer::setDownsampleFactor(const uint32_t& downsampleFactor) {
     uint32_t newDownsampleFactor = glm::min(downsampleFactor, (uint32_t)8);
     if (m_downsampleFactor != newDownsampleFactor) {
         m_downsampleFactor = newDownsampleFactor;
-        m_recreateVertexScatterMesh = true;
+        if (UseVertexScattering) {
+            m_recreateVertexScatterMesh = true;
+        }
     }
 }
 
+float HistogramRenderer::getOffset() const {
+    return m_offset;
+}
+
+void HistogramRenderer::setOffset(const float& offset) {
+    m_offset = offset;
+}
+
+float HistogramRenderer::getScale() const {
+    return m_scale;
+}
+
+void HistogramRenderer::setScale(const float& scale) {
+    m_scale = scale;
+}
+
+float HistogramRenderer::getMinBrightness() const {
+    return m_minBrightness;
+}
+
+void HistogramRenderer::setMinBrightness(const float& minBrightness) {
+    m_minBrightness = minBrightness;
+}
+
+float HistogramRenderer::getMaxBrightness() const {
+    return m_maxBrightness;
+}
+
+void HistogramRenderer::setMaxBrightness(const float& maxBrightness) {
+    m_maxBrightness = maxBrightness;
+}
+
+glm::bvec4 HistogramRenderer::getEnabledChannels() const {
+    return m_enabledChannels;
+}
+
+void HistogramRenderer::setEnabledChannels(const glm::bvec4& enabledChannels) {
+    m_enabledChannels = enabledChannels;
+}
+
+Buffer* HistogramRenderer::getHistogramBuffer() const {
+    return m_resources->histogramBuffer;
+}
+
 ImageView* HistogramRenderer::getHistogramImageView() const {
-    return m_resources->frameImageView;
+    return m_resources->histogramImageView;
 }
 
 const std::shared_ptr<Sampler>& HistogramRenderer::getSampler() const {
-    return m_sampler;
+    return m_inputFrameSampler;
+}
+
+void HistogramRenderer::renderVertexScatterHistogram(const vk::CommandBuffer& commandBuffer) {
+    if (m_resources->vertexScatterFramebuffer->getWidth() != m_binCount) {
+        createVertexScatterFramebuffer(m_resources.get());
+    }
+
+    if (m_recreateVertexScatterMesh) {
+        m_recreateVertexScatterMesh = false;
+        createVertexScatterMesh();
+    }
+
+    if (m_resources->vertexScatterMesh != m_vertexScatterMesh) {
+        m_resources->vertexScatterMesh = m_vertexScatterMesh; // shared_ptr will ensure the mesh being used by previous frames will remain allocated until that frame is done
+    }
+
+    HistogramPushConstantData pushConstantData{};
+    pushConstantData.resolution = m_resolution;
+    pushConstantData.maxBrightness = 5.0F;
+    pushConstantData.binCount = m_binCount;
+    pushConstantData.offset = m_offset;
+    pushConstantData.scale = m_scale;
+
+    Framebuffer* framebuffer = m_resources->vertexScatterFramebuffer;
+    m_renderPass->begin(commandBuffer, framebuffer, vk::SubpassContents::eInline);
+
+    m_histogramVertexScatterGraphicsPipeline->setViewport(commandBuffer, 0, framebuffer->getResolution());
+    m_histogramVertexScatterGraphicsPipeline->bind(commandBuffer);
+
+    std::array<vk::DescriptorSet, 1> descriptorSets = {
+            m_resources->descriptorSet->getDescriptorSet()
+    };
+
+    const vk::PipelineLayout& pipelineLayout = m_histogramVertexScatterGraphicsPipeline->getPipelineLayout();
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, descriptorSets, nullptr);
+
+    for (uint32_t i = 0; i < 4; ++i) {
+        if (m_enabledChannels[i]) {
+            pushConstantData.channel = i; // TODO: one draw call for 4 instances, rather than 4 draw calls
+            commandBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(HistogramPushConstantData), &pushConstantData);
+            m_resources->vertexScatterMesh->draw(commandBuffer, 1, 0);
+        }
+    }
+
+    commandBuffer.endRenderPass();
+}
+
+void HistogramRenderer::renderComputeHistogram(const vk::CommandBuffer& commandBuffer) {
+
+    updateHistogramBuffer(m_resources.get());
+
+    HistogramPushConstantData pushConstantData{};
+    pushConstantData.resolution = m_resolution;
+    pushConstantData.maxBrightness = 5.0F;
+    pushConstantData.binCount = m_binCount;
+    pushConstantData.offset = m_offset;
+    pushConstantData.scale = m_scale;
+
+
+    std::array<vk::DescriptorSet, 1> descriptorSets = {
+            m_resources->descriptorSet->getDescriptorSet()
+    };
+
+    constexpr uint32_t workgroupSize = 16;
+    uint32_t workgroupCountX, workgroupCountY;
+
+    m_histogramClearComputePipeline->bind(commandBuffer);
+    const vk::PipelineLayout& clearPipelineLayout = m_histogramAccumulationComputePipeline->getPipelineLayout();
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, clearPipelineLayout, 0, descriptorSets, nullptr);
+    commandBuffer.pushConstants(clearPipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, sizeof(HistogramPushConstantData), &pushConstantData);
+    workgroupCountX = INT_DIV_CEIL(m_binCount, workgroupSize);
+    m_histogramClearComputePipeline->dispatch(commandBuffer, workgroupCountX, 1, 1);
+
+    m_histogramAccumulationComputePipeline->bind(commandBuffer);
+    const vk::PipelineLayout& accumulatePipelineLayout = m_histogramAccumulationComputePipeline->getPipelineLayout();
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, accumulatePipelineLayout, 0, descriptorSets, nullptr);
+    commandBuffer.pushConstants(accumulatePipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, sizeof(HistogramPushConstantData), &pushConstantData);
+
+    workgroupCountX = INT_DIV_CEIL(m_resolution.x, workgroupSize);
+    workgroupCountY = INT_DIV_CEIL(m_resolution.y, workgroupSize);
+    m_histogramAccumulationComputePipeline->dispatch(commandBuffer, workgroupCountX, workgroupCountY, 1);
+}
+
+void HistogramRenderer::readback(const vk::CommandBuffer& commandBuffer) {
+    PROFILE_SCOPE("HistogramRenderer::readback")
+    PROFILE_BEGIN_GPU_CMD("HistogramRenderer::readback", commandBuffer)
+    const vk::Image& srcImage = m_resources->histogramImage->getImage();
+    const vk::Buffer& dstBuffer = m_readbackBuffer->getBuffer();
+
+    ImageUtil::transitionLayout(commandBuffer, srcImage, vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1),
+                                ImageTransition::General(vk::PipelineStageFlagBits::eFragmentShader),
+                                ImageTransition::General(vk::PipelineStageFlagBits::eFragmentShader));
+//                                ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader),
+//                                ImageTransition::TransferSrc());
+    vk::BufferImageCopy imageCopy;
+    imageCopy.bufferOffset = 0;
+    imageCopy.bufferRowLength = 0;
+    imageCopy.bufferImageHeight = 0;
+    imageCopy.imageSubresource = vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1);
+    imageCopy.imageOffset = vk::Offset3D(0, 0, 0);
+    imageCopy.imageExtent = vk::Extent3D(m_binCount, 1, 1);
+    commandBuffer.copyImageToBuffer(srcImage, vk::ImageLayout::eTransferSrcOptimal, dstBuffer, 1, &imageCopy);
+
+//    ImageUtil::transitionLayout(commandBuffer, srcImage, vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1),
+//                                ImageTransition::TransferSrc(),
+//                                ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader));
+
+    PROFILE_END_GPU_CMD(commandBuffer)
+
+    m_readbackData.clear();
+    m_readbackData.resize(m_binCount);
+    memcpy(m_readbackData.data(), m_readbackBuffer->map(), sizeof(glm::vec4) * m_binCount);
 }
 
 void HistogramRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
     bool success;
     for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_resources[i]->frameTextureChanged = true;
-        success = createFramebuffer(m_resources[i]);
+        if (UseVertexScattering) {
+            success = createVertexScatterFramebuffer(m_resources[i]);
+            assert(success);
+        }
+    }
+    if (UseVertexScattering) {
+        m_recreateVertexScatterMesh = true;
+        success = createVertexScatterGraphicsPipeline();
+        assert(success);
+    } else {
+        success = createHistogramClearComputePipeline();
+        assert(success);
+
+        success = createHistogramAccumulationComputePipeline();
         assert(success);
     }
-    success = createGraphicsPipeline();
-    assert(success);
-
-    m_recreateVertexScatterMesh = true;
 }
 
-bool HistogramRenderer::createFramebuffer(RenderResources* resource) {
-    delete resource->framebuffer;
-    delete resource->frameImageView;
-    delete resource->frameImage;
-    resource->recreateFramebuffer = false;
+bool HistogramRenderer::createVertexScatterFramebuffer(RenderResources* resource) {
+    delete resource->vertexScatterFramebuffer;
+    delete resource->histogramImageView;
+    delete resource->histogramImage;
+
+//    resource->binCountChanged = false;
 
     // Histogram bin image (binCount x 1 pixels)
     Image2DConfiguration imageConfig{};
@@ -178,38 +367,56 @@ bool HistogramRenderer::createFramebuffer(RenderResources* resource) {
     imageConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
     imageConfig.sampleCount = vk::SampleCountFlagBits::e1;
     imageConfig.setSize(m_binCount, 1);
-    imageConfig.format = Engine::deferredRenderer()->getOutputColourFormat();
-    imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;
-    resource->frameImage = Image2D::create(imageConfig, "HistogramRenderer-FrameImage");
+//    imageConfig.format = vk::Format::eR32G32B32A32Sfloat;
+    imageConfig.format = vk::Format::eR32Sfloat;
+    imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc;
+//    imageConfig.enabledTexelAccess = true; // Linear tiling
+    resource->histogramImage = Image2D::create(imageConfig, "HistogramRenderer-HistogramImage");
 
     ImageViewConfiguration imageViewConfig{};
     imageViewConfig.device = Engine::graphics()->getDevice();
     imageViewConfig.format = imageConfig.format;
     imageViewConfig.aspectMask = vk::ImageAspectFlagBits::eColor;
-    imageViewConfig.setImage(resource->frameImage);
-    resource->frameImageView = ImageView::create(imageViewConfig, "HistogramRenderer-FrameImageView");
+    imageViewConfig.setImage(resource->histogramImage);
+    resource->histogramImageView = ImageView::create(imageViewConfig, "HistogramRenderer-HistogramImageView");
 
     // Framebuffer
     FramebufferConfiguration framebufferConfig{};
     framebufferConfig.device = Engine::graphics()->getDevice();
     framebufferConfig.setSize(m_binCount, 1);
     framebufferConfig.setRenderPass(m_renderPass.get());
-    framebufferConfig.addAttachment(resource->frameImageView);
+    framebufferConfig.addAttachment(resource->histogramImageView);
 
-    resource->framebuffer = Framebuffer::create(framebufferConfig, "HistogramRenderer-Framebuffer");
-    if (resource->framebuffer == nullptr)
+    resource->vertexScatterFramebuffer = Framebuffer::create(framebufferConfig, "HistogramRenderer-VertexScatterFramebuffer");
+    if (resource->vertexScatterFramebuffer == nullptr)
         return false;
     return true;
 }
 
-bool HistogramRenderer::createGraphicsPipeline() {
+void HistogramRenderer::updateHistogramBuffer(RenderResources* resource) {
+    if (resource->histogramBuffer == nullptr || resource->histogramBuffer->getSize<uint32_t>() != m_binCount) {
+        BufferConfiguration bufferConfig{};
+        bufferConfig.device = Engine::graphics()->getDevice();
+        bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+        bufferConfig.usage = vk::BufferUsageFlagBits::eStorageBuffer;
+        bufferConfig.size = sizeof(uint32_t) * m_binCount;
+
+        resource->histogramBuffer = Buffer::create(bufferConfig, "HistogramRenderer-HistogramBuffer");
+
+        DescriptorSetWriter(m_resources->descriptorSet)
+                .writeBuffer(HISTOGRAM_OUTPUT_BUFFER_BINDING, resource->histogramBuffer->getBuffer())
+                .write();
+    }
+}
+
+bool HistogramRenderer::createVertexScatterGraphicsPipeline() {
     GraphicsPipelineConfiguration pipelineConfig{};
     pipelineConfig.device = Engine::graphics()->getDevice();
     pipelineConfig.renderPass = m_renderPass;
     pipelineConfig.setDynamicState(vk::DynamicState::eViewport, true);
     pipelineConfig.depthTestEnabled = false;
-    pipelineConfig.vertexShader = "res/shaders/histogram/histogram.vert";
-    pipelineConfig.fragmentShader = "res/shaders/histogram/histogram.frag";
+    pipelineConfig.vertexShader = "res/shaders/histogram/histogram_vtx_scatter.vert";
+    pipelineConfig.fragmentShader = "res/shaders/histogram/histogram_vtx_scatter.frag";
     pipelineConfig.addDescriptorSetLayout(m_descriptorSetLayout.get());
     pipelineConfig.addVertexInputBinding(0, sizeof(glm::vec2), vk::VertexInputRate::eVertex);
     pipelineConfig.addVertexInputAttribute(0, 0, vk::Format::eR32G32Sfloat, 0);
@@ -217,22 +424,40 @@ bool HistogramRenderer::createGraphicsPipeline() {
     pipelineConfig.setAttachmentBlendEnabled(0, true);
     pipelineConfig.setAttachmentColourBlendMode(0, vk::BlendFactor::eOne, vk::BlendFactor::eOne, vk::BlendOp::eAdd);
     pipelineConfig.primitiveTopology = vk::PrimitiveTopology::ePointList;
-    return m_histogramGraphicsPipeline->recreate(pipelineConfig, "HistogramRenderer-HistogramGraphicsPipeline");
+    return m_histogramVertexScatterGraphicsPipeline->recreate(pipelineConfig, "HistogramRenderer-VertexScatterGraphicsPipeline");
 }
 
-bool HistogramRenderer::createRenderPass() {
+bool HistogramRenderer::createHistogramClearComputePipeline() {
+    ComputePipelineConfiguration pipelineConfig{};
+    pipelineConfig.device = Engine::graphics()->getDevice();
+    pipelineConfig.computeShader = "res/shaders/histogram/histogram_clear_compute.glsl";
+    pipelineConfig.addDescriptorSetLayout(m_descriptorSetLayout.get());
+    pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(HistogramPushConstantData));
+    return m_histogramClearComputePipeline->recreate(pipelineConfig, "HistogramRenderer-HistogramClearComputePipeline");
+}
+
+bool HistogramRenderer::createHistogramAccumulationComputePipeline() {
+    ComputePipelineConfiguration pipelineConfig{};
+    pipelineConfig.device = Engine::graphics()->getDevice();
+    pipelineConfig.computeShader = "res/shaders/histogram/histogram_accumulate_compute.glsl";
+    pipelineConfig.addDescriptorSetLayout(m_descriptorSetLayout.get());
+    pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(HistogramPushConstantData));
+    return m_histogramAccumulationComputePipeline->recreate(pipelineConfig, "HistogramRenderer-HistogramAccumulationComputePipeline");
+}
+
+bool HistogramRenderer::createVertexScatterRenderPass() {
     vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1;
 
     std::array<vk::AttachmentDescription, 1> attachments;
 
-    attachments[0].setFormat(Engine::deferredRenderer()->getOutputColourFormat());
+    attachments[0].setFormat(vk::Format::eR32Sfloat);
     attachments[0].setSamples(samples);
     attachments[0].setLoadOp(vk::AttachmentLoadOp::eClear); // could be eDontCare ?
     attachments[0].setStoreOp(vk::AttachmentStoreOp::eStore);
     attachments[0].setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
     attachments[0].setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
     attachments[0].setInitialLayout(vk::ImageLayout::eUndefined);
-    attachments[0].setFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+    attachments[0].setFinalLayout(vk::ImageLayout::eGeneral);
 
     std::array<SubpassConfiguration, 1> subpassConfigurations;
     subpassConfigurations[0].addColourAttachment(0, vk::ImageLayout::eColorAttachmentOptimal);
@@ -266,7 +491,6 @@ bool HistogramRenderer::createRenderPass() {
 }
 
 void HistogramRenderer::createVertexScatterMesh() {
-    m_recreateVertexScatterMesh = false;
 
     glm::uvec2 resolution = Engine::graphics()->getResolution() / (1 << m_downsampleFactor);
 
@@ -287,5 +511,21 @@ void HistogramRenderer::createVertexScatterMesh() {
         meshConfig.device = Engine::graphics()->getDevice();
         m_vertexScatterMesh = std::shared_ptr<Mesh>(Mesh::create(meshConfig, "HistogramRenderer-VertexScatterMesh"));
         m_vertexScatterMesh->uploadVertices(vertices.data(), sizeof(glm::vec2), vertices.size());
+    }
+}
+
+void HistogramRenderer::updateReadbackBuffer() {
+    vk::DeviceSize requiredSize = sizeof(glm::vec4) * m_binCount;
+    if (m_readbackBuffer == nullptr || m_readbackBuffer->getSize() < requiredSize) {
+        delete m_readbackBuffer;
+
+        printf("Creating HistogramRenderer read-back buffer for %u bins\n", m_binCount);
+
+        BufferConfiguration bufferConfig{};
+        bufferConfig.device = Engine::graphics()->getDevice();
+        bufferConfig.size = requiredSize;
+        bufferConfig.usage = vk::BufferUsageFlagBits::eTransferDst;
+        bufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible;
+        m_readbackBuffer = Buffer::create(bufferConfig, "HistogramRenderer-ReadbackBuffer");
     }
 }

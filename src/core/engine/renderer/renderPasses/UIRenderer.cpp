@@ -5,6 +5,7 @@
 #include "core/application/InputHandler.h"
 #include "extern/imgui/imgui_impl_sdl.h"
 #include "extern/imgui/imgui_impl_vulkan.h"
+#include "extern/imgui/implot.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/CommandPool.h"
 #include "core/engine/ui/PerformanceGraphUI.h"
@@ -17,12 +18,14 @@ void checkVulkanResult(VkResult result);
 UIRenderer::UIRenderer():
     m_createdFontsTexture(false) {
     m_imGuiContext = ImGui::CreateContext();
+    m_imPlotContext = ImPlot::CreateContext();
 }
 
 UIRenderer::~UIRenderer() {
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL2_Shutdown();
 
+    ImPlot::DestroyContext(m_imPlotContext);
     ImGui::DestroyContext(m_imGuiContext);
 }
 
@@ -121,6 +124,7 @@ void UIRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer
     PROFILE_BEGIN_GPU_CMD("UIRenderer::render", commandBuffer);
 
 //    ImGui::ShowDemoWindow();
+    ImPlot::ShowDemoWindow();
 
     for (auto it = m_uis.begin(); it != m_uis.end(); ++it) {
         const bool& visible = it->second.second;
@@ -129,6 +133,7 @@ void UIRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer
         if (visible)
             ui->draw(dt);
     }
+
 
     m_uiRenderPass->begin(commandBuffer, Engine::graphics()->getCurrentFramebuffer(), vk::SubpassContents::eInline);
     ImGui::Render();

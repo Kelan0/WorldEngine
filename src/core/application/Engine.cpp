@@ -102,6 +102,14 @@ const bool& Engine::isDebugCompositeEnabled() const {
     return m_debugCompositeEnabled;
 }
 
+const double& Engine::getAccumulatedTime() {
+    return m_accumulatedTime;
+}
+
+const double& Engine::getRunTime() {
+    return m_runTime;
+}
+
 void Engine::setDebugCompositeEnabled(const bool& debugCompositeEnabled) {
     m_debugCompositeEnabled = debugCompositeEnabled;
 }
@@ -148,6 +156,14 @@ EventDispatcher* Engine::eventDispatcher() {
 
 const uint64_t& Engine::currentFrameCount() {
     return instance()->getCurrentFrameCount();
+}
+
+const double& Engine::accumulatedTime() {
+    return instance()->getAccumulatedTime();
+}
+
+const double& Engine::runTime() {
+    return instance()->getRunTime();
 }
 
 const bool& Engine::debugCompositeEnabled() {
@@ -201,7 +217,11 @@ bool Engine::init(SDL_Window* windowHandle) {
     if (!m_postProcessingRenderer->init())
         return false;
 
+    m_runTime = 0.0;
+    m_accumulatedTime = 0.0;
     m_currentFrameCount = 0;
+
+    m_startTime = std::chrono::high_resolution_clock::now();
 
     return true;
 }
@@ -259,6 +279,13 @@ void Engine::render(const double& dt) {
     PROFILE_END_GPU_CMD(commandBuffer);
 
     ++m_currentFrameCount;
+    m_accumulatedTime += dt;
+
+    // m_runTime accurate to 1/10th millisecond
+    constexpr uint32_t res = 10000;
+    using dur = std::chrono::duration<long long, std::ratio<1, res>>;
+    auto now = std::chrono::high_resolution_clock::now();
+    m_runTime = (double)std::chrono::duration_cast<dur>(now - m_startTime).count() / (double)res;
 }
 
 void Engine::cleanup() {

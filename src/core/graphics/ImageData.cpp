@@ -30,11 +30,11 @@ ImageData::ImageData(uint8_t* data, const ImageRegion::size_type& width, const I
 //}
 
 ImageData::ImageData(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat):
-    ImageData(data, width, height, pixelLayout, pixelFormat, AllocationType_External) {
+        ImageData(data, width, height, pixelLayout, pixelFormat, AllocationType_External) {
 }
 
-ImageData::ImageData(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout &pixelLayout, const ImagePixelFormat &pixelFormat):
-    ImageData(nullptr, width, height, pixelLayout, pixelFormat, AllocationType_Internal) {
+ImageData::ImageData(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat):
+        ImageData(nullptr, width, height, pixelLayout, pixelFormat, AllocationType_Internal) {
 
     size_t pixelSize = ImageData::getChannels(pixelLayout) * ImageData::getChannelSize(pixelFormat);
     m_data = static_cast<uint8_t*>(malloc(width * height * pixelSize));
@@ -189,36 +189,70 @@ ImageData* ImageData::mutate(uint8_t* data, const ImageRegion::size_type& width,
         //ImageData::getPixelSwizzle(srcLayout, srcSwizzle);
         //ImageData::getPixelSwizzle(dstLayout, dstSwizzle);
 
-        int swizzleTransform[4] = { 0, 1, 2, 3 };
+        int swizzleTransform[4] = {0, 1, 2, 3};
 
 
         for (size_t y = 0; y < height; ++y) {
             for (size_t x = 0; x < width; ++x) {
                 for (glm::length_t i = 0; i < srcChannels; ++i) {
                     switch (srcFormat) {
-                        case ImagePixelFormat::UInt8: channels[swizzleTransform[i]] = reinterpret_cast<uint8_t*>(srcPixel)[i]; break;
-                        case ImagePixelFormat::SInt8: channels[swizzleTransform[i]] = reinterpret_cast<int8_t*>(srcPixel)[i]; break;
-                        case ImagePixelFormat::UInt16: channels[swizzleTransform[i]] = reinterpret_cast<uint16_t*>(srcPixel)[i]; break;
-                        case ImagePixelFormat::SInt16: channels[swizzleTransform[i]] = reinterpret_cast<int16_t*>(srcPixel)[i]; break;
-                        case ImagePixelFormat::UInt32: channels[swizzleTransform[i]] = reinterpret_cast<uint32_t*>(srcPixel)[i]; break;
-                        case ImagePixelFormat::SInt32: channels[swizzleTransform[i]] = reinterpret_cast<int32_t*>(srcPixel)[i]; break;
-                        case ImagePixelFormat::Float16: channels[swizzleTransform[i]] = reinterpret_cast<uint16_t*>(srcPixel)[i]; break;
-                        case ImagePixelFormat::Float32: channels[swizzleTransform[i]] = reinterpret_cast<uint32_t*>(srcPixel)[i]; break;
-                        case ImagePixelFormat::Invalid: assert(false);
+                        case ImagePixelFormat::UInt8:
+                            channels[swizzleTransform[i]] = reinterpret_cast<uint8_t*>(srcPixel)[i];
+                            break;
+                        case ImagePixelFormat::SInt8:
+                            channels[swizzleTransform[i]] = reinterpret_cast<int8_t*>(srcPixel)[i];
+                            break;
+                        case ImagePixelFormat::UInt16:
+                            channels[swizzleTransform[i]] = reinterpret_cast<uint16_t*>(srcPixel)[i];
+                            break;
+                        case ImagePixelFormat::SInt16:
+                            channels[swizzleTransform[i]] = reinterpret_cast<int16_t*>(srcPixel)[i];
+                            break;
+                        case ImagePixelFormat::UInt32:
+                            channels[swizzleTransform[i]] = reinterpret_cast<uint32_t*>(srcPixel)[i];
+                            break;
+                        case ImagePixelFormat::SInt32:
+                            channels[swizzleTransform[i]] = reinterpret_cast<int32_t*>(srcPixel)[i];
+                            break;
+                        case ImagePixelFormat::Float16:
+                            channels[swizzleTransform[i]] = reinterpret_cast<uint16_t*>(srcPixel)[i];
+                            break;
+                        case ImagePixelFormat::Float32:
+                            channels[swizzleTransform[i]] = reinterpret_cast<uint32_t*>(srcPixel)[i];
+                            break;
+                        case ImagePixelFormat::Invalid:
+                            assert(false);
                     }
                 }
 
                 for (glm::length_t i = 0; i < dstChannels; ++i) {
                     switch (dstFormat) {
-                        case ImagePixelFormat::UInt8: reinterpret_cast<uint8_t*>(dstPixel)[i] = (uint8_t)channels[i]; break;
-                        case ImagePixelFormat::SInt8: reinterpret_cast<int8_t*>(dstPixel)[i] = (int8_t)channels[i]; break;
-                        case ImagePixelFormat::UInt16: reinterpret_cast<uint16_t*>(dstPixel)[i] = (uint16_t)channels[i]; break;
-                        case ImagePixelFormat::SInt16: reinterpret_cast<int16_t*>(dstPixel)[i] = (int16_t)channels[i]; break;
-                        case ImagePixelFormat::UInt32: reinterpret_cast<uint32_t*>(dstPixel)[i] = (uint32_t)channels[i]; break;
-                        case ImagePixelFormat::SInt32: reinterpret_cast<int32_t*>(dstPixel)[i] = (int32_t)channels[i]; break;
-                        case ImagePixelFormat::Float16: reinterpret_cast<uint16_t*>(dstPixel)[i] = (uint16_t)channels[i]; break;
-                        case ImagePixelFormat::Float32: reinterpret_cast<uint32_t*>(dstPixel)[i] = (uint32_t)channels[i]; break;
-                        case ImagePixelFormat::Invalid: assert(false);
+                        case ImagePixelFormat::UInt8:
+                            reinterpret_cast<uint8_t*>(dstPixel)[i] = (uint8_t)channels[i];
+                            break;
+                        case ImagePixelFormat::SInt8:
+                            reinterpret_cast<int8_t*>(dstPixel)[i] = (int8_t)channels[i];
+                            break;
+                        case ImagePixelFormat::UInt16:
+                            reinterpret_cast<uint16_t*>(dstPixel)[i] = (uint16_t)channels[i];
+                            break;
+                        case ImagePixelFormat::SInt16:
+                            reinterpret_cast<int16_t*>(dstPixel)[i] = (int16_t)channels[i];
+                            break;
+                        case ImagePixelFormat::UInt32:
+                            reinterpret_cast<uint32_t*>(dstPixel)[i] = (uint32_t)channels[i];
+                            break;
+                        case ImagePixelFormat::SInt32:
+                            reinterpret_cast<int32_t*>(dstPixel)[i] = (int32_t)channels[i];
+                            break;
+                        case ImagePixelFormat::Float16:
+                            reinterpret_cast<uint16_t*>(dstPixel)[i] = (uint16_t)channels[i];
+                            break;
+                        case ImagePixelFormat::Float32:
+                            reinterpret_cast<uint32_t*>(dstPixel)[i] = (uint32_t)channels[i];
+                            break;
+                        case ImagePixelFormat::Invalid:
+                            assert(false);
                     }
                 }
 
@@ -244,15 +278,25 @@ int64_t ImageData::getChannel(const ImageRegion::offset_type& x, const ImageRegi
     uint8_t* data = &m_data[channelOffset];
 
     switch (m_pixelFormat) {
-        case ImagePixelFormat::UInt8: return (int64_t)(*(uint8_t*)(data));
-        case ImagePixelFormat::SInt8: return (int64_t)(*(int8_t*)(data));
-        case ImagePixelFormat::UInt16: return (int64_t)(*(uint16_t*)(data));
-        case ImagePixelFormat::SInt16: return (int64_t)(*(int16_t*)(data));
-        case ImagePixelFormat::UInt32: return (int64_t)(*(uint32_t*)(data));
-        case ImagePixelFormat::SInt32: return (int64_t)(*(int32_t*)(data));
-        case ImagePixelFormat::Float16: return (int64_t)(*(uint16_t*)(data)); // No c++ representation
-        case ImagePixelFormat::Float32: return (int64_t)(*(float*)(data));
-        default: assert(false); return 0;
+        case ImagePixelFormat::UInt8:
+            return (int64_t)(*(uint8_t*)(data));
+        case ImagePixelFormat::SInt8:
+            return (int64_t)(*(int8_t*)(data));
+        case ImagePixelFormat::UInt16:
+            return (int64_t)(*(uint16_t*)(data));
+        case ImagePixelFormat::SInt16:
+            return (int64_t)(*(int16_t*)(data));
+        case ImagePixelFormat::UInt32:
+            return (int64_t)(*(uint32_t*)(data));
+        case ImagePixelFormat::SInt32:
+            return (int64_t)(*(int32_t*)(data));
+        case ImagePixelFormat::Float16:
+            return (int64_t)(*(uint16_t*)(data)); // No c++ representation
+        case ImagePixelFormat::Float32:
+            return (int64_t)(*(float*)(data));
+        default:
+            assert(false);
+            return 0;
     }
 }
 
@@ -261,21 +305,46 @@ void ImageData::setChannel(const ImageRegion::offset_type& x, const ImageRegion:
     uint8_t* data = &m_data[channelOffset];
 
     union {
-        int64_t value;int8_t s8;uint8_t u8;int16_t s16;uint16_t u16;int32_t s32;uint32_t u32;uint16_t f16;float f32;
+        int64_t value;
+        int8_t s8;
+        uint8_t u8;
+        int16_t s16;
+        uint16_t u16;
+        int32_t s32;
+        uint32_t u32;
+        uint16_t f16;
+        float f32;
     } channel{};
 
     channel.value = value;
 
     switch (m_pixelFormat) {
-        case ImagePixelFormat::UInt8: (*(uint8_t*)data) = channel.u8; break;
-        case ImagePixelFormat::SInt8: (*(int8_t*)data) = channel.s8; break;
-        case ImagePixelFormat::UInt16: (*(uint16_t*)data) = channel.u16; break;
-        case ImagePixelFormat::SInt16: (*(int16_t*)data) = channel.s16; break;
-        case ImagePixelFormat::UInt32: (*(uint32_t*)data) = channel.u32; break;
-        case ImagePixelFormat::SInt32: (*(int32_t*)data) = channel.s32; break;
-        case ImagePixelFormat::Float16: (*(uint16_t*)data) = channel.f16; break;
-        case ImagePixelFormat::Float32: (*(float*)data) = channel.f32; break;
-        default: assert(false);
+        case ImagePixelFormat::UInt8:
+            (*(uint8_t*)data) = channel.u8;
+            break;
+        case ImagePixelFormat::SInt8:
+            (*(int8_t*)data) = channel.s8;
+            break;
+        case ImagePixelFormat::UInt16:
+            (*(uint16_t*)data) = channel.u16;
+            break;
+        case ImagePixelFormat::SInt16:
+            (*(int16_t*)data) = channel.s16;
+            break;
+        case ImagePixelFormat::UInt32:
+            (*(uint32_t*)data) = channel.u32;
+            break;
+        case ImagePixelFormat::SInt32:
+            (*(int32_t*)data) = channel.s32;
+            break;
+        case ImagePixelFormat::Float16:
+            (*(uint16_t*)data) = channel.f16;
+            break;
+        case ImagePixelFormat::Float32:
+            (*(float*)data) = channel.f32;
+            break;
+        default:
+            assert(false);
     }
 }
 
@@ -289,16 +358,26 @@ void ImageData::setPixel(const ImageRegion::offset_type& x, const ImageRegion::o
 
     for (size_t i = 0; i < numChannels; ++i) {
         switch (swizzle[i]) {
-            case vk::ComponentSwizzle::eR: setChannel(x, y, i, r); break;
-            case vk::ComponentSwizzle::eG: setChannel(x, y, i, g); break;
-            case vk::ComponentSwizzle::eB: setChannel(x, y, i, b); break;
-            case vk::ComponentSwizzle::eA: setChannel(x, y, i, a); break;
+            case vk::ComponentSwizzle::eR:
+                setChannel(x, y, i, r);
+                break;
+            case vk::ComponentSwizzle::eG:
+                setChannel(x, y, i, g);
+                break;
+            case vk::ComponentSwizzle::eB:
+                setChannel(x, y, i, b);
+                break;
+            case vk::ComponentSwizzle::eA:
+                setChannel(x, y, i, a);
+                break;
 //            case vk::ComponentSwizzle::eOne: setChannel(x, y, i, ONE); break;
 //            case vk::ComponentSwizzle::eZero: setChannel(x, y, i, ZERO); break;
-            default: break; // break from switch, not for loop
+            default:
+                break; // break from switch, not for loop
         }
     }
 }
+
 void ImageData::setPixelf(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const float& r, const float& g, const float& b, const float& a) {
     assert(m_pixelFormat == ImagePixelFormat::Float32);
 
@@ -313,13 +392,22 @@ void ImageData::setPixelf(const ImageRegion::offset_type& x, const ImageRegion::
 
     for (size_t i = 0; i < numChannels; ++i) {
         switch (swizzle[i]) {
-            case vk::ComponentSwizzle::eR: setChannel(x, y, i, *(int64_t*)&r); break;
-            case vk::ComponentSwizzle::eG: setChannel(x, y, i, *(int64_t*)&g); break;
-            case vk::ComponentSwizzle::eB: setChannel(x, y, i, *(int64_t*)&b); break;
-            case vk::ComponentSwizzle::eA: setChannel(x, y, i, *(int64_t*)&a); break;
+            case vk::ComponentSwizzle::eR:
+                setChannel(x, y, i, *(int64_t*)&r);
+                break;
+            case vk::ComponentSwizzle::eG:
+                setChannel(x, y, i, *(int64_t*)&g);
+                break;
+            case vk::ComponentSwizzle::eB:
+                setChannel(x, y, i, *(int64_t*)&b);
+                break;
+            case vk::ComponentSwizzle::eA:
+                setChannel(x, y, i, *(int64_t*)&a);
+                break;
 //            case vk::ComponentSwizzle::eOne: setChannel(x, y, i, ONE); break;
 //            case vk::ComponentSwizzle::eZero: setChannel(x, y, i, ZERO); break;
-            default: break; // break from switch, not for loop
+            default:
+                break; // break from switch, not for loop
         }
     }
 }
@@ -652,7 +740,7 @@ bool ImageData::ImageTransform::isNoOp() const {
 }
 
 void ImageData::ImageTransform::initComputeResources() {
-    Engine::graphics()->commandPool()->allocateCommandBuffer("image_compute_buffer", { vk::CommandBufferLevel::ePrimary });
+    Engine::graphics()->commandPool()->allocateCommandBuffer("image_compute_buffer", {vk::CommandBufferLevel::ePrimary});
 }
 
 void ImageData::ImageTransform::destroyComputeResources() {
@@ -661,15 +749,14 @@ void ImageData::ImageTransform::destroyComputeResources() {
 }
 
 
-
 ImageData::Flip::Flip(bool x, bool y):
-    flip_x(x),
-    flip_y(y) {
+        flip_x(x),
+        flip_y(y) {
 }
 
 ImageData::Flip::Flip(const Flip& copy):
-    flip_x(copy.flip_x),
-    flip_y(copy.flip_y) {
+        flip_x(copy.flip_x),
+        flip_y(copy.flip_y) {
 }
 
 ImageData* ImageData::Flip::apply(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& layout, const ImagePixelFormat& format) const {
@@ -696,7 +783,7 @@ ImageData* ImageData::Flip::apply(uint8_t* data, const ImageRegion::size_type& w
     uint8_t* srcPixels = data;
     uint8_t* dstPixels = static_cast<uint8_t*>(malloc(numBytes));
 
-    uint8_t *src, *dst;
+    uint8_t* src, * dst;
 
     for (size_t y = 0; y < height; ++y) {
         src = &srcPixels[y * rowStride];
@@ -737,7 +824,6 @@ ComputePipeline* ImageData::Flip::getComputePipeline() {
         return it->second;
     }
 }
-
 
 
 bool ImageUtil::isDepthAttachment(const vk::Format& format) {
@@ -793,9 +879,9 @@ bool ImageUtil::getImageFormatProperties(const vk::Format& format, const vk::Ima
 
     if (result != vk::Result::eSuccess) {
         if (result == vk::Result::eErrorFormatNotSupported) {
-            printf("Unable to get image format properties: requested image format %s is not supported by the physical device for usage %s\n", vk::to_string(format).c_str(), vk::to_string(usage).c_str());
+            printf("Image format %s is not supported for usage=%s, tiling=%s, flags=%s\n", vk::to_string(format).c_str(), vk::to_string(usage).c_str(), vk::to_string(tiling).c_str(), vk::to_string(flags).c_str());
         } else {
-            printf("Unable to get image format properties: %s\n", vk::to_string(result).c_str());
+            printf("Failed to get image format properties (%s) for format=%s, usage=%s, tiling=%s, flags=%s\n", vk::to_string(result).c_str() , vk::to_string(format).c_str(), vk::to_string(usage).c_str(), vk::to_string(tiling).c_str(), vk::to_string(flags).c_str());
         }
         return false;
     }
@@ -807,26 +893,27 @@ bool ImageUtil::getImageFormatProperties(const vk::Format& format, const vk::Ima
 bool ImageUtil::validateImageCreateInfo(const vk::ImageCreateInfo& imageCreateInfo) {
     vk::ImageFormatProperties imageFormatProperties;
     if (!getImageFormatProperties(imageCreateInfo.format, imageCreateInfo.imageType, imageCreateInfo.tiling, imageCreateInfo.usage, imageCreateInfo.flags, &imageFormatProperties)) {
+        printf("Image validation failed: Unable to get image format properties for the supplied image configuration\n");
         return false;
     }
 
     if (imageCreateInfo.extent.width > imageFormatProperties.maxExtent.width ||
         imageCreateInfo.extent.height > imageFormatProperties.maxExtent.height ||
         imageCreateInfo.extent.depth > imageFormatProperties.maxExtent.depth) {
-        printf("Unable to create Image: requested image extent [%d x %d x %d] is greater than the maximum supported extent for this format [%d x %d x %d]\n",
+        printf("Image validation failed: requested image extent [%d x %d x %d] is greater than the maximum supported extent [%d x %d x %d] for the supplied configuration\n",
                imageCreateInfo.extent.width, imageCreateInfo.extent.height, imageCreateInfo.extent.depth,
                imageFormatProperties.maxExtent.width, imageFormatProperties.maxExtent.height, imageFormatProperties.maxExtent.depth);
         return false;
     }
 
     if (imageCreateInfo.mipLevels > imageFormatProperties.maxMipLevels) {
-        printf("Unable to create Image: %d requested mip levels is greater than the maximum %d mip levels supported for this format\n",
+        printf("Image validation failed: %d requested mip levels is greater than the maximum %d mip levels supported for the supplied configuration\n",
                imageCreateInfo.mipLevels, imageFormatProperties.maxMipLevels);
         return false;
     }
 
     if (imageCreateInfo.arrayLayers > imageFormatProperties.maxArrayLayers) {
-        printf("Unable to create Image: %d requested array layers is greater than the maximum %d array layers supported for this format\n",
+        printf("Image validation failed: %d requested array layers is greater than the maximum %d array layers supported for the supplied configuration\n",
                imageCreateInfo.arrayLayers, imageFormatProperties.maxArrayLayers);
         return false;
     }
@@ -852,10 +939,10 @@ bool ImageUtil::transitionLayout(const vk::CommandBuffer& commandBuffer, const v
     barrier.setDstQueueFamilyIndex(dstState.queueFamilyIndex);
     barrier.setSubresourceRange(subresourceRange);
 
-    vk::PipelineStageFlags srcStageFlags = srcState.pipelineStage;
-    vk::PipelineStageFlags dstStageFlags = dstState.pipelineStage;
+    vk::PipelineStageFlags srcStageMask = srcState.pipelineStages;
+    vk::PipelineStageFlags dstStageMask = dstState.pipelineStages;
 
-    commandBuffer.pipelineBarrier(srcStageFlags, dstStageFlags, {}, 0, nullptr, 0, nullptr, 1, &barrier);
+    commandBuffer.pipelineBarrier(srcStageMask, dstStageMask, {}, 0, nullptr, 0, nullptr, 1, &barrier);
 
     PROFILE_END_GPU_CMD(commandBuffer);
     return true;
@@ -1096,14 +1183,14 @@ void ImageUtil::endTransferCommands(const vk::Queue& queue, const bool& waitComp
 
 const vk::CommandBuffer& ImageUtil::getTransferCommandBuffer() {
     if (!Engine::graphics()->commandPool()->hasCommandBuffer("image_transfer_buffer"))
-        Engine::graphics()->commandPool()->allocateCommandBuffer("image_transfer_buffer", { vk::CommandBufferLevel::ePrimary });
+        Engine::graphics()->commandPool()->allocateCommandBuffer("image_transfer_buffer", {vk::CommandBufferLevel::ePrimary});
 
     return **Engine::graphics()->commandPool()->getCommandBuffer("image_transfer_buffer");
 }
 
 const vk::CommandBuffer& ImageUtil::getComputeCommandBuffer() {
     if (!Engine::graphics()->commandPool()->hasCommandBuffer("image_compute_buffer"))
-        Engine::graphics()->commandPool()->allocateCommandBuffer("image_compute_buffer", { vk::CommandBufferLevel::ePrimary });
+        Engine::graphics()->commandPool()->allocateCommandBuffer("image_compute_buffer", {vk::CommandBufferLevel::ePrimary});
 
     return **Engine::graphics()->commandPool()->getCommandBuffer("image_compute_buffer");
 }
@@ -1170,79 +1257,77 @@ Buffer* ImageUtil::getImageStagingBuffer(const ImageRegion::size_type& width, co
 }
 
 
-
-
-
-
+ImageTransitionState::ImageTransitionState(const vk::ImageLayout& layout, const vk::AccessFlagBits& accessMask, const vk::PipelineStageFlags& pipelineStages, const uint32_t& queueFamilyIndex):
+        layout(layout),
+        accessMask(accessMask),
+        pipelineStages(pipelineStages),
+        queueFamilyIndex(queueFamilyIndex) {
+}
 
 bool ImageTransitionState::operator==(const ImageTransitionState& other) const {
     if (layout != other.layout) return false;
-    if (pipelineStage != other.pipelineStage) return false;
+    if (pipelineStages != other.pipelineStages) return false;
     if (accessMask != other.accessMask) return false;
     if (queueFamilyIndex != other.queueFamilyIndex) return false;
     return true;
 }
 
 
-ImageTransition::FromAny::FromAny() {
-    layout = vk::ImageLayout::eUndefined;
-    pipelineStage = vk::PipelineStageFlagBits::eTopOfPipe;
-    accessMask = vk::Flags<vk::AccessFlagBits>(0);
+ImageTransition::FromAny::FromAny(const vk::PipelineStageFlagBits& shaderPipelineStages):
+        ImageTransitionState(vk::ImageLayout::eUndefined, {}, shaderPipelineStages) {
 }
 
-ImageTransition::TransferDst::TransferDst() {
-    layout = vk::ImageLayout::eTransferDstOptimal;
-    pipelineStage = vk::PipelineStageFlagBits::eTransfer;
-    accessMask = vk::AccessFlagBits::eTransferWrite;
+ImageTransition::General::General(const vk::PipelineStageFlagBits& shaderPipelineStages):
+        ImageTransitionState(vk::ImageLayout::eGeneral, {}, shaderPipelineStages) {
 }
 
-ImageTransition::TransferSrc::TransferSrc() {
-    layout = vk::ImageLayout::eTransferSrcOptimal;
-    pipelineStage = vk::PipelineStageFlagBits::eTransfer; // is eTopOfPipe correct here?
-    accessMask = vk::AccessFlagBits::eTransferRead;
+ImageTransition::TransferDst::TransferDst():
+        ImageTransitionState(vk::ImageLayout::eTransferDstOptimal, vk::AccessFlagBits::eTransferWrite, vk::PipelineStageFlagBits::eTransfer) {
 }
 
-ImageTransition::ShaderAccess::ShaderAccess(vk::PipelineStageFlags shaderPipelineStages, bool read, bool write) {
+ImageTransition::TransferSrc::TransferSrc():
+        ImageTransitionState(vk::ImageLayout::eTransferSrcOptimal, vk::AccessFlagBits::eTransferRead, vk::PipelineStageFlagBits::eTransfer) {
+}
+
+ImageTransition::ShaderAccess::ShaderAccess(const vk::PipelineStageFlags& shaderPipelineStages, const bool& read, const bool& write):
+        ImageTransitionState(vk::ImageLayout::eShaderReadOnlyOptimal, {}, shaderPipelineStages) {
 #if _DEBUG
-    constexpr vk::PipelineStageFlags validShaderStages =
-		vk::PipelineStageFlagBits::eVertexShader |
-		vk::PipelineStageFlagBits::eGeometryShader |
-		vk::PipelineStageFlagBits::eTessellationControlShader |
-		vk::PipelineStageFlagBits::eTessellationEvaluationShader |
-		vk::PipelineStageFlagBits::eFragmentShader |
-		vk::PipelineStageFlagBits::eComputeShader |
-		vk::PipelineStageFlagBits::eRayTracingShaderNV |
-		vk::PipelineStageFlagBits::eTaskShaderNV;
-		vk::PipelineStageFlagBits::eMeshShaderNV;
-		if ((shaderPipelineStages & (~validShaderStages))) {
-			printf("Provided pipeline stages for ShaderAccess image transition must only contain shader stages\n");
-			assert(false);
-		}
-		if (!read && !write) {
-			printf("Provided access flags for ShaderAccess image transition must be readable, writable or both\n");
-			assert(false);
-		}
+    const vk::PipelineStageFlags validShaderStages =
+            vk::PipelineStageFlagBits::eVertexShader |
+            vk::PipelineStageFlagBits::eGeometryShader |
+            vk::PipelineStageFlagBits::eTessellationControlShader |
+            vk::PipelineStageFlagBits::eTessellationEvaluationShader |
+            vk::PipelineStageFlagBits::eFragmentShader |
+            vk::PipelineStageFlagBits::eComputeShader |
+            vk::PipelineStageFlagBits::eRayTracingShaderNV |
+            vk::PipelineStageFlagBits::eTaskShaderNV |
+            vk::PipelineStageFlagBits::eMeshShaderNV;
+    if ((shaderPipelineStages & (~validShaderStages))) {
+        printf("Provided pipeline stages for ShaderAccess image transition must only contain shader stages\n");
+        assert(false);
+    }
+    if (!read && !write) {
+        printf("Provided access flags for ShaderAccess image transition must be readable, writable or both\n");
+        assert(false);
+    }
 #endif
-    pipelineStage = shaderPipelineStages;
     layout = write ? vk::ImageLayout::eGeneral : vk::ImageLayout::eShaderReadOnlyOptimal;
     if (read) accessMask |= vk::AccessFlagBits::eShaderRead;
     if (write) accessMask |= vk::AccessFlagBits::eShaderWrite;
 }
 
-ImageTransition::ShaderReadOnly::ShaderReadOnly(vk::PipelineStageFlags shaderPipelineStages) :
-    ShaderAccess(shaderPipelineStages, true, false) {
+ImageTransition::ShaderReadOnly::ShaderReadOnly(const vk::PipelineStageFlags& shaderPipelineStages):
+        ShaderAccess(shaderPipelineStages, true, false) {
 }
 
-ImageTransition::ShaderWriteOnly::ShaderWriteOnly(vk::PipelineStageFlags shaderPipelineStages) :
-    ShaderAccess(shaderPipelineStages, false, true) {
+ImageTransition::ShaderWriteOnly::ShaderWriteOnly(const vk::PipelineStageFlags& shaderPipelineStages):
+        ShaderAccess(shaderPipelineStages, false, true) {
 }
 
-ImageTransition::ShaderReadWrite::ShaderReadWrite(vk::PipelineStageFlags shaderPipelineStages) :
-    ShaderAccess(shaderPipelineStages, true, true) {
+ImageTransition::ShaderReadWrite::ShaderReadWrite(const vk::PipelineStageFlags& shaderPipelineStages):
+        ShaderAccess(shaderPipelineStages, true, true) {
 }
 
-ImageTransition::PresentSrc::PresentSrc() {
-    layout = vk::ImageLayout::ePresentSrcKHR;
-    pipelineStage = vk::PipelineStageFlagBits::eBottomOfPipe;
-    accessMask = vk::Flags<vk::AccessFlagBits>(0);
+ImageTransition::PresentSrc::PresentSrc():
+        ImageTransitionState(vk::ImageLayout::ePresentSrcKHR, {}, vk::PipelineStageFlagBits::eBottomOfPipe) {
 }

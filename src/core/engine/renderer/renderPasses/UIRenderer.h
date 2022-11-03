@@ -6,8 +6,9 @@
 #include "core/engine/ui/UI.h"
 #include "core/graphics/FrameResource.h"
 #include "core/graphics/RenderPass.h"
-#include "extern/imgui/imgui.h"
 
+struct ImGuiContext;
+struct ImPlotContext;
 struct SDL_Window;
 union SDL_Event;
 
@@ -36,6 +37,7 @@ public:
 
 private:
     ImGuiContext* m_imGuiContext;
+    ImPlotContext* m_imPlotContext;
     std::shared_ptr<RenderPass> m_uiRenderPass;
     bool m_createdFontsTexture;
     std::unordered_map<std::type_index, std::pair<UI*, bool>> m_uis;

@@ -29,29 +29,33 @@ private:
 public:
     void processEvent(const SDL_Event* event);
 
-    [[nodiscard]] GraphicsManager* getGraphics() const;
+    GraphicsManager* getGraphics() const;
 
-    [[nodiscard]] Scene* getScene() const;
+    Scene* getScene() const;
 
-    [[nodiscard]] UIRenderer* getUIRenderer() const;
+    UIRenderer* getUIRenderer() const;
 
-    [[nodiscard]] SceneRenderer* getSceneRenderer() const;
+    SceneRenderer* getSceneRenderer() const;
 
-    [[nodiscard]] LightRenderer* getLightRenderer() const;
+    LightRenderer* getLightRenderer() const;
 
-    [[nodiscard]] ImmediateRenderer* getImmediateRenderer() const;
+    ImmediateRenderer* getImmediateRenderer() const;
 
-    [[nodiscard]] DeferredRenderer* getDeferredRenderer() const;
+    DeferredRenderer* getDeferredRenderer() const;
 
-    [[nodiscard]] ReprojectionRenderer* getReprojectionRenderer() const;
+    ReprojectionRenderer* getReprojectionRenderer() const;
 
-    [[nodiscard]] PostProcessRenderer* getPostProcessingRenderer() const;
+    PostProcessRenderer* getPostProcessingRenderer() const;
 
-    [[nodiscard]] EventDispatcher* getEventDispatcher() const;
+    EventDispatcher* getEventDispatcher() const;
 
-    [[nodiscard]] const uint64_t& getCurrentFrameCount() const;
+    const uint64_t& getCurrentFrameCount() const;
 
-    [[nodiscard]] const bool& isDebugCompositeEnabled() const;
+    const double& getAccumulatedTime();
+
+    const double& getRunTime();
+
+    const bool& isDebugCompositeEnabled() const;
 
     void setDebugCompositeEnabled(const bool& debugCompositeEnabled);
 
@@ -76,6 +80,10 @@ public:
     static EventDispatcher* eventDispatcher();
 
     static const uint64_t& currentFrameCount();
+
+    static const double& accumulatedTime();
+
+    static const double& runTime();
 
     static const bool& debugCompositeEnabled();
 
@@ -106,6 +114,9 @@ private:
     PostProcessRenderer* m_postProcessingRenderer;
     EventDispatcher* m_eventDispatcher;
     uint64_t m_currentFrameCount;
+    std::chrono::high_resolution_clock::time_point m_startTime;
+    double m_accumulatedTime;
+    double m_runTime;
     bool m_debugCompositeEnabled;
 
     RenderCamera* m_renderCamera;

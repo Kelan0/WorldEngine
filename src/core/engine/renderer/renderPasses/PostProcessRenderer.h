@@ -18,10 +18,18 @@ class HistogramRenderer;
 
 class PostProcessRenderer {
 private:
+    struct PostProcessPushConstantData {
+        float deltaTime;
+        float time;
+        float test;
+    };
+
     struct PostProcessUniformData {
         bool bloomEnabled;
         float bloomIntensity;
         bool debugCompositeEnabled;
+        float histogramOffset;
+        float histogramScale;
     };
 
     struct BloomBlurPushConstantData {
@@ -98,6 +106,10 @@ public:
 
     void setBloomBlurIterations(const uint32_t& bloomBlurIterations);
 
+    void setTest(const float& test);
+
+    HistogramRenderer* histogramRenderer();
+
 private:
     void setPostProcessUniformDataChanged(const bool& didChange);
 
@@ -129,6 +141,7 @@ private:
     uint32_t m_bloomBlurIterations;
     uint32_t m_bloomBlurMaxIterations;
     HistogramRenderer* m_histogramRenderer;
+    float m_test;
 };
 
 #endif //WORLDENGINE_POSTPROCESSRENDERER_H

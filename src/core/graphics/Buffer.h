@@ -45,6 +45,9 @@ public:
 
     vk::DeviceSize getSize() const;
 
+    template<typename T>
+    vk::DeviceSize getSize();
+
     vk::MemoryPropertyFlags getMemoryProperties() const;
 
     bool hasMemoryProperties(const vk::MemoryPropertyFlags& memoryProperties, const bool& any = false);
@@ -79,4 +82,9 @@ private:
     static vk::DeviceSize s_maxStagingBufferSize;
 };
 
+
+template<typename T>
+vk::DeviceSize Buffer::getSize() {
+    return m_size / sizeof(T);
+}
 #endif //WORLDENGINE_BUFFER_H

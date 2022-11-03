@@ -59,7 +59,7 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration, const
             ImagePixelLayout pixelLayout;
             ImagePixelFormat pixelFormat;
             if (!ImageData::getPixelLayoutAndFormat(image2DConfiguration.format, pixelLayout, pixelFormat)) {
-                printf("Unable to create image: supplied image format %s has no corresponding loadable pixel format or layout\n", vk::to_string(image2DConfiguration.format).c_str());
+                printf("Unable to create Image2D \"%s\": supplied image format %s has no corresponding loadable pixel format or layout\n", name.c_str(), vk::to_string(image2DConfiguration.format).c_str());
                 return nullptr;
             }
             imageData = ImageData::load(image2DConfiguration.filePath, pixelLayout, pixelFormat);
@@ -111,13 +111,14 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration, const
     imageCreateInfo.setInitialLayout(image2DConfiguration.preInitialized ? vk::ImageLayout::ePreinitialized : vk::ImageLayout::eUndefined);
 
     if (!ImageUtil::validateImageCreateInfo(imageCreateInfo)) {
+        printf("Failed to create Image2D \"%s\": Image validation failed\n", name.c_str());
         return nullptr;
     }
 
     vk::Image image = VK_NULL_HANDLE;
     result = device.createImage(&imageCreateInfo, nullptr, &image);
     if (result != vk::Result::eSuccess) {
-        printf("Failed to create image: %s\n", vk::to_string(result).c_str());
+        printf("Failed to create Image2D \"%s\": %s\n", name.c_str(), vk::to_string(result).c_str());
         return nullptr;
     }
 
@@ -127,7 +128,7 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration, const
     DeviceMemoryBlock* memory = vmalloc(memoryRequirements, image2DConfiguration.memoryProperties);
     if (memory == nullptr) {
         device.destroyImage(image);
-        printf("Image memory allocation failed\n");
+        printf("Failed to create Image2D \"%s\": Memory allocation failed\n", name.c_str());
         return nullptr;
     }
 
@@ -141,10 +142,10 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration, const
         uploadRegion.height = imageData->getHeight();
         ImageTransitionState dstState = ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader);
 
-        printf("Uploading Image2D data [%d x %d]\n", (int32_t)uploadRegion.width, (int32_t)uploadRegion.height);
+        printf("Uploading data for Image2D \"%s\": Size [%d x %d]\n", name.c_str(), (int32_t)uploadRegion.width, (int32_t)uploadRegion.height);
 
         if (!returnImage->upload(imageData->getData(), imageData->getPixelLayout(), imageData->getPixelFormat(), vk::ImageAspectFlagBits::eColor, uploadRegion, dstState)) {
-            printf("Failed to upload buffer data\n");
+            printf("Failed to create Image2D \"%s\": Failed to upload buffer data\n", name.c_str());
             delete returnImage;
             return nullptr;
         }
@@ -165,19 +166,19 @@ bool Image2D::upload(Image2D* dstImage, void* data, const ImagePixelLayout& pixe
     assert(data != nullptr);
 
     if (pixelLayout == ImagePixelLayout::Invalid) {
-        printf("Unable to upload image data: Invalid image pixel layout\n");
+        printf("Unable to upload data for Image2D \"%s\": Invalid image pixel layout\n", dstImage->getName().c_str());
         return false;
     }
 
     if (pixelFormat == ImagePixelFormat::Invalid) {
-        printf("Unable to upload image data: Invalid image pixel format\n");
+        printf("Unable to upload data for Image2D \"%s\": Invalid image pixel format\n", dstImage->getName().c_str());
         return false;
     }
 
     ImagePixelLayout dstPixelLayout;
     ImagePixelFormat dstPixelFormat;
     if (!ImageData::getPixelLayoutAndFormat(dstImage->getFormat(), dstPixelLayout, dstPixelFormat)) {
-        printf("Unable to upload image data: There is no corresponding pixel layout or format for the destination images format %s\n", vk::to_string(dstImage->getFormat()).c_str());
+        printf("Unable to upload data for Image2D \"%s\": There is no corresponding pixel layout or format for the destination images format %s\n", dstImage->getName().c_str(), vk::to_string(dstImage->getFormat()).c_str());
         return false;
     }
 
@@ -196,7 +197,7 @@ bool Image2D::upload(Image2D* dstImage, void* data, const ImagePixelLayout& pixe
     uint32_t bytesPerPixel = ImageData::getChannelSize(dstPixelFormat) * ImageData::getChannels(dstPixelLayout);
 
     if (bytesPerPixel == 0) {
-        printf("Unable to upload image data: Invalid image pixel format\n");
+        printf("Unable to upload data for Image2D \"%s\": Invalid image pixel format\n", dstImage->getName().c_str());
         delete tempImageData;
         return false;
     }
@@ -264,7 +265,7 @@ bool Image2D::validateImageRegion(const Image2D* image, ImageRegion& imageRegion
     }
 
     if ((ImageRegion::size_type)imageRegion.x >= image->getWidth() || (ImageRegion::size_type)imageRegion.y >= image->getHeight()) {
-        printf("Image region out of range\n");
+        printf("Image region out of range for Image2D \"%s\"\n", image->getName().c_str());
         return false;
     }
 
@@ -277,7 +278,7 @@ bool Image2D::validateImageRegion(const Image2D* image, ImageRegion& imageRegion
     imageRegion.layerCount = 1;
 
     if (imageRegion.x + imageRegion.width > image->getWidth() || imageRegion.y + imageRegion.height > image->getHeight()) {
-        printf("Image region out of range\n");
+        printf("Image region out of range for Image2D \"%s\"\n", image->getName().c_str());
         return false;
     }
 

@@ -152,22 +152,25 @@ private:
 
 
 struct ImageTransitionState {
-    vk::ImageLayout layout;
-    vk::AccessFlags accessMask = {};
-    vk::PipelineStageFlags pipelineStage;
-    uint32_t queueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    vk::ImageLayout layout; // The layout of the image for this synchronization scope
+    vk::AccessFlags accessMask = {}; // The memory access types that this synchronization scope covers.
+    vk::PipelineStageFlags pipelineStages; // The pipeline stages that this synchronization scope covers
+    uint32_t queueFamilyIndex = VK_QUEUE_FAMILY_IGNORED; // Queue family ownership transfer
+
+    ImageTransitionState(const vk::ImageLayout& layout, const vk::AccessFlagBits& accessMask, const vk::PipelineStageFlags& pipelineStages, const uint32_t& queueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
 
     bool operator==(const ImageTransitionState& other) const;
 };
 
 namespace ImageTransition {
-    struct FromAny : public ImageTransitionState { FromAny(); };
+    struct FromAny : public ImageTransitionState { FromAny(const vk::PipelineStageFlagBits& shaderPipelineStages = vk::PipelineStageFlagBits::eTopOfPipe); };
+    struct General : public ImageTransitionState { General(const vk::PipelineStageFlagBits& shaderPipelineStages = vk::PipelineStageFlagBits::eTopOfPipe); };
     struct TransferSrc : public ImageTransitionState { TransferSrc(); };
     struct TransferDst : public ImageTransitionState { TransferDst(); };
-    struct ShaderAccess : public ImageTransitionState { ShaderAccess(vk::PipelineStageFlags shaderPipelineStages, bool read, bool write); };
-    struct ShaderReadOnly : public ShaderAccess { ShaderReadOnly(vk::PipelineStageFlags shaderPipelineStages); };
-    struct ShaderWriteOnly : public ShaderAccess { ShaderWriteOnly(vk::PipelineStageFlags shaderPipelineStages); };
-    struct ShaderReadWrite : public ShaderAccess { ShaderReadWrite(vk::PipelineStageFlags shaderPipelineStages); };
+    struct ShaderAccess : public ImageTransitionState { ShaderAccess(const vk::PipelineStageFlags& shaderPipelineStages, const bool& read, const bool& write); };
+    struct ShaderReadOnly : public ShaderAccess { ShaderReadOnly(const vk::PipelineStageFlags& shaderPipelineStages); };
+    struct ShaderWriteOnly : public ShaderAccess { ShaderWriteOnly(const vk::PipelineStageFlags& shaderPipelineStages); };
+    struct ShaderReadWrite : public ShaderAccess { ShaderReadWrite(const vk::PipelineStageFlags& shaderPipelineStages); };
     struct PresentSrc  : public ImageTransitionState { PresentSrc(); };
 };
 

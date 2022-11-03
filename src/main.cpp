@@ -30,6 +30,7 @@
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/renderer/renderPasses/ReprojectionRenderer.h"
 #include "core/engine/renderer/renderPasses/PostProcessRenderer.h"
+#include "core/engine/renderer/renderPasses/HistogramRenderer.h"
 #include "extern/imgui/imgui.h"
 
 #include <iostream>
@@ -303,7 +304,8 @@ class App : public Application {
     bool pauseFrustum = false;
     double time = 0.0;
     float framerateLimit = 0.0F;
-
+    bool histogramNormalized = true;
+    float test = 1.0F;
 
     void render(const double& dt) override {
         PROFILE_SCOPE("custom render")
@@ -328,6 +330,11 @@ class App : public Application {
         float bloomBaxBrightness = Engine::postProcessingRenderer()->getBloomMaxBrightness();
         int bloomBlurIterations = (int)Engine::postProcessingRenderer()->getBloomBlurIterations() - 1;
         int bloomBlurMaxIterations = (int)Engine::postProcessingRenderer()->getMaxBloomBlurIterations() - 1;
+
+        uint32_t histogramDownsampleFactor = Engine::postProcessingRenderer()->histogramRenderer()->getDownsampleFactor();
+        float histogramOffset = Engine::postProcessingRenderer()->histogramRenderer()->getOffset();
+        float histogramScale = Engine::postProcessingRenderer()->histogramRenderer()->getScale();
+        glm::bvec4 enabledChannels = Engine::postProcessingRenderer()->histogramRenderer()->getEnabledChannels();
 
         ImGui::Begin("Test");
         if (ImGui::CollapsingHeader("Temporal AA")) {
@@ -360,6 +367,18 @@ class App : public Application {
             ImGui::SliderInt("Iterations", &bloomBlurIterations, 1, bloomBlurMaxIterations);
             ImGui::EndDisabled();
         }
+        if (ImGui::CollapsingHeader("Histogram")) {
+            ImGui::DragFloat("Histogram Offset", &histogramOffset, 0.005F, -2.0F, 2.0F);
+            ImGui::DragFloat("Histogram Scale", &histogramScale, 0.005F, -2.0F, 2.0F);
+            ImGui::Checkbox("Red", &enabledChannels.r);
+            ImGui::SameLine();
+            ImGui::Checkbox("Green", &enabledChannels.g);
+            ImGui::SameLine();
+            ImGui::Checkbox("Blue", &enabledChannels.b);
+            ImGui::SameLine();
+            ImGui::Checkbox("Luminance", &enabledChannels.a);
+            ImGui::Checkbox("Normalized", &histogramNormalized);
+        }
         if (ImGui::CollapsingHeader("Misc")) {
             ImGui::SliderFloat("Framerate Limit", &framerateLimit, 0.0F, 200.0F);
             ImGui::SliderFloat("Movement speed", &playerMovementSpeed, 0.05F, 10.0F);
@@ -386,6 +405,18 @@ class App : public Application {
         Engine::postProcessingRenderer()->setBloomSoftThreshold(bloomSoftThreshold);
         Engine::postProcessingRenderer()->setBloomMaxBrightness(bloomBaxBrightness);
         Engine::postProcessingRenderer()->setBloomBlurIterations(bloomBlurIterations + 1);
+
+        Engine::postProcessingRenderer()->histogramRenderer()->setDownsampleFactor(histogramDownsampleFactor);
+        Engine::postProcessingRenderer()->histogramRenderer()->setOffset(histogramOffset);
+        Engine::postProcessingRenderer()->histogramRenderer()->setScale(histogramScale);
+        Engine::postProcessingRenderer()->histogramRenderer()->setEnabledChannels(enabledChannels);
+
+        if (histogramNormalized) {
+            test = glm::max(0.0F, test - (float)dt);
+        } else {
+            test = glm::min(1.0F, test + (float)dt);
+        }
+        Engine::postProcessingRenderer()->setTest(test);
 
         Entity mainCamera = Engine::scene()->getMainCameraEntity();
         Transform& cameraTransform = mainCamera.getComponent<Transform>();
