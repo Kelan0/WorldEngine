@@ -28,6 +28,7 @@ layout(set = 0, binding = 2) uniform sampler2D debugCompositeColourTexture;
 layout(set = 0, binding = 3) uniform sampler2D bloomTexture;
 //layout(set = 0, binding = 4) uniform sampler2D histogramTexture;
 layout(set = 0, binding = 4, std430) buffer readonly HistogramBuffer {
+    HistogramBufferHeader histogramHeader;
     uint histogramBuffer[];
 };
 
@@ -45,26 +46,14 @@ void debug(inout vec3 finalColour) {
         } else {
             finalColour = min(finalColour, 1.0) * 2.0 / 3.0;
 
-            const uint BIN_COUNT = 256;
-            const float fBIN_COUNT = float(BIN_COUNT);
-
-            float hist_max = 500.0;
-            for (uint i = 0; i < BIN_COUNT; ++i) {
-//                vec4 h = texture(histogramTexture, vec2(i / BIN_COUNT));
-//                hist_max = max(hist_max, max(h.r, max(h.g, h.b)));
-                hist_max = max(hist_max, float(histogramBuffer[i]));
-            }
-            hist_max *= 1.025;
+            float hist_max = histogramHeader.maxValue * 1.05;
 
 //            float transition = sin(time)
             float hist_x = uv.x;
-            float hist_x_norm = getHistogramBinFromLuminance(uv.x * 20.0, histogramOffset, histogramScale);
+            float hist_x_norm = getHistogramBinFromLuminance(uv.x * 20.0, histogramHeader.offset, histogramHeader.scale);
             hist_x = mix(hist_x, hist_x_norm, test);
-            hist_x = hist_x * fBIN_COUNT;
-//            hist_x = exp2(hist_x / 16.0) / 256.0;
-            hist_x = floor(hist_x);
-            hist_x /= fBIN_COUNT;
-            uint hist_ux = uint(hist_x * BIN_COUNT);
+            hist_x = floor(hist_x * float(histogramHeader.binCount)) / float(histogramHeader.binCount);
+            uint hist_ux = uint(hist_x * histogramHeader.binCount);
             if (hist_ux % 16 == 0) finalColour.rgb = vec3(0.8);
 
 //            vec4 hist = texture(histogramTexture, vec2(hist_x, 0.0)).rgba  / hist_max;
@@ -72,9 +61,18 @@ void debug(inout vec3 finalColour) {
 //            if (hist.g >= uv.y) finalColour.g = 1.0;
 //            if (hist.b >= uv.y) finalColour.b = 1.0;
 
-            float hist = float(histogramBuffer[uint(hist_x * fBIN_COUNT)]) / hist_max;
+            float hist = float(histogramBuffer[uint(hist_x * histogramHeader.binCount)]) / hist_max;
             if (hist >= uv.y) {
                 finalColour = vec3(1.0);
+            }
+
+            float hist_x_avg = getHistogramBinFromLuminance(histogramHeader.averageLuminance, histogramHeader.offset, histogramHeader.scale);
+//            float hist_x_avg_norm = getLuminanceFromHistogramBin(hist_x_avg, histogramHeader.offset, histogramHeader.scale);
+//            hist_x_avg = mix(hist_x_avg, hist_x_avg_norm, test);
+            hist_x_avg = floor(hist_x_avg * float(histogramHeader.binCount)) / float(histogramHeader.binCount);
+            uint hist_ux_avg = uint(hist_x_avg * histogramHeader.binCount);
+            if (hist_ux == hist_ux_avg) {
+                finalColour = vec3(1.0, 0.0, 0.0);
             }
         }
     }

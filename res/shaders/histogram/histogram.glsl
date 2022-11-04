@@ -1,7 +1,13 @@
 
 #include "res/shaders/common/common.glsl"
 
-
+struct HistogramBufferHeader {
+    uint binCount;
+    float offset;
+    float scale;
+    float averageLuminance;
+    uint maxValue;
+};
 
 float getHistogramBinFromLuminance(float value, float offset, float scale) {
     float logValue = log2(value);

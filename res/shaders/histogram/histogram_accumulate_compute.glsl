@@ -14,13 +14,13 @@ layout(push_constant) uniform PC1 {
     uvec2 resolution;
     float maxBrightness;
     uint binCount;
-    uint channel;
     float offset;
     float scale;
 };
 
 layout(set = 0, binding = 0) uniform sampler2D srcImage;
 layout(set = 0, binding = 1, std430) writeonly buffer HistogramBuffer {
+    HistogramBufferHeader dstHistogramHeader;
     uint dstHistogramBuffer[];
 };
 

@@ -25,19 +25,22 @@ private:
         glm::uvec2 resolution;
         float maxBrightness;
         uint32_t binCount;
-        uint32_t channel;
         float offset;
         float scale;
     };
 
     struct RenderResources {
         DescriptorSet* descriptorSet = nullptr;
-        Framebuffer* vertexScatterFramebuffer = nullptr;
-        ImageView* histogramImageView = nullptr;
-        Image2D* histogramImage = nullptr;
-        std::shared_ptr<Mesh> vertexScatterMesh;
         Buffer* histogramBuffer;
         bool frameTextureChanged = true;
+    };
+
+    struct HistogramStorageBufferHeader {
+        uint32_t binCount;
+        float offset;
+        float scale;
+        float averageLuminance;
+        uint32_t maxValue;
     };
 
 public:
@@ -73,40 +76,22 @@ public:
 
     void setMaxBrightness(const float& maxBrightness);
 
-    glm::bvec4 getEnabledChannels() const;
-
-    void setEnabledChannels(const glm::bvec4& enabledChannels);
-
     Buffer* getHistogramBuffer() const;
 
-    ImageView* getHistogramImageView() const;
-
-    const std::shared_ptr<Sampler>& getSampler() const;
-
 private:
-    void renderVertexScatterHistogram(const vk::CommandBuffer& commandBuffer);
-
     void renderComputeHistogram(const vk::CommandBuffer& commandBuffer);
 
     void readback(const vk::CommandBuffer& commandBuffer);
 
     void recreateSwapchain(RecreateSwapchainEvent* event);
 
-    bool createVertexScatterFramebuffer(RenderResources* resource);
-
     void updateHistogramBuffer(RenderResources* resource);
-
-    bool createVertexScatterGraphicsPipeline();
 
     bool createHistogramClearComputePipeline();
 
     bool createHistogramAccumulationComputePipeline();
 
-    bool createVertexScatterRenderPass();
-
-    void createVertexScatterMesh();
-
-    void updateReadbackBuffer();
+    bool createHistogramAverageComputePipeline();
 
 private:
     SharedResource<RenderPass> m_renderPass;
@@ -114,15 +99,13 @@ private:
     FrameResource<RenderResources> m_resources;
     std::shared_ptr<Sampler> m_inputFrameSampler;
 
-    GraphicsPipeline* m_histogramVertexScatterGraphicsPipeline;
-    std::shared_ptr<Mesh> m_vertexScatterMesh;
-    bool m_recreateVertexScatterMesh;
-
     ComputePipeline* m_histogramClearComputePipeline;
     ComputePipeline* m_histogramAccumulationComputePipeline;
+    ComputePipeline* m_histogramAverageComputePipeline;
 
     bool m_readbackNextFrame;
-    std::vector<glm::vec4> m_readbackData;
+    HistogramStorageBufferHeader m_readbackHeader;
+    std::vector<uint32_t> m_readbackData;
     Buffer* m_readbackBuffer;
     glm::uvec2 m_resolution;
     uint32_t m_downsampleFactor;

@@ -334,7 +334,6 @@ class App : public Application {
         uint32_t histogramDownsampleFactor = Engine::postProcessingRenderer()->histogramRenderer()->getDownsampleFactor();
         float histogramOffset = Engine::postProcessingRenderer()->histogramRenderer()->getOffset();
         float histogramScale = Engine::postProcessingRenderer()->histogramRenderer()->getScale();
-        glm::bvec4 enabledChannels = Engine::postProcessingRenderer()->histogramRenderer()->getEnabledChannels();
 
         ImGui::Begin("Test");
         if (ImGui::CollapsingHeader("Temporal AA")) {
@@ -370,13 +369,6 @@ class App : public Application {
         if (ImGui::CollapsingHeader("Histogram")) {
             ImGui::DragFloat("Histogram Offset", &histogramOffset, 0.005F, -2.0F, 2.0F);
             ImGui::DragFloat("Histogram Scale", &histogramScale, 0.005F, -2.0F, 2.0F);
-            ImGui::Checkbox("Red", &enabledChannels.r);
-            ImGui::SameLine();
-            ImGui::Checkbox("Green", &enabledChannels.g);
-            ImGui::SameLine();
-            ImGui::Checkbox("Blue", &enabledChannels.b);
-            ImGui::SameLine();
-            ImGui::Checkbox("Luminance", &enabledChannels.a);
             ImGui::Checkbox("Normalized", &histogramNormalized);
         }
         if (ImGui::CollapsingHeader("Misc")) {
@@ -409,7 +401,6 @@ class App : public Application {
         Engine::postProcessingRenderer()->histogramRenderer()->setDownsampleFactor(histogramDownsampleFactor);
         Engine::postProcessingRenderer()->histogramRenderer()->setOffset(histogramOffset);
         Engine::postProcessingRenderer()->histogramRenderer()->setScale(histogramScale);
-        Engine::postProcessingRenderer()->histogramRenderer()->setEnabledChannels(enabledChannels);
 
         if (histogramNormalized) {
             test = glm::max(0.0F, test - (float)dt);

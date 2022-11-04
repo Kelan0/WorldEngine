@@ -54,6 +54,9 @@ public:
 
     void* map();
 
+    template<typename T>
+    T* map();
+
     void unmap();
 
     bool isMapped() const;
@@ -87,4 +90,10 @@ template<typename T>
 vk::DeviceSize Buffer::getSize() {
     return m_size / sizeof(T);
 }
+
+template<typename T>
+T* Buffer::map() {
+    return static_cast<T*>(map());
+}
+
 #endif //WORLDENGINE_BUFFER_H

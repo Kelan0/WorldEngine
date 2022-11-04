@@ -12,17 +12,23 @@ layout(push_constant) uniform PC1 {
     uvec2 resolution;
     float maxBrightness;
     uint binCount;
-    uint channel;
     float offset;
     float scale;
 };
 
 layout(set = 0, binding = 1, std430) writeonly buffer HistogramBuffer {
+    HistogramBufferHeader dstHistogramHeader;
     uint dstHistogramBuffer[];
 };
 
 void main() {
     const uint invocationIndex = gl_GlobalInvocationID.x;
+
+    dstHistogramHeader.binCount = binCount;
+    dstHistogramHeader.offset = offset;
+    dstHistogramHeader.scale = scale;
+    dstHistogramHeader.averageLuminance = 0.0;
+    dstHistogramHeader.maxValue = 0;
 
     if (invocationIndex < binCount) {
         dstHistogramBuffer[invocationIndex] = 0;
