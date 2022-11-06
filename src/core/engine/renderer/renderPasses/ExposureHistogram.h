@@ -1,5 +1,5 @@
-#ifndef WORLDENGINE_HISTOGRAMRENDERER_H
-#define WORLDENGINE_HISTOGRAMRENDERER_H
+#ifndef WORLDENGINE_EXPOSUREHISTOGRAM_H
+#define WORLDENGINE_EXPOSUREHISTOGRAM_H
 
 #include "core/core.h"
 #include "core/graphics/GraphicsResource.h"
@@ -19,20 +19,13 @@ class Image2D;
 class Buffer;
 class Mesh;
 
-class HistogramRenderer {
+class ExposureHistogram {
 private:
-    struct HistogramPushConstantData {
-        glm::uvec2 resolution;
-        float maxBrightness;
-        uint32_t binCount;
-        float offset;
-        float scale;
-    };
-
     struct RenderResources {
         DescriptorSet* descriptorSet = nullptr;
         Buffer* histogramBuffer;
         bool frameTextureChanged = true;
+        bool prevHistogramBufferChanged = true;
     };
 
     struct HistogramStorageBufferHeader {
@@ -41,16 +34,19 @@ private:
         float scale;
         float averageLuminance;
         uint32_t maxValue;
+        uint32_t sumValue;
+        float prevExposure;
+        float exposure;
     };
 
 public:
-    HistogramRenderer();
+    ExposureHistogram();
 
-    ~HistogramRenderer();
+    ~ExposureHistogram();
 
     bool init();
 
-    void render(const double& dt, const vk::CommandBuffer& commandBuffer);
+    void update(const double& dt, const vk::CommandBuffer& commandBuffer);
 
     uint32_t getBinCount() const;
 
@@ -68,24 +64,34 @@ public:
 
     void setScale(const float& scale);
 
-    float getMinBrightness() const;
+    float getLowPercent() const;
 
-    void setMinBrightness(const float& minBrightness);
+    void setLowPercent(const float& lowPercent);
 
-    float getMaxBrightness() const;
+    float getHighPercent() const;
 
-    void setMaxBrightness(const float& maxBrightness);
+    void setHighPercent(const float& highPercent);
+
+    float getExposureSpeedUp() const;
+
+    void setExposureSpeedUp(const float& exposureSpeedUp);
+
+    float getExposureSpeedDown() const;
+
+    void setExposureSpeedDown(const float& exposureSpeedDown);
+
+    float getExposureCompensation() const;
+
+    void setExposureCompensation(const float& exposureCompensation);
 
     Buffer* getHistogramBuffer() const;
 
 private:
-    void renderComputeHistogram(const vk::CommandBuffer& commandBuffer);
-
     void readback(const vk::CommandBuffer& commandBuffer);
 
     void recreateSwapchain(RecreateSwapchainEvent* event);
 
-    void updateHistogramBuffer(RenderResources* resource);
+    bool updateHistogramBuffer(RenderResources* resource);
 
     bool createHistogramClearComputePipeline();
 
@@ -112,10 +118,13 @@ private:
     uint32_t m_binCount;
     float m_offset;
     float m_scale;
-    float m_minBrightness;
-    float m_maxBrightness;
+    float m_lowPercent;
+    float m_highPercent;
+    float m_exposureSpeedUp;
+    float m_exposureSpeedDown;
+    float m_exposureCompensation;
     glm::bvec4 m_enabledChannels;
 };
 
 
-#endif //WORLDENGINE_HISTOGRAMRENDERER_H
+#endif //WORLDENGINE_EXPOSUREHISTOGRAM_H

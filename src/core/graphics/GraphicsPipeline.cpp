@@ -735,10 +735,8 @@ void GraphicsPipeline::onShaderLoaded(ShaderLoadedEvent* event) {
     }
 
     if (doRecreate) {
-        Engine::graphics()->flushRendering();
-
-        Engine::eventDispatcher()->connect(CallbackWrapper<FlushRenderingEvent>([&event, this](FlushRenderingEvent* event1) {
-
+        Engine::graphics()->flushRendering([&event, this]() {
+            // Backup current status in case recreate fails. It will always clean up the current resources, so we must exchange them with null
             vk::Pipeline backupPipeline = std::exchange(m_pipeline, VK_NULL_HANDLE);
             vk::PipelineLayout backupPipelineLayout = std::exchange(m_pipelineLayout, VK_NULL_HANDLE);
             SharedResource<RenderPass> backupRenderPass = std::exchange(m_renderPass, nullptr);
@@ -746,17 +744,17 @@ void GraphicsPipeline::onShaderLoaded(ShaderLoadedEvent* event) {
 
             bool success = recreate(m_config, m_name);
             if (!success) {
-                printf("Shader %s@%s was reloaded, but reconstructing pipeline %s failed. The pipeline will remain unchanged\n", event->filePath.c_str(), event->entryPoint.c_str(), m_name.c_str());
+                printf("Shader %s@%s was reloaded, but reconstructing GraphicsPipeline \"%s\" failed. The pipeline will remain unchanged\n", event->filePath.c_str(), event->entryPoint.c_str(), m_name.c_str());
                 m_pipeline = backupPipeline;
                 m_pipelineLayout = backupPipelineLayout;
                 m_renderPass = std::move(backupRenderPass);
                 m_config = backupConfig;
             } else {
+                // We exchanged the old resources, so they were not cleaned up by recreate. We must destroy them up manually.
                 (**m_device).destroyPipelineLayout(backupPipelineLayout);
                 (**m_device).destroyPipeline(backupPipeline);
             }
-        }), true);
-
+        });
     }
 }
 

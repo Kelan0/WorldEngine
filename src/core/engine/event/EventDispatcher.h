@@ -227,6 +227,7 @@ private:
     std::unordered_map<TimerId, TimeoutEvent*> m_timeoutIds;
     std::unordered_map<TimerId, IntervalEvent*> m_intervalIds;
     Performance::moment_t m_lastUpdate;
+    uint32_t m_triggerStack;
 };
 
 
@@ -236,6 +237,8 @@ inline void EventDispatcher::connect(void(*callback)(Event*), const bool& once) 
     PROFILE_SCOPE("EventDispatcher::connect")
     if (callback == nullptr)
         return;
+
+    assert(m_triggerStack == 0);
 
     auto& listeners = m_eventListeners[std::type_index(typeid(Event))];
 
@@ -259,6 +262,8 @@ void EventDispatcher::connect(CallbackWrapper<Event>&& callback, const bool& onc
     if (!callback)
         return;
 
+    assert(m_triggerStack == 0);
+
     CallbackWrapper<Event>* instance = new CallbackWrapper<Event>(callback);
     instance->m_eventDispatcher = this;
     connect(&CallbackWrapper<Event>::call, instance, once);
@@ -272,6 +277,8 @@ inline void EventDispatcher::connect(void(T::* callback)(Event*), T* instance, c
 
     if (callback == nullptr)
         return;
+
+    assert(m_triggerStack == 0);
 
     auto& listeners = m_eventListeners[std::type_index(typeid(Event))];
 
@@ -431,7 +438,9 @@ inline void EventDispatcher::disconnect(T* instance) {
 template<class Event>
 inline void EventDispatcher::trigger(Event* event) {
     PROFILE_SCOPE("EventDispatcher::trigger")
+    ++m_triggerStack;
     m_dispatcher.trigger(*event);
+    --m_triggerStack;
 
     auto& dispatchers = m_repeatEventDispatchers[std::type_index(typeid(Event))];
     for (auto it = dispatchers.begin(); it != dispatchers.end(); ++it) {
@@ -544,6 +553,7 @@ EventDispatcher::InstanceListener<Event, T>::InstanceListener(InstanceListener<E
 template<class Event, typename T>
 EventDispatcher::InstanceListener<Event, T>::~InstanceListener() {
 //    printf("==== DESTROY InstanceListener<%s, %s>, 0x%p\n", typeid(Event).name(), typeid(T).name(), this);
+//    eventDispatcher->disconnect<Event, T>(&InstanceListener<Event, T>::receive, this);
 }
 
 template<class Event, typename T>

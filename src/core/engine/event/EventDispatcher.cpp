@@ -94,7 +94,8 @@ void TimerId::decrRef() {
 }
 
 EventDispatcher::EventDispatcher():
-    m_lastUpdate(Performance::zero_moment) { // lastUpdate is zero nanoseconds since epoch
+    m_lastUpdate(Performance::zero_moment),
+    m_triggerStack(0) { // lastUpdate is zero nanoseconds since epoch
 }
 
 EventDispatcher::~EventDispatcher() {

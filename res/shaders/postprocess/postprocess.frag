@@ -87,7 +87,8 @@ void main() {
 //        finalColour = finalColour + bloomColour * bloomIntensity;
     }
 
-    finalColour = finalColour / (finalColour + vec3(1.0));
+    finalColour *= histogramHeader.exposure;
+//    finalColour = finalColour / (finalColour + vec3(1.0));
     finalColour = pow(finalColour, vec3(1.0 / 2.2));
 
     if (debugCompositeEnabled) {
@@ -96,6 +97,8 @@ void main() {
     }
 
 //    finalColour = vec3(floor(dot(finalColour, RGB_LUMINANCE)) / 12.0);
+
+//    finalColour = vec3(histogramHeader.exposure);
 
     debug(finalColour);
     outColor = vec4(finalColour, 1.0);

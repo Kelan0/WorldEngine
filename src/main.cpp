@@ -30,7 +30,7 @@
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/renderer/renderPasses/ReprojectionRenderer.h"
 #include "core/engine/renderer/renderPasses/PostProcessRenderer.h"
-#include "core/engine/renderer/renderPasses/HistogramRenderer.h"
+#include "core/engine/renderer/renderPasses/ExposureHistogram.h"
 #include "extern/imgui/imgui.h"
 
 #include <iostream>
@@ -331,9 +331,14 @@ class App : public Application {
         int bloomBlurIterations = (int)Engine::postProcessingRenderer()->getBloomBlurIterations() - 1;
         int bloomBlurMaxIterations = (int)Engine::postProcessingRenderer()->getMaxBloomBlurIterations() - 1;
 
-        uint32_t histogramDownsampleFactor = Engine::postProcessingRenderer()->histogramRenderer()->getDownsampleFactor();
-        float histogramOffset = Engine::postProcessingRenderer()->histogramRenderer()->getOffset();
-        float histogramScale = Engine::postProcessingRenderer()->histogramRenderer()->getScale();
+        uint32_t histogramDownsampleFactor = Engine::postProcessingRenderer()->exposureHistogram()->getDownsampleFactor();
+        float histogramOffset = Engine::postProcessingRenderer()->exposureHistogram()->getOffset();
+        float histogramScale = Engine::postProcessingRenderer()->exposureHistogram()->getScale();
+        float histogramLowPercent = Engine::postProcessingRenderer()->exposureHistogram()->getLowPercent() * 100.0F;
+        float histogramHighPercent = Engine::postProcessingRenderer()->exposureHistogram()->getHighPercent() * 100.0F;
+        float exposureSpeedUp = Engine::postProcessingRenderer()->exposureHistogram()->getExposureSpeedUp();
+        float exposureSpeedDown = Engine::postProcessingRenderer()->exposureHistogram()->getExposureSpeedDown();
+        float exposureCompensation = Engine::postProcessingRenderer()->exposureHistogram()->getExposureCompensation();
 
         ImGui::Begin("Test");
         if (ImGui::CollapsingHeader("Temporal AA")) {
@@ -366,10 +371,15 @@ class App : public Application {
             ImGui::SliderInt("Iterations", &bloomBlurIterations, 1, bloomBlurMaxIterations);
             ImGui::EndDisabled();
         }
-        if (ImGui::CollapsingHeader("Histogram")) {
+        if (ImGui::CollapsingHeader("Exposure")) {
+            ImGui::Checkbox("Histogram Normalized", &histogramNormalized);
             ImGui::DragFloat("Histogram Offset", &histogramOffset, 0.005F, -2.0F, 2.0F);
-            ImGui::DragFloat("Histogram Scale", &histogramScale, 0.005F, -2.0F, 2.0F);
-            ImGui::Checkbox("Normalized", &histogramNormalized);
+            ImGui::DragFloat("Histogram Scale", &histogramScale, 0.005F, 0.005F, 2.0F);
+            ImGui::DragFloat("Histogram Low Percent", &histogramLowPercent, 0.1F, 0.0F, histogramHighPercent);
+            ImGui::DragFloat("Histogram High Percent", &histogramHighPercent, 0.1F, histogramLowPercent, 100.0F);
+            ImGui::DragFloat("Exposure Speed Up", &exposureSpeedUp, 0.005F, 0.0F, 20.0F, "%.5f");
+            ImGui::DragFloat("Exposure Speed Down", &exposureSpeedDown, 0.005F, 0.0F, 20.0F, "%.5f");
+            ImGui::DragFloat("Exposure Compensation", &exposureCompensation, 0.005F, -8.0F, 8.0F);
         }
         if (ImGui::CollapsingHeader("Misc")) {
             ImGui::SliderFloat("Framerate Limit", &framerateLimit, 0.0F, 200.0F);
@@ -398,9 +408,14 @@ class App : public Application {
         Engine::postProcessingRenderer()->setBloomMaxBrightness(bloomBaxBrightness);
         Engine::postProcessingRenderer()->setBloomBlurIterations(bloomBlurIterations + 1);
 
-        Engine::postProcessingRenderer()->histogramRenderer()->setDownsampleFactor(histogramDownsampleFactor);
-        Engine::postProcessingRenderer()->histogramRenderer()->setOffset(histogramOffset);
-        Engine::postProcessingRenderer()->histogramRenderer()->setScale(histogramScale);
+        Engine::postProcessingRenderer()->exposureHistogram()->setDownsampleFactor(histogramDownsampleFactor);
+        Engine::postProcessingRenderer()->exposureHistogram()->setOffset(histogramOffset);
+        Engine::postProcessingRenderer()->exposureHistogram()->setScale(histogramScale);
+        Engine::postProcessingRenderer()->exposureHistogram()->setLowPercent(histogramLowPercent * 0.01F);
+        Engine::postProcessingRenderer()->exposureHistogram()->setHighPercent(histogramHighPercent * 0.01F);
+        Engine::postProcessingRenderer()->exposureHistogram()->setExposureSpeedUp(exposureSpeedUp);
+        Engine::postProcessingRenderer()->exposureHistogram()->setExposureSpeedDown(exposureSpeedDown);
+        Engine::postProcessingRenderer()->exposureHistogram()->setExposureCompensation(exposureCompensation);
 
         if (histogramNormalized) {
             test = glm::max(0.0F, test - (float)dt);

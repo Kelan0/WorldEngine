@@ -1,0 +1,1 @@
+compute_equirectangular.spv: res/shaders/compute/compute_equirectangular.glsl C:/Users/Kelan/Code/WorldEngine/cmake-build-debug/res/shaders/common/common.glsl

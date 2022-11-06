@@ -14,7 +14,7 @@ class Image2D;
 class ImageView;
 class Framebuffer;
 struct RecreateSwapchainEvent;
-class HistogramRenderer;
+class ExposureHistogram;
 
 class PostProcessRenderer {
 private:
@@ -68,9 +68,9 @@ public:
 
     bool init();
 
-    void renderBloomBlur(const double& dt, const vk::CommandBuffer& commandBuffer);
+    void updateExposure(const double& dt, const vk::CommandBuffer& commandBuffer);
 
-    void renderHistogram(const double& dt, const vk::CommandBuffer& commandBuffer);
+    void renderBloomBlur(const double& dt, const vk::CommandBuffer& commandBuffer);
 
     void render(const double& dt, const vk::CommandBuffer& commandBuffer);
 
@@ -108,7 +108,7 @@ public:
 
     void setTest(const float& test);
 
-    HistogramRenderer* histogramRenderer();
+    ExposureHistogram* exposureHistogram();
 
 private:
     void setPostProcessUniformDataChanged(const bool& didChange);
@@ -140,7 +140,7 @@ private:
     BloomBlurUniformData m_bloomBlurUniformData;
     uint32_t m_bloomBlurIterations;
     uint32_t m_bloomBlurMaxIterations;
-    HistogramRenderer* m_histogramRenderer;
+    ExposureHistogram* m_exposureHistogram;
     float m_test;
 };
 

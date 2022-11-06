@@ -22,8 +22,6 @@ namespace ShaderUtils {
     bool loadShaderStage(const ShaderStage& shaderStage, std::string filePath, std::string entryPoint, std::vector<char>* bytecode);
 
     bool loadShaderModule(const ShaderStage& shaderStage, const vk::Device& device, const std::string& filePath, const std::string& entryPoint, vk::ShaderModule* outShaderModule);
-
-    bool runCommand(const std::string& command);
 };
 
 

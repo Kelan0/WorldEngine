@@ -8,6 +8,7 @@
 #include "core/util/DebugUtils.h"
 #include <SDL2/SDL.h>
 #include <SDL_vulkan.h>
+#include <functional>
 
 #define QUEUE_GRAPHICS_MAIN "graphics_main"
 #define QUEUE_COMPUTE_MAIN "compute_main"
@@ -149,6 +150,8 @@ public:
 
     void endFrame();
 
+    void flushRendering(const std::function<void()>& callback);
+
     void flushRendering();
 
     void presentImageDirect(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::ImageLayout& imageLayout);
@@ -168,6 +171,8 @@ public:
     vk::DeviceSize getAlignedUniformBufferOffset(const vk::DeviceSize& offset);
 
     uint32_t getPreviousFrameIndex() const;
+
+    uint32_t getNextFrameIndex() const;
 
     const uint32_t& getCurrentFrameIndex() const;
 
@@ -272,6 +277,8 @@ private:
     DebugUtils::RenderInfo m_debugInfo;
     bool m_flushRendering;
     bool m_abortOnVulkanError;
+
+    std::vector<std::function<void()>> m_onFlushRenderingCallbacks;
 
     static uint64_t s_nextResourceID;
 };

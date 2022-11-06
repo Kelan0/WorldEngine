@@ -12,7 +12,6 @@ layout (local_size_z = 1) in;
 
 layout(push_constant) uniform PC1 {
     uvec2 resolution;
-    float maxBrightness;
     uint binCount;
     float offset;
     float scale;

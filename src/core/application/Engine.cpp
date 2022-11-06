@@ -267,8 +267,8 @@ void Engine::render(const double& dt) {
     m_reprojectionRenderer->render(dt, commandBuffer);
     commandBuffer.endRenderPass();
 
+    m_postProcessingRenderer->updateExposure(dt, commandBuffer);
     m_postProcessingRenderer->renderBloomBlur(dt, commandBuffer);
-    m_postProcessingRenderer->renderHistogram(dt, commandBuffer);
 
     m_postProcessingRenderer->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
     m_postProcessingRenderer->render(dt, commandBuffer);

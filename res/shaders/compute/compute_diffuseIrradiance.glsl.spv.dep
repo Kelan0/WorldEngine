@@ -1,0 +1,1 @@
+compute_diffuseIrradiance.spv: res/shaders/compute/compute_diffuseIrradiance.glsl C:/Users/Kelan/Code/WorldEngine/cmake-build-debug/res/shaders/common/common.glsl

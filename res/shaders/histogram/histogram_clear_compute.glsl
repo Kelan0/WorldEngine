@@ -9,8 +9,6 @@ layout (local_size_y = 1) in;
 layout (local_size_z = 1) in;
 
 layout(push_constant) uniform PC1 {
-    uvec2 resolution;
-    float maxBrightness;
     uint binCount;
     float offset;
     float scale;
@@ -29,6 +27,7 @@ void main() {
     dstHistogramHeader.scale = scale;
     dstHistogramHeader.averageLuminance = 0.0;
     dstHistogramHeader.maxValue = 0;
+    dstHistogramHeader.sumValue = 0;
 
     if (invocationIndex < binCount) {
         dstHistogramBuffer[invocationIndex] = 0;

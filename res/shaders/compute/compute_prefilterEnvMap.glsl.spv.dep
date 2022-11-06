@@ -1,0 +1,1 @@
+compute_prefilterEnvMap.spv: res/shaders/compute/compute_prefilterEnvMap.glsl C:/Users/Kelan/Code/WorldEngine/cmake-build-debug/res/shaders/common/common.glsl C:/Users/Kelan/Code/WorldEngine/cmake-build-debug/res/shaders/common/pbr.glsl

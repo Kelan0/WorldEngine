@@ -991,10 +991,22 @@ void GraphicsManager::endFrame() {
     if (m_flushRendering) {
         m_flushRendering = false;
         Engine::graphics()->getDevice()->waitIdle();
+        for (auto& callback : m_onFlushRenderingCallbacks)
+            callback();
+        m_onFlushRenderingCallbacks.clear();
+
         FlushRenderingEvent event{};
+
 //        printf("======== ======== DISPATCH FlushRenderingEvent ======== ========\n\n");
         Engine::eventDispatcher()->trigger(&event);
     }
+}
+
+void GraphicsManager::flushRendering(const std::function<void()>& callback) {
+    // At the end of the current frame, all rendering commands will be flushed, and a FlushRenderingEvent will be triggered
+    // The provided callback will be called first.
+    m_flushRendering = true;
+    m_onFlushRenderingCallbacks.emplace_back(callback);
 }
 
 void GraphicsManager::flushRendering() {
@@ -1053,6 +1065,10 @@ vk::DeviceSize GraphicsManager::getAlignedUniformBufferOffset(const vk::DeviceSi
 
 uint32_t GraphicsManager::getPreviousFrameIndex() const {
     return (m_swapchain.currentFrameIndex + CONCURRENT_FRAMES - 1) % CONCURRENT_FRAMES;
+}
+
+uint32_t GraphicsManager::getNextFrameIndex() const {
+    return (m_swapchain.currentFrameIndex + 1) % CONCURRENT_FRAMES;
 }
 
 const uint32_t& GraphicsManager::getCurrentFrameIndex() const {

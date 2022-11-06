@@ -1,7 +1,7 @@
 #include "core/engine/renderer/renderPasses/PostProcessRenderer.h"
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/renderer/renderPasses/ReprojectionRenderer.h"
-#include "core/engine/renderer/renderPasses/HistogramRenderer.h"
+#include "core/engine/renderer/renderPasses/ExposureHistogram.h"
 #include "core/engine/renderer/ImmediateRenderer.h"
 #include "core/engine/event/EventDispatcher.h"
 #include "core/engine/event/GraphicsEvents.h"
@@ -23,12 +23,13 @@
 
 #define BLOOM_BLUR_UNIFORM_BUFFER_BINDING 0
 #define BLOOM_BLUR_SRC_TEXTURE_BINDING 1
+#define BLOOM_BLUR_EXPOSURE_BUFFER_BINDING 2
 
 PostProcessRenderer::PostProcessRenderer():
-    m_postProcessUniformData(PostProcessUniformData{}),
-    m_bloomBlurUniformData(BloomBlurUniformData{}),
-    m_bloomBlurMaxIterations(10),
-    m_histogramRenderer(new HistogramRenderer()) {
+        m_postProcessUniformData(PostProcessUniformData{}),
+        m_bloomBlurUniformData(BloomBlurUniformData{}),
+        m_bloomBlurMaxIterations(10),
+        m_exposureHistogram(new ExposureHistogram()) {
     m_resources.initDefault();
     setBloomEnabled(true);
     setBloomBlurFilterRadius(8.0F);
@@ -58,12 +59,12 @@ PostProcessRenderer::~PostProcessRenderer() {
         delete m_resources[i]->bloomBlurImage;
     }
 
-    delete m_histogramRenderer;
+    delete m_exposureHistogram;
 }
 
 bool PostProcessRenderer::init() {
-    if (!m_histogramRenderer->init()) {
-        printf("Failed to initialize PostProcessRenderer HistogramRenderer\n");
+    if (!m_exposureHistogram->init()) {
+        printf("Failed to initialize PostProcessRenderer ExposureHistogram\n");
         return false;
     }
 
@@ -85,6 +86,7 @@ bool PostProcessRenderer::init() {
     m_bloomBlurDescriptorSetLayout = DescriptorSetLayoutBuilder(descriptorPool->getDevice())
             .addUniformBuffer(BLOOM_BLUR_UNIFORM_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment)
             .addCombinedImageSampler(BLOOM_BLUR_SRC_TEXTURE_BINDING, vk::ShaderStageFlagBits::eFragment)
+            .addStorageBuffer(BLOOM_BLUR_EXPOSURE_BUFFER_BINDING, vk::ShaderStageFlagBits::eFragment)
             .build("PostProcessRenderer-BloomBlurDescriptorSetLayout");
 
     SamplerConfiguration samplerConfig{};
@@ -141,6 +143,22 @@ bool PostProcessRenderer::init() {
     return true;
 }
 
+void PostProcessRenderer::updateExposure(const double& dt, const vk::CommandBuffer& commandBuffer) {
+    Buffer* prevExposureBuffer = m_exposureHistogram->getHistogramBuffer();
+    m_exposureHistogram->update(dt, commandBuffer);
+
+    if (prevExposureBuffer != m_exposureHistogram->getHistogramBuffer()) {
+        DescriptorSetWriter(m_resources->bloomBlurInputDescriptorSet)
+                .writeBuffer(BLOOM_BLUR_EXPOSURE_BUFFER_BINDING, m_exposureHistogram->getHistogramBuffer())
+                .write();
+        for (size_t i = 0; i < m_resources->bloomBlurDescriptorSets.size(); ++i) {
+            DescriptorSetWriter(m_resources->bloomBlurDescriptorSets[i])
+                    .writeBuffer(BLOOM_BLUR_EXPOSURE_BUFFER_BINDING, m_exposureHistogram->getHistogramBuffer())
+                    .write();
+        }
+    }
+}
+
 void PostProcessRenderer::renderBloomBlur(const double& dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("PostProcessRenderer::renderBloomBlur")
 
@@ -151,7 +169,7 @@ void PostProcessRenderer::renderBloomBlur(const double& dt, const vk::CommandBuf
     PROFILE_BEGIN_GPU_CMD("PostProcessRenderer::renderBloomBlur", commandBuffer)
 
     if (m_resources->bloomBlurIterations != m_bloomBlurIterations) {
-        printf("Updating bloom blur iterations from %u to %u\n", m_resources->bloomBlurIterations , m_bloomBlurIterations);
+        printf("Updating bloom blur iterations from %u to %u\n", m_resources->bloomBlurIterations, m_bloomBlurIterations);
         bool success = createBloomBlurFramebuffer(m_resources.get());
         assert(success);
     }
@@ -221,10 +239,6 @@ void PostProcessRenderer::renderBloomBlur(const double& dt, const vk::CommandBuf
     PROFILE_END_GPU_CMD(commandBuffer)
 }
 
-void PostProcessRenderer::renderHistogram(const double& dt, const vk::CommandBuffer& commandBuffer) {
-    m_histogramRenderer->render(dt, commandBuffer);
-}
-
 void PostProcessRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("PostProcessRenderer::render")
     PROFILE_BEGIN_GPU_CMD("PostProcessRenderer::render", commandBuffer)
@@ -255,16 +269,15 @@ void PostProcessRenderer::render(const double& dt, const vk::CommandBuffer& comm
     }
 
     DescriptorSetWriter(m_resources->postProcessDescriptorSet)
-//            .writeImage(POSTPROCESS_HISTOGRAM_BUFFER_BINDING, m_histogramRenderer->getSampler().get(), m_histogramRenderer->getHistogramImageView(), vk::ImageLayout::eGeneral, 0, 1)
-            .writeBuffer(POSTPROCESS_HISTOGRAM_BUFFER_BINDING, m_histogramRenderer->getHistogramBuffer())
+            .writeBuffer(POSTPROCESS_HISTOGRAM_BUFFER_BINDING, m_exposureHistogram->getHistogramBuffer())
             .write();
 
-    if (m_postProcessUniformData.histogramOffset != m_histogramRenderer->getOffset()) {
-        m_postProcessUniformData.histogramOffset = m_histogramRenderer->getOffset();
+    if (m_postProcessUniformData.histogramOffset != m_exposureHistogram->getOffset()) {
+        m_postProcessUniformData.histogramOffset = m_exposureHistogram->getOffset();
         m_resources->postProcessUniformDataChanged = true;
     }
-    if (m_postProcessUniformData.histogramScale != m_histogramRenderer->getScale()) {
-        m_postProcessUniformData.histogramScale = m_histogramRenderer->getScale();
+    if (m_postProcessUniformData.histogramScale != m_exposureHistogram->getScale()) {
+        m_postProcessUniformData.histogramScale = m_exposureHistogram->getScale();
         m_resources->postProcessUniformDataChanged = true;
     }
 
@@ -376,8 +389,8 @@ void PostProcessRenderer::setTest(const float& test) {
     m_test = test;
 }
 
-HistogramRenderer* PostProcessRenderer::histogramRenderer() {
-    return m_histogramRenderer;
+ExposureHistogram* PostProcessRenderer::exposureHistogram() {
+    return m_exposureHistogram;
 }
 
 void PostProcessRenderer::setPostProcessUniformDataChanged(const bool& didChange) {

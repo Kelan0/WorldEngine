@@ -171,11 +171,13 @@ namespace Util {
 
     void splitString(const std::string_view& str, char separator, std::vector<std::string_view>& outSplitString);
 
-    void splitString(const std::string_view& str, char separator, std::vector<std::string>& outSplitString);
+    size_t splitString(const std::string_view& str, char separator, std::vector<std::string>& outSplitString);
 
     // dst and src must be 16-byte aligned
     // size must be multiple of 16*2 = 32 bytes
     inline void memcpy_sse(void* dst, void const* src, size_t size);
+
+    int executeCommand(const std::string& command, std::string& outCommandOutput);
 }
 
 #endif //WORLDENGINE_UTIL_H

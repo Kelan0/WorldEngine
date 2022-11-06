@@ -9,6 +9,7 @@
 class Buffer;
 
 class DescriptorSetLayout;
+struct ShaderLoadedEvent;
 
 
 struct ComputePipelineConfiguration {
@@ -37,11 +38,6 @@ class ComputePipeline : public GraphicsResource {
 private:
     explicit ComputePipeline(const WeakResource <vkr::Device>& device, const std::string& name);
 
-    ComputePipeline(const WeakResource <vkr::Device>& device,
-                    vk::Pipeline& pipeline,
-                    vk::PipelineLayout& pipelineLayout,
-                    ComputePipelineConfiguration config, const std::string& name);
-
 public:
     ~ComputePipeline() override;
 
@@ -69,6 +65,8 @@ public:
 
 private:
     void cleanup();
+
+    void onShaderLoaded(ShaderLoadedEvent* event);
 
 private:
     vk::Pipeline m_pipeline;

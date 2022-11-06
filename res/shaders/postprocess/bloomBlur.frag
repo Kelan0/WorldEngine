@@ -3,6 +3,7 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 
 #include "res/shaders/common/common.glsl"
+#include "res/shaders/histogram/histogram.glsl"
 
 layout(push_constant) uniform PC1 {
     vec2 texelSize;
@@ -22,6 +23,10 @@ layout(set = 0, binding = 0) uniform UBO1 {
 };
 
 layout(set = 0, binding = 1) uniform sampler2D srcTexture;
+
+layout(set = 0, binding = 2, std430) readonly buffer ExposureBuffer {
+    HistogramBufferHeader exposureBufferHeader;
+};
 
 vec3 applyBloomThreshold(in vec3 colour) {
     float brightness = max(colour.r, max(colour.g, colour.b));
@@ -143,6 +148,7 @@ vec3 upsampleTent(in sampler2D tex, vec2 coord, vec2 texelSize, vec2 radius) {
 vec3 downsampleImpl2() {
     vec3 finalColour = downsampleBox13Tap(srcTexture, fs_texture, texelSize * 1);
     if (passIndex == 0) {
+        finalColour *= exposureBufferHeader.exposure;
         finalColour = applyBloomThreshold(finalColour);
         float luminance0 = dot(finalColour, RGB_LUMINANCE);
         finalColour *= 1.0 / (1.0 + luminance0 * 1.0 / maxBrightness);

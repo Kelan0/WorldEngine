@@ -5,6 +5,8 @@
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/ShaderUtils.h"
 #include "core/application/Engine.h"
+#include "core/engine/event/GraphicsEvents.h"
+#include "core/engine/event/EventDispatcher.h"
 #include "core/util/Profiler.h"
 #include "core/util/Util.h"
 
@@ -44,16 +46,16 @@ void ComputePipelineConfiguration::addPushConstantRange(const vk::ShaderStageFla
 
 ComputePipeline::ComputePipeline(const WeakResource<vkr::Device>& device, const std::string& name):
         GraphicsResource(ResourceType_ComputePipeline, device, name) {
-}
 
-ComputePipeline::ComputePipeline(const WeakResource<vkr::Device>& device, vk::Pipeline& pipeline, vk::PipelineLayout& pipelineLayout, ComputePipelineConfiguration config, const std::string& name):
-        GraphicsResource(ResourceType_ComputePipeline, device, name),
-        m_pipeline(pipeline),
-        m_pipelineLayout(pipelineLayout),
-        m_config(std::move(config)) {
+#if ENABLE_SHADER_HOT_RELOAD
+    Engine::eventDispatcher()->connect(&ComputePipeline::onShaderLoaded, this);
+#endif
 }
 
 ComputePipeline::~ComputePipeline() {
+#if ENABLE_SHADER_HOT_RELOAD
+    Engine::eventDispatcher()->disconnect(&ComputePipeline::onShaderLoaded, this);
+#endif
     cleanup();
 }
 
@@ -114,10 +116,12 @@ bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipeli
     pipelineLayoutCreateInfo.setSetLayouts(pipelineConfig.descriptorSetLayouts);
     pipelineLayoutCreateInfo.setPushConstantRanges(pipelineConfig.pushConstantRanges);
 
+    vk::PipelineLayout pipelineLayout = VK_NULL_HANDLE;
     result = device.createPipelineLayout(&pipelineLayoutCreateInfo, nullptr, &m_pipelineLayout);
     if (result != vk::Result::eSuccess) {
         printf("Unable to create ComputePipeline: Failed to create PipelineLayout: %s\n", vk::to_string(result).c_str());
         device.destroyShaderModule(computeShaderModule);
+        cleanup();
         return false;
     }
 
@@ -129,6 +133,7 @@ bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipeli
     if (createComputePipelineResult.result != vk::Result::eSuccess) {
         printf("Failed to create ComputePipeline: %s\n", vk::to_string(createComputePipelineResult.result).c_str());
         device.destroyShaderModule(computeShaderModule);
+        cleanup();
         return false;
     }
 
@@ -138,7 +143,8 @@ bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipeli
     device.destroyShaderModule(computeShaderModule);
 
     m_pipeline = computePipeline;
-    m_config = pipelineConfig;
+    m_config = std::move(pipelineConfig);
+    m_name = name;
     return true;
 }
 
@@ -180,3 +186,39 @@ void ComputePipeline::cleanup() {
     m_pipelineLayout = VK_NULL_HANDLE;
     m_pipeline = VK_NULL_HANDLE;
 }
+
+
+#if ENABLE_SHADER_HOT_RELOAD
+
+void ComputePipeline::onShaderLoaded(ShaderLoadedEvent* event) {
+    bool doRecreate = false;
+
+    if (m_config.computeShader == event->filePath && m_config.computeShaderEntryPoint == event->entryPoint) {
+        printf("Compute shader %s for ComputePipeline %s\n", event->reloaded ? "reloaded" : "loaded", m_name.c_str());
+        doRecreate = event->reloaded;
+    }
+
+    if (doRecreate) {
+        Engine::graphics()->flushRendering([&event, this]() {
+
+            // Backup current status in case recreate fails. It will always clean up the current resources, so we must exchange them with null
+            vk::Pipeline backupPipeline = std::exchange(m_pipeline, VK_NULL_HANDLE);
+            vk::PipelineLayout backupPipelineLayout = std::exchange(m_pipelineLayout, VK_NULL_HANDLE);
+            ComputePipelineConfiguration backupConfig(m_config); // Copy
+
+            bool success = recreate(m_config, m_name);
+            if (!success) {
+                printf("Shader %s@%s was reloaded, but reconstructing ComputePipeline \"%s\" failed. The pipeline will remain unchanged\n", event->filePath.c_str(), event->entryPoint.c_str(), m_name.c_str());
+                m_pipeline = backupPipeline;
+                m_pipelineLayout = backupPipelineLayout;
+                m_config = backupConfig;
+            } else {
+                // We exchanged the old resources, so they were not cleaned up by recreate. We must destroy them up manually.
+                (**m_device).destroyPipelineLayout(backupPipelineLayout);
+                (**m_device).destroyPipeline(backupPipeline);
+            }
+        });
+    }
+}
+
+#endif

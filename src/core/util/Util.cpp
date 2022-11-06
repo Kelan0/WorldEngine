@@ -1,4 +1,5 @@
 #include "core/util/Util.h"
+#include <cstdio>
 
 uint64_t Util::nextPowerOf2(uint64_t v) {
     v--;
@@ -62,15 +63,20 @@ void Util::splitString(const std::string_view& str, char separator, std::vector<
             return;
     }
 }
-void Util::splitString(const std::string_view& str, char separator, std::vector<std::string>& outSplitString) {
+size_t Util::splitString(const std::string_view& str, char separator, std::vector<std::string>& outSplitString) {
+    size_t count = 0;
     for (auto p = str.begin();; ++p) {
         auto q = p;
         p = std::find(p, str.end(), separator);
-        if (p != q)
+        if (p != q) {
             outSplitString.emplace_back(q, p);
+            ++count;
+        }
         if (p == str.end())
-            return;
+            return count;
     }
+    assert(false);
+//    return count; // We shouldn't reach here
 }
 
 // https://github.com/microsoft/mimalloc/issues/201
@@ -86,6 +92,33 @@ inline void Util::memcpy_sse(void* dst, void const* src, size_t size) {
         src = ( ( uint8_t const * ) src ) + stride;
         dst = ( ( uint8_t * ) dst ) + stride;
     }
+}
+
+// TODO: fix nothing being written to outCommandOutput
+int Util::executeCommand(const std::string& command, std::string& outCommandOutput) {
+    constexpr size_t buffSize = 128;
+    char buffer[buffSize];
+
+    // popen/pclose for UNIX, _popen/_pclose for Windows
+
+#if defined(__WIN32__) || defined(_WIN32) || defined(_WIN64)
+    auto pipe = _popen(command.c_str(), "r");
+
+    if (!pipe)
+        throw std::runtime_error("popen() failed");
+
+    outCommandOutput.clear();
+    while (!feof(pipe)) {
+        if (fgets(buffer, buffSize, pipe) != nullptr)
+            outCommandOutput += buffer;
+    }
+
+    auto returnCode = _pclose(pipe);
+    return (int)returnCode;
+#else
+    printf("Unable to execute commands on unsupported platform\n");
+    assert(false);
+#endif
 }
 
 

@@ -7,6 +7,9 @@ struct HistogramBufferHeader {
     float scale;
     float averageLuminance;
     uint maxValue;
+    uint sumValue;
+    float prevExposure;
+    float exposure;
 };
 
 float getHistogramBinFromLuminance(float value, float offset, float scale) {
