@@ -32,13 +32,13 @@ PostProcessRenderer::PostProcessRenderer():
         m_exposureHistogram(new ExposureHistogram()) {
     m_resources.initDefault();
     setBloomEnabled(true);
-    setBloomBlurFilterRadius(8.0F);
+    setBloomBlurFilterRadius(4.0F);
     setBloomIntensity(0.05F);
     setBloomThreshold(1.0F);
     setBloomSoftThreshold(0.5F);
-    setBloomMaxBrightness(20.0F);
+    setBloomMaxBrightness(45.0F);
 //    setBloomBlurIterations(5);
-    m_bloomBlurIterations = 4;
+    m_bloomBlurIterations = 7;
 }
 
 PostProcessRenderer::~PostProcessRenderer() {
@@ -118,9 +118,12 @@ bool PostProcessRenderer::init() {
         uniformBufferConfig.size = alignedUniformBufferSize;
         m_resources[i]->bloomBlurUniformBuffer = Buffer::create(uniformBufferConfig, "PostProcessRenderer-BloomBlurUniformBuffer");
 
+        std::string indexStr;
+
         m_resources[i]->bloomBlurDescriptorSets.resize(m_bloomBlurMaxIterations);
         for (uint32_t j = 0; j < m_bloomBlurMaxIterations; ++j) {
-            DescriptorSet* descriptorSet = DescriptorSet::create(m_bloomBlurDescriptorSetLayout, descriptorPool, "PostProcessRenderer-BloomBlurDescriptorSet");
+            indexStr = std::to_string(j);
+            DescriptorSet* descriptorSet = DescriptorSet::create(m_bloomBlurDescriptorSetLayout, descriptorPool, "PostProcessRenderer-BloomBlurDescriptorSet-" + indexStr);
             m_resources[i]->bloomBlurDescriptorSets[j] = descriptorSet;
             DescriptorSetWriter(descriptorSet)
                     .writeBuffer(BLOOM_BLUR_UNIFORM_BUFFER_BINDING, m_resources[i]->bloomBlurUniformBuffer, 0, alignedUniformBufferSize)
@@ -189,12 +192,31 @@ void PostProcessRenderer::renderBloomBlur(const double& dt, const vk::CommandBuf
 
     vk::Viewport viewport;
 
+    int32_t iterationCount = (int32_t)m_resources->bloomBlurIterations;
+
+    {
+        PROFILE_BEGIN_GPU_CMD("PostProcessRenderer::renderBloomBlur/Clear", commandBuffer)
+        // Clear the first mip-level
+        Framebuffer* framebuffer = m_resources->bloomBlurMipFramebuffers[0];
+        m_bloomBlurRenderPass->begin(commandBuffer, framebuffer, vk::SubpassContents::eInline);
+        vk::ClearValue clearValue{};
+        clearValue.color.setFloat32(std::array<float, 4>{0.0F, 0.0F, 0.0F, 0.0F});
+        std::array<vk::ClearAttachment, 1> clearAttachments = {vk::ClearAttachment(vk::ImageAspectFlagBits::eColor, 0, clearValue)};
+        std::array<vk::ClearRect, 1> clearRects = {vk::ClearRect({{0, 0}, {framebuffer->getWidth(), framebuffer->getHeight()}}, 0, 1)};
+        commandBuffer.clearAttachments(clearAttachments, clearRects);
+        commandBuffer.endRenderPass();
+        PROFILE_END_GPU_CMD(commandBuffer)
+    }
+
+    PROFILE_BEGIN_GPU_CMD("PostProcessRenderer::renderBloomBlur/DownSample", commandBuffer)
     // Progressively down-sample
-    for (uint32_t i = 0; i < m_resources->bloomBlurIterations - 1; ++i) {
+    for (int32_t i = 0; i < iterationCount - 1; ++i) {
         Framebuffer* framebuffer = m_resources->bloomBlurMipFramebuffers[i + 1]; // output to next mip level
         m_bloomBlurRenderPass->begin(commandBuffer, framebuffer, vk::SubpassContents::eInline);
+
         m_downsampleGraphicsPipeline->setViewport(commandBuffer, 0, GraphicsPipeline::getScreenViewport(framebuffer->getResolution()));
         m_downsampleGraphicsPipeline->bind(commandBuffer);
+
 
         DescriptorSet* descriptorSet = i == 0 ? m_resources->bloomBlurInputDescriptorSet : m_resources->bloomBlurDescriptorSets[i];
 
@@ -211,15 +233,17 @@ void PostProcessRenderer::renderBloomBlur(const double& dt, const vk::CommandBuf
         commandBuffer.draw(3, 1, 0, 0);
         commandBuffer.endRenderPass();
     }
+    PROFILE_END_GPU_CMD(commandBuffer)
 
+    PROFILE_BEGIN_GPU_CMD("PostProcessRenderer::renderBloomBlur/UpSample", commandBuffer)
     // Progressively up-sample
-    for (uint32_t i = m_resources->bloomBlurIterations - 1; i > 0; --i) {
-        Framebuffer* framebuffer = m_resources->bloomBlurMipFramebuffers[i - 1]; // output to previous mip level
+    for (int32_t i = iterationCount - 2; i >= 0; --i) {
+        Framebuffer* framebuffer = m_resources->bloomBlurMipFramebuffers[i];
         m_bloomBlurRenderPass->begin(commandBuffer, framebuffer, vk::SubpassContents::eInline);
         m_upsampleGraphicsPipeline->setViewport(commandBuffer, 0, GraphicsPipeline::getScreenViewport(framebuffer->getResolution()));
         m_upsampleGraphicsPipeline->bind(commandBuffer);
 
-        DescriptorSet* descriptorSet = m_resources->bloomBlurDescriptorSets[i];
+        DescriptorSet* descriptorSet = m_resources->bloomBlurDescriptorSets[i + 1];
 
         std::array<vk::DescriptorSet, 1> descriptorSets = {
                 descriptorSet->getDescriptorSet()
@@ -235,6 +259,7 @@ void PostProcessRenderer::renderBloomBlur(const double& dt, const vk::CommandBuf
         commandBuffer.draw(3, 1, 0, 0);
         commandBuffer.endRenderPass();
     }
+    PROFILE_END_GPU_CMD(commandBuffer)
 
     PROFILE_END_GPU_CMD(commandBuffer)
 }
@@ -453,22 +478,22 @@ bool PostProcessRenderer::createBloomBlurFramebuffer(RenderResources* resources)
     FramebufferConfiguration framebufferConfig{};
     framebufferConfig.device = Engine::graphics()->getDevice();
 
+    std::string iterationStr;
     glm::uvec2 resolution = Engine::graphics()->getResolution();
-    ImageView* imageViews[1];
     for (uint32_t i = 0; i < m_resources->bloomBlurIterations; ++i) {
         assert(resolution.x > 0 && resolution.y > 0); // Resolution must not reach zero, we must ensure m_bloomBlurImageMipLevels is set to a valid value instead
+        iterationStr = std::to_string(i);
         imageViewConfig.baseMipLevel = i;
         imageViewConfig.mipLevelCount = 1;
-        ImageView* imageView = ImageView::create(imageViewConfig, "PostProcessRenderer-BloomBlurMipImageView");
+        ImageView* imageView = ImageView::create(imageViewConfig, "PostProcessRenderer-BloomBlurMipImageView-" + iterationStr);
         if (imageView == nullptr)
             return false;
         resources->bloomBlurMipImageViews.emplace_back(imageView);
 
-        imageViews[0] = imageView;
         framebufferConfig.setSize(resolution);
-        framebufferConfig.setAttachments(imageViews);
+        framebufferConfig.setAttachment(0, imageView);
         framebufferConfig.setRenderPass(m_bloomBlurRenderPass.get());
-        Framebuffer* framebuffer = Framebuffer::create(framebufferConfig, "PostProcessRenderer-BloomBlurFramebuffer");
+        Framebuffer* framebuffer = Framebuffer::create(framebufferConfig, "PostProcessRenderer-BloomBlurFramebuffer-" + iterationStr);
         if (framebuffer == nullptr)
             return false;
         resources->bloomBlurMipFramebuffers.emplace_back(framebuffer);
@@ -513,7 +538,8 @@ bool PostProcessRenderer::createUpsampleGraphicsPipeline() {
     pipelineConfig.renderPass = m_bloomBlurRenderPass;
     pipelineConfig.setDynamicState(vk::DynamicState::eViewport, true);
     pipelineConfig.setViewport(Engine::graphics()->getResolution());
-//    pipelineConfig.depthTestEnabled = false;
+    pipelineConfig.depthTestEnabled = false;
+    pipelineConfig.depthWriteEnabled = false;
     pipelineConfig.vertexShader = "res/shaders/screen/fullscreen_quad.vert";
     pipelineConfig.fragmentShader = "res/shaders/postprocess/bloomBlur.frag";
     pipelineConfig.fragmentShaderEntryPoint = "upsampleStage";
@@ -521,6 +547,7 @@ bool PostProcessRenderer::createUpsampleGraphicsPipeline() {
     pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eFragment, 0, sizeof(BloomBlurPushConstantData));
     pipelineConfig.setAttachmentBlendEnabled(0, true);
     pipelineConfig.setAttachmentColourBlendMode(0, vk::BlendFactor::eOne, vk::BlendFactor::eOne, vk::BlendOp::eAdd);
+//    pipelineConfig.setAttachmentAlphaBlendMode(0, vk::BlendFactor::eOne, vk::BlendFactor::eZero, vk::BlendOp::eAdd);
     return m_upsampleGraphicsPipeline->recreate(pipelineConfig, "PostProcessRenderer-UpsampleGraphicsPipeline");
 }
 
@@ -543,7 +570,7 @@ bool PostProcessRenderer::createBloomBlurRenderPass() {
 
     attachments[0].setFormat(Engine::deferredRenderer()->getOutputColourFormat());
     attachments[0].setSamples(samples);
-    attachments[0].setLoadOp(vk::AttachmentLoadOp::eClear); // could be eDontCare ?
+    attachments[0].setLoadOp(vk::AttachmentLoadOp::eLoad); // Clear the current mip level on every down-sample pass.
     attachments[0].setStoreOp(vk::AttachmentStoreOp::eStore);
     attachments[0].setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
     attachments[0].setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
@@ -577,6 +604,6 @@ bool PostProcessRenderer::createBloomBlurRenderPass() {
     renderPassConfig.setSubpassDependencies(dependencies);
 //    renderPassConfig.setClearColour(0, glm::vec4(0.0F, 0.0F, 0.0F, 1.0F));
 
-    m_bloomBlurRenderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "PostProcessRenderer-BloomBlurRenderPass"));
+    m_bloomBlurRenderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "PostProcessRenderer-BloomBlurDownsampleRenderPass"));
     return (bool)m_bloomBlurRenderPass;
 }

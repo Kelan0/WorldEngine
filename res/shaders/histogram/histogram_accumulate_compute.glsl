@@ -37,11 +37,20 @@ void main() {
 
     if (invocation.x < resolution.x && invocation.y < resolution.y) {
         vec2 coord = vec2(invocation.xy) / vec2(resolution);
+        uint weight = 1;
+
+        if (true) {
+            vec2 d = abs(coord - vec2(0.5));
+            float vfactor = clamp(1.0 - dot(d, d), 0.0, 1.0);
+            vfactor *= vfactor;
+            weight = uint(64.0 * vfactor);
+        }
+
         vec3 colour = texture(srcImage, coord).rgb;
 
         float luminance = dot(colour.rgb, RGB_LUMINANCE);
         float bin = getHistogramBinFromLuminance(luminance, offset, scale) * (binCount - 1);
-        atomicAdd(shared_bins[uint(bin)], 1);
+        atomicAdd(shared_bins[uint(bin)], weight);
     }
 
     barrier();

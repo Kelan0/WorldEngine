@@ -373,7 +373,10 @@ DescriptorSetWriter& DescriptorSetWriter::writeTexelBufferView(const uint32_t& b
 
 DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const vk::DescriptorImageInfo* imageInfos, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
     int bindingIndex = m_descriptorSet->getLayout()->findBindingIndex(binding);
-    assert(bindingIndex >= 0);
+#if _DEBUG
+    bool hasBinding = bindingIndex >= 0;
+    assert(hasBinding);
+#endif
 
     const auto& bindingInfo = m_descriptorSet->getLayout()->getBinding(bindingIndex);
 

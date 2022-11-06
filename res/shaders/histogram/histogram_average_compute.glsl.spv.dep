@@ -1,1 +1,1 @@
-histogram_average_compute.spv: res/shaders/histogram/histogram_average_compute.glsl C:/Users/Kelan/Code/WorldEngine/cmake-build-debug/res/shaders/histogram/histogram.glsl C:/Users/Kelan/Code/WorldEngine/cmake-build-debug/res/shaders/common/common.glsl
+histogram_average_compute.spv: res/shaders/histogram/histogram_average_compute.glsl C:/Users/Kelan/Code/WorldEngine/cmake-build-release/res/shaders/histogram/histogram.glsl C:/Users/Kelan/Code/WorldEngine/cmake-build-release/res/shaders/common/common.glsl

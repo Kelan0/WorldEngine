@@ -38,6 +38,19 @@ void FramebufferConfiguration::setAttachments(const vk::ArrayProxy<ImageView*>& 
         addAttachment(imageView);
 }
 
+void FramebufferConfiguration::setAttachment(const uint32_t& index, const vk::ImageView& imageView) {
+    assert(index <= attachments.size());
+    if (index == attachments.size()) {
+        addAttachment(imageView);
+    } else {
+        attachments[index] = imageView;
+    }
+}
+
+void FramebufferConfiguration::setAttachment(const uint32_t& index, const ImageView* imageView) {
+    setAttachment(index, imageView->getImageView());
+}
+
 void FramebufferConfiguration::setSize(const uint32_t& p_width, const uint32_t& p_height) {
     width = p_width;
     height = p_height;

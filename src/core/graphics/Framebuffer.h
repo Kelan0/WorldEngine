@@ -28,6 +28,10 @@ struct FramebufferConfiguration {
 
     void setAttachments(const vk::ArrayProxy<ImageView*>& imageViews);
 
+    void setAttachment(const uint32_t& index, const vk::ImageView& imageView);
+
+    void setAttachment(const uint32_t& index, const ImageView* imageView);
+
     void setSize(const uint32_t& width, const uint32_t& height);
 
     void setSize(const glm::uvec2& size);

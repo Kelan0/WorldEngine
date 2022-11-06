@@ -367,7 +367,7 @@ class App : public Application {
             ImGui::SliderFloat("Intensity", &bloomIntensity, 0.0F, 1.0F, "%.5f");
             ImGui::SliderFloat("Threshold", &bloomThreshold, 0.0F, 30.0F, "%.5f");
             ImGui::SliderFloat("Soft Threshold", &bloomSoftThreshold, 0.0F, 1.0F, "%.5f");
-            ImGui::SliderFloat("Max Brightness", &bloomBaxBrightness, 0.0F, 20.0F, "%.5f");
+            ImGui::SliderFloat("Max Brightness", &bloomBaxBrightness, 0.0F, 100.0F, "%.5f");
             ImGui::SliderInt("Iterations", &bloomBlurIterations, 1, bloomBlurMaxIterations);
             ImGui::EndDisabled();
         }
