@@ -1,7 +1,7 @@
 #ifndef _PBR_GLSL
 #define _PBR_GLSL
 
-#include "res/shaders/common/common.glsl"
+#include "shaders/common/common.glsl"
 
 float radicalInverse_VdC(uint bits)  {
     bits = (bits << 16u) | (bits >> 16u);

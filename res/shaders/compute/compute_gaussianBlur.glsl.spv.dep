@@ -1,1 +1,1 @@
-compute_gaussianBlur.spv: res/shaders/compute/compute_gaussianBlur.glsl
+compute_gaussianBlur.spv: D:\Code\ActiveProjects\WorldEngine\res\shaders\compute\compute_gaussianBlur.glsl

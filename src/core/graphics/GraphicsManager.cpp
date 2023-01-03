@@ -783,7 +783,7 @@ bool GraphicsManager::createSwapchainImages() {
     for (int i = 0; i < m_swapchain.images.size(); ++i) {
         ImageViewConfiguration imageViewConfig{};
         imageViewConfig.device = m_device.device;
-        imageViewConfig.image = vk::Image(m_swapchain.images[i]);
+        imageViewConfig.image = m_swapchain.images[i];
         imageViewConfig.format = m_surface.surfaceFormat.format;
         m_swapchain.imageViews[i] = std::shared_ptr<ImageView>(ImageView::create(imageViewConfig, "SwapchainPresentImageView"));
     }
@@ -1017,7 +1017,7 @@ void GraphicsManager::flushRendering() {
 void GraphicsManager::presentImageDirect(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::ImageLayout& imageLayout) {
     PROFILE_SCOPE("GraphicsManager::presentImageDirect");
     PROFILE_BEGIN_GPU_CMD("GraphicsManager::presentImageDirect", commandBuffer);
-    VkImage currentImage = m_swapchain.images[m_swapchain.currentImageIndex];
+    vk::Image currentImage = m_swapchain.images[m_swapchain.currentImageIndex];
     vk::ImageCopy region{};
 
     vk::ImageSubresourceRange subresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);

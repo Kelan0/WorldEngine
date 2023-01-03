@@ -2,9 +2,9 @@
 
 #extension GL_EXT_nonuniform_qualifier : enable
 
-#include "res/shaders/common/common.glsl"
-#include "res/shaders/common/pbr.glsl"
-#include "res/shaders/common/structures.glsl"
+#include "shaders/common/common.glsl"
+#include "shaders/common/pbr.glsl"
+#include "shaders/common/structures.glsl"
 
 #define LIGHT_TYPE_IINVALID 0
 #define LIGHT_TYPE_DIRECTIONAL 1

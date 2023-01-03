@@ -47,11 +47,23 @@ public:
 
     const std::string& getExecutionDirectory() const;
 
+    const std::string& getResourceDirectory() const;
+
+    const std::string& getShaderCompilerDirectory() const;
+
+    std::string getAbsoluteResourceFilePath(const std::string& resourceFilePath) const;
+
     const std::thread::id& getMainThreadId() const;
     uint64_t getHashedMainThreadId() const;
 
 private:
     void start();
+
+    bool parseArgs(int argc, char* argv[]);
+
+    bool matchesArgWithValue(int argc, char* argv[], int index, const std::vector<const char*>& argNames);
+
+    bool getArgValue(int argc, char* argv[], int& index, const std::vector<const char*>& argNames, char*& outValue);
 
     bool initInternal();
 
@@ -67,6 +79,8 @@ private:
     SDL_Window* m_windowHandle;
     InputHandler* m_inputHandler;
     std::string m_executionDirectory;
+    std::string m_resourceDirectory;
+    std::string m_shaderCompilerDirectory;
 
     double m_framerateLimit;
 
@@ -90,6 +104,12 @@ inline int Application::create(int argc, char* argv[]) {
     }
 
     s_instance = new T();
+
+    if (!s_instance->parseArgs(argc, argv)) {
+        Application::destroy();
+        return -1;
+    }
+
     if (!s_instance->initInternal()) {
         Application::destroy();
         return -1;

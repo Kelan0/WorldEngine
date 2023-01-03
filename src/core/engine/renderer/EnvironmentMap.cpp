@@ -324,7 +324,7 @@ void EnvironmentMap::calculateBRDFIntegrationMap(const vk::CommandBuffer& comman
         if (s_BRDFIntegrationMapComputePipeline == nullptr) {
             ComputePipelineConfiguration pipelineConfig{};
             pipelineConfig.device = Engine::graphics()->getDevice();
-            pipelineConfig.computeShader = "res/shaders/compute/compute_BRDFIntegrationMap.glsl";
+            pipelineConfig.computeShader = "shaders/compute/compute_BRDFIntegrationMap.glsl";
             pipelineConfig.addDescriptorSetLayout(s_BRDFIntegrationMapDescriptorSet->getLayout().get());
             pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(BRDFIntegrationPushConstants));
             s_BRDFIntegrationMapComputePipeline = ComputePipeline::create(pipelineConfig, "EnvironmentMap-BRDFIntegrationMapComputePipeline");
@@ -390,7 +390,7 @@ ComputePipeline* EnvironmentMap::getDiffuseIrradianceComputePipeline() {
     if (s_diffuseIrradianceConvolutionComputePipeline == nullptr) {
         ComputePipelineConfiguration pipelineConfig{};
         pipelineConfig.device = Engine::graphics()->getDevice();
-        pipelineConfig.computeShader = "res/shaders/compute/compute_diffuseIrradiance.glsl";
+        pipelineConfig.computeShader = "shaders/compute/compute_diffuseIrradiance.glsl";
         pipelineConfig.addDescriptorSetLayout(getDiffuseIrradianceComputeDescriptorSet()->getLayout().get());
         s_diffuseIrradianceConvolutionComputePipeline = ComputePipeline::create(pipelineConfig, "EnvironmentMap-DiffuseIrradianceConvolutionComputePipeline");
         assert(s_diffuseIrradianceConvolutionComputePipeline != nullptr);
@@ -420,7 +420,7 @@ ComputePipeline* EnvironmentMap::getPrefilteredEnvironmentComputePipeline() {
     if (s_prefilteredEnvironmentComputePipeline == nullptr) {
         ComputePipelineConfiguration pipelineConfig{};
         pipelineConfig.device = Engine::graphics()->getDevice();
-        pipelineConfig.computeShader = "res/shaders/compute/compute_prefilterEnvMap.glsl";
+        pipelineConfig.computeShader = "shaders/compute/compute_prefilterEnvMap.glsl";
         pipelineConfig.addDescriptorSetLayout(getPrefilteredEnvironmentComputeDescriptorSet()->getLayout().get());
         pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(PrefilteredEnvironmentComputePushConstants));
         s_prefilteredEnvironmentComputePipeline = ComputePipeline::create(pipelineConfig, "EnvironmentMap-PrefilteredEnvironmentComputePipeline");

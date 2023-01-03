@@ -377,6 +377,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, co
     bool hasBinding = bindingIndex >= 0;
     assert(hasBinding);
 #endif
+    assert(imageInfos != nullptr);
 
     const auto& bindingInfo = m_descriptorSet->getLayout()->getBinding(bindingIndex);
 
@@ -413,6 +414,9 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, co
 }
 
 DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const vk::Sampler* samplers, const vk::ImageView* imageViews, const vk::ImageLayout* imageLayouts, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
+    assert(samplers != nullptr);
+    assert(imageViews != nullptr);
+    assert(imageLayouts != nullptr);
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
         imageInfos[i].setSampler(samplers[i]);
@@ -437,8 +441,13 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, co
 }
 
 DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* const* samplers, const ImageView* const* imageViews, const vk::ImageLayout* imageLayouts, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
+    assert(samplers != nullptr);
+    assert(imageViews != nullptr);
+    assert(imageLayouts != nullptr);
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
+        assert(samplers[i] != nullptr);
+        assert(imageViews[i] != nullptr);
         imageInfos[i].setSampler(samplers[i]->getSampler());
         imageInfos[i].setImageView(imageViews[i]->getImageView());
         imageInfos[i].setImageLayout(imageLayouts[i]);
@@ -449,6 +458,9 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, co
 }
 
 DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* sampler, const ImageView* const* imageViews, const vk::ImageLayout* imageLayouts, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
+    assert(sampler != nullptr);
+    assert(imageViews != nullptr);
+    assert(imageLayouts != nullptr);
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
         imageInfos[i].setSampler(sampler->getSampler());
@@ -461,8 +473,11 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, co
 }
 
 DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* sampler, const ImageView* const* imageViews, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
+    assert(sampler != nullptr);
+    assert(imageViews != nullptr);
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
+        assert(imageViews[i] != nullptr);
         imageInfos[i].setSampler(sampler->getSampler());
         imageInfos[i].setImageView(imageViews[i]->getImageView());
         imageInfos[i].setImageLayout(imageLayout);
@@ -474,6 +489,8 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, co
 
 
 DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Sampler* sampler, const ImageView* imageView, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
+    assert(sampler != nullptr);
+    assert(imageView != nullptr);
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
         imageInfos[i].setSampler(sampler->getSampler());
@@ -486,9 +503,12 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, co
 }
 
 DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Texture* const* textures, const vk::ImageLayout* imageLayouts, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
-    assert(arrayCount > 0);
+    assert(textures != nullptr);
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
+        assert(textures[i] != nullptr);
+        assert(textures[i]->getSampler() != nullptr);
+        assert(textures[i]->getImageView() != nullptr);
         imageInfos[i].setSampler(textures[i]->getSampler()->getSampler());
         imageInfos[i].setImageView(textures[i]->getImageView()->getImageView());
         imageInfos[i].setImageLayout(imageLayouts[i]);
@@ -499,9 +519,12 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, co
 }
 
 DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Texture* const* textures, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
-    assert(arrayCount > 0);
+    assert(textures != nullptr);
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
+        assert(textures[i] != nullptr);
+        assert(textures[i]->getSampler() != nullptr);
+        assert(textures[i]->getImageView() != nullptr);
         imageInfos[i].setSampler(textures[i]->getSampler()->getSampler());
         imageInfos[i].setImageView(textures[i]->getImageView()->getImageView());
         imageInfos[i].setImageLayout(imageLayout);
@@ -513,6 +536,9 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, co
 
 DescriptorSetWriter& DescriptorSetWriter::writeImage(const uint32_t& binding, const Texture* texture, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex, const uint32_t& arrayCount) {
     assert(arrayCount > 0);
+    assert(texture != nullptr);
+    assert(texture->getSampler() != nullptr);
+    assert(texture->getImageView() != nullptr);
     vk::DescriptorImageInfo* imageInfos = new vk::DescriptorImageInfo[arrayCount];
     for (uint32_t i = 0; i < arrayCount; ++i) {
         imageInfos[i].setSampler(texture->getSampler()->getSampler());

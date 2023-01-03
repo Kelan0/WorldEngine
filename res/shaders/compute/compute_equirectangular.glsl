@@ -4,7 +4,7 @@ layout (local_size_x = 16) in;
 layout (local_size_y = 16) in;
 layout (local_size_z = 1) in;
 
-#include "res/shaders/common/common.glsl"
+#include "shaders/common/common.glsl"
 
 layout(set = 0, binding = 0) uniform UBO1 {
     ivec2 faceSize;

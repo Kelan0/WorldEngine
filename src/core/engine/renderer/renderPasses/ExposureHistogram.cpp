@@ -347,7 +347,7 @@ bool ExposureHistogram::updateHistogramBuffer(RenderResources* resource) {
 bool ExposureHistogram::createHistogramClearComputePipeline() {
     ComputePipelineConfiguration pipelineConfig{};
     pipelineConfig.device = Engine::graphics()->getDevice();
-    pipelineConfig.computeShader = "res/shaders/histogram/histogram_clear_compute.glsl";
+    pipelineConfig.computeShader = "shaders/histogram/histogram_clear_compute.glsl";
     pipelineConfig.addDescriptorSetLayout(m_descriptorSetLayout.get());
     pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(ClearHistogramPushConstantData));
     return m_histogramClearComputePipeline->recreate(pipelineConfig, "ExposureHistogram-HistogramClearComputePipeline");
@@ -356,7 +356,7 @@ bool ExposureHistogram::createHistogramClearComputePipeline() {
 bool ExposureHistogram::createHistogramAccumulationComputePipeline() {
     ComputePipelineConfiguration pipelineConfig{};
     pipelineConfig.device = Engine::graphics()->getDevice();
-    pipelineConfig.computeShader = "res/shaders/histogram/histogram_accumulate_compute.glsl";
+    pipelineConfig.computeShader = "shaders/histogram/histogram_accumulate_compute.glsl";
     pipelineConfig.addDescriptorSetLayout(m_descriptorSetLayout.get());
     pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(AccumulateHistogramPushConstantData));
     return m_histogramAccumulationComputePipeline->recreate(pipelineConfig, "ExposureHistogram-HistogramAccumulationComputePipeline");
@@ -365,7 +365,7 @@ bool ExposureHistogram::createHistogramAccumulationComputePipeline() {
 bool ExposureHistogram::createHistogramAverageComputePipeline() {
     ComputePipelineConfiguration pipelineConfig{};
     pipelineConfig.device = Engine::graphics()->getDevice();
-    pipelineConfig.computeShader = "res/shaders/histogram/histogram_average_compute.glsl";
+    pipelineConfig.computeShader = "shaders/histogram/histogram_average_compute.glsl";
     pipelineConfig.addDescriptorSetLayout(m_descriptorSetLayout.get());
     pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(AverageHistogramPushConstantData));
     return m_histogramAverageComputePipeline->recreate(pipelineConfig, "ExposureHistogram-HistogramAverageComputePipeline");

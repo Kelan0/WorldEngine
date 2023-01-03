@@ -1,5 +1,6 @@
 #include "core/util/Util.h"
 #include <cstdio>
+#include <xmmintrin.h>
 
 uint64_t Util::nextPowerOf2(uint64_t v) {
     v--;

@@ -2,8 +2,8 @@
 
 #extension GL_EXT_nonuniform_qualifier : enable
 
-#include "res/shaders/common/structures.glsl"
-#include "res/shaders/common/common.glsl"
+#include "shaders/common/structures.glsl"
+#include "shaders/common/common.glsl"
 
 #define HAS_ALBEDO_TEXTURE_FLAG uint(1 << 0)
 #define HAS_ROUGHNESS_TEXTURE_FLAG uint(1 << 1)

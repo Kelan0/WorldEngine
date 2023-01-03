@@ -4,17 +4,42 @@
 #include <windows.h>
 #endif
 
+#include <filesystem>
+
+#include "core/util/Util.h"
+
+std::string PlatformUtils::getFileDirectory(std::string filePath) {
+    std::filesystem::path path = std::filesystem::path(filePath);
+    if (!std::filesystem::is_directory(filePath)) {
+        path = path.parent_path();
+    }
+    return formatFilePath(path.string());
+}
+
+std::string PlatformUtils::formatFilePath(std::string filePath) {
+    Util::trim(filePath);
+    for (char& i : filePath) {
+        if (i == '\\' || i == '/')
+            i = getFilePathSeparator();
+    }
+    if (!filePath.empty() && !filePath.ends_with(getFilePathSeparator())) {
+        filePath += getFilePathSeparator();
+    }
+    return filePath;
+}
+
+std::string PlatformUtils::getAbsoluteFilePath(const std::string& filePath) {
+    return formatFilePath(std::filesystem::absolute(filePath).string());
+}
+
+char PlatformUtils::getFilePathSeparator() {
+    return std::filesystem::path::preferred_separator;
+}
+
 std::string PlatformUtils::findExecutionDirectory() {
 #ifdef _WIN32
             char buffer[MAX_PATH] = { 0 };
             GetModuleFileNameA(NULL, buffer, MAX_PATH);
-            size_t end = 0;
-            for (size_t i = 0; i < MAX_PATH && buffer[i] != '\0'; ++i) {
-                if (buffer[i] == '\\') buffer[i] = '/';
-                if (buffer[i] == '/') end = i;
-            }
-            buffer[end] = '\0';
-            std::string t(buffer);
-            return t;
+            return getFileDirectory(buffer);
 #endif
 }

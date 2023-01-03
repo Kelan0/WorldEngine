@@ -12,7 +12,9 @@
 #include "core/thread/ThreadUtils.h"
 #include "core/util/PlatformUtils.h"
 #include "core/util/Profiler.h"
+#include "core/util/Util.h"
 #include <chrono>
+#include <filesystem>
 
 Application* Application::s_instance = nullptr;
 
@@ -38,12 +40,85 @@ Application::~Application() {
     printf("Uninitialized application\n");
 }
 
+bool Application::parseArgs(int argc, char* argv[]) {
+    assert(argc > 0); // First argument is the executable directory
+    m_executionDirectory = PlatformUtils::getFileDirectory(argv[0]);
+
+    m_resourceDirectory = "./";
+    m_shaderCompilerDirectory = "";
+
+    char* value;
+    for (int i = 1; i < argc; ++i) {
+        value = argv[i];
+
+        if (getArgValue(argc, argv, i, { "--resdir" }, value)) {
+            m_resourceDirectory = value;
+        } else if (getArgValue(argc, argv, i, { "--spvcdir" }, value)) {
+            m_shaderCompilerDirectory = value;
+        }
+    }
+
+    m_resourceDirectory = PlatformUtils::getAbsoluteFilePath(m_resourceDirectory);
+    m_shaderCompilerDirectory = PlatformUtils::getAbsoluteFilePath(m_shaderCompilerDirectory);
+
+    return true;
+}
+
+bool Application::matchesArgWithValue(int argc, char* argv[], int index, const std::vector<const char*>& argNames) {
+    if (index + 1 >= argc) {
+        return false;
+    }
+
+    const char* arg = argv[index];
+
+    for (const char* argName : argNames) {
+        if (strcmp(arg, argName) == 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Application::getArgValue(int argc, char* argv[], int& index, const std::vector<const char*>& argNames, char*& outValue) {
+    if (matchesArgWithValue(argc, argv, index, argNames)) {
+        ++index;
+        outValue = argv[index];
+
+        size_t len = strlen(outValue);
+        size_t i0 = std::string::npos;
+        size_t i1 = std::string::npos;
+
+        if (len > 0) {
+            for (size_t i = 0; i < len && i0 != std::string::npos; ++i) {
+                if (outValue[i] == '"')
+                    i0 = i + 1;
+            }
+            for (size_t i = len - 1; i >= 0 && i1 != std::string::npos; --i) {
+                if (outValue[i] == '"')
+                    i1 = i;
+            }
+        }
+
+        if (i0 != i1) {
+            if (i0 == std::string::npos || i1 == std::string::npos || i0 > i1) {
+                printf("Mismatched argument value quotation marks\n");
+                return false;
+            }
+
+            outValue[i1] = '\0'; // End the string at the last quotation mark
+            outValue += i0; // Shift the start of the string to within the first quotation mark.
+        }
+        return true;
+    }
+    return false;
+}
+
 bool Application::initInternal() {
     PROFILE_SCOPE("Application::initInternal")
 
     m_mainThreadId = std::this_thread::get_id();
     printf("Initializing application on main thread 0x%016llx\n", ThreadUtils::getThreadHashedId(m_mainThreadId));
-    m_executionDirectory = PlatformUtils::findExecutionDirectory();
 
     PROFILE_REGION("Init SDL")
 
@@ -349,6 +424,18 @@ bool Application::isViewportInverted() const {
 
 const std::string& Application::getExecutionDirectory() const {
     return m_executionDirectory;
+}
+
+const std::string& Application::getResourceDirectory() const {
+    return m_resourceDirectory;
+}
+
+const std::string& Application::getShaderCompilerDirectory() const {
+    return m_shaderCompilerDirectory;
+}
+
+std::string Application::getAbsoluteResourceFilePath(const std::string& resourceFilePath) const {
+    return std::filesystem::absolute(getResourceDirectory() + resourceFilePath).string();
 }
 
 const std::thread::id& Application::getMainThreadId() const {

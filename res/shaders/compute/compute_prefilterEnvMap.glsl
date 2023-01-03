@@ -6,8 +6,8 @@ layout (local_size_x = 16) in;
 layout (local_size_y = 16) in;
 layout (local_size_z = 1) in;
 
-#include "res/shaders/common/common.glsl"
-#include "res/shaders/common/pbr.glsl"
+#include "shaders/common/common.glsl"
+#include "shaders/common/pbr.glsl"
 
 layout(push_constant) uniform PC1 {
     uint srcSize;

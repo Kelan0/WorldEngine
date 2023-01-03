@@ -31,8 +31,8 @@ private:
 //        NO_COPY(Tracker);
 
         ptr_t ptr;
-        std::_Atomic_counter_t strongRefCount = 1;
-        std::_Atomic_counter_t weakRefCount = 1;
+        std::atomic<size_t> strongRefCount = 1;
+        std::atomic<size_t> weakRefCount = 1;
         std::unordered_map<SharedResource<T>*, std::string> m_ownerNames;
 
         Tracker(const ptr_t& ptr);

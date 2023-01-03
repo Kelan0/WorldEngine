@@ -640,7 +640,7 @@ ComputePipeline* ImageCube::getEquirectangularComputePipeline() {
 
         ComputePipelineConfiguration pipelineConfig{};
         pipelineConfig.device = Engine::graphics()->getDevice();
-        pipelineConfig.computeShader = "res/shaders/compute/compute_equirectangular.glsl";
+        pipelineConfig.computeShader = "shaders/compute/compute_equirectangular.glsl";
         pipelineConfig.addDescriptorSetLayout(getEquirectangularComputeDescriptorSet()->getLayout().get());
         s_computeEquirectangularPipeline = ComputePipeline::create(pipelineConfig, "ComputeEquirectangularPipeline");
 

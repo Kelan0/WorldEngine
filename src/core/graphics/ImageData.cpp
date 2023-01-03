@@ -8,6 +8,7 @@
 #include "core/util/Util.h"
 #include "core/engine/event/EventDispatcher.h"
 #include "core/engine/event/GraphicsEvents.h"
+#include "core/application/Application.h"
 
 std::unordered_map<std::string, ImageData*> ImageData::s_imageCache;
 std::unordered_map<std::string, ComputePipeline*> ImageData::ImageTransform::s_transformComputePipelines;
@@ -71,20 +72,21 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
     int width, height, channels;
     uint8_t* data;
 
+    std::string absFilePath = Application::instance()->getAbsoluteResourceFilePath(filePath);
 
     if (channelSize == 1) {
-        data = reinterpret_cast<uint8_t*>(stbi_load(filePath.c_str(), &width, &height, &channels, desiredChannelCount));
+        data = reinterpret_cast<uint8_t*>(stbi_load(absFilePath.c_str(), &width, &height, &channels, desiredChannelCount));
     } else if (channelSize == 2) {
-        data = reinterpret_cast<uint8_t*>(stbi_load_16(filePath.c_str(), &width, &height, &channels, desiredChannelCount));
+        data = reinterpret_cast<uint8_t*>(stbi_load_16(absFilePath.c_str(), &width, &height, &channels, desiredChannelCount));
     } else if (channelSize == 4) {
-        data = reinterpret_cast<uint8_t*>(stbi_loadf(filePath.c_str(), &width, &height, &channels, desiredChannelCount));
+        data = reinterpret_cast<uint8_t*>(stbi_loadf(absFilePath.c_str(), &width, &height, &channels, desiredChannelCount));
     } else {
-        printf("Unable to load image \"%s\": Invalid image data format\n", filePath.c_str());
+        printf("Unable to load image \"%s\": Invalid image data format\n", absFilePath.c_str());
         return nullptr;
     }
 
     if (data == nullptr) {
-        printf("Failed to load image \"%s\" - Reason: %s\n", filePath.c_str(), stbi_failure_reason());
+        printf("Failed to load image \"%s\" - Reason: %s\n", absFilePath.c_str(), stbi_failure_reason());
         return nullptr;
     }
 
@@ -100,7 +102,7 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
             ImagePixelLayout::Invalid;
 
     if (layout == ImagePixelLayout::Invalid) {
-        printf("Failed to load image \"%s\": Invalid pixel layout for %d channels\n", filePath.c_str(), channels);
+        printf("Failed to load image \"%s\": Invalid pixel layout for %d channels\n", absFilePath.c_str(), channels);
         stbi_image_free(data);
         return nullptr;
     }
@@ -112,16 +114,16 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
             ImagePixelFormat::Invalid;
 
     if (format == ImagePixelFormat::Invalid) {
-        printf("Failed to load image \"%s\": Invalid pixel format for %d bytes per channel\n", filePath.c_str(), channelSize);
+        printf("Failed to load image \"%s\": Invalid pixel format for %d bytes per channel\n", absFilePath.c_str(), channelSize);
         stbi_image_free(data);
         return nullptr;
     }
 
-    printf("Loaded image \"%s\"\n", filePath.c_str());
+    printf("Loaded image \"%s\"\n", absFilePath.c_str());
 
     ImageData* image = new ImageData(data, width, height, layout, format, AllocationType_Stbi);
 
-    s_imageCache.insert(std::make_pair(filePath, image));
+    s_imageCache.insert(std::make_pair(absFilePath, image));
 
     return image;
 }
@@ -816,7 +818,7 @@ ComputePipeline* ImageData::Flip::getComputePipeline() {
     if (it == s_transformComputePipelines.end()) {
         ComputePipelineConfiguration pipelineConfig{};
         pipelineConfig.device = Engine::graphics()->getDevice();
-        pipelineConfig.computeShader = "res/shaders/util/imageTransform/compute_flip.glsl";
+        pipelineConfig.computeShader = "shaders/util/imageTransform/compute_flip.glsl";
         ComputePipeline* pipeline = ComputePipeline::create(pipelineConfig, "ImageDataFlip-TransformComputePipelines");
         s_transformComputePipelines.insert(std::make_pair(key, pipeline));
         return pipeline;
@@ -1075,6 +1077,9 @@ bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk:
     subresourceRange.setBaseArrayLayer(baseLayer);
     subresourceRange.setLayerCount(layerCount);
     subresourceRange.setLevelCount(1);
+
+    vk::ArrayWrapper1D<vk::Offset3D, 2> test;
+    test[0] = vk::Offset3D(0, 0, 0);
 
     vk::ImageBlit blit{};
     blit.srcOffsets[0] = vk::Offset3D(0, 0, 0);

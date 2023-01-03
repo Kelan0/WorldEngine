@@ -2,7 +2,7 @@
 
 #extension GL_EXT_nonuniform_qualifier : enable
 
-#include "res/shaders/common/common.glsl"
+#include "shaders/common/common.glsl"
 
 #define CLIPPING_MODE_NONE 0
 #define CLIPPING_MODE_FAST 1

@@ -1,6 +1,6 @@
 #version 450
 
-#include "res/shaders/histogram/histogram.glsl"
+#include "shaders/histogram/histogram.glsl"
 
 #define GROUP_SIZE_X 16
 

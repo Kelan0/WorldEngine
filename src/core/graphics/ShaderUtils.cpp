@@ -8,12 +8,6 @@
 #include "core/engine/event/EventDispatcher.h"
 #include "core/util/Util.h"
 
-#ifndef GLSL_COMPILER_EXECUTABLE
-// TODO: define this as a program argument, or define in CMakeLists.txt
-// Switching Vulkan version and forgetting to update this caused a real headache.
-#define GLSL_COMPILER_EXECUTABLE "C:/VulkanSDK/1.3.224.1/Bin/glslc.exe"
-#endif
-
 struct DependencyFileInfo {
     std::string filePath;
     std::filesystem::file_time_type lastCheckTime;
@@ -222,17 +216,21 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
 
     Util::trim(filePath);
     Util::trim(entryPoint);
+
+
+    std::string absFilePath = Application::instance()->getAbsoluteResourceFilePath(filePath);
+
     if (entryPoint.empty()) {
-        printf("Cannot compile shader \"%s\": Entry point is not specified\n", filePath.c_str());
+        printf("Cannot compile shader \"%s\": Entry point is not specified\n", absFilePath.c_str());
         return false;
     }
 
     if (entryPoint.find(' ') != std::string::npos) {
-        printf("Cannot compile shader \"%s\" with specified entry point \"%s\": The entry point must not contain spaces\n", filePath.c_str(), entryPoint.c_str());
+        printf("Cannot compile shader \"%s\" with specified entry point \"%s\": The entry point must not contain spaces\n", absFilePath.c_str(), entryPoint.c_str());
         return false;
     }
 
-    LoadedShaderInfo* loadedShaderInfo = ShaderLoadingUpdater::instance()->getLoadedShaderInfo(filePath, entryPoint);
+    LoadedShaderInfo* loadedShaderInfo = ShaderLoadingUpdater::instance()->getLoadedShaderInfo(absFilePath, entryPoint);
     if (loadedShaderInfo != nullptr && !loadedShaderInfo->shouldReload) {
         if (bytecode != nullptr)
             *bytecode = loadedShaderInfo->bytecode; // copy assignment
@@ -247,7 +245,7 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
 
     // TODO: determine if source file is GLSL or HLSL and call correct compiler
 
-    std::string outputFilePath = filePath;
+    std::string outputFilePath = absFilePath;
     std::string dependencyFilePath = outputFilePath + ".dep";
 
     bool isValidShader = true; // By default, we assume the shader is valid. This is overwritten if the shader gets recompiled.
@@ -265,18 +263,18 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
             if (!std::filesystem::exists(outputFilePath)) {
                 // Compiled file does not exist.
 
-                if (!std::filesystem::exists(filePath)) {
+                if (!std::filesystem::exists(absFilePath)) {
                     // Source file does not exist
-                    printf("Shader source file \"%s\" was not found\n", filePath.c_str());
+                    printf("Shader source file \"%s\" was not found\n", absFilePath.c_str());
                     return false;
                 }
 
                 shouldCompile = true;
 
-            } else if (std::filesystem::exists(filePath)) {
+            } else if (std::filesystem::exists(absFilePath)) {
                 // Compiled file and source file both exist
 
-                auto lastModifiedSource = std::filesystem::last_write_time(filePath);
+                auto lastModifiedSource = std::filesystem::last_write_time(absFilePath);
                 auto lastCompiled = std::filesystem::last_write_time(outputFilePath);
 
                 if (lastModifiedSource > lastCompiled) {
@@ -287,33 +285,42 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
         }
 
         if (shouldCompile) {
-            printf("Compiling shader: %s@%s\n", filePath.c_str(), entryPoint.c_str());
+            printf("Compiling shader: %s@%s\n", absFilePath.c_str(), entryPoint.c_str());
 
-            std::string command(GLSL_COMPILER_EXECUTABLE);
+            const std::string& glslcdir = Application::instance()->getShaderCompilerDirectory();
+            if (!glslcdir.empty() && !std::filesystem::exists(glslcdir + "glslc.exe")) {
+                printf("Unable to compile shader: GLSL compiler (glslc.exe) was not found in the directory \"%s\". Make sure the location of the GLSL compiler is specified correctly using the --spvcdir program argument\n",
+                       Application::instance()->getShaderCompilerDirectory().c_str());
+                isValidShader = false;
+            } else {
 
-            command +=
-                    shaderStage == ShaderStage_VertexShader ? " -fshader-stage=vert" :
-                    shaderStage == ShaderStage_FragmentShader ? " -fshader-stage=frag" :
-                    shaderStage == ShaderStage_TessellationControlShader ? " -fshader-stage=tesc" :
-                    shaderStage == ShaderStage_TessellationEvaluationShader ? " -fshader-stage=tese" :
-                    shaderStage == ShaderStage_GeometryShader ? " -fshader-stage=geom" :
-                    shaderStage == ShaderStage_ComputeShader ? " -fshader-stage=comp" : "";
+                std::string command = glslcdir + "glslc.exe";
+                command +=
+                        shaderStage == ShaderStage_VertexShader ? " -fshader-stage=vert" :
+                        shaderStage == ShaderStage_FragmentShader ? " -fshader-stage=frag" :
+                        shaderStage == ShaderStage_TessellationControlShader ? " -fshader-stage=tesc" :
+                        shaderStage == ShaderStage_TessellationEvaluationShader ? " -fshader-stage=tese" :
+                        shaderStage == ShaderStage_GeometryShader ? " -fshader-stage=geom" :
+                        shaderStage == ShaderStage_ComputeShader ? " -fshader-stage=comp" : "";
 
-            command += " -D" + entryPoint + "=main";
+                command += " -D" + entryPoint + "=main";
 //            command += " -fentry-point=" + entryPoint;
 
-            command += std::string(" \"") + filePath + "\"";
+                std::string includeDirectory = Application::instance()->getResourceDirectory(); // Always includes trailing file separator
+                includeDirectory = includeDirectory.substr(0, includeDirectory.size() - 1); // glsl compiler does not like trailing file separator on this file path
 
-            command += std::string(" -I \"") + Application::instance()->getExecutionDirectory() + "\"";
+                command += std::string(" \"") + absFilePath + "\"";
+                command += std::string(" -I \"") + includeDirectory + "\"";
 
-            std::string commandResponse;
-            int error = Util::executeCommand(command + " -o \"" + outputFilePath + "\"", commandResponse);
-            isValidShader = error == EXIT_SUCCESS;
-            if (!isValidShader) {
-                Util::trim(commandResponse);
-                printf("SPIR-V compile command failed\n%s\n", commandResponse.c_str());
-            } else {
-                generateShaderDependencies(command, filePath, dependencyFilePath);
+                std::string commandResponse;
+                int error = Util::executeCommand(command + " -o \"" + outputFilePath + "\"", commandResponse);
+                isValidShader = error == EXIT_SUCCESS;
+                if (!isValidShader) {
+                    Util::trim(commandResponse);
+                    printf("SPIR-V compile command failed\n%s\n", commandResponse.c_str());
+                } else {
+                    generateShaderDependencies(command, absFilePath, dependencyFilePath);
+                }
             }
         }
     }
@@ -328,15 +335,15 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
 
         LoadedShaderInfo newShaderInfo{};
         newShaderInfo.stage = shaderStage;
-        newShaderInfo.filePath = filePath;
+        newShaderInfo.filePath = absFilePath;
         newShaderInfo.entryPoint = entryPoint;
         newShaderInfo.fileLoadedTime = std::chrono::file_clock::now();
         newShaderInfo.bytecode.resize(file.tellg());
         newShaderInfo.isValidShader = isValidShader;
         newShaderInfo.dependencyFilePaths.clear();
 
-        if (!getShaderDependencies(filePath, dependencyFilePath, newShaderInfo.dependencyFilePaths)) {
-            printf("Failed to get dependencies for shader \"%s\" - Modifications to any dependencies will not be reloaded\n", filePath.c_str());
+        if (!getShaderDependencies(absFilePath, dependencyFilePath, newShaderInfo.dependencyFilePaths)) {
+            printf("Failed to get dependencies for shader \"%s\" - Modifications to any dependencies will not be reloaded\n", absFilePath.c_str());
         }
 
         file.seekg(0);

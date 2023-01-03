@@ -523,8 +523,8 @@ bool PostProcessRenderer::createDownsampleGraphicsPipeline() {
     pipelineConfig.setDynamicState(vk::DynamicState::eViewport, true);
     pipelineConfig.setViewport(Engine::graphics()->getResolution());
 //    pipelineConfig.depthTestEnabled = false;
-    pipelineConfig.vertexShader = "res/shaders/screen/fullscreen_quad.vert";
-    pipelineConfig.fragmentShader = "res/shaders/postprocess/bloomBlur.frag";
+    pipelineConfig.vertexShader = "shaders/screen/fullscreen_quad.vert";
+    pipelineConfig.fragmentShader = "shaders/postprocess/bloomBlur.frag";
     pipelineConfig.fragmentShaderEntryPoint = "downsampleStage";
     pipelineConfig.addDescriptorSetLayout(m_bloomBlurDescriptorSetLayout.get());
     pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eFragment, 0, sizeof(BloomBlurPushConstantData));
@@ -540,8 +540,8 @@ bool PostProcessRenderer::createUpsampleGraphicsPipeline() {
     pipelineConfig.setViewport(Engine::graphics()->getResolution());
     pipelineConfig.depthTestEnabled = false;
     pipelineConfig.depthWriteEnabled = false;
-    pipelineConfig.vertexShader = "res/shaders/screen/fullscreen_quad.vert";
-    pipelineConfig.fragmentShader = "res/shaders/postprocess/bloomBlur.frag";
+    pipelineConfig.vertexShader = "shaders/screen/fullscreen_quad.vert";
+    pipelineConfig.fragmentShader = "shaders/postprocess/bloomBlur.frag";
     pipelineConfig.fragmentShaderEntryPoint = "upsampleStage";
     pipelineConfig.addDescriptorSetLayout(m_bloomBlurDescriptorSetLayout.get());
     pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eFragment, 0, sizeof(BloomBlurPushConstantData));
@@ -556,8 +556,8 @@ bool PostProcessRenderer::createPostProcessGraphicsPipeline() {
     pipelineConfig.device = Engine::graphics()->getDevice();
     pipelineConfig.renderPass = Engine::graphics()->renderPass();
     pipelineConfig.setViewport(Engine::graphics()->getResolution());
-    pipelineConfig.vertexShader = "res/shaders/screen/fullscreen_quad.vert";
-    pipelineConfig.fragmentShader = "res/shaders/postprocess/postprocess.frag";
+    pipelineConfig.vertexShader = "shaders/screen/fullscreen_quad.vert";
+    pipelineConfig.fragmentShader = "shaders/postprocess/postprocess.frag";
     pipelineConfig.addDescriptorSetLayout(m_postProcessDescriptorSetLayout.get());
     pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eFragment, 0, sizeof(PostProcessPushConstantData));
     return m_postProcessGraphicsPipeline->recreate(pipelineConfig, "PostProcessRenderer-PostProcessGraphicsPipeline");
@@ -570,7 +570,7 @@ bool PostProcessRenderer::createBloomBlurRenderPass() {
 
     attachments[0].setFormat(Engine::deferredRenderer()->getOutputColourFormat());
     attachments[0].setSamples(samples);
-    attachments[0].setLoadOp(vk::AttachmentLoadOp::eLoad); // Clear the current mip level on every down-sample pass.
+    attachments[0].setLoadOp(vk::AttachmentLoadOp::eClear); // Clear the current mip level on every down-sample pass.
     attachments[0].setStoreOp(vk::AttachmentStoreOp::eStore);
     attachments[0].setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
     attachments[0].setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);

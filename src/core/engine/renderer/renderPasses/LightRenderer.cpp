@@ -169,8 +169,8 @@ bool LightRenderer::init() {
     pipelineConfig.device = Engine::graphics()->getDevice();
     pipelineConfig.renderPass = m_shadowRenderPass;
     pipelineConfig.setViewport(512, 512);
-    pipelineConfig.vertexShader = "res/shaders/shadow/shadow.vert";
-    pipelineConfig.fragmentShader = "res/shaders/shadow/shadow.frag";
+    pipelineConfig.vertexShader = "shaders/shadow/shadow.vert";
+    pipelineConfig.fragmentShader = "shaders/shadow/shadow.frag";
     pipelineConfig.vertexInputBindings = MeshUtils::getVertexBindingDescriptions<Vertex>();
     pipelineConfig.vertexInputAttributes = MeshUtils::getVertexAttributeDescriptions<Vertex>();
     pipelineConfig.addDescriptorSetLayout(m_shadowRenderPassDescriptorSetLayout->getDescriptorSetLayout());
@@ -208,7 +208,7 @@ bool LightRenderer::init() {
 
     ComputePipelineConfiguration computePipelineConfig{};
     computePipelineConfig.device = Engine::graphics()->getDevice();
-    computePipelineConfig.computeShader = "res/shaders/compute/compute_gaussianBlur.glsl";
+    computePipelineConfig.computeShader = "shaders/compute/compute_gaussianBlur.glsl";
     computePipelineConfig.addDescriptorSetLayout(m_vsmBlurXComputeDescriptorSetLayout.get());
     computePipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(GaussianBlurPushConstants));
     m_vsmBlurComputePipeline = std::shared_ptr<ComputePipeline>(ComputePipeline::create(computePipelineConfig, "LightRenderer-VsmBlurComputePipeline"));

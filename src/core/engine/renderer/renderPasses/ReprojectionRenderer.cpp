@@ -301,8 +301,8 @@ bool ReprojectionRenderer::createReprojectionGraphicsPipeline() {
     pipelineConfig.subpass = 0;
     pipelineConfig.setViewport(Engine::graphics()->getResolution());
     pipelineConfig.depthTestEnabled = false;
-    pipelineConfig.vertexShader = "res/shaders/screen/fullscreen_quad.vert";
-    pipelineConfig.fragmentShader = "res/shaders/postprocess/reprojection.frag";
+    pipelineConfig.vertexShader = "shaders/screen/fullscreen_quad.vert";
+    pipelineConfig.fragmentShader = "shaders/postprocess/reprojection.frag";
     pipelineConfig.addDescriptorSetLayout(m_reprojectionDescriptorSetLayout.get());
 //    pipelineConfig.addDescriptorSetLayout(Engine::lightRenderer()->getLightingRenderPassDescriptorSetLayout().get());
     return m_reprojectionGraphicsPipeline->recreate(pipelineConfig, "ReprojectionRenderer-ReprojectionGraphicsPipeline");

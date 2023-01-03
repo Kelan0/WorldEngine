@@ -628,8 +628,8 @@ GraphicsPipeline* ImmediateRenderer::getGraphicsPipeline(const RenderCommand& re
 
         pipelineConfiguration.setAttachmentBlendState(0, attachmentBlendState);
 
-        pipelineConfiguration.vertexShader = "res/shaders/debug/debug_lines.vert";
-        pipelineConfiguration.fragmentShader = "res/shaders/debug/debug_lines.frag";
+        pipelineConfiguration.vertexShader = "shaders/debug/debug_lines.vert";
+        pipelineConfiguration.fragmentShader = "shaders/debug/debug_lines.frag";
 
         pipelineConfiguration.vertexInputBindings.resize(1);
         pipelineConfiguration.vertexInputBindings[0].setBinding(0);

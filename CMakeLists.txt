@@ -37,7 +37,7 @@ elseif(NOT EXISTS "${glm_DIR}")
 endif()
 
 if ("${VTUNE_DIR}" STREQUAL "")
-    message(WARNING "VTUNE_DIR variable is not defined. Intel Instrumentation and Tracing Technology API will be disabled, no profile data will be produced for VTune Profiler")
+    message(WARNING "VTUNE_DIR variable is not defined. Intel Instrumentation and Tracing Technology API will be disabled, no profile data will be produced for VTune Profiler. This is not an error")
 elseif(NOT EXISTS "${VTUNE_DIR}")
     message(FATAL_ERROR "VTUNE_DIR was defined but the file path '${VTUNE_DIR}' does not exist.")
 else()
@@ -50,6 +50,8 @@ if ("${Vulkan_VERSION}" VERSION_GREATER_EQUAL "1.3")
 else()
     add_compile_definitions(USE_VULKAN_HASH_HPP=0)
 endif()
+
+#add_compile_definitions(VK_USE_64_BIT_PTR_DEFINES=1)
 
 find_package(SDL2 REQUIRED)
 if (${SDL2_SDL2_FOUND}) # Somebody messed up naming for MinGW SDL2. SDL2_FOUND is never set to true, instead, SDL2_SDL2_FOUND is, but find_package will not check this automatically
@@ -276,7 +278,12 @@ add_executable(${PROJECT_NAME}
         src/core/engine/event/ApplicationEvents.cpp
         src/core/engine/event/ApplicationEvents.h
         src/core/graphics/GraphicsResource.cpp
-        src/core/graphics/GraphicsResource.h src/core/engine/renderer/renderPasses/ExposureHistogram.cpp src/core/engine/renderer/renderPasses/ExposureHistogram.h src/core/core.cpp src/core/engine/ConfigManager.cpp src/core/engine/ConfigManager.h)
+        src/core/graphics/GraphicsResource.h
+        src/core/engine/renderer/renderPasses/ExposureHistogram.cpp
+        src/core/engine/renderer/renderPasses/ExposureHistogram.h
+        src/core/core.cpp
+        src/core/engine/ConfigManager.cpp
+        src/core/engine/ConfigManager.h)
 
 target_link_libraries(${PROJECT_NAME}
         ${Vulkan_LIBRARIES}

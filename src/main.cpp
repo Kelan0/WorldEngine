@@ -87,18 +87,18 @@ class App : public Application {
 
         MaterialConfiguration floorMaterialConfig{};
         floorMaterialConfig.device = Engine::graphics()->getDevice();
-        floorMaterialConfig.setAlbedoMap(loadTexture("res/textures/blacktiles04/albedo.png", vk::Format::eR8G8B8A8Unorm, sampler));
-        floorMaterialConfig.setRoughnessMap(loadTexture("res/textures/blacktiles04/roughness.png", vk::Format::eR8G8B8A8Unorm, sampler));
-//        floorMaterialConfig.setMetallicMap(loadTexture("res/textures/blacktiles04/metallic.png", vk::Format::eR8G8B8A8Unorm, sampler));
-        floorMaterialConfig.setNormalMap(loadTexture("res/textures/blacktiles04/normal.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        floorMaterialConfig.setAlbedoMap(loadTexture("textures/blacktiles04/albedo.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        floorMaterialConfig.setRoughnessMap(loadTexture("textures/blacktiles04/roughness.png", vk::Format::eR8G8B8A8Unorm, sampler));
+//        floorMaterialConfig.setMetallicMap(loadTexture("textures/blacktiles04/metallic.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        floorMaterialConfig.setNormalMap(loadTexture("textures/blacktiles04/normal.png", vk::Format::eR8G8B8A8Unorm, sampler));
         std::shared_ptr<Material> floorMaterial = std::shared_ptr<Material>(Material::create(floorMaterialConfig, "Demo-FloorMaterial"));
 
         MaterialConfiguration cubeMaterialConfig{};
         cubeMaterialConfig.device = Engine::graphics()->getDevice();
-        cubeMaterialConfig.setAlbedoMap(loadTexture("res/textures/mossybark02/albedo.png", vk::Format::eR8G8B8A8Unorm, sampler));
-        cubeMaterialConfig.setRoughnessMap(loadTexture("res/textures/mossybark02/roughness.png", vk::Format::eR8G8B8A8Unorm, sampler));
-//        cubeMaterialConfig.setMetallicMap(loadTexture("res/textures/mossybark02/metallic.png", vk::Format::eR8G8B8A8Unorm, sampler));
-        cubeMaterialConfig.setNormalMap(loadTexture("res/textures/mossybark02/normal.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        cubeMaterialConfig.setAlbedoMap(loadTexture("textures/mossybark02/albedo.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        cubeMaterialConfig.setRoughnessMap(loadTexture("textures/mossybark02/roughness.png", vk::Format::eR8G8B8A8Unorm, sampler));
+//        cubeMaterialConfig.setMetallicMap(loadTexture("textures/mossybark02/metallic.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        cubeMaterialConfig.setNormalMap(loadTexture("textures/mossybark02/normal.png", vk::Format::eR8G8B8A8Unorm, sampler));
         std::shared_ptr<Material> cubeMaterial = std::shared_ptr<Material>(Material::create(cubeMaterialConfig, "Demo-CubeMaterial"));
 
         MeshData<Vertex> testMeshData;
@@ -132,7 +132,7 @@ class App : public Application {
 
         testMeshData.clear();
         testMeshData.scale(0.5);
-        MeshUtils::loadMeshData("res/meshes/bunny.obj", testMeshData);
+        MeshUtils::loadMeshData("meshes/bunny.obj", testMeshData);
         glm::vec3 centerBottom = testMeshData.calculateBoundingBox() * glm::vec4(0, -1, 0, 1);
         testMeshData.translate(-1.0F * centerBottom);
         testMeshData.applyTransform();
@@ -175,11 +175,11 @@ class App : public Application {
 
         MaterialConfiguration christmasBallMaterialConfig{};
         christmasBallMaterialConfig.device = Engine::graphics()->getDevice();
-        christmasBallMaterialConfig.setAlbedoMap(loadTexture("res/textures/christmas_tree_ball/albedo.png", vk::Format::eR8G8B8A8Unorm, sampler));
-        christmasBallMaterialConfig.setRoughnessMap(loadTexture("res/textures/christmas_tree_ball/roughness.png", vk::Format::eR8G8B8A8Unorm, sampler));
-        christmasBallMaterialConfig.setMetallicMap(loadTexture("res/textures/christmas_tree_ball/metallic.png", vk::Format::eR8G8B8A8Unorm, sampler));
-        christmasBallMaterialConfig.setNormalMap(loadTexture("res/textures/christmas_tree_ball/normal.png", vk::Format::eR8G8B8A8Unorm, sampler));
-        christmasBallMaterialConfig.setDisplacementMap(loadTexture("res/textures/christmas_tree_ball/displacement.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        christmasBallMaterialConfig.setAlbedoMap(loadTexture("textures/christmas_tree_ball/albedo.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        christmasBallMaterialConfig.setRoughnessMap(loadTexture("textures/christmas_tree_ball/roughness.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        christmasBallMaterialConfig.setMetallicMap(loadTexture("textures/christmas_tree_ball/metallic.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        christmasBallMaterialConfig.setNormalMap(loadTexture("textures/christmas_tree_ball/normal.png", vk::Format::eR8G8B8A8Unorm, sampler));
+        christmasBallMaterialConfig.setDisplacementMap(loadTexture("textures/christmas_tree_ball/displacement.png", vk::Format::eR8G8B8A8Unorm, sampler));
         std::shared_ptr<Material> christmasBallMaterial = std::shared_ptr<Material>(Material::create(christmasBallMaterialConfig, "Demo-ChristmasBallMaterial"));
 
         Entity christmasBallEntity = EntityHierarchy::create(Engine::scene(), "christmasBallEntity");

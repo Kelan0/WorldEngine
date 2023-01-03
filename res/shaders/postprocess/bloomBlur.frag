@@ -2,8 +2,8 @@
 
 #extension GL_EXT_nonuniform_qualifier : enable
 
-#include "res/shaders/common/common.glsl"
-#include "res/shaders/histogram/histogram.glsl"
+#include "shaders/common/common.glsl"
+#include "shaders/histogram/histogram.glsl"
 
 layout(push_constant) uniform PC1 {
     vec2 texelSize;

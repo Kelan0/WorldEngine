@@ -140,8 +140,10 @@ bool DeferredRenderer::init() {
     imageCubeConfig.usage = vk::ImageUsageFlagBits::eSampled;
     imageCubeConfig.generateMipmap = true;
     imageCubeConfig.mipLevels = UINT32_MAX;
-    imageCubeConfig.imageSource.setEquirectangularSource("res/environment_maps/wide_street_02_8k.hdr");
+    imageCubeConfig.imageSource.setEquirectangularSource("environment_maps/wide_street_02_8k.hdr");
     std::shared_ptr<ImageCube> imageCube = std::shared_ptr<ImageCube>(ImageCube::create(imageCubeConfig, "DeferredRenderer-DefaultSkyboxCubeImage"));
+
+    assert(imageCube != nullptr);
 
     environmentMap = new EnvironmentMap();
     environmentMap->setEnvironmentImage(imageCube);
@@ -488,8 +490,8 @@ bool DeferredRenderer::createGeometryGraphicsPipeline() {
     pipelineConfig.subpass = 0;
     pipelineConfig.setViewport(Engine::graphics()->getResolution());
     pipelineConfig.depthTestEnabled = true;
-    pipelineConfig.vertexShader = "res/shaders/main.vert";
-    pipelineConfig.fragmentShader = "res/shaders/main.frag";
+    pipelineConfig.vertexShader = "shaders/main.vert";
+    pipelineConfig.fragmentShader = "shaders/main.frag";
     pipelineConfig.vertexInputBindings = MeshUtils::getVertexBindingDescriptions<Vertex>();
     pipelineConfig.vertexInputAttributes = MeshUtils::getVertexAttributeDescriptions<Vertex>();
     pipelineConfig.setAttachmentBlendState(0, AttachmentBlendState(false, 0b1111));
@@ -508,8 +510,8 @@ bool DeferredRenderer::createLightingGraphicsPipeline() {
     pipelineConfig.subpass = 1;
     pipelineConfig.setViewport(Engine::graphics()->getResolution());
     pipelineConfig.depthTestEnabled = false;
-    pipelineConfig.vertexShader = "res/shaders/screen/fullscreen_quad.vert";
-    pipelineConfig.fragmentShader = "res/shaders/deferred/lighting.frag";
+    pipelineConfig.vertexShader = "shaders/screen/fullscreen_quad.vert";
+    pipelineConfig.fragmentShader = "shaders/deferred/lighting.frag";
     pipelineConfig.addDescriptorSetLayout(m_lightingDescriptorSetLayout.get());
     pipelineConfig.addDescriptorSetLayout(Engine::lightRenderer()->getLightingRenderPassDescriptorSetLayout().get());
     return m_lightingGraphicsPipeline->recreate(pipelineConfig, "DeferredRenderer-LightingGraphicsPipeline");

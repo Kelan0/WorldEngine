@@ -1,4 +1,5 @@
 #include "core/engine/geometry/MeshData.h"
+#include "core/application/Application.h"
 #include <fstream>
 #include <filesystem>
 
@@ -205,7 +206,9 @@ bool MeshUtils::loadOBJFile(const std::string& filePath, MeshUtils::OBJMeshData&
     // TODO: this could be optimised a lot.
 
     printf("Loading OBJ file \"%s\"\n", filePath.c_str());
-    std::ifstream stream(filePath.c_str(), std::ifstream::in);
+
+    std::string absFilePath = Application::instance()->getAbsoluteResourceFilePath(filePath);
+    std::ifstream stream(absFilePath.c_str(), std::ifstream::in);
 
     if (!stream.is_open()) {
         printf("Failed to open OBJ file\n");
@@ -479,14 +482,15 @@ bool writeMeshCache(const std::filesystem::path& path, MeshUtils::OBJMeshData& m
 }
 
 bool MeshUtils::loadMeshData(const std::string& filePath, MeshUtils::OBJMeshData& meshData) {
-    size_t extensionPos = filePath.find_last_of('.');
+    std::string absFilePath = Application::instance()->getAbsoluteResourceFilePath(filePath);
+    size_t extensionPos = absFilePath.find_last_of('.');
 
 //    std::string sourceExtension;
 //    if (extensionPos != std::string::npos)
-//        sourceExtension = filePath.substr(extensionPos + 1);
+//        sourceExtension = absFilePath.substr(extensionPos + 1);
 
-    std::filesystem::path sourceMeshFilePath(filePath);
-    std::filesystem::path cachedMeshFilePath(filePath.substr(0, extensionPos) + ".mesh");
+    std::filesystem::path sourceMeshFilePath(absFilePath);
+    std::filesystem::path cachedMeshFilePath(absFilePath.substr(0, extensionPos) + ".mesh");
 
     if (std::filesystem::exists(cachedMeshFilePath)) {
 
