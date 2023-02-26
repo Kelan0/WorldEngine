@@ -44,7 +44,7 @@ bool Application::parseArgs(int argc, char* argv[]) {
     assert(argc > 0); // First argument is the executable directory
     m_executionDirectory = PlatformUtils::getFileDirectory(argv[0]);
 
-    m_resourceDirectory = "./";
+    m_resourceDirectory = "res/";
     m_shaderCompilerDirectory = "";
 
     char* value;
@@ -435,6 +435,11 @@ const std::string& Application::getShaderCompilerDirectory() const {
 }
 
 std::string Application::getAbsoluteResourceFilePath(const std::string& resourceFilePath) const {
+    auto path = std::filesystem::path(resourceFilePath);
+    if (path.is_absolute()) {
+        std::string s = path.string();
+        return s;
+    }
     return std::filesystem::absolute(getResourceDirectory() + resourceFilePath).string();
 }
 

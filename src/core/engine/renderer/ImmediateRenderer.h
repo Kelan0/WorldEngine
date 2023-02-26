@@ -62,6 +62,7 @@ private:
     struct UniformBufferData {
         glm::mat4 modelViewMatrix;
         glm::mat4 projectionMatrix;
+        glm::vec2 resolution;
         bool depthTestEnabled;
     };
 

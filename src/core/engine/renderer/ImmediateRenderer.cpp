@@ -220,6 +220,7 @@ void ImmediateRenderer::begin(const MeshPrimitiveType& primitiveType) {
     UniformBufferData& uniformBufferData = m_uniformBufferData.emplace_back();
     uniformBufferData.modelViewMatrix = m_modelMatrixStack.top();
     uniformBufferData.projectionMatrix = m_projectionMatrixStack.top();
+    uniformBufferData.resolution = Engine::graphics()->getResolution();
     uniformBufferData.depthTestEnabled = m_renderState.depthTestEnabled;
 
 //    printf("Begin modelViewMatrix:\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n",

@@ -30,7 +30,7 @@ GraphicsManager::GraphicsManager():
         m_descriptorPool(nullptr),
         m_memory(nullptr),
         m_debugMessenger(nullptr),
-        m_preferredPresentMode(vk::PresentModeKHR::eMailbox),
+        m_preferredPresentMode(vk::PresentModeKHR::eImmediate), // eMailbox
         m_isInitialized(false),
         m_recreateSwapchain(false),
         m_resolutionChanged(false),

@@ -108,7 +108,8 @@ LoadedShaderInfo* ShaderLoadingUpdater::getLoadedShaderInfo(const std::string& f
 
 void ShaderLoadingUpdater::checkModifiedShaders() {
     for (auto& [filePath, dependencyInfo] : m_loadedDependencies) {
-        if (std::filesystem::last_write_time(dependencyInfo.filePath) < dependencyInfo.lastCheckTime) {
+        std::string absDependencyFilePath = Application::instance()->getResourceDirectory() + dependencyInfo.filePath;
+        if (std::filesystem::last_write_time(absDependencyFilePath) < dependencyInfo.lastCheckTime) {
             continue; // File was previously checked after it was previously modified
         }
         dependencyInfo.lastCheckTime = std::chrono::file_clock::now();
@@ -136,7 +137,8 @@ void ShaderLoadingUpdater::checkModifiedShaders() {
     }
 
     for (auto& [key, shaderInfo] : m_loadedShaders) {
-        if (std::filesystem::last_write_time(shaderInfo.filePath) < shaderInfo.fileLoadedTime) {
+        std::string absFilePath = Application::instance()->getResourceDirectory() + shaderInfo.filePath;
+        if (std::filesystem::last_write_time(absFilePath) < shaderInfo.fileLoadedTime) {
             continue; // Shader was previously loaded after it was previously modified
         }
 
@@ -218,19 +220,19 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
     Util::trim(entryPoint);
 
 
-    std::string absFilePath = Application::instance()->getAbsoluteResourceFilePath(filePath);
+    std::string absFilePath = Application::instance()->getResourceDirectory() + filePath;
 
     if (entryPoint.empty()) {
-        printf("Cannot compile shader \"%s\": Entry point is not specified\n", absFilePath.c_str());
+        printf("Cannot compile shader \"%s\": Entry point is not specified\n", filePath.c_str());
         return false;
     }
 
     if (entryPoint.find(' ') != std::string::npos) {
-        printf("Cannot compile shader \"%s\" with specified entry point \"%s\": The entry point must not contain spaces\n", absFilePath.c_str(), entryPoint.c_str());
+        printf("Cannot compile shader \"%s\" with specified entry point \"%s\": The entry point must not contain spaces\n", filePath.c_str(), entryPoint.c_str());
         return false;
     }
 
-    LoadedShaderInfo* loadedShaderInfo = ShaderLoadingUpdater::instance()->getLoadedShaderInfo(absFilePath, entryPoint);
+    LoadedShaderInfo* loadedShaderInfo = ShaderLoadingUpdater::instance()->getLoadedShaderInfo(filePath, entryPoint);
     if (loadedShaderInfo != nullptr && !loadedShaderInfo->shouldReload) {
         if (bytecode != nullptr)
             *bytecode = loadedShaderInfo->bytecode; // copy assignment
@@ -265,7 +267,7 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
 
                 if (!std::filesystem::exists(absFilePath)) {
                     // Source file does not exist
-                    printf("Shader source file \"%s\" was not found\n", absFilePath.c_str());
+                    printf("Shader source file \"%s\" was not found\n", filePath.c_str());
                     return false;
                 }
 
@@ -285,7 +287,7 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
         }
 
         if (shouldCompile) {
-            printf("Compiling shader: %s@%s\n", absFilePath.c_str(), entryPoint.c_str());
+            printf("Compiling shader: %s@%s\n", filePath.c_str(), entryPoint.c_str());
 
             const std::string& glslcdir = Application::instance()->getShaderCompilerDirectory();
             if (!glslcdir.empty() && !std::filesystem::exists(glslcdir + "glslc.exe")) {
@@ -319,7 +321,7 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
                     Util::trim(commandResponse);
                     printf("SPIR-V compile command failed\n%s\n", commandResponse.c_str());
                 } else {
-                    generateShaderDependencies(command, absFilePath, dependencyFilePath);
+                    generateShaderDependencies(command, filePath, dependencyFilePath);
                 }
             }
         }
@@ -335,7 +337,7 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
 
         LoadedShaderInfo newShaderInfo{};
         newShaderInfo.stage = shaderStage;
-        newShaderInfo.filePath = absFilePath;
+        newShaderInfo.filePath = filePath;
         newShaderInfo.entryPoint = entryPoint;
         newShaderInfo.fileLoadedTime = std::chrono::file_clock::now();
         newShaderInfo.bytecode.resize(file.tellg());
