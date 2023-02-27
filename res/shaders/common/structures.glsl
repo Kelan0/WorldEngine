@@ -31,7 +31,8 @@ struct LightInfo {
     vec4 worldPosition;
     vec4 worldDirection;
     vec4 intensity;
-    vec4 _pad1;
+    vec3 _pad1;
+    float cosAngularSize;
     uint shadowMapIndex;
     uint shadowMapCount;
     uint type;

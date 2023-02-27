@@ -56,13 +56,13 @@ public:
 
     void setDownsampleFactor(const uint32_t& downsampleFactor);
 
-    float getOffset() const;
+    float getMinLogLuminance() const;
 
-    void setOffset(const float& offset);
+    void setMinLogLuminance(const float& minLogLuminance);
 
-    float getScale() const;
+    float getLogLuminanceRange() const;
 
-    void setScale(const float& scale);
+    void setLogLuminanceRange(const float& logLuminanceRange);
 
     float getLowPercent() const;
 
@@ -116,8 +116,10 @@ private:
     glm::uvec2 m_resolution;
     uint32_t m_downsampleFactor;
     uint32_t m_binCount;
-    float m_offset;
-    float m_scale;
+    float m_minLogLuminance;
+    float m_logLuminanceRange;
+//    float m_offset;
+//    float m_scale;
     float m_lowPercent;
     float m_highPercent;
     float m_exposureSpeedUp;

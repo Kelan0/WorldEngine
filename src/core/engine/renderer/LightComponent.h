@@ -21,6 +21,8 @@ public:
 
     LightComponent& setIntensity(const float& r, const float& g, const float& b);
 
+    LightComponent& setAngularSize(const float& angularSize);
+
     LightComponent& setShadowCaster(const bool& shadowCaster);
 
     LightComponent& setCsmMapBasedSelection(const bool& csmMapBasedSelection);
@@ -34,6 +36,8 @@ public:
     [[nodiscard]] const LightType& getType() const;
 
     [[nodiscard]] const glm::vec3& getIntensity() const;
+
+    [[nodiscard]] const float& getAngularSize() const;
 
     [[nodiscard]] bool isShadowCaster() const;
 
@@ -51,6 +55,7 @@ private:
 private:
     LightType m_type;
     glm::vec3 m_intensity;
+    float m_angularSize; // angular size in radians
     glm::uvec2 m_shadowResolution;
     ShadowMap* m_shadowMap;
     std::vector<double> m_cascadeDistances;

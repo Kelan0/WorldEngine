@@ -26,6 +26,11 @@ LightComponent& LightComponent::setIntensity(const float& r, const float& g, con
     return setIntensity(glm::vec3(r, g, b));
 }
 
+LightComponent& LightComponent::setAngularSize(const float& angularSize) {
+    m_angularSize = angularSize;
+    return *this;
+}
+
 LightComponent& LightComponent::setShadowCaster(const bool& shadowCaster) {
     m_flags_shadowCaster = shadowCaster;
     return *this;
@@ -56,6 +61,10 @@ const LightType& LightComponent::getType() const {
 
 const glm::vec3& LightComponent::getIntensity() const {
     return m_intensity;
+}
+
+const float& LightComponent::getAngularSize() const {
+    return m_angularSize;
 }
 
 bool LightComponent::isShadowCaster() const {

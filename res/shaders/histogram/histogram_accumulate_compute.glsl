@@ -13,8 +13,8 @@ layout (local_size_z = 1) in;
 layout(push_constant) uniform PC1 {
     uvec2 resolution;
     uint binCount;
-    float offset;
-    float scale;
+    float minLogLum;
+    float oneOverLogLumRange;
 };
 
 layout(set = 0, binding = 0) uniform sampler2D srcImage;
@@ -39,17 +39,17 @@ void main() {
         vec2 coord = vec2(invocation.xy) / vec2(resolution);
         uint weight = 1;
 
-        if (true) {
-            vec2 d = abs(coord - vec2(0.5));
-            float vfactor = clamp(1.0 - dot(d, d), 0.0, 1.0);
-            vfactor *= vfactor;
-            weight = uint(64.0 * vfactor);
-        }
+//        if (true) {  // Bias to center of screen
+//            vec2 d = abs(coord - vec2(0.5));
+//            float vfactor = clamp(1.0 - dot(d, d), 0.0, 1.0);
+//            vfactor *= vfactor;
+//            weight = uint(64.0 * vfactor);
+//        }
 
-        vec3 colour = texture(srcImage, coord).rgb;
+        vec3 hdrColour = texture(srcImage, coord).rgb;
 
-        float luminance = dot(colour.rgb, RGB_LUMINANCE);
-        float bin = getHistogramBinFromLuminance(luminance, offset, scale) * (binCount - 1);
+        float luminance = dot(hdrColour.rgb, RGB_LUMINANCE);
+        float bin = getHistogramBinFromLuminance(luminance, minLogLum, oneOverLogLumRange, binCount);
         atomicAdd(shared_bins[uint(bin)], weight);
     }
 

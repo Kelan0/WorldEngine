@@ -608,6 +608,7 @@ void LightRenderer::updateLightInfoBuffer(size_t maxLights) {
             defaultLight.intensity = glm::vec4(0.0F);
             defaultLight.worldPosition = glm::vec4(0.0F, 0.0F, 0.0F, 1.0F);
             defaultLight.worldDirection = glm::vec4(0.0F, 0.0F, 1.0F, 0.0F);
+            defaultLight.cosAngularSize = 1.0F; // 0 degrees
             defaultLight.shadowMapIndex = 0;
             defaultLight.shadowMapCount = 0;
             defaultLight.flags = 0;
@@ -631,6 +632,7 @@ void LightRenderer::updateLightInfoBuffer(size_t maxLights) {
             gpuLight.worldPosition = glm::vec4(transform.getTranslation(), 1.0F); // TODO: this should probably be view-space position to avoid loosing precision in extremely large scenes. (planet rendering)
             gpuLight.worldDirection = glm::vec4(transform.getForwardAxis(), 0.0F);
             gpuLight.intensity = glm::vec4(lightComponent.getIntensity(), 0.0F);
+            gpuLight.cosAngularSize = glm::cos(lightComponent.getAngularSize());
             gpuLight.shadowMapCount = 0;
 
             ShadowMap* shadowMap = lightComponent.getShadowMap();

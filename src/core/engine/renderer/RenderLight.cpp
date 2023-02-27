@@ -29,10 +29,19 @@ void DirectionalLight::setIntensity(const glm::vec3& intensity) {
     m_intensity = intensity;
 }
 
+const float& DirectionalLight::getAngularSize() const {
+    return m_angularSize;
+}
+
+void DirectionalLight::setAngularSize(const float& angularSize) {
+    m_angularSize = angularSize;
+}
+
 void DirectionalLight::copyLightData(GPULight* dst) const {
     dst->type = getType();
     dst->worldDirection = glm::vec4(m_direction, 0.0F);
     dst->intensity = glm::vec4(m_intensity, 1.0F);
+    dst->cosAngularSize = glm::cos(m_angularSize);
 }
 
 

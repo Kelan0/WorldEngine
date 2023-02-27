@@ -160,6 +160,25 @@ void EnvironmentMap::update() {
     }
 }
 
+void EnvironmentMap::setEmptyEnvironmentImage() {
+    ImageData* imageData = new ImageData(2, 1, ImagePixelLayout::RGBA, ImagePixelFormat::Float32);
+    imageData->setPixelf(0, 0, 0.0F, 0.0F, 0.0F, 0.0F);
+    imageData->setPixelf(1, 0, 0.0F, 0.0F, 0.0F, 0.0F);
+
+    ImageCubeConfiguration imageCubeConfig{};
+    imageCubeConfig.device = Engine::graphics()->getDevice();
+    imageCubeConfig.format = vk::Format::eR32G32B32A32Sfloat;
+    imageCubeConfig.usage = vk::ImageUsageFlagBits::eSampled;
+    imageCubeConfig.generateMipmap = true;
+    imageCubeConfig.mipLevels = UINT32_MAX;
+    imageCubeConfig.imageSource.setEquirectangularSource(imageData);
+    std::shared_ptr<ImageCube> imageCube = std::shared_ptr<ImageCube>(ImageCube::create(imageCubeConfig, "EnvironmentMap-EmptyCubeImage"));
+
+    setEnvironmentImage(imageCube);
+
+    delete imageData;
+}
+
 void EnvironmentMap::setEnvironmentImage(const std::shared_ptr<ImageCube>& environmentImage) {
     m_environmentImage = environmentImage;
     m_environmentMapTexture = createTexture(environmentImage, 0, UINT32_MAX);

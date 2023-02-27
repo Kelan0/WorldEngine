@@ -16,7 +16,8 @@ struct GPULight {
     glm::vec4 worldPosition;
     glm::vec4 worldDirection;
     glm::vec4 intensity;
-    glm::vec4 _pad1;
+    glm::vec3 _pad1;
+    float cosAngularSize;
     uint32_t shadowMapIndex;
     uint32_t shadowMapCount; // Number of cascades for CSM directional lights
     uint32_t type;
@@ -56,11 +57,16 @@ public:
 
     void setIntensity(const glm::vec3& intensity);
 
+    const float& getAngularSize() const;
+
+    void setAngularSize(const float& angularSize);
+
     virtual void copyLightData(GPULight* dst) const override;
 
 private:
     glm::vec3 m_direction;
     glm::vec3 m_intensity;
+    float m_angularSize; // Angular diameter in radians
 };
 
 class PointLight : public Light {

@@ -146,7 +146,8 @@ bool DeferredRenderer::init() {
     assert(imageCube != nullptr);
 
     environmentMap = new EnvironmentMap();
-    environmentMap->setEnvironmentImage(imageCube);
+//    environmentMap->setEnvironmentImage(imageCube);
+    environmentMap->setEmptyEnvironmentImage();
     environmentMap->update();
 
     Engine::eventDispatcher()->connect(&DeferredRenderer::recreateSwapchain, this);
@@ -245,9 +246,9 @@ void DeferredRenderer::render(const double& dt, const vk::CommandBuffer& command
         descriptorSetWriter.writeImage(EMISSION_TEXTURE_BINDING, m_attachmentSampler.get(), getEmissionImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
         descriptorSetWriter.writeImage(VELOCITY_TEXTURE_BINDING, m_attachmentSampler.get(), getVelocityImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
         descriptorSetWriter.writeImage(DEPTH_TEXTURE_BINDING, m_depthSampler.get(), getDepthImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
-        descriptorSetWriter.writeImage(ENVIRONMENT_CUBEMAP_BINDING, environmentMap->getEnvironmentMapTexture().get(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+        descriptorSetWriter.writeImage(ENVIRONMENT_CUBEMAP_BINDING,environmentMap->getEnvironmentMapTexture().get(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
         descriptorSetWriter.writeImage(SPECULAR_REFLECTION_CUBEMAP_BINDING,environmentMap->getSpecularReflectionMapTexture().get(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
-        descriptorSetWriter.writeImage(DIFFUSE_IRRADIANCE_CUBEMAP_BINDING, environmentMap->getDiffuseIrradianceMapTexture().get(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+        descriptorSetWriter.writeImage(DIFFUSE_IRRADIANCE_CUBEMAP_BINDING,environmentMap->getDiffuseIrradianceMapTexture().get(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
         descriptorSetWriter.writeImage(BRDF_INTEGRATION_MAP_BINDING, EnvironmentMap::getBRDFIntegrationMap(commandBuffer).get(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
     }
     descriptorSetWriter.write();

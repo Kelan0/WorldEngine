@@ -243,7 +243,8 @@ class App : public Application {
 
         Entity lightEntity6 = EntityHierarchy::create(Engine::scene(), "lightEntity6");
         lightEntity6.addComponent<Transform>().setRotation(glm::vec3(-1.0F, -1.3F, -1.0F), glm::vec3(0.0F, 1.0F, 0.0F), false);
-        lightEntity6.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(70.0F, 70.0F, 70.0F).setShadowCaster(true).setShadowCascadeDistances({3.0F, 6.0F, 12.0F, 24.0F});
+        glm::vec3 sunIntensity = glm::vec3(90.0F);
+        lightEntity6.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(sunIntensity).setAngularSize(glm::radians(0.52F)).setShadowCaster(true).setShadowCascadeDistances({3.0F, 6.0F, 12.0F, 24.0F});
 
 //        Entity lightEntity7 = EntityHierarchy::create(Engine::scene(), "lightEntity7");
 //        lightEntity7.addComponent<Transform>().setRotation(glm::vec3(-1.4F, -1.0F, 0.2F), glm::vec3(0.0F, 1.0F, 0.0F), false);
@@ -332,8 +333,8 @@ class App : public Application {
         int bloomBlurMaxIterations = (int)Engine::postProcessingRenderer()->getMaxBloomBlurIterations() - 1;
 
         uint32_t histogramDownsampleFactor = Engine::postProcessingRenderer()->exposureHistogram()->getDownsampleFactor();
-        float histogramOffset = Engine::postProcessingRenderer()->exposureHistogram()->getOffset();
-        float histogramScale = Engine::postProcessingRenderer()->exposureHistogram()->getScale();
+        float histogramMinLogLum = Engine::postProcessingRenderer()->exposureHistogram()->getMinLogLuminance();
+        float histogramLogLumRange = Engine::postProcessingRenderer()->exposureHistogram()->getLogLuminanceRange();
         float histogramLowPercent = Engine::postProcessingRenderer()->exposureHistogram()->getLowPercent() * 100.0F;
         float histogramHighPercent = Engine::postProcessingRenderer()->exposureHistogram()->getHighPercent() * 100.0F;
         float exposureSpeedUp = Engine::postProcessingRenderer()->exposureHistogram()->getExposureSpeedUp();
@@ -373,8 +374,8 @@ class App : public Application {
         }
         if (ImGui::CollapsingHeader("Exposure")) {
             ImGui::Checkbox("Histogram Normalized", &histogramNormalized);
-            ImGui::DragFloat("Histogram Offset", &histogramOffset, 0.005F, -2.0F, 2.0F);
-            ImGui::DragFloat("Histogram Scale", &histogramScale, 0.005F, 0.005F, 2.0F);
+            ImGui::DragFloat("Histogram log2(lum) Min", &histogramMinLogLum, 0.05F, -30.0F, 10.0F);
+            ImGui::DragFloat("Histogram log2(lum) Range", &histogramLogLumRange, 0.05F, 1.0F, 40.0F);
             ImGui::DragFloat("Histogram Low Percent", &histogramLowPercent, 0.1F, 0.0F, histogramHighPercent);
             ImGui::DragFloat("Histogram High Percent", &histogramHighPercent, 0.1F, histogramLowPercent, 100.0F);
             ImGui::DragFloat("Exposure Speed Up", &exposureSpeedUp, 0.005F, 0.0F, 20.0F, "%.5f");
@@ -409,8 +410,8 @@ class App : public Application {
         Engine::postProcessingRenderer()->setBloomBlurIterations(bloomBlurIterations + 1);
 
         Engine::postProcessingRenderer()->exposureHistogram()->setDownsampleFactor(histogramDownsampleFactor);
-        Engine::postProcessingRenderer()->exposureHistogram()->setOffset(histogramOffset);
-        Engine::postProcessingRenderer()->exposureHistogram()->setScale(histogramScale);
+        Engine::postProcessingRenderer()->exposureHistogram()->setMinLogLuminance(histogramMinLogLum);
+        Engine::postProcessingRenderer()->exposureHistogram()->setLogLuminanceRange(histogramLogLumRange);
         Engine::postProcessingRenderer()->exposureHistogram()->setLowPercent(histogramLowPercent * 0.01F);
         Engine::postProcessingRenderer()->exposureHistogram()->setHighPercent(histogramHighPercent * 0.01F);
         Engine::postProcessingRenderer()->exposureHistogram()->setExposureSpeedUp(exposureSpeedUp);

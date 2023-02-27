@@ -257,6 +257,18 @@ vec3 calculateDirectionalLight(in SurfacePoint surface, in LightInfo light) {
     return calculateOutgoingRadiance(surface, lightRadiance, L);
 }
 
+vec3 calculateDirectionalLightScattering(in vec3 viewRay, in LightInfo light) {
+    vec3 L = -1.0 * vec3(light.worldDirection);
+
+    vec3 lightRadiance = light.intensity.rgb;
+
+    float d = dot(viewRay, L);
+    const float EPS = 0.0;//1e-5;
+    d = smoothstep(light.cosAngularSize - EPS, light.cosAngularSize + EPS, d);
+//    d = step(light.cosAngularSize, d);
+    return lightRadiance * d * 5000.0;
+}
+
 void main() {
     SurfacePoint surface;
     loadSurface(fs_texture, surface);
@@ -264,8 +276,15 @@ void main() {
     vec3 finalColour = vec3(0.0);
 
     if (!surface.exists) {
-        finalColour = textureLod(environmentCubeMap, getViewRay(fs_texture, cameraRays), 0.5).rgb;
-
+        vec3 viewRay = getViewRay(fs_texture, cameraRays);
+        finalColour = textureLod(environmentCubeMap, viewRay, 0.5).rgb;
+        for (uint i = 0; i < lightCount; ++i) {
+            switch (lights[i].type) {
+                case LIGHT_TYPE_DIRECTIONAL:
+                finalColour += calculateDirectionalLightScattering(viewRay, lights[i]);
+                break;
+            }
+        }
     } else {
         vec3 cameraPos = vec3(0.0); // camera at origin
 

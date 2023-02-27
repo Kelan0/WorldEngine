@@ -22,19 +22,18 @@
 
 struct ClearHistogramPushConstantData {
     uint32_t binCount;
-    float offset;
-    float scale;
 };
 struct AccumulateHistogramPushConstantData {
     glm::uvec2 resolution;
     uint32_t binCount;
-    float offset;
-    float scale;
+    float minLogLum;
+    float oneOverLogLumRange;
 };
 struct AverageHistogramPushConstantData {
+    glm::uvec2 resolution;
     uint32_t binCount;
-    float offset;
-    float scale;
+    float minLogLum;
+    float logLumRange;
     float lowPercent;
     float highPercent;
     float speedUp;
@@ -53,8 +52,8 @@ ExposureHistogram::ExposureHistogram():
     m_resources.initDefault();
     setDownsampleFactor(2);
     setBinCount(256);
-    setOffset(0.5F);
-    setScale(0.06F);
+    setMinLogLuminance(-8.0F);
+    setLogLuminanceRange(16.0F);
     setLowPercent(0.1F);
     setHighPercent(0.9F);
     setExposureSpeedUp(3.0F);
@@ -139,19 +138,20 @@ void ExposureHistogram::update(const double& dt, const vk::CommandBuffer& comman
 
     ClearHistogramPushConstantData clearPushConstantData{};
     clearPushConstantData.binCount = m_binCount;
-    clearPushConstantData.offset = m_offset;
-    clearPushConstantData.scale = m_scale;
+//    clearPushConstantData.offset = m_offset;
+//    clearPushConstantData.scale = m_scale;
 
     AccumulateHistogramPushConstantData accumulatePushConstantData{};
     accumulatePushConstantData.resolution = m_resolution;
     accumulatePushConstantData.binCount = m_binCount;
-    accumulatePushConstantData.offset = m_offset;
-    accumulatePushConstantData.scale = m_scale;
+    accumulatePushConstantData.minLogLum = m_minLogLuminance;
+    accumulatePushConstantData.oneOverLogLumRange = 1.0F / m_logLuminanceRange;
 
     AverageHistogramPushConstantData averagePushConstantData{};
+    averagePushConstantData.resolution = m_resolution;
     averagePushConstantData.binCount = m_binCount;
-    averagePushConstantData.offset = m_offset;
-    averagePushConstantData.scale = m_scale;
+    averagePushConstantData.minLogLum = m_minLogLuminance;
+    averagePushConstantData.logLumRange = m_logLuminanceRange;
     averagePushConstantData.lowPercent = m_lowPercent;
     averagePushConstantData.highPercent = m_highPercent;
     averagePushConstantData.speedUp = m_exposureSpeedUp;
@@ -215,20 +215,20 @@ void ExposureHistogram::setDownsampleFactor(const uint32_t& downsampleFactor) {
     m_downsampleFactor = glm::min(downsampleFactor, (uint32_t)8);
 }
 
-float ExposureHistogram::getOffset() const {
-    return m_offset;
+float ExposureHistogram::getMinLogLuminance() const {
+    return m_minLogLuminance;
 }
 
-void ExposureHistogram::setOffset(const float& offset) {
-    m_offset = offset;
+void ExposureHistogram::setMinLogLuminance(const float& minLogLuminance) {
+    m_minLogLuminance = minLogLuminance;
 }
 
-float ExposureHistogram::getScale() const {
-    return m_scale;
+float ExposureHistogram::getLogLuminanceRange() const {
+    return m_logLuminanceRange;
 }
 
-void ExposureHistogram::setScale(const float& scale) {
-    m_scale = scale;
+void ExposureHistogram::setLogLuminanceRange(const float& logLuminanceRange) {
+    m_logLuminanceRange = logLuminanceRange;
 }
 
 float ExposureHistogram::getLowPercent() const {

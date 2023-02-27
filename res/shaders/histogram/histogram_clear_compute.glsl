@@ -10,8 +10,6 @@ layout (local_size_z = 1) in;
 
 layout(push_constant) uniform PC1 {
     uint binCount;
-    float offset;
-    float scale;
 };
 
 layout(set = 0, binding = 1, std430) writeonly buffer HistogramBuffer {
@@ -23,8 +21,6 @@ void main() {
     const uint invocationIndex = gl_GlobalInvocationID.x;
 
     dstHistogramHeader.binCount = binCount;
-    dstHistogramHeader.offset = offset;
-    dstHistogramHeader.scale = scale;
     dstHistogramHeader.averageLuminance = 0.0;
     dstHistogramHeader.maxValue = 0;
     dstHistogramHeader.sumValue = 0;

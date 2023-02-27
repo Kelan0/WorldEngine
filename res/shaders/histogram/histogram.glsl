@@ -3,8 +3,8 @@
 
 struct HistogramBufferHeader {
     uint binCount;
-    float offset;
-    float scale;
+    float minLogLum;
+    float logLumRange;
     float averageLuminance;
     uint maxValue;
     uint sumValue;
@@ -12,12 +12,15 @@ struct HistogramBufferHeader {
     float exposure;
 };
 
-float getHistogramBinFromLuminance(float value, float offset, float scale) {
-    float logValue = log2(value);
-//    logValue = mix(-9999.0, logValue, value < 1e-4); // Correct for log(0)
-    return clamp(logValue * scale + offset, 0.0, 1.0);
+float getHistogramBinFromLuminance(float value, float minLogLum, float oneOverLogLumRange, float binCount) {
+    const float EPSILON = 1.0 / 255.0;
+    if (value < EPSILON) {
+        return 0;
+    }
+    float logLuminance = clamp((log2(value) - minLogLum) * oneOverLogLumRange, 0.0, 1.0);
+    return logLuminance * (binCount - 2.0) + 1.0;
 }
 
-float getLuminanceFromHistogramBin(float bin, float offset, float scale) {
-    return exp2((bin - offset) / scale);
+float getLuminanceFromHistogramBin(float bin, float minLogLum, float logLumRange, float binCount) {
+    return exp2((((bin - 1.0) / (binCount - 2.0)) * logLumRange) + minLogLum);
 }

@@ -9,9 +9,12 @@ layout (local_size_y = 1) in;
 layout (local_size_z = 1) in;
 
 layout(push_constant) uniform PC1 {
+    uvec2 resolution;
     uint binCount;
-    float offset;
-    float scale;
+    float minLogLum;
+    float logLumRange;
+//    float offset;
+//    float scale;
     float lowPercent;
     float highPercent;
     float speedUp;
@@ -30,37 +33,12 @@ layout(set = 0, binding = 2, std430) buffer PrevHistogramBuffer {
     uint prevHistogramBuffer[];
 };
 
-shared uint shared_bins_max[256];
-shared uint shared_bins_sum[256];
+shared uint histogramShared_avg[256];
+shared uint histogramShared_max[256];
 
-void filterLuminance(in uint binIndex, in float oneOverMaxValue, in float offset, in float scale, inout vec4 filterVal) {
-    float bin = float(binIndex) / float(binCount);
-    float binValue = float(histogramBuffer[binIndex]) * oneOverMaxValue;
-
-    float deltaOffset = min(filterVal.z, binValue);
-    binValue -= deltaOffset;
-    filterVal.zw -= deltaOffset.xx;
-
-    binValue = min(filterVal.w, binValue);
-    filterVal.w -= binValue;
-
-    float luminance = getLuminanceFromHistogramBin(bin, offset, scale);
-
-    filterVal.xy += vec2(luminance * binValue, binValue);
-}
-
-float getAverageLuminance(in float lowPercent, in float highPercent, in float oneOverMaxValue, in uint sumValue, in float offset, in float scale) {
-    float fSumValue = float(sumValue) * oneOverMaxValue;
-    vec4 filterVal = vec4(0.0, 0.0, fSumValue * lowPercent, fSumValue * highPercent);
-
-    for (uint i = 0; i < binCount; ++i)
-        filterLuminance(i, oneOverMaxValue, offset, scale, filterVal);
-
-    return filterVal.x / max(filterVal.y, 1e-5);
-}
 
 float getExposureMultiplier(in float luminance) {
-    luminance = max(1e-5, luminance);
+    luminance = max(0.01, luminance);
 //    float keyValue = 1.03 - (2.0 / (2.0 + log2(luminance + 1.0)));
 
     float keyValue = 0.18;
@@ -83,31 +61,37 @@ float interpolateExposure(in float newExposure, in float oldExposure, in float s
 void main() {
     const uint invocationIndex = gl_GlobalInvocationID.x;
 
-    if (invocationIndex < binCount) {
-        shared_bins_max[invocationIndex] = histogramBuffer[invocationIndex];
-        shared_bins_sum[invocationIndex] = histogramBuffer[invocationIndex];
+    uint countForThisBin = histogramBuffer[invocationIndex];
+    histogramShared_avg[invocationIndex] = countForThisBin * invocationIndex;
+    histogramShared_max[invocationIndex] = invocationIndex == 0 ? 0 : invocationIndex == (binCount - 1) ? 0 : countForThisBin;
+
+    barrier();
+
+    for (uint i = binCount >> 1; i > 0; i >>= 1) {
+        if (invocationIndex < i) {
+            histogramShared_avg[invocationIndex] += histogramShared_avg[invocationIndex + i];
+            histogramShared_max[invocationIndex] = max(histogramShared_max[invocationIndex], histogramShared_max[invocationIndex + i]);
+        }
 
         barrier();
+    }
+    barrier();
 
-        for (uint i = binCount >> 1; i > 0; i >>= 1) {
-            if (invocationIndex < i) {
-                shared_bins_max[invocationIndex] = max(shared_bins_max[invocationIndex], shared_bins_max[invocationIndex + i]);
-                shared_bins_sum[invocationIndex] += shared_bins_sum[invocationIndex + i];
-            }
+    if (invocationIndex == 0) {
+        const float weightScale = 1.0;
+        uint numPixels = resolution.x * resolution.y;
+        float weightedLogAverage = ((histogramShared_avg[0] / weightScale) / max(numPixels - float(countForThisBin / weightScale), 1.0)) - 1.0;
+        float weightedAverageLuminance = getLuminanceFromHistogramBin(weightedLogAverage, minLogLum, logLumRange, binCount);
 
-            barrier();
-        }
-        barrier();
+        histogramHeader.averageLuminance = weightedAverageLuminance;
+        float exposure = getExposureMultiplier(histogramHeader.averageLuminance);
+        exposure = interpolateExposure(exposure, prevHistogramHeader.exposure, speedUp, speedDown, deltaTime);
+        histogramHeader.prevExposure = prevHistogramHeader.exposure;
+        histogramHeader.exposure = exposure;
+        histogramHeader.minLogLum = minLogLum;
+        histogramHeader.logLumRange = logLumRange;
+        histogramHeader.binCount = binCount;
 
-        if (invocationIndex == 0) {
-            histogramHeader.maxValue = shared_bins_max[0];
-            histogramHeader.sumValue = shared_bins_sum[0];
-            histogramHeader.averageLuminance = getAverageLuminance(lowPercent, highPercent, 1.0 / shared_bins_max[0], shared_bins_sum[0], offset, scale);
-            float exposure = getExposureMultiplier(histogramHeader.averageLuminance);
-//            float exposure = getStandardOutputBasedExposure(1.4, 0.02, 2000);
-            exposure = interpolateExposure(exposure, prevHistogramHeader.exposure, speedUp, speedDown, deltaTime);
-            histogramHeader.prevExposure = prevHistogramHeader.exposure;
-            histogramHeader.exposure = exposure;
-        }
+        histogramHeader.maxValue = histogramShared_max[0];
     }
 }

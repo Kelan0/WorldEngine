@@ -28,8 +28,8 @@ private:
         bool bloomEnabled;
         float bloomIntensity;
         bool debugCompositeEnabled;
-        float histogramOffset;
-        float histogramScale;
+        float histogramMinLogLum;
+        float histogramLogLumRange;
     };
 
     struct BloomBlurPushConstantData {

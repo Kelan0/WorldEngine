@@ -12,6 +12,7 @@
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/RenderPass.h"
 #include "core/util/Profiler.h"
+#include "core/engine/renderer/EnvironmentMap.h"
 #include <SDL2/SDL.h>
 
 
@@ -246,6 +247,9 @@ void Engine::render(const double& dt) {
 
     auto& commandBuffer = graphics()->getCurrentCommandBuffer();
     PROFILE_BEGIN_GPU_CMD("Engine::render", commandBuffer)
+
+    // Initializes the BRDF integration map on the first frame
+    EnvironmentMap::getBRDFIntegrationMap(graphics()->getCurrentCommandBuffer());
 
     m_lightRenderer->render(dt, commandBuffer, m_renderCamera);
 

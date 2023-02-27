@@ -22,6 +22,8 @@ public:
 
     void update();
 
+    void setEmptyEnvironmentImage();
+
     void setEnvironmentImage(const std::shared_ptr<ImageCube>& environmentImage);
 
     const std::shared_ptr<ImageCube>& getEnvironmentImage() const;

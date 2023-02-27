@@ -33,12 +33,11 @@ PostProcessRenderer::PostProcessRenderer():
     m_resources.initDefault();
     setBloomEnabled(true);
     setBloomBlurFilterRadius(4.0F);
-    setBloomIntensity(0.05F);
-    setBloomThreshold(1.0F);
+    setBloomIntensity(0.025F);
+    setBloomThreshold(0.0F);
     setBloomSoftThreshold(0.5F);
     setBloomMaxBrightness(45.0F);
-//    setBloomBlurIterations(5);
-    m_bloomBlurIterations = 7;
+    setBloomBlurIterations(6);
 }
 
 PostProcessRenderer::~PostProcessRenderer() {
@@ -297,12 +296,12 @@ void PostProcessRenderer::render(const double& dt, const vk::CommandBuffer& comm
             .writeBuffer(POSTPROCESS_HISTOGRAM_BUFFER_BINDING, m_exposureHistogram->getHistogramBuffer())
             .write();
 
-    if (m_postProcessUniformData.histogramOffset != m_exposureHistogram->getOffset()) {
-        m_postProcessUniformData.histogramOffset = m_exposureHistogram->getOffset();
+    if (m_postProcessUniformData.histogramMinLogLum != m_exposureHistogram->getMinLogLuminance()) {
+        m_postProcessUniformData.histogramMinLogLum = m_exposureHistogram->getMinLogLuminance();
         m_resources->postProcessUniformDataChanged = true;
     }
-    if (m_postProcessUniformData.histogramScale != m_exposureHistogram->getScale()) {
-        m_postProcessUniformData.histogramScale = m_exposureHistogram->getScale();
+    if (m_postProcessUniformData.histogramLogLumRange != m_exposureHistogram->getLogLuminanceRange()) {
+        m_postProcessUniformData.histogramLogLumRange = m_exposureHistogram->getLogLuminanceRange();
         m_resources->postProcessUniformDataChanged = true;
     }
 
@@ -547,6 +546,7 @@ bool PostProcessRenderer::createUpsampleGraphicsPipeline() {
     pipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eFragment, 0, sizeof(BloomBlurPushConstantData));
     pipelineConfig.setAttachmentBlendEnabled(0, true);
     pipelineConfig.setAttachmentColourBlendMode(0, vk::BlendFactor::eOne, vk::BlendFactor::eOne, vk::BlendOp::eAdd);
+    pipelineConfig.setAttachmentAlphaBlendMode(0, vk::BlendFactor::eOne, vk::BlendFactor::eOne, vk::BlendOp::eAdd);
 //    pipelineConfig.setAttachmentAlphaBlendMode(0, vk::BlendFactor::eOne, vk::BlendFactor::eZero, vk::BlendOp::eAdd);
     return m_upsampleGraphicsPipeline->recreate(pipelineConfig, "PostProcessRenderer-UpsampleGraphicsPipeline");
 }
@@ -570,7 +570,8 @@ bool PostProcessRenderer::createBloomBlurRenderPass() {
 
     attachments[0].setFormat(Engine::deferredRenderer()->getOutputColourFormat());
     attachments[0].setSamples(samples);
-    attachments[0].setLoadOp(vk::AttachmentLoadOp::eClear); // Clear the current mip level on every down-sample pass.
+//    attachments[0].setLoadOp(vk::AttachmentLoadOp::eClear); // Clear the current mip level on every down-sample pass.
+    attachments[0].setLoadOp(vk::AttachmentLoadOp::eLoad); // On the upsample pass this MUST be eLoad in order for additive blending to work... This cost hours of time to solve this bug >:(
     attachments[0].setStoreOp(vk::AttachmentStoreOp::eStore);
     attachments[0].setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
     attachments[0].setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
