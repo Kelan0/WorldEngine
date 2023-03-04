@@ -24,6 +24,8 @@ public:
 
     virtual void render(const double& dt) = 0;
 
+    virtual void tick(const double& dt) = 0;
+
     template<class T>
     static int create(int argc, char* argv[]);
 
@@ -43,6 +45,14 @@ public:
 
     void setFramerateLimit(const double& framerateLimit);
 
+    const double& getTickrate() const;
+
+    void setTickrate(const double& tickrate);
+
+    const double& getPartialFrames() const;
+
+    const double& getPartialTicks() const;
+
     bool isViewportInverted() const;
 
     const std::string& getExecutionDirectory() const;
@@ -55,9 +65,10 @@ public:
 
     const std::thread::id& getMainThreadId() const;
     uint64_t getHashedMainThreadId() const;
-
 private:
     void start();
+
+    void runUpdateThread();
 
     bool parseArgs(int argc, char* argv[]);
 
@@ -71,6 +82,8 @@ private:
 
     void renderInternal(const double& dt);
 
+    void tickInternal(const double& dt);
+
     void processEventsInternal();
 
 private:
@@ -83,8 +96,15 @@ private:
     std::string m_shaderCompilerDirectory;
 
     double m_framerateLimit;
+    double m_tickrate;
+
+    double m_partialFrames;
+    double m_partialTicks;
+
+    std::thread m_updateThread;
 
     std::thread::id m_mainThreadId;
+    std::thread::id m_updateThreadId;
 
     bool m_rendering;
     bool m_running;

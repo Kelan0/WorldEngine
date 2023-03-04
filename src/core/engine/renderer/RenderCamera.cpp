@@ -32,7 +32,7 @@ void RenderCamera::update() {
     }
 
     //if (m_transform != m_prevTransform) {
-    m_transform.fillMatrix(m_inverseViewMatrix);
+    Transform::fillMatrixf(m_transform, m_inverseViewMatrix);
     m_viewMatrix = glm::inverse(m_inverseViewMatrix);
     m_viewProjectionMatrix = m_projectionMatrix * m_viewMatrix;
     m_inverseViewProjectionMatrix = glm::inverse(m_viewProjectionMatrix);

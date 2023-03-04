@@ -106,8 +106,8 @@ void ReprojectionRenderer::preRender(const double& dt) {
 void ReprojectionRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("ReprojectionRenderer::render")
 
-    m_uniformData.resolution = Engine::graphics()->getResolution();
-    if (isTaaEnabled() && !m_haltonSequence.empty()) {
+    m_uniformData.resolution = glm::vec2(Engine::graphics()->getResolution());
+    if (isTaaEnabled() && hasPreviousFrame() && !m_haltonSequence.empty()) {
         m_uniformData.taaPreviousJitterOffset = m_uniformData.taaCurrentJitterOffset;
         m_uniformData.taaCurrentJitterOffset = m_haltonSequence[Engine::currentFrameCount() % m_haltonSequence.size()] * Engine::graphics()->getNormalizedPixelSize() * 0.5F;
     } else {
@@ -136,6 +136,7 @@ void ReprojectionRenderer::render(const double& dt, const vk::CommandBuffer& com
             m_resources->reprojectionDescriptorSet->getDescriptorSet()
     };
 
+    m_uniformData.hasPreviousFrame = hasPreviousFrame();
     m_resources->reprojectionUniformBuffer->upload(0, sizeof(ReprojectionUniformData), &m_uniformData);
 
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_reprojectionGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, nullptr);

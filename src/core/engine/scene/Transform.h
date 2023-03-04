@@ -106,18 +106,18 @@ public:
 
     glm::dmat4 getMatrix() const;
 
-    glm::dmat4& fillMatrix(glm::dmat4& matrix) const;
+    static void fillMatrixd(const Transform& transform, glm::dmat4& matrix);
 
-    glm::mat4& fillMatrix(glm::mat4& matrix) const;
+    static void fillMatrixf(const Transform& transform, glm::fmat4& matrix);
 
-    glm::mat4x3& fillMatrix(glm::mat4x3& matrix) const;
+    static void fillMatrixf(const Transform& transform1, const Transform& transform2, const double& delta, glm::fmat4& matrix);
 
     Transform& setMatrix(const glm::dmat4& matrix);
 
     operator glm::dmat4() const;
 
 private:
-    static void reindex(Transform& transform, const EntityChangeTracker::entity_index& newEntityIndex);
+//    static void reindex(Transform& transform, const EntityChangeTracker::entity_index& newEntityIndex);
 
     void change();
 
@@ -125,7 +125,8 @@ private:
     glm::dvec3 m_translation;
     glm::mat3 m_rotation;
     glm::dvec3 m_scale;
-    EntityChangeTracker::entity_index m_entityIndex = EntityChangeTracker::INVALID_INDEX;
+    uint64_t m_lastChangedTimestamp;
+//    EntityChangeTracker::entity_index m_entityIndex = EntityChangeTracker::INVALID_INDEX;
 };
 
 

@@ -205,6 +205,7 @@ vec3 downsampleImpl2() {
         finalColour = groups[0]+groups[1]+groups[2]+groups[3]+groups[4];
         finalColour *= exposureBufferHeader.exposure;
         finalColour = applyBloomThreshold(finalColour);
+//        finalColour = max(finalColour, 0.000001); // Prevent zeros being mulltiplied during downpass. A single zero-pixel would grow and multiply out a large region after downsampling
     } else {
         finalColour = e*0.125;
         finalColour += (a+c+g+i)*0.03125;

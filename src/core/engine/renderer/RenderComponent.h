@@ -4,6 +4,7 @@
 
 #include "core/core.h"
 #include "core/util/EntityChangeTracker.h"
+#include "core/engine/scene/Transform.h"
 
 class Material;
 class Mesh;
@@ -36,7 +37,7 @@ public:
 
     RenderComponent& setMaterial(const std::shared_ptr<Material>& material);
 
-    [[nodiscard]] const uint32_t& getMaterialIndex() const;
+//    [[nodiscard]] const uint32_t& getMaterialIndex() const;
 
     [[nodiscard]] const std::shared_ptr<Mesh>& mesh() const;
 
@@ -49,14 +50,11 @@ public:
     [[nodiscard]] UpdateType meshUpdateType() const;
 
 private:
-    static void reindex(RenderComponent& renderComponent, const EntityChangeTracker::entity_index& newEntityIndex);
+//    static void reindex(RenderComponent& renderComponent, const EntityChangeTracker::entity_index& newEntityIndex);
 
 private:
     std::shared_ptr<Mesh> m_mesh;
     std::shared_ptr<Material> m_material;
-
-    EntityChangeTracker::entity_index m_entityIndex;
-    uint32_t m_materialIndex;
 
     struct {
         UpdateType m_transformUpdateType : 2;

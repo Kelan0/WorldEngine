@@ -8,6 +8,7 @@ struct SDL_Window;
 union SDL_Event;
 class GraphicsManager;
 class Scene;
+class PhysicsSystem;
 class UIRenderer;
 class SceneRenderer;
 class LightRenderer;
@@ -33,6 +34,8 @@ public:
 
     Scene* getScene() const;
 
+    PhysicsSystem* getPhysicsSystem() const;
+
     UIRenderer* getUIRenderer() const;
 
     SceneRenderer* getSceneRenderer() const;
@@ -51,6 +54,10 @@ public:
 
     const uint64_t& getCurrentFrameCount() const;
 
+    const double& getPartialFrames() const;
+
+    const double& getPartialTicks() const;
+
     const double& getAccumulatedTime();
 
     const double& getRunTime();
@@ -62,6 +69,8 @@ public:
     static GraphicsManager* graphics();
 
     static Scene* scene();
+
+    static PhysicsSystem* physicsSystem();
 
     static UIRenderer* uiRenderer();
 
@@ -96,6 +105,10 @@ private:
 
     void render(const double& dt);
 
+    void preTick(const double& dt);
+
+    void tick(const double& dt);
+
     void cleanup();
 
     static void destroy();
@@ -105,6 +118,7 @@ private:
 
     GraphicsManager* m_graphics;
     Scene* m_scene;
+    PhysicsSystem* m_physicsSystem;
     UIRenderer* m_uiRenderer;
     SceneRenderer* m_sceneRenderer;
     LightRenderer* m_lightRenderer;

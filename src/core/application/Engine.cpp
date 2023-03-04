@@ -1,6 +1,8 @@
 
 #include "core/application/Engine.h"
+#include "core/application/Application.h"
 #include "core/engine/scene/Scene.h"
+#include "core/engine/physics/PhysicsSystem.h"
 #include "core/engine/renderer/SceneRenderer.h"
 #include "core/engine/renderer/renderPasses/UIRenderer.h"
 #include "core/engine/renderer/renderPasses/LightRenderer.h"
@@ -8,11 +10,10 @@
 #include "core/engine/renderer/renderPasses/ReprojectionRenderer.h"
 #include "core/engine/renderer/renderPasses/PostProcessRenderer.h"
 #include "core/engine/renderer/ImmediateRenderer.h"
+#include "core/engine/renderer/EnvironmentMap.h"
 #include "core/engine/event/EventDispatcher.h"
 #include "core/graphics/GraphicsManager.h"
-#include "core/graphics/RenderPass.h"
 #include "core/util/Profiler.h"
-#include "core/engine/renderer/EnvironmentMap.h"
 #include <SDL2/SDL.h>
 
 
@@ -22,6 +23,7 @@ Engine::Engine():
     m_graphics(new GraphicsManager()),
     m_eventDispatcher(new EventDispatcher()),
     m_scene(new Scene()),
+    m_physicsSystem(new PhysicsSystem()),
     m_uiRenderer(new UIRenderer()),
     m_sceneRenderer(new SceneRenderer()),
     m_lightRenderer(new LightRenderer()),
@@ -31,12 +33,15 @@ Engine::Engine():
     m_postProcessingRenderer(new PostProcessRenderer()),
     m_renderCamera(new RenderCamera()),
     m_currentFrameCount(0),
-    m_debugCompositeEnabled(true) {
+    m_debugCompositeEnabled(true),
+    m_accumulatedTime(0.0),
+    m_runTime(0.0) {
 }
 
 Engine::~Engine() {
 
     delete m_scene; // Scene is destroyed before SceneRenderer since destruction of components may interact with SceneRenderer. This might need to change.
+    delete m_physicsSystem;
     delete m_uiRenderer;
     delete m_sceneRenderer;
     delete m_lightRenderer;
@@ -61,6 +66,10 @@ GraphicsManager* Engine::getGraphics() const {
 
 Scene* Engine::getScene() const {
     return m_scene;
+}
+
+PhysicsSystem* Engine::getPhysicsSystem() const {
+    return m_physicsSystem;
 }
 
 UIRenderer* Engine::getUIRenderer() const {
@@ -103,6 +112,14 @@ const bool& Engine::isDebugCompositeEnabled() const {
     return m_debugCompositeEnabled;
 }
 
+const double& Engine::getPartialFrames() const {
+    return Application::instance()->getPartialFrames();
+}
+
+const double& Engine::getPartialTicks() const {
+    return Application::instance()->getPartialTicks();
+}
+
 const double& Engine::getAccumulatedTime() {
     return m_accumulatedTime;
 }
@@ -121,6 +138,10 @@ GraphicsManager* Engine::graphics() {
 
 Scene* Engine::scene() {
     return instance()->getScene();
+}
+
+PhysicsSystem* Engine::physicsSystem() {
+    return instance()->getPhysicsSystem();
 }
 
 UIRenderer *Engine::uiRenderer() {
@@ -193,6 +214,11 @@ bool Engine::init(SDL_Window* windowHandle) {
     m_scene->init();
     m_eventDispatcher->repeatAll(m_scene->getEventDispatcher());
 
+    PROFILE_REGION("Init PhysicsSystem")
+    m_physicsSystem->setScene(m_scene);
+    if (!m_physicsSystem->init())
+        return false;
+
     PROFILE_REGION("Init SceneRenderer")
     m_sceneRenderer->setScene(m_scene);
     if (!m_sceneRenderer->init())
@@ -230,6 +256,7 @@ bool Engine::init(SDL_Window* windowHandle) {
 void Engine::preRender(const double& dt) {
     PROFILE_SCOPE("Engine::preRender");
     m_uiRenderer->preRender(dt);
+    m_physicsSystem->preRender(dt);
 }
 
 void Engine::render(const double& dt) {
@@ -242,6 +269,7 @@ void Engine::render(const double& dt) {
     m_renderCamera->setTransform(cameraEntity.getComponent<Transform>());
     m_renderCamera->update();
 
+    m_physicsSystem->preRender(dt);
     m_sceneRenderer->preRender(dt);
     m_lightRenderer->preRender(dt);
 
@@ -290,6 +318,17 @@ void Engine::render(const double& dt) {
     using dur = std::chrono::duration<long long, std::ratio<1, res>>;
     auto now = std::chrono::high_resolution_clock::now();
     m_runTime = (double)std::chrono::duration_cast<dur>(now - m_startTime).count() / (double)res;
+}
+
+void Engine::preTick(const double& dt) {
+    PROFILE_SCOPE("Engine::preTick");
+    m_physicsSystem->preTick(dt);
+    m_scene->preTick(dt);
+}
+
+void Engine::tick(const double& dt) {
+    PROFILE_SCOPE("Engine::tick");
+    m_physicsSystem->tick(dt);
 }
 
 void Engine::cleanup() {

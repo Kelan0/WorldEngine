@@ -512,6 +512,18 @@ bool PostProcessRenderer::createBloomBlurFramebuffer(RenderResources* resources)
             .writeImage(POSTPROCESS_BLOOM_TEXTURE_BINDING, m_frameSampler.get(), resources->bloomTextureImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
             .write();
 
+    // This is janky... The render pass needs an initial layout in order to allow VK_ATTACHMENT_LOAD_OP_LOAD, and therefor the framebuffer image
+    // needs to have an initial layout too. Surely there is a cleaner way to deal with this?
+    const vk::CommandBuffer& commandBuffer = ImageUtil::beginTransferCommands();
+    vk::ImageSubresourceRange subresourceRange{};
+    subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+    subresourceRange.baseArrayLayer = 0;
+    subresourceRange.layerCount = 1;
+    subresourceRange.baseMipLevel = 0;
+    subresourceRange.levelCount = imageConfig.mipLevels;
+    ImageUtil::transitionLayout(commandBuffer, resources->bloomBlurImage->getImage(), subresourceRange, ImageTransition::FromAny(), ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader));
+    ImageUtil::endTransferCommands(**Engine::graphics()->getQueue(QUEUE_TRANSFER_MAIN), true);
+
     return true;
 }
 
@@ -575,7 +587,7 @@ bool PostProcessRenderer::createBloomBlurRenderPass() {
     attachments[0].setStoreOp(vk::AttachmentStoreOp::eStore);
     attachments[0].setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
     attachments[0].setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    attachments[0].setInitialLayout(vk::ImageLayout::eUndefined);
+    attachments[0].setInitialLayout(vk::ImageLayout::eShaderReadOnlyOptimal); // Preinitialized in order to use AttachmentLoadOp::eLoad
     attachments[0].setFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 
     std::array<SubpassConfiguration, 1> subpassConfigurations;

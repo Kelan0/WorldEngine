@@ -3,6 +3,7 @@
 #include "core/engine/renderer/SceneRenderer.h"
 #include "core/engine/renderer/ShadowMap.h"
 #include "core/engine/scene/bound/Frustum.h"
+#include "core/engine/scene/Scene.h"
 #include "core/graphics/Texture.h"
 #include "core/graphics/Framebuffer.h"
 #include "core/graphics/GraphicsPipeline.h"

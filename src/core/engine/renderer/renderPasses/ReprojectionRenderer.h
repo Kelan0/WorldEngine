@@ -25,16 +25,17 @@ public:
 
 private:
     struct ReprojectionUniformData {
-        glm::uvec2 resolution;
+        glm::vec2 resolution;
         glm::vec2 taaCurrentJitterOffset;
         glm::vec2 taaPreviousJitterOffset;
         float taaHistoryFadeFactor;
-        bool useCatmullRomFilter;
+        uint32_t useCatmullRomFilter;
         uint32_t colourClippingMode;
-        bool useMitchellFilter;
+        uint32_t useMitchellFilter;
         float mitchellB;
         float mitchellC;
-        bool taaEnabled;
+        uint32_t taaEnabled;
+        uint32_t hasPreviousFrame;
     };
 
     struct FrameImages {

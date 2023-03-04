@@ -13,16 +13,17 @@ layout(location = 0) in vec2 fs_texture;
 layout(location = 0) out vec4 outColor;
 
 layout(set = 0, binding = 0) uniform UBO1 {
-    uvec2 resolution;
+    vec2 resolution;
     vec2 taaCurrentJitterOffset;
     vec2 taaPreviousJitterOffset;
     float taaHistoryFadeFactor;
     bool useCatmullRomFilter;
-    uint clippingMode;
+    uint colourClippingMode;
     bool useMitchellFilter;
     float mitchellB;
     float mitchellC;
     bool taaEnabled;
+    bool hasPreviousFrame;
 };
 
 layout(set = 0, binding = 1) uniform sampler2D frameTexture;
@@ -286,9 +287,9 @@ vec3 calculateTemporalAntiAliasing(in vec2 texCoord, in vec2 velocity) {
         historySample = texture(previousFrameTexture, texCoord - velocity).rgb;
     }
 
-    if (clippingMode == CLIPPING_MODE_FAST) {
+    if (colourClippingMode == CLIPPING_MODE_FAST) {
         historySample = clip_aabb_fast(cmin.xyz, cmax.xyz, clamp(cavg, cmin, cmax), historySample);
-    } else if (clippingMode == CLIPPING_MODE_ACCURATE) {
+    } else if (colourClippingMode == CLIPPING_MODE_ACCURATE) {
         historySample = clip_aabb_accurate(cmin.xyz, cmax.xyz, clamp(cavg, cmin, cmax), historySample);
     } else { // Simple clamp
         historySample = clamp(historySample, cmin, cmax);
@@ -308,7 +309,7 @@ vec3 calculateTemporalAntiAliasing(in vec2 texCoord, in vec2 velocity) {
 
 void main() {
     vec3 finalColour;
-    if (taaEnabled) {
+    if (taaEnabled && hasPreviousFrame) {
         vec2 unjitteredTexCoord = fs_texture - taaCurrentJitterOffset;
         vec3 closestFragment = findClosestFragment3x3(unjitteredTexCoord);
 
@@ -323,6 +324,9 @@ void main() {
         finalColour = texture(frameTexture, fs_texture).rgb;
     }
 
+    if (!hasPreviousFrame) {
+        finalColour.r = 1.0;
+    }
     outColor = vec4(finalColour, 1.0);
 //    outColor = vec4(abs(velocity) * 100.0, 0.0, 1.0);
 //    outColor = vec4(vec3(texture(depthTexture, fs_texture).r), 1.0);

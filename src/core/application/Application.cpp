@@ -21,6 +21,9 @@ Application* Application::s_instance = nullptr;
 
 Application::Application():
         m_framerateLimit(0.0), // Unlimited
+        m_tickrate(60.0),
+        m_partialFrames(0.0),
+        m_partialTicks(0.0),
         m_windowHandle(nullptr),
         m_inputHandler(nullptr),
         m_running(false),
@@ -170,6 +173,18 @@ void Application::renderInternal(const double& dt) {
 
 }
 
+void Application::tickInternal(const double& dt) {
+    PROFILE_SCOPE("Application::tickInternal");
+
+    Engine::instance()->preTick(dt);
+
+    PROFILE_REGION("Application::tick - Implementation")
+    tick(dt);
+    PROFILE_END_REGION()
+
+    Engine::instance()->tick(dt);
+}
+
 void Application::processEventsInternal() {
     PROFILE_SCOPE("Application::processEventsInternal")
     m_inputHandler->update();
@@ -245,6 +260,8 @@ void Application::destroy() {
 void Application::start() {
     m_running = true;
 
+    m_updateThread = std::thread(&Application::runUpdateThread, this);
+
     // Trigger a ScreenResizeEvent at the beginning of the render loop so that anything that needs it can be initialized easily
     ScreenResizeEvent event{getWindowSize(), getWindowSize() };
     Engine::eventDispatcher()->trigger(&event);
@@ -256,7 +273,7 @@ void Application::start() {
     auto lastFrame = std::chrono::high_resolution_clock::now();
     auto lastTime = std::chrono::high_resolution_clock::now();
 
-    double partialFrames = 0.0;
+    m_partialFrames = 0.0;
 
     DebugUtils::RenderInfo tempDebugInfo;
 
@@ -275,25 +292,23 @@ void Application::start() {
         bool isFrame = false;
         double frameDurationNanos = 1e+9 / framerateLimit;
 
-        partialFrames += (double)elapsedNanos / frameDurationNanos;
+        m_partialFrames += (double)elapsedNanos / frameDurationNanos;
 
         Engine::eventDispatcher()->update();
 
-        if (partialFrames >= 1.0) {
+        if (m_partialFrames >= 1.0) {
             Profiler::endCPU(); // profileID_CPU_Idle
             Profiler::endFrame();
             Profiler::beginFrame();
             isFrame = true;
 
-            partialFrames = 0.0;
+            m_partialFrames = 0.0; // Reset partial frames
 
             auto beginFrame = now;
 
             ThreadUtils::wakeThreads();
 
             processEventsInternal();
-
-            // TODO: update tick independent of render and framerate, possibly on separate thread?
 
             if (m_rendering) {
                 if (Engine::graphics()->beginFrame()) {
@@ -384,7 +399,49 @@ void Application::start() {
 
     Engine::graphics()->getDevice()->waitIdle();
 
+    m_updateThread.join(); // Wait for update thread to shut down
+
     cleanupInternal();
+}
+
+void Application::runUpdateThread() {
+    m_updateThreadId = std::this_thread::get_id();
+    assert(m_mainThreadId != m_updateThreadId);
+    assert(m_running);
+    assert(m_tickrate >= 1.0);
+
+    auto startTime = std::chrono::high_resolution_clock::now();
+    auto lastTime = std::chrono::high_resolution_clock::now();
+
+    m_partialTicks = 0.0;
+
+    double tickDeltaTime = 1.0 / m_tickrate; // Tick delta time is constant. Variation would cause unstable physics simulation
+    double tickDurationNanos = 1e+9 / m_tickrate;
+
+    double simulationTime = 0.0;
+
+    while (m_running) {
+        auto now = std::chrono::high_resolution_clock::now();
+        uint64_t elapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastTime).count();
+        lastTime = now;
+
+        m_partialTicks += (double)elapsedNanos / tickDurationNanos;
+
+        if (m_partialTicks >= 1.0) {
+            m_partialTicks -= 1.0; // Decrement one tick
+
+            tickInternal(tickDeltaTime);
+
+            simulationTime += tickDeltaTime;
+
+            if (m_partialTicks >= m_tickrate * 5) {
+                uint64_t realElapsedSimTimeMsec = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
+                double missedSimTimeMsec = realElapsedSimTimeMsec - (simulationTime * 1000.0);
+                printf("WARNING: Simulation thread can't keep up. Skipping %llu ticks (Simulation is running %.2f msec behind)\n", (uint64_t)m_partialTicks, missedSimTimeMsec);
+                m_partialTicks = 0.0;
+            }
+        }
+    }
 }
 
 Application* Application::instance() {
@@ -416,6 +473,27 @@ const double& Application::getFramerateLimit() const {
 
 void Application::setFramerateLimit(const double& framerateLimit) {
     m_framerateLimit = framerateLimit;
+}
+
+const double& Application::getTickrate() const {
+    return m_tickrate;
+}
+
+void Application::setTickrate(const double& tickrate) {
+    if (m_running) {
+        printf("Cannot change tickrate while running\n");
+        assert(false);
+        return;
+    }
+    m_tickrate = tickrate;
+}
+
+const double& Application::getPartialFrames() const {
+    return m_partialFrames;
+}
+
+const double& Application::getPartialTicks() const {
+    return m_partialTicks;
 }
 
 bool Application::isViewportInverted() const {

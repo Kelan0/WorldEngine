@@ -17,7 +17,7 @@ layout(location = 2) in vec3 fs_bitangent;
 layout(location = 3) in vec2 fs_texture;
 layout(location = 4) in vec4 fs_prevPosition;
 layout(location = 5) in vec4 fs_currPosition;
-layout(location = 6) in flat uint fs_objectIndex;
+layout(location = 6) in flat uint fs_materialIndex;
 
 
 layout(location = 0) out vec4 out_AlbedoRGB_Roughness;
@@ -93,7 +93,7 @@ vec3 getMaterialNormal(in vec2 textureCoord, in Material material) {
 }
 
 void main() {
-    Material material = objectMaterials[fs_objectIndex];
+    Material material = objectMaterials[fs_materialIndex];
 
     out_AlbedoRGB_Roughness.rgb = getMaterialAlbedo(fs_texture, material);
     out_AlbedoRGB_Roughness.w = getMaterialRoughness(fs_texture, material);
@@ -101,6 +101,10 @@ void main() {
     out_NormalXYZ_Metallic.w = getMaterialMetallic(fs_texture, material);
     outEmissionRGB_AO.rgb = getMaterialEmission(fs_texture, material);
     outEmissionRGB_AO.a = 1.0;
+
+//    out_AlbedoRGB_Roughness = vec4(0.0);
+//    outEmissionRGB_AO.rgb = texture(textures[material.normalTextureIndex], fs_texture).xyz;
+
     vec2 currPositionNDC = (fs_currPosition.xy / fs_currPosition.w);
     vec2 prevPositionNDC = (fs_prevPosition.xy / fs_prevPosition.w);
     vec2 currPosition = (currPositionNDC.xy - taaCurrentJitterOffset.xy);

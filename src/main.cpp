@@ -32,6 +32,7 @@
 #include "core/engine/renderer/renderPasses/PostProcessRenderer.h"
 #include "core/engine/renderer/renderPasses/ExposureHistogram.h"
 #include "extern/imgui/imgui.h"
+#include "core/engine/physics/RigidBody.h"
 
 #include <iostream>
 
@@ -75,6 +76,8 @@ class App : public Application {
 
     void init() override {
         //eventDispatcher()->connect<ScreenResizeEvent>(&App::onScreenResize, this);
+
+        setTickrate(60.0);
 
         SamplerConfiguration samplerConfig{};
         samplerConfig.device = Engine::graphics()->getDevice();
@@ -183,7 +186,8 @@ class App : public Application {
         std::shared_ptr<Material> christmasBallMaterial = std::shared_ptr<Material>(Material::create(christmasBallMaterialConfig, "Demo-ChristmasBallMaterial"));
 
         Entity christmasBallEntity = EntityHierarchy::create(Engine::scene(), "christmasBallEntity");
-        christmasBallEntity.addComponent<Transform>().translate(-2.0, 0.6, 0.3).rotate(1.0F, 0.0F, 0.0F, glm::pi<float>() * 0.5F);
+        christmasBallEntity.addComponent<RigidBody>().setInterpolationType(RigidBody::InterpolationType_Extrapolate)
+            .transform().translate(-2.0, 0.6, 0.3).rotate(1.0F, 0.0F, 0.0F, glm::pi<float>() * 0.5F);
         christmasBallEntity.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(christmasBallMaterial);
 
         size_t numSpheresX = 10;
@@ -303,7 +307,6 @@ class App : public Application {
 
     Frustum frustum;
     bool pauseFrustum = false;
-    double time = 0.0;
     float framerateLimit = 0.0F;
     bool histogramNormalized = true;
     float test = 1.0F;
@@ -311,7 +314,6 @@ class App : public Application {
     void render(const double& dt) override {
         PROFILE_SCOPE("custom render")
         handleUserInput(dt);
-        time += dt;
 
 //        ImGui::ShowDemoWindow();
 
@@ -434,13 +436,6 @@ class App : public Application {
             cameraTransform.setRotation(cubeEntity.getComponent<Transform>().getTranslation() - cameraTransform.getTranslation(),glm::vec3(0, 1, 0), false);
         }
 
-        Entity christmasBallEntity = Engine::scene()->findNamedEntity("christmasBallEntity");
-        if (christmasBallEntity) {
-            Transform& transform = christmasBallEntity.getComponent<Transform>();
-            transform.rotate(0.0F, 0.0F, 1.0F, glm::two_pi<float>() * (float)dt * 0.25F);
-            transform.translate(0.0F, glm::sin(time * 2.0F) * dt * 0.333F, 0.0F);
-        }
-
         Engine::immediateRenderer()->matrixMode(MatrixMode_Projection);
         Engine::immediateRenderer()->pushMatrix();
         Engine::immediateRenderer()->loadMatrix(cameraProjection.getProjectionMatrix());
@@ -450,33 +445,6 @@ class App : public Application {
 
         Engine::immediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
         Engine::immediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
-//
-//        Engine::immediateRenderer()->setBlendEnabled(true);
-//        Engine::immediateRenderer()->setDepthTestEnabled(true);
-//        Engine::immediateRenderer()->matrixMode(MatrixMode_ModelView);
-//        Engine::immediateRenderer()->pushMatrix();
-//        Engine::immediateRenderer()->translate(2.0F, 2.0F, 0.0F);
-//
-//        Engine::immediateRenderer()->begin(PrimitiveType_TriangleStrip);
-//        Engine::immediateRenderer()->colour(1.0F, 0.0F, 0.0F, 0.5F);
-//        Engine::immediateRenderer()->vertex(0.0F, 0.0F, 0.0F);
-//        Engine::immediateRenderer()->vertex(1.0F, 0.0F, 0.0F);
-//        Engine::immediateRenderer()->vertex(0.0F, 1.0F, 0.0F);
-//        Engine::immediateRenderer()->vertex(1.0F, 1.0F, 0.0F);
-//        Engine::immediateRenderer()->end();
-//
-//        Engine::immediateRenderer()->setBlendEnabled(false);
-//        Engine::immediateRenderer()->setDepthTestEnabled(false);
-//        Engine::immediateRenderer()->setLineWidth(3.0F);
-//        Engine::immediateRenderer()->begin(PrimitiveType_LineLoop);
-//        Engine::immediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
-//        Engine::immediateRenderer()->vertex(0.0F, 0.0F, 0.0F);
-//        Engine::immediateRenderer()->vertex(1.0F, 0.0F, 0.0F);
-//        Engine::immediateRenderer()->vertex(1.0F, 1.0F, 0.0F);
-//        Engine::immediateRenderer()->vertex(0.0F, 1.0F, 0.0F);
-//        Engine::immediateRenderer()->end();
-//
-//        Engine::immediateRenderer()->popMatrix();
 
         if (input()->keyPressed(SDL_SCANCODE_F)) {
             if (!pauseFrustum) {
@@ -502,6 +470,18 @@ class App : public Application {
 
         Engine::immediateRenderer()->popMatrix(MatrixMode_ModelView);
         Engine::immediateRenderer()->popMatrix(MatrixMode_Projection);
+    }
+
+    double time = 0.0;
+    virtual void tick(const double& dt) override {
+        time += dt;
+
+        Entity christmasBallEntity = Engine::scene()->findNamedEntity("christmasBallEntity");
+        if (christmasBallEntity) {
+            RigidBody& rigidBody = christmasBallEntity.getComponent<RigidBody>();
+            rigidBody.transform().rotate(0.0F, 0.0F, 1.0F, glm::two_pi<float>() * (float)dt * 0.25F);
+            rigidBody.transform().translate(0.0F, glm::sin(time * 2.0F) * dt * 0.333F, 0.0F);
+        }
     }
 };
 

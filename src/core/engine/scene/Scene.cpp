@@ -33,6 +33,10 @@ void Scene::init() {
     setMainCameraEntity(nullptr);
 }
 
+void Scene::preTick(const double& dt) {
+//    const auto& renderEntities = registry()->group<RenderComponent, RenderInfo, Transform>();
+}
+
 void Scene::destroyEntity(const Entity& entity) {
     PROFILE_SCOPE("Scene::destroyEntity")
     if (entity) {

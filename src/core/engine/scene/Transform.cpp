@@ -427,66 +427,71 @@ bool Transform::operator!=(const glm::mat4& other) const {
 
 glm::dmat4 Transform::getMatrix() const {
     glm::dmat4 mat;
-    return fillMatrix(mat);
+    fillMatrixd(*this, mat);
+    return mat;
 }
 
-glm::dmat4& Transform::fillMatrix(glm::dmat4& matrix) const {
-    glm::dvec3 scale = m_scale;
-    matrix[0].x = (double)(m_rotation[0].x * scale.x);
-    matrix[0].y = (double)(m_rotation[0].y * scale.x);
-    matrix[0].z = (double)(m_rotation[0].z * scale.x);
+void Transform::fillMatrixd(const Transform& transform, glm::dmat4& matrix) {
+    glm::dvec3 scale = transform.m_scale;
+    matrix[0].x = (double)(transform.m_rotation[0].x * scale.x);
+    matrix[0].y = (double)(transform.m_rotation[0].y * scale.x);
+    matrix[0].z = (double)(transform.m_rotation[0].z * scale.x);
     matrix[0].w = 0.0;
-    matrix[1].x = (double)(m_rotation[1].x * scale.y);
-    matrix[1].y = (double)(m_rotation[1].y * scale.y);
-    matrix[1].z = (double)(m_rotation[1].z * scale.y);
+    matrix[1].x = (double)(transform.m_rotation[1].x * scale.y);
+    matrix[1].y = (double)(transform.m_rotation[1].y * scale.y);
+    matrix[1].z = (double)(transform.m_rotation[1].z * scale.y);
     matrix[1].w = 0.0;
-    matrix[2].x = (double)(m_rotation[2].x * scale.z);
-    matrix[2].y = (double)(m_rotation[2].y * scale.z);
-    matrix[2].z = (double)(m_rotation[2].z * scale.z);
+    matrix[2].x = (double)(transform.m_rotation[2].x * scale.z);
+    matrix[2].y = (double)(transform.m_rotation[2].y * scale.z);
+    matrix[2].z = (double)(transform.m_rotation[2].z * scale.z);
     matrix[2].w = 0.0;
-    matrix[3].x = (double)m_translation.x;
-    matrix[3].y = (double)m_translation.y;
-    matrix[3].z = (double)m_translation.z;
+    matrix[3].x = (double)transform.m_translation.x;
+    matrix[3].y = (double)transform.m_translation.y;
+    matrix[3].z = (double)transform.m_translation.z;
     matrix[3].w = 1.0;
-    return matrix;
 }
 
-glm::mat4& Transform::fillMatrix(glm::mat4& matrix) const {
-    glm::dvec3 scale = m_scale;
-    matrix[0].x = (float)(m_rotation[0].x * scale.x);
-    matrix[0].y = (float)(m_rotation[0].y * scale.x);
-    matrix[0].z = (float)(m_rotation[0].z * scale.x);
+void Transform::fillMatrixf(const Transform& transform, glm::mat4& matrix) {
+    glm::dvec3 scale = transform.m_scale;
+    matrix[0].x = (float)(transform.m_rotation[0].x * scale.x);
+    matrix[0].y = (float)(transform.m_rotation[0].y * scale.x);
+    matrix[0].z = (float)(transform.m_rotation[0].z * scale.x);
     matrix[0].w = 0.0F;
-    matrix[1].x = (float)(m_rotation[1].x * scale.y);
-    matrix[1].y = (float)(m_rotation[1].y * scale.y);
-    matrix[1].z = (float)(m_rotation[1].z * scale.y);
+    matrix[1].x = (float)(transform.m_rotation[1].x * scale.y);
+    matrix[1].y = (float)(transform.m_rotation[1].y * scale.y);
+    matrix[1].z = (float)(transform.m_rotation[1].z * scale.y);
     matrix[1].w = 0.0F;
-    matrix[2].x = (float)(m_rotation[2].x * scale.z);
-    matrix[2].y = (float)(m_rotation[2].y * scale.z);
-    matrix[2].z = (float)(m_rotation[2].z * scale.z);
+    matrix[2].x = (float)(transform.m_rotation[2].x * scale.z);
+    matrix[2].y = (float)(transform.m_rotation[2].y * scale.z);
+    matrix[2].z = (float)(transform.m_rotation[2].z * scale.z);
     matrix[2].w = 0.0F;
-    matrix[3].x = (float)m_translation.x;
-    matrix[3].y = (float)m_translation.y;
-    matrix[3].z = (float)m_translation.z;
+    matrix[3].x = (float)transform.m_translation.x;
+    matrix[3].y = (float)transform.m_translation.y;
+    matrix[3].z = (float)transform.m_translation.z;
     matrix[3].w = 1.0F;
-    return matrix;
 }
 
-glm::mat4x3& Transform::fillMatrix(glm::mat4x3& matrix) const {
-    glm::dvec3 scale = m_scale;
-    matrix[0].x = (float)(m_rotation[0].x * scale.x);
-    matrix[0].y = (float)(m_rotation[0].y * scale.x);
-    matrix[0].z = (float)(m_rotation[0].z * scale.x);
-    matrix[1].x = (float)(m_rotation[1].x * scale.y);
-    matrix[1].y = (float)(m_rotation[1].y * scale.y);
-    matrix[1].z = (float)(m_rotation[1].z * scale.y);
-    matrix[2].x = (float)(m_rotation[2].x * scale.z);
-    matrix[2].y = (float)(m_rotation[2].y * scale.z);
-    matrix[2].z = (float)(m_rotation[2].z * scale.z);
-    matrix[3].x = (float)m_translation.x;
-    matrix[3].y = (float)m_translation.y;
-    matrix[3].z = (float)m_translation.z;
-    return matrix;
+void Transform::fillMatrixf(const Transform& transform1, const Transform& transform2, const double& delta, glm::fmat4& matrix) {
+    glm::dvec3 translation = glm::lerp(transform1.m_translation, transform2.m_translation, delta);
+    glm::mat3 rotation = glm::mat3_cast(glm::slerp(transform1.getRotation(), transform2.getRotation(), (float)delta));
+    glm::dvec3 scale = glm::lerp(transform1.m_scale, transform2.m_scale, delta);
+
+    matrix[0].x = (float)(rotation[0].x * scale.x);
+    matrix[0].y = (float)(rotation[0].y * scale.x);
+    matrix[0].z = (float)(rotation[0].z * scale.x);
+    matrix[0].w = 0.0F;
+    matrix[1].x = (float)(rotation[1].x * scale.y);
+    matrix[1].y = (float)(rotation[1].y * scale.y);
+    matrix[1].z = (float)(rotation[1].z * scale.y);
+    matrix[1].w = 0.0F;
+    matrix[2].x = (float)(rotation[2].x * scale.z);
+    matrix[2].y = (float)(rotation[2].y * scale.z);
+    matrix[2].z = (float)(rotation[2].z * scale.z);
+    matrix[2].w = 0.0F;
+    matrix[3].x = (float)translation.x;
+    matrix[3].y = (float)translation.y;
+    matrix[3].z = (float)translation.z;
+    matrix[3].w = 1.0F;
 }
 
 Transform& Transform::setMatrix(const glm::dmat4& matrix) {
@@ -507,13 +512,14 @@ Transform::operator glm::dmat4() const {
 }
 
 void Transform::change() {
-    Engine::sceneRenderer()->notifyTransformChanged(m_entityIndex);
+    m_lastChangedTimestamp = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+//    Engine::sceneRenderer()->notifyTransformChanged(m_entityIndex);
 }
 
-void Transform::reindex(Transform& transform, const EntityChangeTracker::entity_index& newEntityIndex) {
-    if (newEntityIndex == transform.m_entityIndex)
-        return;
-//    Engine::renderer()->notifyTransformChanged(transform.m_entityIndex);
-//    Engine::renderer()->notifyTransformChanged(newEntityIndex);
-    transform.m_entityIndex = newEntityIndex;
-}
+//void Transform::reindex(Transform& transform, const EntityChangeTracker::entity_index& newEntityIndex) {
+//    if (newEntityIndex == transform.m_entityIndex)
+//        return;
+////    Engine::renderer()->notifyTransformChanged(transform.m_entityIndex);
+////    Engine::renderer()->notifyTransformChanged(newEntityIndex);
+//    transform.m_entityIndex = newEntityIndex;
+//}

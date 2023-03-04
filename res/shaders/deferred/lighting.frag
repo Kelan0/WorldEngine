@@ -343,6 +343,6 @@ void main() {
         }
     }
 
+//    finalColour = vec3(subpassLoad(texture_NormalXYZ_Metallic).xyz * 0.5 + 0.5);
     outColor = vec4(finalColour, 1.0);
-
 }

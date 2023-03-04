@@ -4,6 +4,10 @@
 struct ObjectData {
     mat4 prevModelMatrix;
     mat4 modelMatrix;
+    uint materialIndex;
+    uint _pad0;
+    uint _pad1;
+    uint _pad2;
 };
 
 struct CameraData {
