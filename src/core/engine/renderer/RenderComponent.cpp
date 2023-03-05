@@ -4,18 +4,15 @@
 #include "core/engine/renderer/Material.h"
 
 RenderComponent::RenderComponent():
-    RenderComponent(UpdateType_Dynamic, UpdateType_Static, UpdateType_Static) {
+    RenderComponent(UpdateType_Dynamic, UpdateType_Static) {
 }
 
-RenderComponent::RenderComponent(const UpdateType& transformUpdateType,
-                const UpdateType& materialUpdateType,
-                const UpdateType& meshUpdateType):
+RenderComponent::RenderComponent(const UpdateType& transformUpdateType, const UpdateType& meshUpdateType):
         m_mesh(nullptr),
         m_material(nullptr),
 //        m_materialIndex(0), // missing material
 //        m_entityIndex(EntityChangeTracker::INVALID_INDEX),
         m_transformUpdateType(transformUpdateType),
-        m_materialUpdateType(materialUpdateType),
         m_meshUpdateType(meshUpdateType) {
 }
 
@@ -60,10 +57,6 @@ const std::shared_ptr<Material>& RenderComponent::material() const {
 
 RenderComponent::UpdateType RenderComponent::transformUpdateType() const {
     return m_transformUpdateType;
-}
-
-RenderComponent::UpdateType RenderComponent::materialUpdateType() const {
-    return m_materialUpdateType;
 }
 
 RenderComponent::UpdateType RenderComponent::meshUpdateType() const {

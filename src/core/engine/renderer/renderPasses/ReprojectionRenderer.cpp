@@ -28,7 +28,7 @@ ReprojectionRenderer::ReprojectionRenderer():
     setTaaUseMitchellFilter(false);
     setTaaColourClippingMode(ColourClippingMode_Accurate);
     setTaaMitchellFilterCoefficients(0.3F, 0.3F);
-    setTaaEnabled(true);
+    setTaaEnabled(false);
 }
 
 ReprojectionRenderer::~ReprojectionRenderer() {

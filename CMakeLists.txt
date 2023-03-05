@@ -285,7 +285,7 @@ add_executable(${PROJECT_NAME}
         src/core/engine/ConfigManager.cpp
         src/core/engine/ConfigManager.h
         src/core/engine/physics/RigidBody.cpp
-        src/core/engine/physics/RigidBody.h src/core/engine/physics/PhysicsSystem.cpp src/core/engine/physics/PhysicsSystem.h)
+        src/core/engine/physics/RigidBody.h src/core/engine/physics/PhysicsSystem.cpp src/core/engine/physics/PhysicsSystem.h src/demo/BloomTestApplication.cpp src/demo/BloomTestApplication.h src/demo/RenderStressTestApplication.cpp src/demo/RenderStressTestApplication.h)
 
 target_link_libraries(${PROJECT_NAME}
         ${Vulkan_LIBRARIES}

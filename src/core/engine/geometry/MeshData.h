@@ -745,6 +745,9 @@ void MeshData<Vertex_t>::addQuad(const Index& i0, const Index& i1, const Index& 
             createPointPrimitive(i2);
             createPointPrimitive(i3);
             break;
+        default:
+            assert(false); // Unsupported primitive type
+            break;
     }
 }
 

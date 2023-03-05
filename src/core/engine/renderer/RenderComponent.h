@@ -29,9 +29,7 @@ public:
 public:
     RenderComponent();
 
-    RenderComponent(const UpdateType& transformUpdateType,
-                    const UpdateType& materialUpdateType,
-                    const UpdateType& meshUpdateType);
+    RenderComponent(const UpdateType& transformUpdateType, const UpdateType& meshUpdateType);
 
     RenderComponent& setMesh(const std::shared_ptr<Mesh>& mesh);
 
@@ -45,8 +43,6 @@ public:
 
     [[nodiscard]] UpdateType transformUpdateType() const;
 
-    [[nodiscard]] UpdateType materialUpdateType() const;
-
     [[nodiscard]] UpdateType meshUpdateType() const;
 
 private:
@@ -58,7 +54,6 @@ private:
 
     struct {
         UpdateType m_transformUpdateType : 2;
-        UpdateType m_materialUpdateType : 2;
         UpdateType m_meshUpdateType : 2;
     };
 };

@@ -124,7 +124,7 @@ void UIRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer
     PROFILE_BEGIN_GPU_CMD("UIRenderer::render", commandBuffer);
 
 //    ImGui::ShowDemoWindow();
-    ImPlot::ShowDemoWindow();
+//    ImPlot::ShowDemoWindow();
 
     for (auto it = m_uis.begin(); it != m_uis.end(); ++it) {
         const bool& visible = it->second.second;

@@ -65,7 +65,7 @@ private:
     void* mapMaterialDataBuffer(const size_t& maxObjects);
 private:
     struct GPUObjectData {
-        glm::mat4 prevModelMatrix; // TODO: don't store a second matrix per object, but instead store an index into the objectTransforms buffer to reference as the previous transform
+        glm::mat4 prevModelMatrix;
         glm::mat4 modelMatrix;
         uint32_t materialIndex;
         uint32_t _pad0;
@@ -128,6 +128,18 @@ private:
         uint32_t updateTextureDescriptorEndIndex;
     };
 
+    struct DrawCommand {
+        Mesh* mesh = nullptr;
+        uint32_t instanceCount = 0;
+        uint32_t firstInstance = 0;
+    };
+
+    struct RenderInfo {
+        ResourceId materialId = 0;
+        uint32_t materialIndex = UINT32_MAX;
+        uint32_t objectIndex = UINT32_MAX;
+    };
+
 private:
     Scene* m_scene;
 
@@ -147,8 +159,11 @@ private:
     std::vector<Texture*> m_textures;
     std::vector<GPUObjectData> m_objectBuffer;
     std::vector<GPUMaterial> m_materialBuffer;
+    std::vector<DrawCommand> m_drawCommands;
 
     double m_previousPartialTicks;
+
+    uint32_t m_numAddedRenderEntities;
 };
 
 

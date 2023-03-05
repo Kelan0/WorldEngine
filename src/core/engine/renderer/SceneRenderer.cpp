@@ -8,22 +8,20 @@
 #include "core/engine/renderer/Material.h"
 
 
-struct DrawCommand {
-    Mesh* mesh = nullptr;
-    uint32_t instanceCount = 0;
-    uint32_t firstInstance = 0;
-};
+template<typename T>
+struct StaticUpdateFlag { uint8_t _v; };
 
-struct RenderInfo {
-    ResourceId materialId;
-    uint32_t materialIndex;
-};
+template<typename T>
+struct DynamicUpdateFlag { uint8_t _v; };
 
+template<typename T>
+struct AlwaysUpdateFlag { uint8_t _v; };
 
 SceneRenderer::SceneRenderer():
     m_scene(nullptr),
     m_numRenderEntities(0),
-    m_previousPartialTicks(1.0) {
+    m_previousPartialTicks(1.0),
+    m_numAddedRenderEntities(0) {
 }
 
 SceneRenderer::~SceneRenderer() {
@@ -101,6 +99,7 @@ void SceneRenderer::preRender(const double& dt) {
     streamEntityRenderData();
 
     m_previousPartialTicks = Engine::instance()->getPartialTicks();
+    m_numAddedRenderEntities = 0;
 }
 
 void SceneRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera) {
@@ -231,12 +230,28 @@ void SceneRenderer::initMissingTextureMaterial() {
 }
 
 void SceneRenderer::onRenderComponentAdded(ComponentAddedEvent<RenderComponent>* event) {
+    assert(event->entity.hasComponent<Transform>());
+
     RenderInfo& renderInfo = event->entity.addComponent<RenderInfo>();
-    renderInfo.materialIndex = UINT32_MAX;
+    Transform& transform = event->entity.getComponent<Transform>();
+
     renderInfo.materialId = 0;
+    renderInfo.materialIndex = UINT32_MAX;
+    renderInfo.objectIndex = (uint32_t)m_objectBuffer.size();
+
+    GPUObjectData objectData{};
+    Transform::fillMatrixf(transform, objectData.modelMatrix);
+    m_objectBuffer.emplace_back(objectData);
+
+    ++m_numAddedRenderEntities;
 }
 
 void SceneRenderer::onRenderComponentRemoved(ComponentRemovedEvent<RenderComponent>* event) {
+    RenderInfo& renderInfo = event->entity.getComponent<RenderInfo>();
+    if (renderInfo.objectIndex < m_objectBuffer.size()) {
+        // TODO: add index to removedObjectIndices, then handle this in the next sortRenderEntities call.
+    }
+
     event->entity.removeComponent<RenderInfo>();
 }
 
@@ -249,13 +264,14 @@ void SceneRenderer::recordRenderCommands(const double& dt, const vk::CommandBuff
     uint32_t rangeStart = 0;
     uint32_t rangeEnd = (uint32_t)renderEntities.size();
 
-    std::vector<DrawCommand> drawCommands;
+    m_drawCommands.clear();
 
     DrawCommand currDrawCommand{};
     currDrawCommand.firstInstance = (uint32_t)rangeStart;
 
-    auto it = renderEntities.begin() + (uint32_t)rangeStart;
-    for (uint32_t index = rangeStart; index != rangeEnd; ++index, ++it) {
+//    auto it = renderEntities.begin() + (uint32_t)rangeStart;
+//    for (uint32_t index = rangeStart; index != rangeEnd; ++index, ++it) {
+    for (auto it = renderEntities.begin(); it != renderEntities.end(); ++it) {
         const RenderComponent& renderComponent = renderEntities.get<RenderComponent>(*it);
 
         if (currDrawCommand.mesh == nullptr) {
@@ -263,7 +279,7 @@ void SceneRenderer::recordRenderCommands(const double& dt, const vk::CommandBuff
             currDrawCommand.instanceCount = 0;
 
         } else if (currDrawCommand.mesh != renderComponent.mesh().get()) {
-            drawCommands.emplace_back(currDrawCommand);
+            m_drawCommands.emplace_back(currDrawCommand);
             currDrawCommand.mesh = renderComponent.mesh().get();
             currDrawCommand.firstInstance += currDrawCommand.instanceCount;
             currDrawCommand.instanceCount = 0;
@@ -271,10 +287,10 @@ void SceneRenderer::recordRenderCommands(const double& dt, const vk::CommandBuff
 
         ++currDrawCommand.instanceCount;
     }
-    drawCommands.emplace_back(currDrawCommand);
+    m_drawCommands.emplace_back(currDrawCommand);
 
     PROFILE_REGION("Draw meshes")
-    for (auto& command : drawCommands)
+    for (auto& command : m_drawCommands)
         command.mesh->draw(commandBuffer, command.instanceCount, command.firstInstance);
 
     PROFILE_END_REGION()
@@ -287,32 +303,56 @@ void SceneRenderer::sortRenderEntities() {
     PROFILE_SCOPE("SceneRenderer::sortRenderEntities")
 
     auto renderComponentComp = [](const RenderComponent& lhs, const RenderComponent& rhs) {
-        if (lhs.mesh()->getResourceId() != rhs.mesh()->getResourceId()) {
+        if (lhs.transformUpdateType() != rhs.transformUpdateType()) {
+            // Entities with the same update type are grouped
+            return lhs.transformUpdateType() < rhs.transformUpdateType();
+
+        } else if (lhs.mesh()->getResourceId() != rhs.mesh()->getResourceId()) {
             // Prioritise sorting by mesh. All entities with the same mesh are grouped together
             return lhs.mesh()->getResourceId() < rhs.mesh()->getResourceId();
+
         } else {
             // If the mesh is the same, group by material.
             return lhs.material()->getResourceId() < rhs.material()->getResourceId();
         }
     };
 
-
     const auto& renderEntities = m_scene->registry()->group<RenderComponent, RenderInfo, Transform>();
-    renderEntities.sort([&renderEntities, &renderComponentComp](const entt::entity &lhs, const entt::entity &rhs) {
-        return renderComponentComp(renderEntities.get<RenderComponent>(lhs), renderEntities.get<RenderComponent>(rhs));
-    }, entt::std_sort{});
+
+    if (m_numAddedRenderEntities > 0) {
+        if (m_numAddedRenderEntities > 50) {
+            // Many entities added at once, std_sort is faster
+            renderEntities.sort<RenderComponent>(renderComponentComp, entt::std_sort{});
+        } else {
+            // Only a few entities added, insertion_sort is faster
+            renderEntities.sort<RenderComponent>(renderComponentComp, entt::insertion_sort{});
+        }
+
+        std::vector<GPUObjectData> sortedObjectBuffer;
+        sortedObjectBuffer.resize(m_objectBuffer.size());
+
+        uint32_t index = 0;
+        for (auto it = renderEntities.begin(); it != renderEntities.end(); ++it, ++index) {
+            RenderInfo& renderInfo = renderEntities.get<RenderInfo>(*it);
+            assert(renderInfo.objectIndex < m_objectBuffer.size());
+            sortedObjectBuffer[index] = m_objectBuffer[renderInfo.objectIndex];
+            renderInfo.objectIndex = index;
+        }
+
+        m_objectBuffer.swap(sortedObjectBuffer);
+    }
+
+//    printf("Sort render entities: %u / %u\n", numTrue, numFalse);
 }
 
 void SceneRenderer::updateEntityWorldTransforms() {
     PROFILE_SCOPE("SceneRenderer::updateEntityWorldTransforms")
     const auto& renderEntities = m_scene->registry()->group<RenderComponent, RenderInfo, Transform>();
 
-    m_objectBuffer.resize(renderEntities.size());
+    assert(m_objectBuffer.size() >= renderEntities.size());
 
     size_t index = 0;
-
     for (auto it = renderEntities.begin(); it != renderEntities.end(); ++it, ++index) {
-        RenderInfo& renderInfo = renderEntities.get<RenderInfo>(*it);
         Transform& transform = renderEntities.get<Transform>(*it);
         m_objectBuffer[index].prevModelMatrix = m_objectBuffer[index].modelMatrix;
         Transform::fillMatrixf(transform, m_objectBuffer[index].modelMatrix);
@@ -330,14 +370,16 @@ void SceneRenderer::updateEntityMaterials() {
         RenderInfo& renderInfo = renderEntities.get<RenderInfo>(*it);
 
         if (renderComponent.material() == nullptr) {
-            renderInfo.materialIndex = 0; // Default null material
-            renderInfo.materialId = 0;
+            if (renderInfo.materialIndex != 0) {
+                m_objectBuffer[index].materialIndex = 0;
+                renderInfo.materialIndex = 0;
+                renderInfo.materialId = 0;
+            }
         } else if (renderInfo.materialIndex == UINT_MAX || renderInfo.materialId != renderComponent.material()->getResourceId()) {
             renderInfo.materialIndex = registerMaterial(renderComponent.material().get());
             renderInfo.materialId = renderComponent.material()->getResourceId();
+            m_objectBuffer[index].materialIndex = renderInfo.materialIndex;
         }
-
-        m_objectBuffer[index].materialIndex = renderInfo.materialIndex;
     }
 
     if (m_resources->updateTextureDescriptorStartIndex != UINT32_MAX) {
@@ -363,13 +405,13 @@ void SceneRenderer::streamEntityRenderData() {
 
     if (m_numRenderEntities > 0) {
         PROFILE_REGION("Copy object data");
-        GPUObjectData *mappedObjectBuffer = static_cast<GPUObjectData *>(mapObjectDataBuffer(m_numRenderEntities));
+        GPUObjectData* mappedObjectBuffer = static_cast<GPUObjectData*>(mapObjectDataBuffer(m_numRenderEntities));
         memcpy(&mappedObjectBuffer[0], &m_objectBuffer[0], m_objectBuffer.size() * sizeof(GPUObjectData));
     }
 
     if (!m_materialBuffer.empty()) {
         PROFILE_REGION("Copy material data");
-        GPUMaterial *mappedMaterialBuffer = static_cast<GPUMaterial *>(mapMaterialDataBuffer(m_materialBuffer.size()));
+        GPUMaterial* mappedMaterialBuffer = static_cast<GPUMaterial*>(mapMaterialDataBuffer(m_materialBuffer.size()));
         memcpy(&mappedMaterialBuffer[0], &m_materialBuffer[0], m_materialBuffer.size() * sizeof(GPUMaterial));
     }
 }
