@@ -259,7 +259,6 @@ xcopy /y /d  "D:\Code\Libraries\SDL2-2.0.20\lib\x64\SDL2.dll" "$(OutDir)"</Comma
     <ClInclude Include="src\core\engine\renderer\SceneRenderer.h" />
     <ClInclude Include="src\core\engine\renderer\ShadowMap.h" />
     <ClInclude Include="src\core\engine\scene\bound\Frustum.h" />
-    <ClInclude Include="src\core\engine\scene\bound\Intersection.h" />
     <ClInclude Include="src\core\engine\scene\bound\Plane.h" />
     <ClInclude Include="src\core\engine\scene\bound\Sphere.h" />
     <ClInclude Include="src\core\engine\scene\Camera.h" />

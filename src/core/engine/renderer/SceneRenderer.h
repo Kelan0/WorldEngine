@@ -25,7 +25,7 @@ public:
 
     void preRender(const double& dt);
 
-    void render(const double& dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera);
+    void render(const double& dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera);
 
     void setScene(Scene* scene);
 
@@ -52,6 +52,8 @@ private:
 
     void recordRenderCommands(const double& dt, const vk::CommandBuffer& commandBuffer);
 
+    void applyFrustumCulling(const RenderCamera* renderCamera);
+
     void sortRenderEntities();
 
     void updateEntityWorldTransforms();
@@ -59,6 +61,8 @@ private:
     void updateEntityMaterials();
 
     void streamEntityRenderData();
+
+    void* mapObjectIndicesBuffer(const size_t& maxObjects);
 
     void* mapObjectDataBuffer(const size_t& maxObjects);
 
@@ -120,6 +124,7 @@ private:
     };
 
     struct RenderResources {
+        Buffer* objectIndicesBuffer;
         Buffer* worldTransformBuffer;
         Buffer* materialDataBuffer;
         DescriptorSet* objectDescriptorSet;
@@ -140,6 +145,11 @@ private:
         uint32_t objectIndex = UINT32_MAX;
     };
 
+    struct WorldRenderBounds {
+        glm::vec3 aabbMin;
+        glm::vec3 aabbMax;
+    };
+
 private:
     Scene* m_scene;
 
@@ -157,8 +167,9 @@ private:
     std::unordered_map<ResourceId, uint32_t> m_textureIndices;
     std::vector<ResourceId> m_objectMaterials;
     std::vector<Texture*> m_textures;
-    std::vector<GPUObjectData> m_objectBuffer;
-    std::vector<GPUMaterial> m_materialBuffer;
+    std::vector<uint32_t> m_objectIndicesBuffer;
+    std::vector<GPUObjectData> m_objectDataBuffer;
+    std::vector<GPUMaterial> m_materialDataBuffer;
     std::vector<DrawCommand> m_drawCommands;
 
     double m_previousPartialTicks;

@@ -6,6 +6,7 @@
 #include "core/engine/scene/Camera.h"
 #include "core/engine/renderer/RenderCamera.h"
 #include "core/engine/scene/bound/Plane.h"
+#include "core/engine/scene/bound/BoundingVolume.h"
 
 class Frustum {
 public:
@@ -34,9 +35,9 @@ public:
 public:
     Frustum();
 
-    Frustum(const glm::dmat4& viewProjection);
+    explicit Frustum(const glm::dmat4& viewProjection);
 
-    Frustum(const RenderCamera& renderCamera);
+    explicit Frustum(const RenderCamera& renderCamera);
 
     Frustum(const Transform& transform, const Camera& camera);
 
@@ -45,10 +46,6 @@ public:
     Frustum& set(const RenderCamera& renderCamera);
 
     Frustum& set(const Transform& transform, const Camera& camera);
-
-    bool containsPoint(const glm::dvec3& point);
-
-    bool containsPoint(const double& x, const double& y, const double& z);
 
     const Plane& getPlane(const size_t& planeIndex) const;
 
@@ -59,6 +56,13 @@ public:
     void drawLines();
 
     void drawFill();
+
+    bool intersects(const BoundingVolume& boundingVolume) const;
+
+    bool contains(const BoundingVolume& boundingVolume) const;
+
+    bool contains(const glm::dvec3& point) const;
+
 
 private:
     void getRenderCorners(glm::dvec3* corners) const;

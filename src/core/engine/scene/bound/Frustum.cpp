@@ -72,18 +72,6 @@ Frustum &Frustum::set(const Transform& transform, const Camera& camera) {
     return *this;
 }
 
-bool Frustum::containsPoint(const glm::dvec3& point) {
-    return containsPoint(point.x, point.y, point.z);
-}
-
-bool Frustum::containsPoint(const double& x, const double& y, const double& z) {
-    for (size_t i = 0; i < 6; ++i) {
-        if (m_planes[i].signedDistance(x, y, z) < 0.0)
-            return false;
-    }
-    return true; // Point is on the positive side of all 6 frustum planes.
-}
-
 const Plane& Frustum::getPlane(const size_t& planeIndex) const {
     assert(planeIndex < NumPlanes);
 
@@ -110,7 +98,7 @@ const glm::dvec3& Frustum::getCorner(const size_t& cornerIndex) const {
 }
 
 std::array<glm::dvec3, Frustum::NumCorners> Frustum::getCornersNDC() {
-    std::array<glm::dvec3, Frustum::NumCorners> corners;
+    std::array<glm::dvec3, Frustum::NumCorners> corners{};
     corners[Corner_Left_Top_Near] = glm::dvec3(-1, +1, -1);
     corners[Corner_Right_Top_Near] = glm::dvec3(+1, +1, -1);
     corners[Corner_Right_Bottom_Near] = glm::dvec3(+1, -1, -1);
@@ -197,5 +185,27 @@ void Frustum::getRenderCorners(glm::dvec3* corners) const {
     corners[Corner_Right_Top_Far] = corners[Corner_Right_Top_Near] + vTR * 0.75;
     corners[Corner_Right_Bottom_Far] = corners[Corner_Right_Bottom_Near] + vBR * 0.75;
     corners[Corner_Left_Bottom_Far] = corners[Corner_Left_Bottom_Near] + vBL * 0.75;
+}
+
+bool Frustum::intersects(const BoundingVolume& boundingVolume) const {
+    for (size_t i = 0; i < NumPlanes; ++i)
+        if (m_planes[i].calculateMaxSignedDistance(boundingVolume) < 0.0F)
+            return false; // The most positive coordinate of this bounding volume is on the negative side of the plane (volume fully outside frustum)
+    return true;
+}
+
+bool Frustum::contains(const BoundingVolume& boundingVolume) const {
+    for (size_t i = 0; i < NumPlanes; ++i)
+        if (m_planes[i].calculateMinSignedDistance(boundingVolume) < 0.0F)
+            return false; // The most negative coordinate of this bounding volume is on the negative side of the plane (volume at least partially outside frustum, not fully contained)
+    return true;
+}
+
+bool Frustum::contains(const glm::dvec3& point) const {
+    for (size_t i = 0; i < NumPlanes; ++i) {
+        if (m_planes[i].calculateSignedDistance(point) < 0.0)
+            return false;
+    }
+    return true; // Point is on the positive side of all 6 frustum planes.
 }
 

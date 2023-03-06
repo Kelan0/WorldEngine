@@ -26,7 +26,7 @@
 #include "core/engine/renderer/Material.h"
 #include "core/thread/ThreadUtils.h"
 #include "core/util/Profiler.h"
-#include "core/engine/scene/bound/Intersection.h"
+#include "core/engine/scene/bound/Frustum.h"
 #include "core/engine/renderer/LightComponent.h"
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/renderer/renderPasses/ReprojectionRenderer.h"

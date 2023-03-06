@@ -28,10 +28,15 @@ layout(std140, set = 1, binding = 0) readonly buffer ObjectDataBuffer {
     ObjectData objects[];
 };
 
+layout(std140, set = 1, binding = 1) readonly buffer ObjectIndexBuffer {
+    uvec4 objectIndices[];
+};
+
 void main() {
-    mat4 prevModelMatrix = objects[gl_InstanceIndex].prevModelMatrix;
-    mat4 modelMatrix = objects[gl_InstanceIndex].modelMatrix;
-    uint materialIndex = objects[gl_InstanceIndex].materialIndex;
+    uint objectIndex = objectIndices[gl_InstanceIndex / 4][gl_InstanceIndex % 4];
+    mat4 prevModelMatrix = objects[objectIndex].prevModelMatrix;
+    mat4 modelMatrix = objects[objectIndex].modelMatrix;
+    uint materialIndex = objects[objectIndex].materialIndex;
 
     mat3 normalMatrix = transpose(inverse(mat3(camera.viewMatrix) * mat3(modelMatrix)));
 

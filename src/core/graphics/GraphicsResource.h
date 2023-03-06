@@ -179,7 +179,7 @@ private:
 class GraphicsResource {
     NO_COPY(GraphicsResource);
 public:
-    enum ResourceType {
+    enum ResourceType : uint8_t {
         ResourceType_None = 0,
         ResourceType_Mesh = 1,
         ResourceType_Buffer = 2,

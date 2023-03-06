@@ -10,9 +10,9 @@
 #include <random>
 
 RenderStressTestApplication::RenderStressTestApplication():
-    m_cameraPitch(0.0F),
-    m_cameraYaw(0.0F),
-    m_playerMovementSpeed(5.0F) {
+    m_cameraPitch(0.0),
+    m_cameraYaw(0.0),
+    m_playerMovementSpeed(5.0) {
 }
 
 RenderStressTestApplication::~RenderStressTestApplication() {
@@ -37,10 +37,10 @@ void RenderStressTestApplication::init() {
     sphereMaterial1Config.setMetallic(0.9F);
     m_sphereMaterial = std::shared_ptr<Material> (Material::create(sphereMaterial1Config, "Demo-AddSphereMaterial"));
 
+    BoundingVolume* sphereBounds = new BoundingSphere(glm::dvec3(0.0), 0.26);
 
-
-    size_t numSpheresX = 800;
-    size_t numSpheresZ = 800;
+    size_t numSpheresX = 300;
+    size_t numSpheresZ = 300;
     float separationX = 0.26F;
     float separationZ = 0.26F;
     float offsetX = 0.0F;//-0.5F * (numSpheresX * separationX);
@@ -72,7 +72,7 @@ void RenderStressTestApplication::init() {
     m_cameraPitch = 0.0F;
     m_cameraYaw = glm::radians(225.0F); // 45 degrees (between +X and +Z)
     Transform& cameraTransform = Engine::scene()->getMainCameraEntity().getComponent<Transform>();
-    cameraTransform.setTranslation(0.0F, 1.0F, 0.0F).setRotation(m_cameraPitch, m_cameraYaw);
+    cameraTransform.setTranslation(0.0F, 1.0F, 0.0F).setRotation((float)m_cameraPitch, (float)m_cameraYaw);
 }
 
 void RenderStressTestApplication::cleanup() {

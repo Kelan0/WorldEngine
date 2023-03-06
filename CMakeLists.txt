@@ -203,10 +203,6 @@ add_executable(${PROJECT_NAME}
         src/core/engine/scene/bound/Frustum.h
         src/core/engine/scene/bound/Plane.cpp
         src/core/engine/scene/bound/Plane.h
-        src/core/engine/scene/bound/Sphere.cpp
-        src/core/engine/scene/bound/Sphere.h
-        src/core/engine/scene/bound/Intersection.cpp
-        src/core/engine/scene/bound/Intersection.h
         src/core/engine/renderer/ImmediateRenderer.cpp
         src/core/engine/renderer/ImmediateRenderer.h
         src/core/graphics/RenderPass.cpp
@@ -285,7 +281,7 @@ add_executable(${PROJECT_NAME}
         src/core/engine/ConfigManager.cpp
         src/core/engine/ConfigManager.h
         src/core/engine/physics/RigidBody.cpp
-        src/core/engine/physics/RigidBody.h src/core/engine/physics/PhysicsSystem.cpp src/core/engine/physics/PhysicsSystem.h src/demo/BloomTestApplication.cpp src/demo/BloomTestApplication.h src/demo/RenderStressTestApplication.cpp src/demo/RenderStressTestApplication.h)
+        src/core/engine/physics/RigidBody.h src/core/engine/physics/PhysicsSystem.cpp src/core/engine/physics/PhysicsSystem.h src/demo/BloomTestApplication.cpp src/demo/BloomTestApplication.h src/demo/RenderStressTestApplication.cpp src/demo/RenderStressTestApplication.h src/core/engine/scene/bound/BoundingVolume.cpp src/core/engine/scene/bound/BoundingVolume.h)
 
 target_link_libraries(${PROJECT_NAME}
         ${Vulkan_LIBRARIES}

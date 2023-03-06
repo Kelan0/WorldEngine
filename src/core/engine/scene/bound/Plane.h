@@ -2,6 +2,7 @@
 #define WORLDENGINE_PLANE_H
 
 #include "core/core.h"
+#include "BoundingVolume.h"
 
 class Plane {
 public:
@@ -35,23 +36,32 @@ public:
 
     double length() const;
 
-    glm::dvec3 getNormal() const;
+    const glm::dvec3& getNormal() const;
 
-    double getOffset() const;
+    const double& getOffset() const;
 
-    double signedDistance(const glm::dvec3& point) const;
+    double calculateSignedDistance(const glm::dvec3& point) const;
 
-    double signedDistance(const double& x, const double& y, const double& z) const;
+    double calculateMinSignedDistance(const BoundingVolume& boundingVolume) const;
+
+    double calculateMaxSignedDistance(const BoundingVolume& boundingVolume) const;
+
+    bool intersects(const BoundingVolume& boundingVolume) const;
 
     // Fast triple-plane intersection point, assumes that the planes WILL intersect
     // at a single point, and none are parallel, or intersect along a line.
     static glm::dvec3 triplePlaneIntersection(const Plane& a, const Plane& b, const Plane& c);
 
 public:
-    double a;
-    double b;
-    double c;
-    double d;
+    union {
+        struct {
+            glm::dvec3 normal;
+            double offset;
+        };
+        struct {
+            double a, b, c, d;
+        };
+    };
 };
 
 

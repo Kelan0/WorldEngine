@@ -341,9 +341,6 @@
     <ClInclude Include="src\core\engine\scene\bound\Frustum.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\engine\scene\bound\Intersection.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\core\engine\scene\bound\Plane.h">
       <Filter>Header Files</Filter>
     </ClInclude>

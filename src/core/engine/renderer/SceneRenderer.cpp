@@ -6,6 +6,7 @@
 #include "core/graphics/Buffer.h"
 #include "core/graphics/Mesh.h"
 #include "core/engine/renderer/Material.h"
+#include "core/engine/scene/bound/Frustum.h"
 
 
 template<typename T>
@@ -26,6 +27,7 @@ SceneRenderer::SceneRenderer():
 
 SceneRenderer::~SceneRenderer() {
     for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
+        delete m_resources[i]->objectIndicesBuffer;
         delete m_resources[i]->worldTransformBuffer;
         delete m_resources[i]->materialDataBuffer;
         delete m_resources[i]->objectDescriptorSet;
@@ -50,7 +52,8 @@ bool SceneRenderer::init() {
     initialImageLayouts.resize(maxTextures, vk::ImageLayout::eShaderReadOnlyOptimal);
 
     m_objectDescriptorSetLayout = builder
-            .addStorageBuffer(0, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+            .addStorageBuffer(0, vk::ShaderStageFlagBits::eVertex)
+            .addStorageBuffer(1, vk::ShaderStageFlagBits::eVertex)
             .build("SceneRenderer-ObjectDescriptorSetLayout");
 
     m_materialDescriptorSetLayout = builder
@@ -63,6 +66,7 @@ bool SceneRenderer::init() {
         m_resources[i]->objectDescriptorSet = DescriptorSet::create(m_objectDescriptorSetLayout, descriptorPool, "SceneRenderer-ObjectDescriptorSet");
         m_resources[i]->materialDescriptorSet = DescriptorSet::create(m_materialDescriptorSetLayout, descriptorPool, "SceneRenderer-MaterialDescriptorSet");
 
+        m_resources[i]->objectIndicesBuffer = nullptr;
         m_resources[i]->worldTransformBuffer = nullptr;
         m_resources[i]->materialDataBuffer = nullptr;
 
@@ -76,7 +80,7 @@ bool SceneRenderer::init() {
 
     // Missing texture needs to be at index 0
     m_materialIndices.clear();
-    m_materialBuffer.clear();
+    m_materialDataBuffer.clear();
     registerMaterial(m_missingTextureMaterial.get());
 
     m_scene->enableEvents<RenderComponent>();
@@ -102,10 +106,11 @@ void SceneRenderer::preRender(const double& dt) {
     m_numAddedRenderEntities = 0;
 }
 
-void SceneRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera) {
+void SceneRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera) {
     PROFILE_SCOPE("SceneRenderer::render")
     PROFILE_BEGIN_GPU_CMD("SceneRenderer::render", commandBuffer);
 
+    applyFrustumCulling(renderCamera);
     recordRenderCommands(dt, commandBuffer);
 
     PROFILE_END_GPU_CMD(commandBuffer);
@@ -163,7 +168,7 @@ uint32_t SceneRenderer::registerMaterial(Material* material) {
 
     auto it = m_materialIndices.find(material->getResourceId());
     if (it == m_materialIndices.end()) {
-        materialIndex = (uint32_t)m_materialBuffer.size();
+        materialIndex = (uint32_t)m_materialDataBuffer.size();
 
         GPUMaterial gpuMaterial{};
         gpuMaterial.hasAlbedoTexture = material->hasAlbedoMap();
@@ -184,7 +189,7 @@ uint32_t SceneRenderer::registerMaterial(Material* material) {
         gpuMaterial.emission_b = material->getEmission().b;
         gpuMaterial.roughness = material->getRoughness();
         gpuMaterial.metallic = material->getMetallic();
-        m_materialBuffer.emplace_back(gpuMaterial);
+        m_materialDataBuffer.emplace_back(gpuMaterial);
 
         m_materialIndices.insert(std::make_pair(material->getResourceId(), materialIndex));
     } else {
@@ -233,61 +238,64 @@ void SceneRenderer::onRenderComponentAdded(ComponentAddedEvent<RenderComponent>*
     assert(event->entity.hasComponent<Transform>());
 
     RenderInfo& renderInfo = event->entity.addComponent<RenderInfo>();
+    WorldRenderBounds& renderBounds = event->entity.addComponent<WorldRenderBounds>();
     Transform& transform = event->entity.getComponent<Transform>();
 
     renderInfo.materialId = 0;
     renderInfo.materialIndex = UINT32_MAX;
-    renderInfo.objectIndex = (uint32_t)m_objectBuffer.size();
+    renderInfo.objectIndex = (uint32_t)m_objectDataBuffer.size();
 
     GPUObjectData objectData{};
     Transform::fillMatrixf(transform, objectData.modelMatrix);
-    m_objectBuffer.emplace_back(objectData);
+    m_objectDataBuffer.emplace_back(objectData);
 
     ++m_numAddedRenderEntities;
 }
 
 void SceneRenderer::onRenderComponentRemoved(ComponentRemovedEvent<RenderComponent>* event) {
     RenderInfo& renderInfo = event->entity.getComponent<RenderInfo>();
-    if (renderInfo.objectIndex < m_objectBuffer.size()) {
+    if (renderInfo.objectIndex < m_objectDataBuffer.size()) {
         // TODO: add index to removedObjectIndices, then handle this in the next sortRenderEntities call.
     }
 
     event->entity.removeComponent<RenderInfo>();
+    event->entity.removeComponent<WorldRenderBounds>();
 }
 
 void SceneRenderer::recordRenderCommands(const double& dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("SceneRenderer::recordRenderCommands");
 
+    if (m_objectIndicesBuffer.empty()) {
+        return; // Nothing to draw ...??
+    }
     PROFILE_REGION("Gather DrawCommands")
     const auto& renderEntities = m_scene->registry()->group<RenderComponent, RenderInfo, Transform>();
-
-    uint32_t rangeStart = 0;
-    uint32_t rangeEnd = (uint32_t)renderEntities.size();
 
     m_drawCommands.clear();
 
     DrawCommand currDrawCommand{};
-    currDrawCommand.firstInstance = (uint32_t)rangeStart;
+    currDrawCommand.firstInstance = 0;
 
-//    auto it = renderEntities.begin() + (uint32_t)rangeStart;
-//    for (uint32_t index = rangeStart; index != rangeEnd; ++index, ++it) {
-    for (auto it = renderEntities.begin(); it != renderEntities.end(); ++it) {
+    for (uint32_t i = 0; i < m_objectIndicesBuffer.size(); ++i) {
+        auto it = renderEntities.begin() + m_objectIndicesBuffer[i];
         const RenderComponent& renderComponent = renderEntities.get<RenderComponent>(*it);
 
         if (currDrawCommand.mesh == nullptr) {
-            currDrawCommand.mesh = renderComponent.mesh().get();
+            currDrawCommand.mesh = renderComponent.getMesh().get();
             currDrawCommand.instanceCount = 0;
 
-        } else if (currDrawCommand.mesh != renderComponent.mesh().get()) {
+        } else if (currDrawCommand.mesh != renderComponent.getMesh().get()) {
             m_drawCommands.emplace_back(currDrawCommand);
-            currDrawCommand.mesh = renderComponent.mesh().get();
+            currDrawCommand.mesh = renderComponent.getMesh().get();
             currDrawCommand.firstInstance += currDrawCommand.instanceCount;
             currDrawCommand.instanceCount = 0;
         }
 
         ++currDrawCommand.instanceCount;
     }
-    m_drawCommands.emplace_back(currDrawCommand);
+
+    if (currDrawCommand.mesh != nullptr && currDrawCommand.instanceCount > 0)
+        m_drawCommands.emplace_back(currDrawCommand);
 
     PROFILE_REGION("Draw meshes")
     for (auto& command : m_drawCommands)
@@ -299,6 +307,37 @@ void SceneRenderer::recordRenderCommands(const double& dt, const vk::CommandBuff
     PROFILE_END_GPU_CMD(commandBuffer);
 }
 
+void SceneRenderer::applyFrustumCulling(const RenderCamera* renderCamera) {
+    PROFILE_SCOPE("SceneRenderer::applyFrustumCulling");
+
+    m_objectIndicesBuffer.clear();
+
+    PROFILE_REGION("Calculate frustum")
+    Frustum frustum(*renderCamera);
+
+    const auto& renderEntities = m_scene->registry()->group<RenderComponent, RenderInfo, Transform>();
+
+    PROFILE_REGION("Update visible indices")
+
+    uint32_t objectIndex = 0;
+    for (auto it = renderEntities.begin(); it != renderEntities.end(); ++it, ++objectIndex) {
+        const Transform& transform = renderEntities.get<Transform>(*it);
+
+        if (frustum.contains(transform.getTranslation())) {
+            m_objectIndicesBuffer.emplace_back(objectIndex);
+        }
+    }
+
+    PROFILE_REGION("Upload visible indices")
+
+    m_objectIndicesBuffer.resize(CEIL_TO_MULTIPLE(m_objectIndicesBuffer.size(), 4));
+
+    if (!m_objectIndicesBuffer.empty()) {
+        uint32_t* mappedObjectIndicesBuffer = static_cast<uint32_t*>(mapObjectIndicesBuffer(m_numRenderEntities));
+        memcpy(&mappedObjectIndicesBuffer[0], &m_objectIndicesBuffer[0], m_objectIndicesBuffer.size() * sizeof(uint32_t));
+    }
+}
+
 void SceneRenderer::sortRenderEntities() {
     PROFILE_SCOPE("SceneRenderer::sortRenderEntities")
 
@@ -307,13 +346,13 @@ void SceneRenderer::sortRenderEntities() {
             // Entities with the same update type are grouped
             return lhs.transformUpdateType() < rhs.transformUpdateType();
 
-        } else if (lhs.mesh()->getResourceId() != rhs.mesh()->getResourceId()) {
+        } else if (lhs.getMesh()->getResourceId() != rhs.getMesh()->getResourceId()) {
             // Prioritise sorting by mesh. All entities with the same mesh are grouped together
-            return lhs.mesh()->getResourceId() < rhs.mesh()->getResourceId();
+            return lhs.getMesh()->getResourceId() < rhs.getMesh()->getResourceId();
 
         } else {
             // If the mesh is the same, group by material.
-            return lhs.material()->getResourceId() < rhs.material()->getResourceId();
+            return lhs.getMaterial()->getResourceId() < rhs.getMaterial()->getResourceId();
         }
     };
 
@@ -329,17 +368,17 @@ void SceneRenderer::sortRenderEntities() {
         }
 
         std::vector<GPUObjectData> sortedObjectBuffer;
-        sortedObjectBuffer.resize(m_objectBuffer.size());
+        sortedObjectBuffer.resize(m_objectDataBuffer.size());
 
         uint32_t index = 0;
         for (auto it = renderEntities.begin(); it != renderEntities.end(); ++it, ++index) {
             RenderInfo& renderInfo = renderEntities.get<RenderInfo>(*it);
-            assert(renderInfo.objectIndex < m_objectBuffer.size());
-            sortedObjectBuffer[index] = m_objectBuffer[renderInfo.objectIndex];
+            assert(renderInfo.objectIndex < m_objectDataBuffer.size());
+            sortedObjectBuffer[index] = m_objectDataBuffer[renderInfo.objectIndex];
             renderInfo.objectIndex = index;
         }
 
-        m_objectBuffer.swap(sortedObjectBuffer);
+        m_objectDataBuffer.swap(sortedObjectBuffer);
     }
 
 //    printf("Sort render entities: %u / %u\n", numTrue, numFalse);
@@ -349,13 +388,13 @@ void SceneRenderer::updateEntityWorldTransforms() {
     PROFILE_SCOPE("SceneRenderer::updateEntityWorldTransforms")
     const auto& renderEntities = m_scene->registry()->group<RenderComponent, RenderInfo, Transform>();
 
-    assert(m_objectBuffer.size() >= renderEntities.size());
+    assert(m_objectDataBuffer.size() >= renderEntities.size());
 
     size_t index = 0;
     for (auto it = renderEntities.begin(); it != renderEntities.end(); ++it, ++index) {
         Transform& transform = renderEntities.get<Transform>(*it);
-        m_objectBuffer[index].prevModelMatrix = m_objectBuffer[index].modelMatrix;
-        Transform::fillMatrixf(transform, m_objectBuffer[index].modelMatrix);
+        m_objectDataBuffer[index].prevModelMatrix = m_objectDataBuffer[index].modelMatrix;
+        Transform::fillMatrixf(transform, m_objectDataBuffer[index].modelMatrix);
     }
 }
 
@@ -369,16 +408,16 @@ void SceneRenderer::updateEntityMaterials() {
         RenderComponent& renderComponent = renderEntities.get<RenderComponent>(*it);
         RenderInfo& renderInfo = renderEntities.get<RenderInfo>(*it);
 
-        if (renderComponent.material() == nullptr) {
+        if (renderComponent.getMaterial() == nullptr) {
             if (renderInfo.materialIndex != 0) {
-                m_objectBuffer[index].materialIndex = 0;
+                m_objectDataBuffer[index].materialIndex = 0;
                 renderInfo.materialIndex = 0;
                 renderInfo.materialId = 0;
             }
-        } else if (renderInfo.materialIndex == UINT_MAX || renderInfo.materialId != renderComponent.material()->getResourceId()) {
-            renderInfo.materialIndex = registerMaterial(renderComponent.material().get());
-            renderInfo.materialId = renderComponent.material()->getResourceId();
-            m_objectBuffer[index].materialIndex = renderInfo.materialIndex;
+        } else if (renderInfo.materialIndex == UINT_MAX || renderInfo.materialId != renderComponent.getMaterial()->getResourceId()) {
+            renderInfo.materialIndex = registerMaterial(renderComponent.getMaterial().get());
+            renderInfo.materialId = renderComponent.getMaterial()->getResourceId();
+            m_objectDataBuffer[index].materialIndex = renderInfo.materialIndex;
         }
     }
 
@@ -405,15 +444,41 @@ void SceneRenderer::streamEntityRenderData() {
 
     if (m_numRenderEntities > 0) {
         PROFILE_REGION("Copy object data");
-        GPUObjectData* mappedObjectBuffer = static_cast<GPUObjectData*>(mapObjectDataBuffer(m_numRenderEntities));
-        memcpy(&mappedObjectBuffer[0], &m_objectBuffer[0], m_objectBuffer.size() * sizeof(GPUObjectData));
+        GPUObjectData* mappedObjectDataBuffer = static_cast<GPUObjectData*>(mapObjectDataBuffer(m_numRenderEntities));
+        memcpy(&mappedObjectDataBuffer[0], &m_objectDataBuffer[0], m_objectDataBuffer.size() * sizeof(GPUObjectData));
     }
 
-    if (!m_materialBuffer.empty()) {
+    if (!m_materialDataBuffer.empty()) {
         PROFILE_REGION("Copy material data");
-        GPUMaterial* mappedMaterialBuffer = static_cast<GPUMaterial*>(mapMaterialDataBuffer(m_materialBuffer.size()));
-        memcpy(&mappedMaterialBuffer[0], &m_materialBuffer[0], m_materialBuffer.size() * sizeof(GPUMaterial));
+        GPUMaterial* mappedMaterialDataBuffer = static_cast<GPUMaterial*>(mapMaterialDataBuffer(m_materialDataBuffer.size()));
+        memcpy(&mappedMaterialDataBuffer[0], &m_materialDataBuffer[0], m_materialDataBuffer.size() * sizeof(GPUMaterial));
     }
+}
+
+void* SceneRenderer::mapObjectIndicesBuffer(const size_t& maxObjects) {
+    PROFILE_SCOPE("SceneRenderer::mapObjectIndicesBuffer")
+
+    vk::DeviceSize newBufferSize = sizeof(uint32_t) * maxObjects;
+
+    if (m_resources->objectIndicesBuffer == nullptr || newBufferSize > m_resources->objectIndicesBuffer->getSize()) {
+        PROFILE_SCOPE("Allocate ObjectIndicesBuffer");
+
+        BufferConfiguration objectIndicesBufferConfig{};
+        objectIndicesBufferConfig.device = Engine::graphics()->getDevice();
+        objectIndicesBufferConfig.size = newBufferSize;
+        objectIndicesBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+        objectIndicesBufferConfig.usage = vk::BufferUsageFlagBits::eStorageBuffer;
+
+        delete m_resources->objectIndicesBuffer;
+        m_resources->objectIndicesBuffer = Buffer::create(objectIndicesBufferConfig, "SceneRenderer-ObjectIndicesBuffer");
+
+        DescriptorSetWriter(m_resources->objectDescriptorSet)
+                .writeBuffer(1, m_resources->objectIndicesBuffer, 0, newBufferSize)
+                .write();
+    }
+
+    void* mappedBuffer = m_resources->objectIndicesBuffer->map();
+    return mappedBuffer;
 }
 
 void* SceneRenderer::mapObjectDataBuffer(const size_t& maxObjects) {
@@ -438,7 +503,6 @@ void* SceneRenderer::mapObjectDataBuffer(const size_t& maxObjects) {
                 .write();
     }
 
-    PROFILE_REGION("Map buffer");
     void* mappedBuffer = m_resources->worldTransformBuffer->map();
     return mappedBuffer;
 }
@@ -465,7 +529,6 @@ void* SceneRenderer::mapMaterialDataBuffer(const size_t& maxObjects) {
                 .write();
     }
 
-    PROFILE_REGION("Map buffer");
     void* mappedBuffer = m_resources->materialDataBuffer->map();
     return mappedBuffer;
 }

@@ -5,6 +5,7 @@
 #include "core/core.h"
 #include "core/util/EntityChangeTracker.h"
 #include "core/engine/scene/Transform.h"
+#include "core/engine/scene/bound/BoundingVolume.h"
 
 class Material;
 class Mesh;
@@ -35,22 +36,22 @@ public:
 
     RenderComponent& setMaterial(const std::shared_ptr<Material>& material);
 
-//    [[nodiscard]] const uint32_t& getMaterialIndex() const;
+    RenderComponent& setBoundingVolume(BoundingVolume* boundingVolume);
 
-    [[nodiscard]] const std::shared_ptr<Mesh>& mesh() const;
+    const std::shared_ptr<Mesh>& getMesh() const;
 
-    [[nodiscard]] const std::shared_ptr<Material>& material() const;
+    const std::shared_ptr<Material>& getMaterial() const;
 
-    [[nodiscard]] UpdateType transformUpdateType() const;
+    BoundingVolume* getBoundingVolume() const;
 
-    [[nodiscard]] UpdateType meshUpdateType() const;
+    UpdateType transformUpdateType() const;
 
-private:
-//    static void reindex(RenderComponent& renderComponent, const EntityChangeTracker::entity_index& newEntityIndex);
+    UpdateType meshUpdateType() const;
 
 private:
     std::shared_ptr<Mesh> m_mesh;
     std::shared_ptr<Material> m_material;
+    BoundingVolume* m_boundingVolume;
 
     struct {
         UpdateType m_transformUpdateType : 2;

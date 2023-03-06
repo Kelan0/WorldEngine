@@ -24,9 +24,9 @@ private:
     void handleUserInput(const double& dt);
 
 private:
-    float m_cameraPitch;
-    float m_cameraYaw;
-    float m_playerMovementSpeed;
+    double m_cameraPitch;
+    double m_cameraYaw;
+    double m_playerMovementSpeed;
 
     std::shared_ptr<Mesh> m_sphereMesh;
     std::shared_ptr<Material> m_sphereMaterial;
