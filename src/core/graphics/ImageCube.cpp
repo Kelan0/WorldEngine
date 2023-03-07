@@ -214,7 +214,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
     Engine::graphics()->setObjectName(device, (uint64_t)(VkImage)image, vk::ObjectType::eImage, name);
 
     const vk::MemoryRequirements& memoryRequirements = device.getImageMemoryRequirements(image);
-    DeviceMemoryBlock* memory = vmalloc(memoryRequirements, imageCubeConfiguration.memoryProperties);
+    DeviceMemoryBlock* memory = vmalloc(memoryRequirements, imageCubeConfiguration.memoryProperties, name);
     if (memory == nullptr) {
         device.destroyImage(image);
         printf("Image memory allocation failed\n");

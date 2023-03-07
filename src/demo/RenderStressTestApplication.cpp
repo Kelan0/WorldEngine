@@ -39,8 +39,8 @@ void RenderStressTestApplication::init() {
 
     BoundingVolume* sphereBounds = new BoundingSphere(glm::dvec3(0.0), 0.26);
 
-    size_t numSpheresX = 300;
-    size_t numSpheresZ = 300;
+    size_t numSpheresX = 100;
+    size_t numSpheresZ = 100;
     float separationX = 0.26F;
     float separationZ = 0.26F;
     float offsetX = 0.0F;//-0.5F * (numSpheresX * separationX);

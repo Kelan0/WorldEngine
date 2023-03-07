@@ -125,7 +125,7 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration, const
     Engine::graphics()->setObjectName(device, (uint64_t)(VkImage)image, vk::ObjectType::eImage, name);
 
     const vk::MemoryRequirements& memoryRequirements = device.getImageMemoryRequirements(image);
-    DeviceMemoryBlock* memory = vmalloc(memoryRequirements, image2DConfiguration.memoryProperties);
+    DeviceMemoryBlock* memory = vmalloc(memoryRequirements, image2DConfiguration.memoryProperties, name);
     if (memory == nullptr) {
         device.destroyImage(image);
         printf("Failed to create Image2D \"%s\": Memory allocation failed\n", name.c_str());

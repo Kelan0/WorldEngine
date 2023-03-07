@@ -60,7 +60,7 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration, const std
     Engine::graphics()->setObjectName(device, (uint64_t)(VkBuffer)buffer, vk::ObjectType::eBuffer, name);
 
     const vk::MemoryRequirements& memoryRequirements = device.getBufferMemoryRequirements(buffer);
-    DeviceMemoryBlock* memory = vmalloc(memoryRequirements, bufferConfiguration.memoryProperties);
+    DeviceMemoryBlock* memory = vmalloc(memoryRequirements, bufferConfiguration.memoryProperties, name);
 
     if (memory == nullptr) {
         device.destroyBuffer(buffer);
@@ -68,6 +68,8 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration, const std
         return nullptr;
     }
 
+    assert(memory->getSize() >= memoryRequirements.size);
+    assert(memory->getOffset() + memory->getSize() <= memory->getHeap()->getSize());
     memory->bindBuffer(buffer);
 
     Buffer* returnBuffer = new Buffer(bufferConfiguration.device, buffer, memory, bufferConfiguration.size, bufferConfiguration.memoryProperties, GraphicsManager::nextResourceId(), name);

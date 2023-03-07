@@ -8,7 +8,7 @@
 #include "core/engine/scene/Scene.h"
 #include "core/engine/renderer/RenderComponent.h"
 
-class Buffer;
+class aaaBuffer;
 class DescriptorSet;
 class DescriptorSetLayout;
 class Texture;

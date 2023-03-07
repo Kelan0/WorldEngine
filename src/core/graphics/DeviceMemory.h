@@ -33,7 +33,7 @@ public:
 
     static vk::DeviceSize getAlignedOffset(const vk::DeviceSize& offset, const vk::DeviceSize& alignment);
 
-    DeviceMemoryBlock* allocate(const vk::MemoryRequirements& requirements, const vk::MemoryPropertyFlags& memoryProperties);
+    DeviceMemoryBlock* allocate(const vk::MemoryRequirements& requirements, const vk::MemoryPropertyFlags& memoryProperties, const std::string& name);
 
     void free(DeviceMemoryBlock* block) const;
 
@@ -52,6 +52,9 @@ class DeviceMemoryHeap : public GraphicsResource {
 
 public:
     struct BlockRange {
+#if _DEBUG
+        std::string name;
+#endif
         vk::DeviceSize offset;
         vk::DeviceSize size;
         bool free;
@@ -77,7 +80,7 @@ public:
 
     void bindImageMemory(const Image2D* image, const vk::DeviceSize& offset) const;
 
-    DeviceMemoryBlock* allocateBlock(const vk::DeviceSize& size, const vk::DeviceSize& alignment);
+    DeviceMemoryBlock* allocateBlock(const vk::DeviceSize& size, const vk::DeviceSize& alignment, const std::string& name);
 
     bool freeBlock(DeviceMemoryBlock* block);
 
@@ -96,15 +99,19 @@ private:
 
     bool moveBlock(const size_t& srcBlockIndex, const size_t& dstBlockIndex);
 
+    size_t resizeBlock(const size_t& blockIndex, const vk::DeviceSize& newSize);
+
     size_t updateBlock(const size_t& blockIndex, const BlockRange& newBlock);
 
     void insertBlock(const BlockRange& block);
 
     size_t getBlockSequenceIndex(const BlockRange& block);
 
+    void insertBlockSequence(const size_t& index);
+
     void eraseBlockSequence(const size_t& index);
 
-    bool isContiguous(const size_t& firstIndex, const size_t& secondIndex);
+    bool isContiguous(const BlockRange& firstBlock, const BlockRange& secondBlock);
 
     bool equalBlocks(const BlockRange& lhs, const BlockRange& rhs);
 
@@ -112,6 +119,11 @@ private:
 
     void unmap(DeviceMemoryBlock* block);
 
+#if _DEBUG
+    void sanityCheckBlocks();
+
+    void sanityCheckSizeSequence();
+#endif
 private:
     vk::DeviceMemory m_deviceMemory;
     vk::DeviceSize m_size;
@@ -168,7 +180,7 @@ private:
 };
 
 
-DeviceMemoryBlock* vmalloc(const vk::MemoryRequirements& requirements, const vk::MemoryPropertyFlags& memoryProperties);
+DeviceMemoryBlock* vmalloc(const vk::MemoryRequirements& requirements, const vk::MemoryPropertyFlags& memoryProperties, const std::string& name);
 
 void vfree(DeviceMemoryBlock* memory);
 
