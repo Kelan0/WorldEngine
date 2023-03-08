@@ -163,7 +163,7 @@ void DeferredRenderer::preRender(double dt) {
     swapFrame();
 }
 
-void DeferredRenderer::renderGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera) {
+void DeferredRenderer::renderGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum) {
     PROFILE_SCOPE("DeferredRenderer::renderGeometryPass");
     PROFILE_BEGIN_GPU_CMD("DeferredRenderer::renderGeometryPass", commandBuffer);
 
@@ -205,7 +205,7 @@ void DeferredRenderer::renderGeometryPass(double dt, const vk::CommandBuffer& co
     m_geometryGraphicsPipeline->bind(commandBuffer);
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_geometryGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
 
-    Engine::sceneRenderer()->render(dt, commandBuffer, renderCamera);
+    Engine::sceneRenderer()->render(dt, commandBuffer, frustum);
     PROFILE_END_GPU_CMD(commandBuffer);
 }
 

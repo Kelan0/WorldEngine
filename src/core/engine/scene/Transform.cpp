@@ -494,6 +494,14 @@ void Transform::fillMatrixf(const Transform& transform1, const Transform& transf
     matrix[3].w = 1.0F;
 }
 
+glm::dvec3 Transform::apply(const Transform& transform, const glm::dvec3& point) {
+    glm::dmat4 m;
+    fillMatrixd(transform, m);
+    glm::dvec4 p = glm::dvec4(point, 1.0);
+    p = m * p;
+    return glm::dvec3(p);
+}
+
 Transform& Transform::setMatrix(const glm::dmat4& matrix) {
     m_translation = glm::dvec3(matrix[3]);
     m_rotation = glm::dmat3(matrix);

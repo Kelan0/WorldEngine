@@ -3,9 +3,12 @@
 #include "core/engine/scene/Entity.h"
 #include "core/engine/scene/EntityHierarchy.h"
 #include "core/engine/scene/Transform.h"
+#include "core/engine/scene/bound/Frustum.h"
 #include "core/engine/renderer/RenderComponent.h"
 #include "core/graphics/Mesh.h"
 #include "core/engine/renderer/LightComponent.h"
+#include "core/engine/renderer/ImmediateRenderer.h"
+#include "core/engine/renderer/RenderCamera.h"
 #include "core/application/InputHandler.h"
 #include <random>
 
@@ -60,7 +63,7 @@ void RenderStressTestApplication::init() {
 
             Entity sphereEntity1 = EntityHierarchy::create(Engine::scene(), "sphereEntity[" + std::to_string(i) + ", " + std::to_string(j) + "]");
             sphereEntity1.addComponent<Transform>().translate(offsetX + i * separationX, 0.333F, offsetZ + j * separationX).scale(0.5F);
-            sphereEntity1.addComponent<RenderComponent>(RenderComponent::UpdateType_Static, RenderComponent::UpdateType_Static).setMesh(m_sphereMesh).setMaterial(sphereMaterial1);
+            sphereEntity1.addComponent<RenderComponent>(RenderComponent::UpdateType_Static, RenderComponent::UpdateType_Static).setMesh(m_sphereMesh).setMaterial(sphereMaterial1).setBoundingVolume(sphereBounds);
         }
     }
 
@@ -93,6 +96,39 @@ void RenderStressTestApplication::render(double dt) {
         Entity sphereEntity = EntityHierarchy::create(Engine::scene(), "AddSphereEntity-" + std::to_string(sphereCount));
         sphereEntity.addComponent<Transform>().translate(cameraTransform.getTranslation() + glm::dvec3(cameraTransform.getForwardAxis() * 3.0F)).scale(0.5F);
         sphereEntity.addComponent<RenderComponent>().setMesh(m_sphereMesh).setMaterial(m_sphereMaterial);
+    }
+
+    if (input()->keyPressed(SDL_SCANCODE_F)) {
+        Engine::instance()->setViewFrustumPaused(!Engine::instance()->isViewFrustumPaused());
+        printf("View frustum paused: %s\n", Engine::instance()->isViewFrustumPaused() ? "TRUE" : "FALSE");
+    }
+
+    if (Engine::instance()->isViewFrustumPaused()) {
+
+        Engine::immediateRenderer()->matrixMode(MatrixMode_Projection);
+        Engine::immediateRenderer()->pushMatrix();
+        Engine::immediateRenderer()->loadMatrix(Engine::instance()->getRenderCamera()->getProjectionMatrix());
+        Engine::immediateRenderer()->matrixMode(MatrixMode_ModelView);
+        Engine::immediateRenderer()->pushMatrix();
+        Engine::immediateRenderer()->loadMatrix(Engine::instance()->getRenderCamera()->getViewMatrix());
+//        Engine::immediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
+
+        Engine::immediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
+        Engine::immediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
+
+        Engine::immediateRenderer()->setBlendEnabled(true);
+        Engine::immediateRenderer()->setDepthTestEnabled(true);
+        Engine::immediateRenderer()->colour(1.0F, 0.0F, 0.0F, 0.25F);
+        Engine::instance()->getViewFrustum()->drawFill();
+
+        Engine::immediateRenderer()->setLineWidth(1.0F);
+        Engine::immediateRenderer()->setBlendEnabled(false);
+        Engine::immediateRenderer()->setDepthTestEnabled(false);
+        Engine::immediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
+        Engine::instance()->getViewFrustum()->drawLines();
+
+        Engine::immediateRenderer()->popMatrix(MatrixMode_ModelView);
+        Engine::immediateRenderer()->popMatrix(MatrixMode_Projection);
     }
 }
 

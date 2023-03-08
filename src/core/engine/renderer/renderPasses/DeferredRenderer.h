@@ -4,6 +4,7 @@
 #include "core/core.h"
 #include "core/engine/renderer/RenderCamera.h"
 #include "core/graphics/FrameResource.h"
+#include "core/engine/scene/bound/Frustum.h"
 
 class GraphicsPipeline;
 class Image2D;
@@ -73,7 +74,7 @@ public:
 
     void preRender(double dt);
 
-    void renderGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera);
+    void renderGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum);
 
     void render(double dt, const vk::CommandBuffer& commandBuffer);
 

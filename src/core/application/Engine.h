@@ -19,6 +19,7 @@ class DeferredRenderer;
 class PostProcessRenderer;
 class EventDispatcher;
 class RenderCamera;
+class Frustum;
 
 class Engine {
     friend class Application;
@@ -64,7 +65,15 @@ public:
 
     bool isDebugCompositeEnabled() const;
 
+    bool isViewFrustumPaused() const;
+
+    void setViewFrustumPaused(bool viewFrustumPaused);
+
     void setDebugCompositeEnabled(bool debugCompositeEnabled);
+
+    const RenderCamera* getRenderCamera() const;
+
+    const Frustum* getViewFrustum() const;
 
     static GraphicsManager* graphics();
 
@@ -132,8 +141,10 @@ private:
     double m_accumulatedTime;
     double m_runTime;
     bool m_debugCompositeEnabled;
+    bool m_viewFrustumPaused;
 
     RenderCamera* m_renderCamera;
+    Frustum* m_viewFrustum;
 };
 
 

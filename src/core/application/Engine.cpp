@@ -2,6 +2,7 @@
 #include "core/application/Engine.h"
 #include "core/application/Application.h"
 #include "core/engine/scene/Scene.h"
+#include "core/engine/scene/bound/Frustum.h"
 #include "core/engine/physics/PhysicsSystem.h"
 #include "core/engine/renderer/SceneRenderer.h"
 #include "core/engine/renderer/renderPasses/UIRenderer.h"
@@ -32,8 +33,10 @@ Engine::Engine():
     m_deferredRenderer(new DeferredRenderer()),
     m_postProcessingRenderer(new PostProcessRenderer()),
     m_renderCamera(new RenderCamera()),
+    m_viewFrustum(nullptr),
     m_currentFrameCount(0),
     m_debugCompositeEnabled(true),
+    m_viewFrustumPaused(false),
     m_accumulatedTime(0.0),
     m_runTime(0.0) {
 }
@@ -53,6 +56,7 @@ Engine::~Engine() {
     delete m_graphics;
 
     delete m_renderCamera;
+    delete m_viewFrustum;
 }
 
 void Engine::processEvent(const SDL_Event* event) {
@@ -112,6 +116,14 @@ bool Engine::isDebugCompositeEnabled() const {
     return m_debugCompositeEnabled;
 }
 
+bool Engine::isViewFrustumPaused() const {
+    return m_viewFrustumPaused;
+}
+
+void Engine::setViewFrustumPaused(bool viewFrustumPaused) {
+    m_viewFrustumPaused = viewFrustumPaused;
+}
+
 double Engine::getPartialFrames() const {
     return Application::instance()->getPartialFrames();
 }
@@ -130,6 +142,14 @@ double Engine::getRunTime() {
 
 void Engine::setDebugCompositeEnabled(bool debugCompositeEnabled) {
     m_debugCompositeEnabled = debugCompositeEnabled;
+}
+
+const RenderCamera* Engine::getRenderCamera() const {
+    return m_renderCamera;
+}
+
+const Frustum* Engine::getViewFrustum() const {
+    return m_viewFrustum;
 }
 
 GraphicsManager* Engine::graphics() {
@@ -255,19 +275,28 @@ bool Engine::init(SDL_Window* windowHandle) {
 
 void Engine::preRender(double dt) {
     PROFILE_SCOPE("Engine::preRender");
+
+    const Entity& cameraEntity = Engine::scene()->getMainCameraEntity();
+
+    m_renderCamera->setProjection(cameraEntity.getComponent<Camera>());
+    m_renderCamera->setTransform(cameraEntity.getComponent<Transform>());
+    m_renderCamera->update();
+
+    if (m_viewFrustum == nullptr) {
+        m_viewFrustum = new Frustum(*m_renderCamera);
+    } else if (!m_viewFrustumPaused) {
+        m_viewFrustum->set(*m_renderCamera);
+    }
+
     m_uiRenderer->preRender(dt);
     m_physicsSystem->preRender(dt);
+
 }
 
 void Engine::render(double dt) {
     PROFILE_SCOPE("Engine::render");
 
 //    PROFILE_BEGIN_GPU_TIMESTAMP("Engine::render");
-    const Entity& cameraEntity = Engine::scene()->getMainCameraEntity();
-
-    m_renderCamera->setProjection(cameraEntity.getComponent<Camera>());
-    m_renderCamera->setTransform(cameraEntity.getComponent<Transform>());
-    m_renderCamera->update();
 
     m_physicsSystem->preRender(dt);
     m_sceneRenderer->preRender(dt);
@@ -286,7 +315,7 @@ void Engine::render(double dt) {
 
     m_deferredRenderer->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredRenderer->beginGeometrySubpass(commandBuffer, vk::SubpassContents::eInline);
-    m_deferredRenderer->renderGeometryPass(dt, commandBuffer, m_renderCamera);
+    m_deferredRenderer->renderGeometryPass(dt, commandBuffer, m_renderCamera, m_viewFrustum);
     m_deferredRenderer->beginLightingSubpass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredRenderer->render(dt, commandBuffer);
     commandBuffer.endRenderPass();

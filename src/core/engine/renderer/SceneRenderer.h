@@ -7,6 +7,7 @@
 #include "core/engine/renderer/RenderCamera.h"
 #include "core/engine/scene/Scene.h"
 #include "core/engine/renderer/RenderComponent.h"
+#include "core/engine/scene/bound/Frustum.h"
 
 class aaaBuffer;
 class DescriptorSet;
@@ -25,7 +26,7 @@ public:
 
     void preRender(double dt);
 
-    void render(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera);
+    void render(double dt, const vk::CommandBuffer& commandBuffer, const Frustum* frustum);
 
     void setScene(Scene* scene);
 
@@ -52,7 +53,7 @@ private:
 
     void recordRenderCommands(double dt, const vk::CommandBuffer& commandBuffer);
 
-    void applyFrustumCulling(const RenderCamera* renderCamera);
+    void applyFrustumCulling(const Frustum* frustum);
 
     void sortRenderEntities();
 

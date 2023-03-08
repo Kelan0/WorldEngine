@@ -348,18 +348,20 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, co
 
         m_shadowGraphicsPipeline->bind(commandBuffer);
 
+        Frustum frustum;
         if (shadowMap->getShadowType() == ShadowMap::ShadowType_CascadedShadowMap) {
             CascadedShadowMap* cascadedShadowMap = dynamic_cast<CascadedShadowMap*>(shadowMap);
             for (size_t j = 0; j < cascadedShadowMap->getNumCascades(); ++j) {
                 PROFILE_BEGIN_GPU_CMD("LightRenderer::render/ShadowMapCascadeRenderPass", commandBuffer);
 
                 RenderCamera& shadowRenderCamera = visibleShadowRenderCameras[shadowMap->m_index + j];
+                frustum.set(shadowRenderCamera);
 
                 std::array<uint32_t, 1> dynamicOffsets = { (uint32_t)(sizeof(GPUCamera) * cameraInfoBufferIndex++) };
                 commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_shadowGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
 
                 m_shadowRenderPass->begin(commandBuffer, cascadedShadowMap->getCascadeFramebuffer(j), vk::SubpassContents::eInline);
-                Engine::sceneRenderer()->render(dt, commandBuffer, &shadowRenderCamera);
+                Engine::sceneRenderer()->render(dt, commandBuffer, &frustum);
                 commandBuffer.endRenderPass();
 
                 shadowMapImages.emplace_back(cascadedShadowMap->getCascadeShadowVarianceImageView(j));

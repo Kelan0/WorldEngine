@@ -111,7 +111,7 @@ std::array<glm::dvec3, Frustum::NumCorners> Frustum::getCornersNDC() {
 }
 
 
-void Frustum::drawLines() {
+void Frustum::drawLines() const {
     auto* renderer = Engine::immediateRenderer();
     auto createLine = [&renderer](const glm::dvec3& a, const glm::dvec3& b) {
         renderer->vertex(a); // 0
@@ -141,7 +141,7 @@ void Frustum::drawLines() {
     renderer->end();
 }
 
-void Frustum::drawFill() {
+void Frustum::drawFill() const {
     auto* renderer = Engine::immediateRenderer();
     auto createQuad = [&renderer](const glm::dvec3 normal, const glm::dvec3& a, const glm::dvec3& b, const glm::dvec3& c, const glm::dvec3& d) {
         renderer->normal(normal);

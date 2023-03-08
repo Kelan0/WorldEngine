@@ -106,11 +106,11 @@ void SceneRenderer::preRender(double dt) {
     m_numAddedRenderEntities = 0;
 }
 
-void SceneRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera) {
+void SceneRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, const Frustum* frustum) {
     PROFILE_SCOPE("SceneRenderer::render")
     PROFILE_BEGIN_GPU_CMD("SceneRenderer::render", commandBuffer);
 
-    applyFrustumCulling(renderCamera);
+    applyFrustumCulling(frustum);
     recordRenderCommands(dt, commandBuffer);
 
     PROFILE_END_GPU_CMD(commandBuffer);
@@ -307,33 +307,42 @@ void SceneRenderer::recordRenderCommands(double dt, const vk::CommandBuffer& com
     PROFILE_END_GPU_CMD(commandBuffer);
 }
 
-void SceneRenderer::applyFrustumCulling(const RenderCamera* renderCamera) {
+void SceneRenderer::applyFrustumCulling(const Frustum* frustum) {
     PROFILE_SCOPE("SceneRenderer::applyFrustumCulling");
 
     m_objectIndicesBuffer.clear();
 
-    PROFILE_REGION("Calculate frustum")
-    Frustum frustum(*renderCamera);
-
-    const auto& renderEntities = m_scene->registry()->group<RenderComponent, RenderInfo, Transform>();
-
     PROFILE_REGION("Update visible indices")
 
-    uint32_t objectIndex = 0;
-    for (auto it = renderEntities.begin(); it != renderEntities.end(); ++it, ++objectIndex) {
-        const Transform& transform = renderEntities.get<Transform>(*it);
+    if (frustum == nullptr) {
+        for (uint32_t i = 0; i < m_numRenderEntities; ++i) {
+            m_objectIndicesBuffer.emplace_back(i);
+        }
 
-        if (frustum.contains(transform.getTranslation())) {
-            m_objectIndicesBuffer.emplace_back(objectIndex);
+    } else {
+
+        const auto& renderEntities = m_scene->registry()->group<RenderComponent, RenderInfo, Transform>();
+
+        uint32_t objectIndex = 0;
+        for (auto it = renderEntities.begin(); it != renderEntities.end(); ++it, ++objectIndex) {
+            const RenderComponent& renderComponent = renderEntities.get<RenderComponent>(*it);
+            const Transform& transform = renderEntities.get<Transform>(*it);
+//            if (renderComponent.getBoundingVolume() != nullptr) {
+//                if (frustum->contains(*renderComponent.getBoundingVolume())) {
+//                    m_objectIndicesBuffer.emplace_back(objectIndex);
+//                }
+//            } else {
+                if (frustum->contains(transform.getTranslation())) {
+                    m_objectIndicesBuffer.emplace_back(objectIndex);
+                }
+//            }
         }
     }
 
     PROFILE_REGION("Upload visible indices")
 
-    m_objectIndicesBuffer.resize(CEIL_TO_MULTIPLE(m_objectIndicesBuffer.size(), 4));
-
     if (!m_objectIndicesBuffer.empty()) {
-        uint32_t* mappedObjectIndicesBuffer = static_cast<uint32_t*>(mapObjectIndicesBuffer(m_numRenderEntities));
+        uint32_t* mappedObjectIndicesBuffer = static_cast<uint32_t*>(mapObjectIndicesBuffer(CEIL_TO_MULTIPLE(m_objectIndicesBuffer.size(), 4)));
         memcpy(&mappedObjectIndicesBuffer[0], &m_objectIndicesBuffer[0], m_objectIndicesBuffer.size() * sizeof(uint32_t));
     }
 }

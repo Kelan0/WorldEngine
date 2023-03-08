@@ -112,6 +112,8 @@ public:
 
     static void fillMatrixf(const Transform& transform1, const Transform& transform2, double delta, glm::fmat4& matrix);
 
+    static glm::dvec3 apply(const Transform& transform, const glm::dvec3& point);
+
     Transform& setMatrix(const glm::dmat4& matrix);
 
     operator glm::dmat4() const;

@@ -53,9 +53,9 @@ public:
 
     static std::array<glm::dvec3, NumCorners> getCornersNDC();
 
-    void drawLines();
+    void drawLines() const;
 
-    void drawFill();
+    void drawFill() const;
 
     bool intersects(const BoundingVolume& boundingVolume) const;
 
