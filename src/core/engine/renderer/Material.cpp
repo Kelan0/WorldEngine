@@ -61,12 +61,12 @@ void MaterialConfiguration::setEmissionMap(const ImageViewConfiguration& imageVi
     setEmissionMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, samplerConfiguration, name)));
 }
 
-void MaterialConfiguration::setRoughness(const uint32_t& roughness) {
+void MaterialConfiguration::setRoughness(uint32_t roughness) {
     this->roughnessMap.reset();
     this->roughness = uint8_t(glm::clamp(roughness, 0u, 255u));
 }
 
-void MaterialConfiguration::setRoughness(const float& roughness) {
+void MaterialConfiguration::setRoughness(float roughness) {
     setRoughness((uint32_t)(roughness * 255.0F));
 }
 
@@ -91,12 +91,12 @@ void MaterialConfiguration::setRoughnessMap(const ImageViewConfiguration& imageV
     setRoughnessMap(std::shared_ptr<Texture>(Texture::create(imageViewConfiguration, samplerConfiguration, name)));
 }
 
-void MaterialConfiguration::setMetallic(const uint32_t& metallic) {
+void MaterialConfiguration::setMetallic(uint32_t metallic) {
     this->metallicMap.reset();
     this->metallic = uint8_t(glm::clamp(metallic, 0u, 255u));
 }
 
-void MaterialConfiguration::setMetallic(const float& metallic) {
+void MaterialConfiguration::setMetallic(float metallic) {
     setMetallic((uint32_t)(metallic * 255.0F));
 }
 

@@ -201,7 +201,7 @@ bool EventDispatcher::isRepeatingAll(EventDispatcher* eventDispatcher) {
     return false;
 }
 
-TimerId EventDispatcher::setTimeout(const TimeoutEvent::Callback& callback, const double& durationMilliseconds) {
+TimerId EventDispatcher::setTimeout(const TimeoutEvent::Callback& callback, double durationMilliseconds) {
     return setTimeout(callback, std::chrono::duration_cast<Performance::duration_t>(std::chrono::duration<double, std::milli>(durationMilliseconds)));
 }
 
@@ -226,7 +226,7 @@ TimerId EventDispatcher::setTimeout(const TimeoutEvent::Callback& callback, cons
     return id;
 }
 
-TimerId EventDispatcher::setInterval(const IntervalEvent::Callback& callback, const double& durationMilliseconds) {
+TimerId EventDispatcher::setInterval(const IntervalEvent::Callback& callback, double durationMilliseconds) {
     return setInterval(callback, std::chrono::duration_cast<Performance::duration_t>(std::chrono::duration<double, std::milli>(durationMilliseconds)));
 }
 

@@ -62,7 +62,7 @@ public:
         ImageTransform() = default;
         ImageTransform(const ImageTransform& copy) = default;
 
-        virtual ImageData* apply(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& layout, const ImagePixelFormat& format) const;
+        virtual ImageData* apply(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format) const;
 
         virtual bool isNoOp() const;
 
@@ -79,7 +79,7 @@ public:
         Flip(bool x, bool y);
         Flip(const Flip& copy);
 
-        virtual ImageData* apply(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& layout, const ImagePixelFormat& format) const override;
+        virtual ImageData* apply(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format) const override;
 
         virtual bool isNoOp() const override;
 
@@ -87,14 +87,14 @@ public:
     };
 
 private:
-    ImageData(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const AllocationType& allocationType);
+    ImageData(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, AllocationType allocationType);
 
 public:
-//    ImageData(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat);
+//    ImageData(ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat);
 
-    ImageData(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat);
+    ImageData(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat);
 
-    ImageData(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat);
+    ImageData(ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat);
 
     ~ImageData();
 
@@ -104,17 +104,17 @@ public:
 
     static void clearCache();
 
-    static ImageData* mutate(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& srcLayout, const ImagePixelFormat& srcFormat, const ImagePixelLayout& dstLayout, const ImagePixelFormat& dstFormat);
+    static ImageData* mutate(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout srcLayout, ImagePixelFormat srcFormat, ImagePixelLayout dstLayout, ImagePixelFormat dstFormat);
 
     static ImageData* transform(const ImageData* imageData, const ImageTransform& transformation);
 
-    static ImageData* transform(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& layout, const ImagePixelFormat& format, const ImageTransform& transformation);
+    static ImageData* transform(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format, const ImageTransform& transformation);
 
-    int64_t getChannel(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const size_t& channelIndex);
-    void setChannel(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const size_t& channelIndex, const int64_t& value);
+    int64_t getChannel(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex);
+    void setChannel(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex, int64_t value);
 
-    void setPixel(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const int64_t& r, const int64_t& g, const int64_t& b, const int64_t& a);
-    void setPixelf(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const float& r, const float& g, const float& b, const float& a);
+    void setPixel(ImageRegion::offset_type x, ImageRegion::offset_type y, int64_t r, int64_t g, int64_t b, int64_t a);
+    void setPixelf(ImageRegion::offset_type x, ImageRegion::offset_type y, float r, float g, float b, float a);
 
     uint8_t* getData() const;
 
@@ -135,7 +135,7 @@ public:
     static bool getPixelLayoutAndFormat(vk::Format format, ImagePixelLayout& outLayout, ImagePixelFormat& outFormat);
 
 private:
-    static size_t getChannelOffset(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const size_t& channelIndex, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat);
+    static size_t getChannelOffset(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat);
 
 private:
     uint8_t* m_data;
@@ -157,60 +157,60 @@ struct ImageTransitionState {
     vk::PipelineStageFlags pipelineStages; // The pipeline stages that this synchronization scope covers
     uint32_t queueFamilyIndex = VK_QUEUE_FAMILY_IGNORED; // Queue family ownership transfer
 
-    ImageTransitionState(const vk::ImageLayout& layout, const vk::AccessFlagBits& accessMask, const vk::PipelineStageFlags& pipelineStages, const uint32_t& queueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
+    ImageTransitionState(vk::ImageLayout layout, vk::AccessFlagBits accessMask, vk::PipelineStageFlags pipelineStages, uint32_t queueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
 
     bool operator==(const ImageTransitionState& other) const;
 };
 
 namespace ImageTransition {
-    struct FromAny : public ImageTransitionState { FromAny(const vk::PipelineStageFlagBits& shaderPipelineStages = vk::PipelineStageFlagBits::eTopOfPipe); };
-    struct General : public ImageTransitionState { General(const vk::PipelineStageFlagBits& shaderPipelineStages = vk::PipelineStageFlagBits::eTopOfPipe); };
+    struct FromAny : public ImageTransitionState { FromAny(vk::PipelineStageFlagBits shaderPipelineStages = vk::PipelineStageFlagBits::eTopOfPipe); };
+    struct General : public ImageTransitionState { General(vk::PipelineStageFlagBits shaderPipelineStages = vk::PipelineStageFlagBits::eTopOfPipe); };
     struct TransferSrc : public ImageTransitionState { TransferSrc(); };
     struct TransferDst : public ImageTransitionState { TransferDst(); };
-    struct ShaderAccess : public ImageTransitionState { ShaderAccess(const vk::PipelineStageFlags& shaderPipelineStages, const bool& read, const bool& write); };
-    struct ShaderReadOnly : public ShaderAccess { ShaderReadOnly(const vk::PipelineStageFlags& shaderPipelineStages); };
-    struct ShaderWriteOnly : public ShaderAccess { ShaderWriteOnly(const vk::PipelineStageFlags& shaderPipelineStages); };
-    struct ShaderReadWrite : public ShaderAccess { ShaderReadWrite(const vk::PipelineStageFlags& shaderPipelineStages); };
+    struct ShaderAccess : public ImageTransitionState { ShaderAccess(vk::PipelineStageFlags shaderPipelineStages, bool read, bool write); };
+    struct ShaderReadOnly : public ShaderAccess { ShaderReadOnly(vk::PipelineStageFlags shaderPipelineStages); };
+    struct ShaderWriteOnly : public ShaderAccess { ShaderWriteOnly(vk::PipelineStageFlags shaderPipelineStages); };
+    struct ShaderReadWrite : public ShaderAccess { ShaderReadWrite(vk::PipelineStageFlags shaderPipelineStages); };
     struct PresentSrc  : public ImageTransitionState { PresentSrc(); };
 };
 
 
 namespace ImageUtil {
-    bool isDepthAttachment(const vk::Format& format);
+    bool isDepthAttachment(vk::Format format);
 
-    bool isStencilAttachment(const vk::Format& format);
+    bool isStencilAttachment(vk::Format format);
 
-    bool isColourAttachment(const vk::Format& format);
+    bool isColourAttachment(vk::Format format);
 
     vk::Format selectSupportedFormat(const vk::PhysicalDevice& physicalDevice, const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features);
 
-    bool getImageFormatProperties(const vk::Format& format, const vk::ImageType& type, const vk::ImageTiling& tiling, const vk::ImageUsageFlags& usage, const vk::ImageCreateFlags& flags, vk::ImageFormatProperties* imageFormatProperties);
+    bool getImageFormatProperties(vk::Format format, vk::ImageType type, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::ImageCreateFlags flags, vk::ImageFormatProperties* imageFormatProperties);
 
     bool validateImageCreateInfo(const vk::ImageCreateInfo& imageCreateInfo);
 
     bool transitionLayout(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::ImageSubresourceRange& subresourceRange, const ImageTransitionState& srcState, const ImageTransitionState& dstState);
 
-    bool upload(const vk::Image& dstImage, void* data, const uint32_t& bytesPerPixel, const vk::ImageAspectFlags& aspectMask, const ImageRegion& imageRegion, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
+    bool upload(const vk::Image& dstImage, void* data, uint32_t bytesPerPixel, vk::ImageAspectFlags aspectMask, const ImageRegion& imageRegion, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
 
-    bool upload(const vk::CommandBuffer& commandBuffer, const vk::Image& dstImage, void* data, const uint32_t& bytesPerPixel, const vk::ImageAspectFlags& aspectMask, const ImageRegion& imageRegion, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
+    bool upload(const vk::CommandBuffer& commandBuffer, const vk::Image& dstImage, void* data, uint32_t bytesPerPixel, vk::ImageAspectFlags aspectMask, const ImageRegion& imageRegion, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
 
     bool transferBuffer(const vk::Image& dstImage, const vk::Buffer& srcBuffer, const vk::BufferImageCopy& imageCopy, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
 
     bool transferBuffer(const vk::CommandBuffer& commandBuffer, const vk::Image& dstImage, const vk::Buffer& srcBuffer, const vk::BufferImageCopy& imageCopy, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
 
-    bool generateMipmap(const vk::Image& image, const vk::Format& format, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth, const uint32_t& mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
+    bool generateMipmap(const vk::Image& image, vk::Format format, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t baseLayer, uint32_t layerCount, ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth, uint32_t mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
 
-    bool generateMipmap(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::Format& format, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth, const uint32_t& mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
+    bool generateMipmap(const vk::CommandBuffer& commandBuffer, const vk::Image& image, vk::Format format, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t baseLayer, uint32_t layerCount, ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth, uint32_t mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
 
-    uint32_t getMaxMipLevels(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth);
+    uint32_t getMaxMipLevels(ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth);
 
-    bool checkAllImageFormatFeatures(const vk::Format& format, const vk::ImageTiling& tiling, const vk::FormatFeatureFlags& formatFeatureFlags);
+    bool checkAllImageFormatFeatures(vk::Format format, vk::ImageTiling tiling, vk::FormatFeatureFlags formatFeatureFlags);
 
-    bool checkAnyImageFormatFeatures(const vk::Format& format, const vk::ImageTiling& tiling, const vk::FormatFeatureFlags& formatFeatureFlags);
+    bool checkAnyImageFormatFeatures(vk::Format format, vk::ImageTiling tiling, vk::FormatFeatureFlags formatFeatureFlags);
 
     const vk::CommandBuffer& beginTransferCommands();
 
-    void endTransferCommands(const vk::Queue& queue, const bool& waitComplete);
+    void endTransferCommands(const vk::Queue& queue, bool waitComplete);
 
     const vk::CommandBuffer& getTransferCommandBuffer();
 
@@ -218,13 +218,13 @@ namespace ImageUtil {
 
     const vk::Queue& getComputeQueue();
 
-    vk::DeviceSize getImageSizeBytes(const ImageRegion& imageRegion, const uint32_t& bytesPerPixel);
+    vk::DeviceSize getImageSizeBytes(const ImageRegion& imageRegion, uint32_t bytesPerPixel);
 
-    vk::DeviceSize getImageSizeBytes(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth, const uint32_t& bytesPerPixel);
+    vk::DeviceSize getImageSizeBytes(ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth, uint32_t bytesPerPixel);
 
-    Buffer* getImageStagingBuffer(const ImageRegion& imageRegion, const uint32_t& bytesPerPixel);
+    Buffer* getImageStagingBuffer(const ImageRegion& imageRegion, uint32_t bytesPerPixel);
 
-    Buffer* getImageStagingBuffer(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth, const uint32_t& bytesPerPixel);
+    Buffer* getImageStagingBuffer(ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth, uint32_t bytesPerPixel);
 }
 
 

@@ -169,13 +169,13 @@ public:
     void update();
 
     template<class Event>
-    void connect(void(*callback)(Event*), const bool& once = false);
+    void connect(void(*callback)(Event*), bool once = false);
 
     template<typename Event>
-    void connect(CallbackWrapper<Event>&& callback, const bool& once = false);
+    void connect(CallbackWrapper<Event>&& callback, bool once = false);
 
     template<typename Event, typename T>
-    void connect(void(T::* callback)(Event*), T* instance, const bool& once = false);
+    void connect(void(T::* callback)(Event*), T* instance, bool once = false);
 
     template<class Event>
     void disconnect(void(*callback)(Event*));
@@ -202,11 +202,11 @@ public:
 
     bool isRepeatingAll(EventDispatcher* eventDispatcher);
 
-    TimerId setTimeout(const TimeoutEvent::Callback& callback, const double& durationMilliseconds);
+    TimerId setTimeout(const TimeoutEvent::Callback& callback, double durationMilliseconds);
 
     TimerId setTimeout(const TimeoutEvent::Callback& callback, const Performance::duration_t& duration);
 
-    TimerId setInterval(const IntervalEvent::Callback& callback, const double& durationMilliseconds);
+    TimerId setInterval(const IntervalEvent::Callback& callback, double durationMilliseconds);
 
     TimerId setInterval(const IntervalEvent::Callback& callback, const Performance::duration_t& duration);
 
@@ -233,7 +233,7 @@ private:
 
 
 template<class Event>
-inline void EventDispatcher::connect(void(*callback)(Event*), const bool& once) {
+inline void EventDispatcher::connect(void(*callback)(Event*), bool once) {
     PROFILE_SCOPE("EventDispatcher::connect")
     if (callback == nullptr)
         return;
@@ -257,7 +257,7 @@ inline void EventDispatcher::connect(void(*callback)(Event*), const bool& once) 
 }
 
 template<typename Event>
-void EventDispatcher::connect(CallbackWrapper<Event>&& callback, const bool& once) {
+void EventDispatcher::connect(CallbackWrapper<Event>&& callback, bool once) {
     PROFILE_SCOPE("EventDispatcher::connect")
     if (!callback)
         return;
@@ -270,7 +270,7 @@ void EventDispatcher::connect(CallbackWrapper<Event>&& callback, const bool& onc
 }
 
 template<typename Event, typename T>
-inline void EventDispatcher::connect(void(T::* callback)(Event*), T* instance, const bool& once) {
+inline void EventDispatcher::connect(void(T::* callback)(Event*), T* instance, bool once) {
     PROFILE_SCOPE("EventDispatcher::connect")
     if (instance == nullptr)
         return;

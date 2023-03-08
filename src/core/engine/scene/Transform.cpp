@@ -34,15 +34,15 @@ const glm::dvec3& Transform::getTranslation() const {
     return m_translation;
 }
 
-const double& Transform::getX() const {
+double Transform::getX() const {
     return m_translation.x;
 }
 
-const double& Transform::getY() const {
+double Transform::getY() const {
     return m_translation.y;
 }
 
-const double& Transform::getZ() const {
+double Transform::getZ() const {
     return m_translation.z;
 }
 
@@ -112,15 +112,15 @@ const glm::dvec3& Transform::getScale() const {
     return m_scale;
 }
 
-const double& Transform::getScaleX() const {
+double Transform::getScaleX() const {
     return m_scale.x;
 }
 
-const double& Transform::getScaleY() const {
+double Transform::getScaleY() const {
     return m_scale.y;
 }
 
-const double& Transform::getScaleZ() const {
+double Transform::getScaleZ() const {
     return m_scale.z;
 }
 
@@ -142,13 +142,13 @@ Transform& Transform::setTranslation(const glm::dvec2& translation) {
     return *this;
 }
 
-Transform& Transform::setTranslation(const double& x, const double& y, const double& z) {
+Transform& Transform::setTranslation(double x, double y, double z) {
     m_translation = glm::dvec3(x, y, z);
     change();
     return *this;
 }
 
-Transform& Transform::setTranslation(const double& x, const double& y) {
+Transform& Transform::setTranslation(double x, double y) {
     m_translation = glm::dvec3(x, y, 0.0);
     change();
     return *this;
@@ -166,7 +166,7 @@ Transform& Transform::setRotation(const glm::mat4& rotation) {
     return *this;
 }
 
-Transform& Transform::setRotation(const glm::vec3& forward, const glm::vec3& up, const bool& normalized) {
+Transform& Transform::setRotation(const glm::vec3& forward, const glm::vec3& up, bool normalized) {
     constexpr double eps = 1e-4;
     constexpr double epsSq = eps * eps;
     if ((double)glm::dot(forward, forward) < epsSq) {
@@ -186,7 +186,7 @@ Transform& Transform::setRotation(const glm::vec3& forward, const glm::vec3& up,
     return *this;
 }
 
-Transform& Transform::setRotation(const glm::quat& rotation, const bool& normalized) {
+Transform& Transform::setRotation(const glm::quat& rotation, bool normalized) {
     m_rotation = (normalized) ? (glm::mat3_cast(rotation)) : (glm::mat3_cast(glm::normalize(rotation)));
     change();
     return *this;
@@ -197,13 +197,13 @@ Transform& Transform::setRotation(const glm::vec3& eulerAngles) {
     return *this;
 }
 
-Transform& Transform::setRotation(const float& pitch, const float& yaw, const float& roll) {
+Transform& Transform::setRotation(float pitch, float yaw, float roll) {
     //setRotation(glm::yawPitchRoll(yaw, pitch, roll));
     setRotation(glm::eulerAngleYXZ(yaw, pitch, roll));
     return *this;
 }
 
-Transform& Transform::setRotation(const float& pitch, const float& yaw) {
+Transform& Transform::setRotation(float pitch, float yaw) {
     setRotation(pitch, yaw, 0.0);
     return *this;
 }
@@ -214,12 +214,12 @@ Transform& Transform::setScale(const glm::dvec3& scale) {
     return *this;
 }
 
-Transform& Transform::setScale(const double& x, const double& y, const double& z) {
+Transform& Transform::setScale(double x, double y, double z) {
     setScale(glm::dvec3(x, y, z));
     return *this;
 }
 
-Transform& Transform::setScale(const double& scale) {
+Transform& Transform::setScale(double scale) {
     setScale(glm::dvec3(scale));
     return *this;
 }
@@ -239,7 +239,7 @@ Transform& Transform::translate(const glm::dvec2& translation) {
     return *this;
 }
 
-Transform& Transform::translate(const double& x, const double& y, const double& z) {
+Transform& Transform::translate(double x, double y, double z) {
     m_translation.x += x;
     m_translation.y += y;
     m_translation.z += z;
@@ -247,21 +247,21 @@ Transform& Transform::translate(const double& x, const double& y, const double& 
     return *this;
 }
 
-Transform& Transform::translate(const double& x, const double& y) {
+Transform& Transform::translate(double x, double y) {
     m_translation.x += x;
     m_translation.y += y;
     change();
     return *this;
 }
 
-Transform& Transform::rotate(const glm::quat& rotation, const bool& normalized) {
+Transform& Transform::rotate(const glm::quat& rotation, bool normalized) {
     normalized
     ? setRotation(rotation * getRotation())
     : setRotation(glm::normalize(rotation) * getRotation());
     return *this;
 }
 
-Transform& Transform::rotate(const glm::mat3& rotation, const bool& normalized) {
+Transform& Transform::rotate(const glm::mat3& rotation, bool normalized) {
     if (normalized) {
         m_rotation = rotation * m_rotation;
     } else {
@@ -275,12 +275,12 @@ Transform& Transform::rotate(const glm::mat3& rotation, const bool& normalized) 
     return *this;
 }
 
-Transform& Transform::rotate(const glm::mat4& rotation, const bool& normalized) {
+Transform& Transform::rotate(const glm::mat4& rotation, bool normalized) {
     rotate(glm::dmat3(rotation), normalized);
     return *this;
 }
 
-Transform& Transform::rotate(const glm::vec3& axis, const float& angle) {
+Transform& Transform::rotate(const glm::vec3& axis, float angle) {
     m_rotation = glm::mat3(glm::rotate(glm::mat4(m_rotation), angle, axis));
     change();
     return *this;
@@ -291,7 +291,7 @@ Transform& Transform::rotate(const glm::vec4& axisAngle) {
     return *this;
 }
 
-Transform& Transform::rotate(const float& x, const float& y, const float& z, const float& angle) {
+Transform& Transform::rotate(float x, float y, float z, float angle) {
     rotate(glm::dvec3(x, y, z), angle);
     return *this;
 }
@@ -301,7 +301,7 @@ Transform& Transform::rotate(const glm::vec3& eulerAngles) {
     return *this;
 }
 
-Transform& Transform::rotate(const float& pitch, const float& yaw, const float& roll) {
+Transform& Transform::rotate(float pitch, float yaw, float roll) {
     setRotation(getEulerAngles() + glm::vec3(pitch, yaw, roll));
     return *this;
 }
@@ -312,7 +312,7 @@ Transform& Transform::scale(const glm::dvec3& scale) {
     return *this;
 }
 
-Transform& Transform::scale(const double& x, const double& y, const double& z) {
+Transform& Transform::scale(double x, double y, double z) {
     m_scale.x *= x;
     m_scale.y *= y;
     m_scale.z *= z;
@@ -320,7 +320,7 @@ Transform& Transform::scale(const double& x, const double& y, const double& z) {
     return *this;
 }
 
-Transform& Transform::scale(const double& scale) {
+Transform& Transform::scale(double scale) {
     m_scale.x *= scale;
     m_scale.y *= scale;
     m_scale.z *= scale;
@@ -349,14 +349,14 @@ Transform& Transform::operator=(const Transform& other) {
     return *this;
 }
 
-bool Transform::equalsTranslation(const Transform& other, const double& epsilon) const {
+bool Transform::equalsTranslation(const Transform& other, double epsilon) const {
     if (!glm::epsilonEqual(m_translation.x, other.m_translation.x, epsilon)) return false;
     if (!glm::epsilonEqual(m_translation.y, other.m_translation.y, epsilon)) return false;
     if (!glm::epsilonEqual(m_translation.z, other.m_translation.z, epsilon)) return false;
     return true;
 }
 
-bool Transform::equalsRotation(const Transform& other, const double& epsilon) const {
+bool Transform::equalsRotation(const Transform& other, double epsilon) const {
     float feps = (float)epsilon;
     if (!glm::epsilonEqual(m_rotation[0].x, other.m_rotation[0].x, feps)) return false;
     if (!glm::epsilonEqual(m_rotation[1].x, other.m_rotation[1].x, feps)) return false;
@@ -370,7 +370,7 @@ bool Transform::equalsRotation(const Transform& other, const double& epsilon) co
     return true;
 }
 
-bool Transform::equalsScale(const Transform& other, const double& epsilon) const {
+bool Transform::equalsScale(const Transform& other, double epsilon) const {
     if (!glm::epsilonEqual(m_scale.x, other.m_scale.x, epsilon)) return false;
     if (!glm::epsilonEqual(m_scale.y, other.m_scale.y, epsilon)) return false;
     if (!glm::epsilonEqual(m_scale.z, other.m_scale.z, epsilon)) return false;
@@ -471,7 +471,7 @@ void Transform::fillMatrixf(const Transform& transform, glm::mat4& matrix) {
     matrix[3].w = 1.0F;
 }
 
-void Transform::fillMatrixf(const Transform& transform1, const Transform& transform2, const double& delta, glm::fmat4& matrix) {
+void Transform::fillMatrixf(const Transform& transform1, const Transform& transform2, double delta, glm::fmat4& matrix) {
     glm::dvec3 translation = glm::lerp(transform1.m_translation, transform2.m_translation, delta);
     glm::mat3 rotation = glm::mat3_cast(glm::slerp(transform1.getRotation(), transform2.getRotation(), (float)delta));
     glm::dvec3 scale = glm::lerp(transform1.m_scale, transform2.m_scale, delta);

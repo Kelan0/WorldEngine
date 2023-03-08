@@ -42,7 +42,7 @@ public:
 
     void init();
 
-    void preTick(const double& dt);
+    void preTick(double dt);
 
     void destroyEntity(const Entity& entity);
 

@@ -22,15 +22,15 @@ public:
 
     void processEvent(const SDL_Event* event);
 
-    void preRender(const double& dt);
+    void preRender(double dt);
 
-    void render(const double& dt, const vk::CommandBuffer& commandBuffer);
+    void render(double dt, const vk::CommandBuffer& commandBuffer);
 
     template<typename T>
     bool initUI();
 
     template<typename T>
-    void setUIEnabled(const bool& enabled);
+    void setUIEnabled(bool enabled);
 
     template<typename T>
     bool isUIEnabled();
@@ -58,7 +58,7 @@ bool UIRenderer::initUI() {
 }
 
 template<typename T>
-void UIRenderer::setUIEnabled(const bool& enabled) {
+void UIRenderer::setUIEnabled(bool enabled) {
     static_assert(std::is_base_of<UI, T>::value);
 
     auto type = std::type_index(typeid(T));

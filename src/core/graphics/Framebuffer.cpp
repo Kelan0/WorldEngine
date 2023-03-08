@@ -38,7 +38,7 @@ void FramebufferConfiguration::setAttachments(const vk::ArrayProxy<ImageView*>& 
         addAttachment(imageView);
 }
 
-void FramebufferConfiguration::setAttachment(const uint32_t& index, const vk::ImageView& imageView) {
+void FramebufferConfiguration::setAttachment(uint32_t index, const vk::ImageView& imageView) {
     assert(index <= attachments.size());
     if (index == attachments.size()) {
         addAttachment(imageView);
@@ -47,11 +47,11 @@ void FramebufferConfiguration::setAttachment(const uint32_t& index, const vk::Im
     }
 }
 
-void FramebufferConfiguration::setAttachment(const uint32_t& index, const ImageView* imageView) {
+void FramebufferConfiguration::setAttachment(uint32_t index, const ImageView* imageView) {
     setAttachment(index, imageView->getImageView());
 }
 
-void FramebufferConfiguration::setSize(const uint32_t& p_width, const uint32_t& p_height) {
+void FramebufferConfiguration::setSize(uint32_t p_width, uint32_t p_height) {
     width = p_width;
     height = p_height;
 }
@@ -124,10 +124,10 @@ const glm::uvec2& Framebuffer::getResolution() const {
     return m_resolution;
 }
 
-const uint32_t& Framebuffer::getWidth() const {
+uint32_t Framebuffer::getWidth() const {
     return m_resolution.x;
 }
 
-const uint32_t& Framebuffer::getHeight() const {
+uint32_t Framebuffer::getHeight() const {
     return m_resolution.y;
 }

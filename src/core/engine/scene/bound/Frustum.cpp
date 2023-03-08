@@ -72,13 +72,13 @@ Frustum &Frustum::set(const Transform& transform, const Camera& camera) {
     return *this;
 }
 
-const Plane& Frustum::getPlane(const size_t& planeIndex) const {
+const Plane& Frustum::getPlane(size_t planeIndex) const {
     assert(planeIndex < NumPlanes);
 
     return m_planes[planeIndex];
 }
 
-const glm::dvec3& Frustum::getCorner(const size_t& cornerIndex) const {
+const glm::dvec3& Frustum::getCorner(size_t cornerIndex) const {
     assert(cornerIndex < NumCorners);
 
     if (glm::isnan(m_corners[cornerIndex].x)) {

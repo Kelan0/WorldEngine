@@ -172,11 +172,11 @@ private:
 
     static bool getNextQueryPool(GPUQueryPool** queryPool);
 
-    static bool createGpuTimestampQueryPool(const vk::Device& device, const uint32_t& capacity, vk::QueryPool* queryPool);
+    static bool createGpuTimestampQueryPool(const vk::Device& device, uint32_t capacity, vk::QueryPool* queryPool);
 
     static void destroyQueryPool(GPUQueryPool* queryPool);
 
-    static void resetQueryPools(GPUQueryPool** queryPools, const size_t& count);
+    static void resetQueryPools(GPUQueryPool** queryPools, size_t count);
 
     static void onCleanupGraphics(ShutdownGraphicsEvent* event);
 

@@ -15,11 +15,11 @@ public:
 
     bool init();
 
-    void preTick(const double& dt);
+    void preTick(double dt);
 
-    void tick(const double& dt);
+    void tick(double dt);
 
-    void preRender(const double& dt);
+    void preRender(double dt);
 
     void setScene(Scene* scene);
 

@@ -160,7 +160,7 @@ void Application::cleanupInternal() {
     cleanup();
 }
 
-void Application::renderInternal(const double& dt) {
+void Application::renderInternal(double dt) {
     PROFILE_SCOPE("Application::renderInternal");
 
     Engine::instance()->preRender(dt);
@@ -173,7 +173,7 @@ void Application::renderInternal(const double& dt) {
 
 }
 
-void Application::tickInternal(const double& dt) {
+void Application::tickInternal(double dt) {
     PROFILE_SCOPE("Application::tickInternal");
 
     Engine::instance()->preTick(dt);
@@ -467,19 +467,19 @@ double Application::getWindowAspectRatio() const {
     return (double)windowSize.x / (double)windowSize.y;
 }
 
-const double& Application::getFramerateLimit() const {
+double Application::getFramerateLimit() const {
     return m_framerateLimit;
 }
 
-void Application::setFramerateLimit(const double& framerateLimit) {
+void Application::setFramerateLimit(double framerateLimit) {
     m_framerateLimit = framerateLimit;
 }
 
-const double& Application::getTickrate() const {
+double Application::getTickrate() const {
     return m_tickrate;
 }
 
-void Application::setTickrate(const double& tickrate) {
+void Application::setTickrate(double tickrate) {
     if (m_running) {
         printf("Cannot change tickrate while running\n");
         assert(false);
@@ -488,11 +488,11 @@ void Application::setTickrate(const double& tickrate) {
     m_tickrate = tickrate;
 }
 
-const double& Application::getPartialFrames() const {
+double Application::getPartialFrames() const {
     return m_partialFrames;
 }
 
-const double& Application::getPartialTicks() const {
+double Application::getPartialTicks() const {
     return m_partialTicks;
 }
 

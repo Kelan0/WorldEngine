@@ -71,11 +71,11 @@ public:
 
     bool init();
 
-    void preRender(const double& dt);
+    void preRender(double dt);
 
-    void renderGeometryPass(const double& dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera);
+    void renderGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera);
 
-    void render(const double& dt, const vk::CommandBuffer& commandBuffer);
+    void render(double dt, const vk::CommandBuffer& commandBuffer);
 
     void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
 
@@ -111,7 +111,7 @@ public:
 
     ImageView* getPreviousOutputFrameImageView() const;
 
-    vk::Format getAttachmentFormat(const uint32_t& attachment) const;
+    vk::Format getAttachmentFormat(uint32_t attachment) const;
 
     vk::Format getOutputColourFormat() const;
 

@@ -41,9 +41,9 @@ typedef struct Vertex {
 
     Vertex(const glm::vec3& position, const glm::vec3& normal, const glm::vec3& tangent, const glm::vec2& texture);
 
-    Vertex(const float& px, const float& py, const float& pz, const float& nx, const float& ny, const float& nz, const float& tu, const float& tv);
+    Vertex(float px, float py, float pz, float nx, float ny, float nz, float tu, float tv);
 
-    Vertex(const float& px, const float& py, const float& pz, const float& nx, const float& ny, const float& nz, const float& tx, const float& ty, const float& tz, const float& tu, const float& tv);
+    Vertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty, float tz, float tu, float tv);
 
     Vertex operator*(const glm::mat4& m) const;
 
@@ -102,7 +102,7 @@ public:
 public:
     MeshData();
 
-    explicit MeshData(const MeshPrimitiveType& primitiveType);
+    explicit MeshData(MeshPrimitiveType primitiveType);
 
     ~MeshData();
 
@@ -112,31 +112,31 @@ public:
 
     void translate(const glm::vec3& v);
 
-    void translate(const float& x, const float& y, const float& z);
+    void translate(float x, float y, float z);
 
     void rotate(const glm::quat& q);
 
-    void rotate(const float& angle, const glm::vec3& axis);
+    void rotate(float angle, const glm::vec3& axis);
 
-    void rotateDegrees(const float& angle, const glm::vec3& axis);
+    void rotateDegrees(float angle, const glm::vec3& axis);
 
-    void rotate(const float& angle, const float& x, const float& y, const float& z);
+    void rotate(float angle, float x, float y, float z);
 
-    void rotateDegrees(const float& angle, const float& x, const float& y, const float& z);
+    void rotateDegrees(float angle, float x, float y, float z);
 
     void scale(const glm::vec3& s);
 
-    void scale(const float& x, const float& y, const float& z);
+    void scale(float x, float y, float z);
 
-    void scale(const float& scale);
+    void scale(float scale);
 
-    void applyTransform(const bool& currentStateOnly = true);
+    void applyTransform(bool currentStateOnly = true);
 
     void pushState();
 
     void popState();
 
-    void reset(const MeshPrimitiveType& primitiveType);
+    void reset(MeshPrimitiveType primitiveType);
 
     void clear();
 
@@ -156,19 +156,19 @@ public:
 
     void createCuboid(const glm::vec3& pos0, const glm::vec3& pos1);
 
-    void createUVSphere(const glm::vec3& center, const float& radius, const uint32_t& slices, const uint32_t& stacks);
+    void createUVSphere(const glm::vec3& center, float radius, uint32_t slices, uint32_t stacks);
 
     Index addVertex(const Vertex& vertex);
 
     Index addVertex(const glm::vec3& position, const glm::vec3& normal, const glm::vec2& texture);
 
-    Index addVertex(const float& px, const float& py, const float& pz, const float& nx, const float& ny, const float& nz, const float& tu, const float& tv);
+    Index addVertex(float px, float py, float pz, float nx, float ny, float nz, float tu, float tv);
 
-    void addTriangle(const Index& i0, const Index& i1, const Index& i2);
+    void addTriangle(Index i0, Index i1, Index i2);
 
     void addTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2);
 
-    void addQuad(const Index& i0, const Index& i1, const Index& i2, const Index& i3);
+    void addQuad(Index i0, Index i1, Index i2, Index i3);
 
     void addQuad(const Vertex& v0, const Vertex& v1, const Vertex& v2, const Vertex& v3);
 
@@ -180,11 +180,11 @@ public:
 
     std::vector<Index>& indices();
 
-    glm::vec3 calculateCenterOffset(const bool& currentStateOnly = true) const;
+    glm::vec3 calculateCenterOffset(bool currentStateOnly = true) const;
 
     // Transforming a vector where any component is 0 or 1 by this matrix will result in a point on the bounding box.
     // e.g. (-1,-1,-1) will be BB min, (+1,+1,+1) will be BB max, (0,+1,0) will be center top etc.
-    glm::mat4 calculateBoundingBox(const bool& currentStateOnly = true) const;
+    glm::mat4 calculateBoundingBox(bool currentStateOnly = true) const;
 
     size_t getVertexCount() const;
 
@@ -192,20 +192,20 @@ public:
 
     size_t getPolygonCount() const;
 
-    static size_t getPolygonCount(const size_t& numIndices, const MeshPrimitiveType& primitiveType);
+    static size_t getPolygonCount(size_t numIndices, MeshPrimitiveType primitiveType);
 
-    const MeshPrimitiveType& getPrimitiveType() const;
+    MeshPrimitiveType getPrimitiveType() const;
 
     void computeTangents();
 
-    static void computeTangents(std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, const MeshPrimitiveType& primitiveType);
+    static void computeTangents(std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, MeshPrimitiveType primitiveType);
 
 private:
-    Index createTrianglePrimitive(const Index& i0, const Index& i1, const Index& i2);
+    Index createTrianglePrimitive(Index i0, Index i1, Index i2);
 
-    Index createLinePrimitive(const Index& i0, const Index& i1);
+    Index createLinePrimitive(Index i0, Index i1);
 
-    Index createPointPrimitive(const Index& i0);
+    Index createPointPrimitive(Index i0);
 
 private:
     std::vector<Vertex> m_vertices;
@@ -227,7 +227,7 @@ namespace MeshUtils {
 
     bool loadMeshData(const std::string& filePath, OBJMeshData& meshData);
 
-    size_t getPolygonCount(const size_t& numIndices, const MeshPrimitiveType& primitiveType);
+    size_t getPolygonCount(size_t numIndices, MeshPrimitiveType primitiveType);
 
     template<typename Vertex_t>
     static std::vector<vk::VertexInputBindingDescription> getVertexBindingDescriptions();
@@ -304,7 +304,7 @@ typename MeshData<Vertex_t>::Vertex& MeshData<Vertex_t>::Triangle::getVertex(std
 	}
 #endif
 
-    const Index& vertexIndex = indices[index];
+    Index vertexIndex = indices[index];
 
 #if _DEBUG
     if (vertexIndex < 0 || vertexIndex >= vertices.size()) {
@@ -330,7 +330,7 @@ const typename MeshData<Vertex_t>::Vertex& MeshData<Vertex_t>::Triangle::getVert
 	}
 #endif
 
-    const Index& vertexIndex = indices[index];
+    Index vertexIndex = indices[index];
 
 #if _DEBUG
     if (vertexIndex < 0 || vertexIndex >= vertices.size()) {
@@ -377,7 +377,7 @@ MeshData<Vertex_t>::MeshData():
 }
 
 template<typename Vertex_t>
-MeshData<Vertex_t>::MeshData(const MeshPrimitiveType& primitiveType) :
+MeshData<Vertex_t>::MeshData(MeshPrimitiveType primitiveType) :
         m_currentTransform(1.0F),
         m_currentState(),
         m_primitiveType(primitiveType) {
@@ -410,7 +410,7 @@ void MeshData<Vertex_t>::translate(const glm::vec3& v) {
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::translate(const float& x, const float& y, const float& z) {
+void MeshData<Vertex_t>::translate(float x, float y, float z) {
     translate(glm::vec3(x, y, z));
 }
 
@@ -420,22 +420,22 @@ void MeshData<Vertex_t>::rotate(const glm::quat& q) {
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::rotate(const float& angle, const glm::vec3& axis) {
+void MeshData<Vertex_t>::rotate(float angle, const glm::vec3& axis) {
     m_currentTransform = glm::rotate(m_currentTransform, angle, axis);
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::rotateDegrees(const float& angle, const glm::vec3& axis) {
+void MeshData<Vertex_t>::rotateDegrees(float angle, const glm::vec3& axis) {
     rotate(glm::radians(angle), axis);
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::rotate(const float& angle, const float& x, const float& y, const float& z) {
+void MeshData<Vertex_t>::rotate(float angle, float x, float y, float z) {
     rotate(angle, glm::vec3(x, y, z));
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::rotateDegrees(const float& angle, const float& x, const float& y, const float& z) {
+void MeshData<Vertex_t>::rotateDegrees(float angle, float x, float y, float z) {
     rotate(glm::radians(angle), glm::vec3(x, y, z));
 }
 
@@ -445,17 +445,17 @@ void MeshData<Vertex_t>::scale(const glm::vec3& s) {
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::scale(const float& x, const float& y, const float& z) {
+void MeshData<Vertex_t>::scale(float x, float y, float z) {
     scale(glm::vec3(x, y, z));
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::scale(const float& s) {
+void MeshData<Vertex_t>::scale(float s) {
     scale(glm::vec3(s));
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::applyTransform(const bool& currentStateOnly) {
+void MeshData<Vertex_t>::applyTransform(bool currentStateOnly) {
     size_t firstVertex = currentStateOnly ? m_currentState.baseVertex : 0;
     for (size_t i = firstVertex; i < m_vertices.size(); ++i) {
         m_vertices[i] *= m_currentTransform;
@@ -483,7 +483,7 @@ void MeshData<Vertex_t>::popState() {
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::reset(const MeshPrimitiveType &primitiveType) {
+void MeshData<Vertex_t>::reset(MeshPrimitiveType primitiveType) {
     clear();
     m_primitiveType = primitiveType;
 }
@@ -621,7 +621,7 @@ void MeshData<Vertex_t>::createCuboid(const glm::vec3& pos0, const glm::vec3& po
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::createUVSphere(const glm::vec3& center, const float& radius, const uint32_t& slices, const uint32_t& stacks) {
+void MeshData<Vertex_t>::createUVSphere(const glm::vec3& center, float radius, uint32_t slices, uint32_t stacks) {
     pushState();
 
     glm::vec3 pos;
@@ -695,12 +695,12 @@ typename MeshData<Vertex_t>::Index MeshData<Vertex_t>::addVertex(const glm::vec3
 }
 
 template<typename Vertex_t>
-typename MeshData<Vertex_t>::Index MeshData<Vertex_t>::addVertex(const float& px, const float& py, const float& pz, const float& nx, const float& ny, const float& nz, const float& tu, const float& tv) {
+typename MeshData<Vertex_t>::Index MeshData<Vertex_t>::addVertex(float px, float py, float pz, float nx, float ny, float nz, float tu, float tv) {
     return addVertex(Vertex(px, py, pz, nx, ny, nz, tu, tv));
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::addTriangle(const Index& i0, const Index& i1, const Index& i2) {
+void MeshData<Vertex_t>::addTriangle(Index i0, Index i1, Index i2) {
     switch (m_primitiveType) {
         case PrimitiveType_Triangle:
             createTrianglePrimitive(i0, i1, i2);
@@ -727,7 +727,7 @@ void MeshData<Vertex_t>::addTriangle(const Vertex& v0, const Vertex& v1, const V
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::addQuad(const Index& i0, const Index& i1, const Index& i2, const Index& i3) {
+void MeshData<Vertex_t>::addQuad(Index i0, Index i1, Index i2, Index i3) {
     switch (m_primitiveType) {
         case PrimitiveType_Triangle:
             createTrianglePrimitive(i0, i1, i2);
@@ -781,7 +781,7 @@ std::vector<typename MeshData<Vertex_t>::Index>& MeshData<Vertex_t>::indices() {
 }
 
 template<typename Vertex_t>
-glm::vec3 MeshData<Vertex_t>::calculateCenterOffset(const bool& currentStateOnly) const {
+glm::vec3 MeshData<Vertex_t>::calculateCenterOffset(bool currentStateOnly) const {
     glm::dvec3 center(0.0F);
 
     uint32_t bucketCount = 0;
@@ -821,7 +821,7 @@ glm::vec3 MeshData<Vertex_t>::calculateCenterOffset(const bool& currentStateOnly
 }
 
 template<typename Vertex_t>
-glm::mat4 MeshData<Vertex_t>::calculateBoundingBox(const bool& currentStateOnly) const {
+glm::mat4 MeshData<Vertex_t>::calculateBoundingBox(bool currentStateOnly) const {
     glm::vec3 minExtent(+INFINITY);
     glm::vec3 maxExtent(-INFINITY);
 
@@ -864,7 +864,7 @@ size_t MeshData<Vertex_t>::getPolygonCount() const {
 }
 
 template<typename Vertex_t>
-const MeshPrimitiveType& MeshData<Vertex_t>::getPrimitiveType() const {
+MeshPrimitiveType MeshData<Vertex_t>::getPrimitiveType() const {
     return m_primitiveType;
 }
 
@@ -874,7 +874,7 @@ void MeshData<Vertex_t>::computeTangents() {
 }
 
 template<typename Vertex_t>
-void MeshData<Vertex_t>::computeTangents(std::vector<Vertex_t>& vertices, const std::vector<uint32_t>& indices, const MeshPrimitiveType& primitiveType) {
+void MeshData<Vertex_t>::computeTangents(std::vector<Vertex_t>& vertices, const std::vector<uint32_t>& indices, MeshPrimitiveType primitiveType) {
     using index_t = MeshData<Vertex_t>::Index;
 
     if (primitiveType != MeshPrimitiveType::PrimitiveType_Triangle) {
@@ -924,7 +924,7 @@ void MeshData<Vertex_t>::computeTangents(std::vector<Vertex_t>& vertices, const 
 }
 
 template<typename Vertex_t>
-typename MeshData<Vertex_t>::Index MeshData<Vertex_t>::createTrianglePrimitive(const Index& i0, const Index& i1, const Index& i2) {
+typename MeshData<Vertex_t>::Index MeshData<Vertex_t>::createTrianglePrimitive(Index i0, Index i1, Index i2) {
     assert(m_primitiveType == PrimitiveType_Triangle);
     size_t index = m_indices.size() - m_currentState.baseIndex;
     m_indices.emplace_back(i0 + m_currentState.baseVertex);
@@ -934,7 +934,7 @@ typename MeshData<Vertex_t>::Index MeshData<Vertex_t>::createTrianglePrimitive(c
 }
 
 template<typename Vertex_t>
-typename MeshData<Vertex_t>::Index MeshData<Vertex_t>::createLinePrimitive(const Index& i0, const Index& i1) {
+typename MeshData<Vertex_t>::Index MeshData<Vertex_t>::createLinePrimitive(Index i0, Index i1) {
     assert(m_primitiveType == PrimitiveType_Line);
     size_t index = m_indices.size() - m_currentState.baseIndex;
     m_indices.emplace_back(i0 + m_currentState.baseVertex);
@@ -943,7 +943,7 @@ typename MeshData<Vertex_t>::Index MeshData<Vertex_t>::createLinePrimitive(const
 }
 
 template<typename Vertex_t>
-typename MeshData<Vertex_t>::Index MeshData<Vertex_t>::createPointPrimitive(const Index& i0) {
+typename MeshData<Vertex_t>::Index MeshData<Vertex_t>::createPointPrimitive(Index i0) {
     assert(m_primitiveType == PrimitiveType_Point);
     size_t index = m_indices.size() - m_currentState.baseIndex;
     m_indices.emplace_back(i0 + m_currentState.baseVertex);

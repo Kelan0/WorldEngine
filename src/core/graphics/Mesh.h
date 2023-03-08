@@ -30,7 +30,7 @@ struct MeshConfiguration {
     template<typename Vertex_t>
     void setMeshData(MeshData<Vertex_t>* meshData);
 
-    void setPrimitiveType(const MeshPrimitiveType& primitiveType);
+    void setPrimitiveType(MeshPrimitiveType primitiveType);
 };
 
 class Mesh : public GraphicsResource {
@@ -43,23 +43,23 @@ public:
 
     static Mesh* create(const MeshConfiguration& meshConfiguration, const std::string& name);
 
-    bool uploadVertices(const void* vertices, const vk::DeviceSize& vertexSize, const size_t& vertexCount);
+    bool uploadVertices(const void* vertices, vk::DeviceSize vertexSize, size_t vertexCount);
 
     template<typename Vertex_t>
-    bool uploadVertices(const typename MeshData<Vertex_t>::Vertex* vertices, const size_t& vertexCount);
+    bool uploadVertices(const typename MeshData<Vertex_t>::Vertex* vertices, size_t vertexCount);
 
     template<typename Vertex_t>
     bool uploadVertices(const std::vector<typename MeshData<Vertex_t>::Vertex>& vertices);
 
-    bool uploadIndices(const void* indices, const vk::DeviceSize& indexSize, const size_t& indexCount);
+    bool uploadIndices(const void* indices, vk::DeviceSize indexSize, size_t indexCount);
 
     template<typename Vertex_t>
-    bool uploadIndices(const typename MeshData<Vertex_t>::Index* indices, const size_t& indexCount);
+    bool uploadIndices(const typename MeshData<Vertex_t>::Index* indices, size_t indexCount);
 
     template<typename Vertex_t>
     bool uploadIndices(const std::vector<typename MeshData<Vertex_t>::Index>& indices);
 
-    void draw(const vk::CommandBuffer& commandBuffer, const uint32_t& instanceCount, const uint32_t& firstInstance);
+    void draw(const vk::CommandBuffer& commandBuffer, uint32_t instanceCount, uint32_t firstInstance);
 
     void reset();
 
@@ -106,7 +106,7 @@ void MeshConfiguration::setMeshData(MeshData<Vertex_t>* meshData) {
 
 
 template<typename Vertex_t>
-bool Mesh::uploadVertices(const typename MeshData<Vertex_t>::Vertex* vertices, const size_t& vertexCount) {
+bool Mesh::uploadVertices(const typename MeshData<Vertex_t>::Vertex* vertices, size_t vertexCount) {
     return uploadVertices(vertices, (vk::DeviceSize)sizeof(MeshData<Vertex_t>::Vertex), vertexCount);
 }
 
@@ -116,7 +116,7 @@ bool Mesh::uploadVertices(const std::vector<typename MeshData<Vertex_t>::Vertex>
 }
 
 template<typename Vertex_t>
-bool Mesh::uploadIndices(const typename MeshData<Vertex_t>::Index* indices, const size_t& indexCount) {
+bool Mesh::uploadIndices(const typename MeshData<Vertex_t>::Index* indices, size_t indexCount) {
     return uploadIndices(indices, (vk::DeviceSize)sizeof(MeshData<Vertex_t>::Index), indexCount);
 }
 

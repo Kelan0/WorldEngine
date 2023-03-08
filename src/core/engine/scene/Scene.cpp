@@ -33,7 +33,7 @@ void Scene::init() {
     setMainCameraEntity(nullptr);
 }
 
-void Scene::preTick(const double& dt) {
+void Scene::preTick(double dt) {
 //    const auto& renderEntities = registry()->group<RenderComponent, RenderInfo, Transform>();
 }
 

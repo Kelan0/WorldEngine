@@ -47,9 +47,9 @@ public:
 
     Frustum& set(const Transform& transform, const Camera& camera);
 
-    const Plane& getPlane(const size_t& planeIndex) const;
+    const Plane& getPlane(size_t planeIndex) const;
 
-    const glm::dvec3& getCorner(const size_t& cornerIndex) const;
+    const glm::dvec3& getCorner(size_t cornerIndex) const;
 
     static std::array<glm::dvec3, NumCorners> getCornersNDC();
 

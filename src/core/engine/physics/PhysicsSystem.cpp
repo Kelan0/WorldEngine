@@ -18,7 +18,7 @@ bool PhysicsSystem::init() {
     return true;
 }
 
-void PhysicsSystem::preTick(const double& dt) {
+void PhysicsSystem::preTick(double dt) {
     PROFILE_SCOPE("PhysicsSystem::preTick");
     const auto& physicsEntities = m_scene->registry()->view<RigidBody>();
 
@@ -31,15 +31,15 @@ void PhysicsSystem::preTick(const double& dt) {
     }
 }
 
-void PhysicsSystem::tick(const double& dt) {
+void PhysicsSystem::tick(double dt) {
     PROFILE_SCOPE("PhysicsSystem::tick");
 }
 
-void PhysicsSystem::preRender(const double& dt) {
+void PhysicsSystem::preRender(double dt) {
     PROFILE_SCOPE("PhysicsSystem::preRender");
     const auto& physicsEntities = m_scene->registry()->view<RigidBody, Transform>();
 
-    const double& partialTicks = Engine::instance()->getPartialTicks();
+    double partialTicks = Engine::instance()->getPartialTicks();
     float fpartialTicks = (float)partialTicks;
 
     for (auto it = physicsEntities.begin(); it != physicsEntities.end(); ++it) {

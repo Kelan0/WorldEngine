@@ -46,43 +46,43 @@ public:
 
     bool init();
 
-    void update(const double& dt, const vk::CommandBuffer& commandBuffer);
+    void update(double dt, const vk::CommandBuffer& commandBuffer);
 
     uint32_t getBinCount() const;
 
-    void setBinCount(const uint32_t& binCount);
+    void setBinCount(uint32_t binCount);
 
     uint32_t getDownsampleFactor() const;
 
-    void setDownsampleFactor(const uint32_t& downsampleFactor);
+    void setDownsampleFactor(uint32_t downsampleFactor);
 
     float getMinLogLuminance() const;
 
-    void setMinLogLuminance(const float& minLogLuminance);
+    void setMinLogLuminance(float minLogLuminance);
 
     float getLogLuminanceRange() const;
 
-    void setLogLuminanceRange(const float& logLuminanceRange);
+    void setLogLuminanceRange(float logLuminanceRange);
 
     float getLowPercent() const;
 
-    void setLowPercent(const float& lowPercent);
+    void setLowPercent(float lowPercent);
 
     float getHighPercent() const;
 
-    void setHighPercent(const float& highPercent);
+    void setHighPercent(float highPercent);
 
     float getExposureSpeedUp() const;
 
-    void setExposureSpeedUp(const float& exposureSpeedUp);
+    void setExposureSpeedUp(float exposureSpeedUp);
 
     float getExposureSpeedDown() const;
 
-    void setExposureSpeedDown(const float& exposureSpeedDown);
+    void setExposureSpeedDown(float exposureSpeedDown);
 
     float getExposureCompensation() const;
 
-    void setExposureCompensation(const float& exposureCompensation);
+    void setExposureCompensation(float exposureCompensation);
 
     Buffer* getHistogramBuffer() const;
 

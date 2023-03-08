@@ -43,17 +43,17 @@ bool ImageSource::hasSource() const {
     return imageData != nullptr || !filePath.empty();
 }
 
-void ImageCubeSource::setFaceSource(const ImageCubeFace& face, const ImageSource& imageSource) {
+void ImageCubeSource::setFaceSource(ImageCubeFace face, const ImageSource& imageSource) {
     faceImages[face] = imageSource;
     equirectangularImage = {};
 }
 
-void ImageCubeSource::setFaceSource(const ImageCubeFace& face, ImageData* imageData, ImageData::ImageTransform* imageTransform) {
+void ImageCubeSource::setFaceSource(ImageCubeFace face, ImageData* imageData, ImageData::ImageTransform* imageTransform) {
     faceImages[face].setImageData(imageData, imageTransform);
     equirectangularImage = {};
 }
 
-void ImageCubeSource::setFaceSource(const ImageCubeFace& face, const std::string& filePath, ImageData::ImageTransform* imageTransform) {
+void ImageCubeSource::setFaceSource(ImageCubeFace face, const std::string& filePath, ImageData::ImageTransform* imageTransform) {
     faceImages[face].setFilePath(filePath, imageTransform);
     equirectangularImage = {};
 }
@@ -78,7 +78,7 @@ bool ImageCubeSource::isEquirectangular() const {
 }
 
 
-ImageCube::ImageCube(const WeakResource<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& size, const uint32_t& mipLevelCount, const vk::Format& format, const std::string& name):
+ImageCube::ImageCube(const WeakResource<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, uint32_t size, uint32_t mipLevelCount, vk::Format format, const std::string& name):
         GraphicsResource(ResourceType_ImageCube, device, name),
         m_image(image),
         m_memory(memory),
@@ -275,7 +275,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
     return returnImage;
 }
 
-bool ImageCube::uploadFace(ImageCube* dstImage, const ImageCubeFace& face, void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
+bool ImageCube::uploadFace(ImageCube* dstImage, ImageCubeFace face, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
     assert(dstImage != nullptr);
     assert(data != nullptr);
 
@@ -321,7 +321,7 @@ bool ImageCube::uploadFace(ImageCube* dstImage, const ImageCubeFace& face, void*
     return success;
 }
 
-bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
+bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
     assert(dstImage != nullptr);
     assert(data != nullptr);
 
@@ -505,19 +505,19 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, const Ima
     return success;
 }
 
-bool ImageCube::uploadFace(const ImageCubeFace& face, void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
+bool ImageCube::uploadFace(ImageCubeFace face, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
     return ImageCube::uploadFace(this, face, data, pixelLayout, pixelFormat, aspectMask, imageRegion, dstState);
 }
 
-bool ImageCube::uploadEquirectangular(void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
+bool ImageCube::uploadEquirectangular(void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
     return ImageCube::uploadEquirectangular(this, data, pixelLayout, pixelFormat, aspectMask, imageRegion, dstState);
 }
 
-bool ImageCube::generateMipmap(ImageCube* image, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState) {
+bool ImageCube::generateMipmap(ImageCube* image, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& dstState) {
     return ImageUtil::generateMipmap(image->getImage(), image->getFormat(), filter, aspectMask, 0, 6, image->getWidth(), image->getHeight(), 1, mipLevels, dstState);
 }
 
-bool ImageCube::generateMipmap(const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState) {
+bool ImageCube::generateMipmap(vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& dstState) {
     return ImageCube::generateMipmap(this, filter, aspectMask, mipLevels, dstState);
 }
 
@@ -526,15 +526,15 @@ const vk::Image& ImageCube::getImage() const {
     return m_image;
 }
 
-const uint32_t& ImageCube::getSize() const {
+uint32_t ImageCube::getSize() const {
     return m_size;
 }
 
-const uint32_t& ImageCube::getWidth() const {
+uint32_t ImageCube::getWidth() const {
     return m_size;
 }
 
-const uint32_t& ImageCube::getHeight() const {
+uint32_t ImageCube::getHeight() const {
     return m_size;
 }
 
@@ -546,7 +546,7 @@ vk::Format ImageCube::getFormat() const {
     return m_format;
 }
 
-std::array<bool, 6> ImageCube::loadCubeFacesImageData(const std::array<ImageSource, 6>& cubeFaceImageSources, const vk::Format& format, std::array<ImageData*, 6>& outImageData, std::vector<ImageData*>& allocatedImageData) {
+std::array<bool, 6> ImageCube::loadCubeFacesImageData(const std::array<ImageSource, 6>& cubeFaceImageSources, vk::Format format, std::array<ImageData*, 6>& outImageData, std::vector<ImageData*>& allocatedImageData) {
     std::array<bool, 6> loadedImages = {false};
 
     for (size_t i = 0; i < 6; ++i)
@@ -555,7 +555,7 @@ std::array<bool, 6> ImageCube::loadCubeFacesImageData(const std::array<ImageSour
     return loadedImages;
 }
 
-bool ImageCube::loadImageData(const ImageSource& imageSource, const vk::Format& format, ImageData*& outImageData, std::vector<ImageData*>& allocatedImageData) {
+bool ImageCube::loadImageData(const ImageSource& imageSource, vk::Format format, ImageData*& outImageData, std::vector<ImageData*>& allocatedImageData) {
     if (outImageData != nullptr)
         return false; // Image was not loaded, we will not delete/overwrite the already existing ImageData from here. This is probably an error.
 
@@ -586,7 +586,7 @@ bool ImageCube::loadImageData(const ImageSource& imageSource, const vk::Format& 
     return true;
 }
 
-bool ImageCube::validateFaceImageRegion(const ImageCube* image, const ImageCubeFace& face, ImageRegion& imageRegion) {
+bool ImageCube::validateFaceImageRegion(const ImageCube* image, ImageCubeFace face, ImageRegion& imageRegion) {
     if (image == nullptr) {
         return false;
     }

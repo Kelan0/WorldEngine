@@ -10,16 +10,16 @@ void BufferViewConfiguration::setBuffer(const Buffer* buffer) {
     setBuffer(buffer->getBuffer());
 }
 
-void BufferViewConfiguration::setFormat(const vk::Format& format) {
+void BufferViewConfiguration::setFormat(vk::Format format) {
     this->format = format;
 }
 
-void BufferViewConfiguration::setOffsetRange(const vk::DeviceSize& offset, const vk::DeviceSize& range) {
+void BufferViewConfiguration::setOffsetRange(vk::DeviceSize offset, vk::DeviceSize range) {
     this->offset = offset;
     this->range = range;
 }
 
-BufferView::BufferView(const WeakResource<vkr::Device>& device, const vk::BufferView& bufferView, const vk::Format& format, const vk::DeviceSize& offset, const vk::DeviceSize& range, const std::string& name):
+BufferView::BufferView(const WeakResource<vkr::Device>& device, const vk::BufferView& bufferView, vk::Format format, vk::DeviceSize offset, vk::DeviceSize range, const std::string& name):
         GraphicsResource(ResourceType_BufferView, device, name),
         m_bufferView(bufferView),
         m_format(format),
@@ -56,14 +56,14 @@ const vk::BufferView& BufferView::getBufferView() const {
     return m_bufferView;
 }
 
-const vk::Format& BufferView::getFormat() const {
+vk::Format BufferView::getFormat() const {
     return m_format;
 }
 
-const vk::DeviceSize& BufferView::getOffset() const {
+vk::DeviceSize BufferView::getOffset() const {
     return m_offset;
 }
 
-const vk::DeviceSize& BufferView::getRange() const {
+vk::DeviceSize BufferView::getRange() const {
     return m_range;
 }

@@ -15,7 +15,7 @@ std::unordered_map<std::string, ComputePipeline*> ImageData::ImageTransform::s_t
 
 Buffer* g_imageStagingBuffer = nullptr;
 
-ImageData::ImageData(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const AllocationType& allocationType):
+ImageData::ImageData(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, AllocationType allocationType):
         m_data(data),
         m_width(width),
         m_height(height),
@@ -24,17 +24,17 @@ ImageData::ImageData(uint8_t* data, const ImageRegion::size_type& width, const I
         m_allocationType(allocationType) {
 }
 
-//ImageData::ImageData(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat):
+//ImageData::ImageData(ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat):
 //        ImageData(nullptr, width, height, pixelLayout, pixelFormat, AllocationType_Internal) {
 //        size_t allocSize = (size_t)width * (size_t)height * (size_t)ImageData::getChannels(pixelLayout) * (size_t)ImageData::getChannelSize(pixelFormat);
 //        m_data = static_cast<uint8_t*>(malloc(allocSize));
 //}
 
-ImageData::ImageData(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat):
+ImageData::ImageData(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat):
         ImageData(data, width, height, pixelLayout, pixelFormat, AllocationType_External) {
 }
 
-ImageData::ImageData(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat):
+ImageData::ImageData(ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat):
         ImageData(nullptr, width, height, pixelLayout, pixelFormat, AllocationType_Internal) {
 
     size_t pixelSize = ImageData::getChannels(pixelLayout) * ImageData::getChannelSize(pixelFormat);
@@ -141,7 +141,7 @@ void ImageData::clearCache() {
     s_imageCache.clear();
 }
 
-ImageData* ImageData::mutate(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& srcLayout, const ImagePixelFormat& srcFormat, const ImagePixelLayout& dstLayout, const ImagePixelFormat& dstFormat) {
+ImageData* ImageData::mutate(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout srcLayout, ImagePixelFormat srcFormat, ImagePixelLayout dstLayout, ImagePixelFormat dstFormat) {
     uint8_t* mutatedPixels;
 
     if (srcLayout == ImagePixelLayout::Invalid || dstLayout == ImagePixelLayout::Invalid) {
@@ -271,11 +271,11 @@ ImageData* ImageData::transform(const ImageData* imageData, const ImageTransform
     return transform(imageData->getData(), imageData->getWidth(), imageData->getHeight(), imageData->getPixelLayout(), imageData->getPixelFormat(), transformation);
 }
 
-ImageData* ImageData::transform(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& layout, const ImagePixelFormat& format, const ImageTransform& transformation) {
+ImageData* ImageData::transform(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format, const ImageTransform& transformation) {
     return transformation.apply(data, width, height, layout, format);
 }
 
-int64_t ImageData::getChannel(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const size_t& channelIndex) {
+int64_t ImageData::getChannel(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex) {
     size_t channelOffset = ImageData::getChannelOffset(x, y, channelIndex, m_width, m_height, m_pixelLayout, m_pixelFormat);
     uint8_t* data = &m_data[channelOffset];
 
@@ -302,7 +302,7 @@ int64_t ImageData::getChannel(const ImageRegion::offset_type& x, const ImageRegi
     }
 }
 
-void ImageData::setChannel(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const size_t& channelIndex, const int64_t& value) {
+void ImageData::setChannel(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex, int64_t value) {
     size_t channelOffset = ImageData::getChannelOffset(x, y, channelIndex, m_width, m_height, m_pixelLayout, m_pixelFormat);
     uint8_t* data = &m_data[channelOffset];
 
@@ -350,7 +350,7 @@ void ImageData::setChannel(const ImageRegion::offset_type& x, const ImageRegion:
     }
 }
 
-void ImageData::setPixel(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const int64_t& r, const int64_t& g, const int64_t& b, const int64_t& a) {
+void ImageData::setPixel(ImageRegion::offset_type x, ImageRegion::offset_type y, int64_t r, int64_t g, int64_t b, int64_t a) {
     size_t numChannels = ImageData::getChannels(m_pixelLayout);
     vk::ComponentSwizzle swizzle[4];
     ImageData::getPixelSwizzle(m_pixelLayout, swizzle);
@@ -380,7 +380,7 @@ void ImageData::setPixel(const ImageRegion::offset_type& x, const ImageRegion::o
     }
 }
 
-void ImageData::setPixelf(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const float& r, const float& g, const float& b, const float& a) {
+void ImageData::setPixelf(ImageRegion::offset_type x, ImageRegion::offset_type y, float r, float g, float b, float a) {
     assert(m_pixelFormat == ImagePixelFormat::Float32);
 
     size_t numChannels = ImageData::getChannels(m_pixelLayout);
@@ -714,7 +714,7 @@ bool ImageData::getPixelLayoutAndFormat(vk::Format format, ImagePixelLayout& out
     }
 }
 
-size_t ImageData::getChannelOffset(const ImageRegion::offset_type& x, const ImageRegion::offset_type& y, const size_t& channelIndex, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat) {
+size_t ImageData::getChannelOffset(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat) {
     assert(x < width && y < height);
     size_t numChannels = ImageData::getChannels(pixelLayout);
     assert(channelIndex < numChannels);
@@ -725,7 +725,7 @@ size_t ImageData::getChannelOffset(const ImageRegion::offset_type& x, const Imag
 }
 
 
-ImageData* ImageData::ImageTransform::apply(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& layout, const ImagePixelFormat& format) const {
+ImageData* ImageData::ImageTransform::apply(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format) const {
     // No-op implementation - The image just gets copied.
 
     size_t pixelStride = ImageData::getChannels(layout) * ImageData::getChannelSize(format);
@@ -761,7 +761,7 @@ ImageData::Flip::Flip(const Flip& copy):
         flip_y(copy.flip_y) {
 }
 
-ImageData* ImageData::Flip::apply(uint8_t* data, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImagePixelLayout& layout, const ImagePixelFormat& format) const {
+ImageData* ImageData::Flip::apply(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format) const {
     // TODO: use compute shader for this
 
     if (isNoOp())
@@ -828,7 +828,7 @@ ComputePipeline* ImageData::Flip::getComputePipeline() {
 }
 
 
-bool ImageUtil::isDepthAttachment(const vk::Format& format) {
+bool ImageUtil::isDepthAttachment(vk::Format format) {
     switch (format) {
         case vk::Format::eD16Unorm:
         case vk::Format::eX8D24UnormPack32:
@@ -842,7 +842,7 @@ bool ImageUtil::isDepthAttachment(const vk::Format& format) {
     }
 }
 
-bool ImageUtil::isStencilAttachment(const vk::Format& format) {
+bool ImageUtil::isStencilAttachment(vk::Format format) {
     switch (format) {
         case vk::Format::eS8Uint:
         case vk::Format::eD16UnormS8Uint:
@@ -854,13 +854,13 @@ bool ImageUtil::isStencilAttachment(const vk::Format& format) {
     }
 }
 
-bool ImageUtil::isColourAttachment(const vk::Format& format) {
+bool ImageUtil::isColourAttachment(vk::Format format) {
     return !isDepthAttachment(format) && !isStencilAttachment(format); // TODO: Is it correct to assume all format types that are not depth or stencil are colour?
 }
 
 vk::Format ImageUtil::selectSupportedFormat(const vk::PhysicalDevice& physicalDevice, const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features) {
     for (size_t i = 0; i < candidates.size(); ++i) {
-        const vk::Format& format = candidates[i];
+        vk::Format format = candidates[i];
         vk::FormatProperties props = physicalDevice.getFormatProperties(format);
 
         if ((tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) ||
@@ -873,7 +873,7 @@ vk::Format ImageUtil::selectSupportedFormat(const vk::PhysicalDevice& physicalDe
     return vk::Format::eUndefined;
 }
 
-bool ImageUtil::getImageFormatProperties(const vk::Format& format, const vk::ImageType& type, const vk::ImageTiling& tiling, const vk::ImageUsageFlags& usage, const vk::ImageCreateFlags& flags, vk::ImageFormatProperties* imageFormatProperties) {
+bool ImageUtil::getImageFormatProperties(vk::Format format, vk::ImageType type, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::ImageCreateFlags flags, vk::ImageFormatProperties* imageFormatProperties) {
     const vk::PhysicalDevice& physicalDevice = Engine::graphics()->getPhysicalDevice();
 
     vk::Result result;
@@ -950,7 +950,7 @@ bool ImageUtil::transitionLayout(const vk::CommandBuffer& commandBuffer, const v
     return true;
 }
 
-bool ImageUtil::upload(const vk::Image& dstImage, void* data, const uint32_t& bytesPerPixel, const vk::ImageAspectFlags& aspectMask, const ImageRegion& imageRegion, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
+bool ImageUtil::upload(const vk::Image& dstImage, void* data, uint32_t bytesPerPixel, vk::ImageAspectFlags aspectMask, const ImageRegion& imageRegion, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
     const vk::CommandBuffer& commandBuffer = ImageUtil::beginTransferCommands();
 
     bool success = ImageUtil::upload(commandBuffer, dstImage, data, bytesPerPixel, aspectMask, imageRegion, dstState, srcState);
@@ -959,7 +959,7 @@ bool ImageUtil::upload(const vk::Image& dstImage, void* data, const uint32_t& by
     return success;
 }
 
-bool ImageUtil::upload(const vk::CommandBuffer& commandBuffer, const vk::Image& dstImage, void* data, const uint32_t& bytesPerPixel, const vk::ImageAspectFlags& aspectMask, const ImageRegion& imageRegion, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
+bool ImageUtil::upload(const vk::CommandBuffer& commandBuffer, const vk::Image& dstImage, void* data, uint32_t bytesPerPixel, vk::ImageAspectFlags aspectMask, const ImageRegion& imageRegion, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
 
     if (!dstImage) {
         assert(false);
@@ -1041,7 +1041,7 @@ bool ImageUtil::transferBuffer(const vk::CommandBuffer& commandBuffer, const vk:
     return true;
 }
 
-bool ImageUtil::generateMipmap(const vk::Image& image, const vk::Format& format, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth, const uint32_t& mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
+bool ImageUtil::generateMipmap(const vk::Image& image, vk::Format format, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t baseLayer, uint32_t layerCount, ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth, uint32_t mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
 
     const vk::CommandBuffer& commandBuffer = ImageUtil::beginTransferCommands();
 
@@ -1051,7 +1051,7 @@ bool ImageUtil::generateMipmap(const vk::Image& image, const vk::Format& format,
     return success;
 }
 
-bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::Format& format, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& baseLayer, const uint32_t& layerCount, const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth, const uint32_t& mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
+bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk::Image& image, vk::Format format, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t baseLayer, uint32_t layerCount, ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth, uint32_t mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
     PROFILE_BEGIN_GPU_CMD("ImageUtil::generateMipmap", commandBuffer);
     vk::ImageTiling tiling = vk::ImageTiling::eOptimal;
     vk::FormatFeatureFlags testFormatFeatureFlags{};
@@ -1127,11 +1127,11 @@ bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk:
     return true;
 }
 
-uint32_t ImageUtil::getMaxMipLevels(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth) {
+uint32_t ImageUtil::getMaxMipLevels(ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth) {
     return static_cast<uint32_t>(glm::floor(glm::log2((float)glm::max(glm::max(width, height), depth)))) + 1;
 }
 
-bool ImageUtil::checkAllImageFormatFeatures(const vk::Format& format, const vk::ImageTiling& tiling, const vk::FormatFeatureFlags& formatFeatureFlags) {
+bool ImageUtil::checkAllImageFormatFeatures(vk::Format format, vk::ImageTiling tiling, vk::FormatFeatureFlags formatFeatureFlags) {
     const vk::PhysicalDevice& physicalDevice = Engine::graphics()->getPhysicalDevice();
 
     vk::FormatProperties formatProperties{};
@@ -1145,7 +1145,7 @@ bool ImageUtil::checkAllImageFormatFeatures(const vk::Format& format, const vk::
     return (testFlags & formatFeatureFlags) == formatFeatureFlags; // All desired flag bits are set.
 }
 
-bool ImageUtil::checkAnyImageFormatFeatures(const vk::Format& format, const vk::ImageTiling& tiling, const vk::FormatFeatureFlags& formatFeatureFlags) {
+bool ImageUtil::checkAnyImageFormatFeatures(vk::Format format, vk::ImageTiling tiling, vk::FormatFeatureFlags formatFeatureFlags) {
     const vk::PhysicalDevice& physicalDevice = Engine::graphics()->getPhysicalDevice();
 
     vk::FormatProperties formatProperties{};
@@ -1170,7 +1170,7 @@ const vk::CommandBuffer& ImageUtil::beginTransferCommands() {
     return transferCommandBuffer;
 }
 
-void ImageUtil::endTransferCommands(const vk::Queue& queue, const bool& waitComplete) {
+void ImageUtil::endTransferCommands(const vk::Queue& queue, bool waitComplete) {
     const vk::CommandBuffer& transferCommandBuffer = ImageUtil::getTransferCommandBuffer();
 
     PROFILE_END_GPU_CMD(transferCommandBuffer);
@@ -1204,15 +1204,15 @@ const vk::Queue& ImageUtil::getComputeQueue() {
     return **Engine::graphics()->getQueue(QUEUE_COMPUTE_MAIN);
 }
 
-vk::DeviceSize ImageUtil::getImageSizeBytes(const ImageRegion& imageRegion, const uint32_t& bytesPerPixel) {
+vk::DeviceSize ImageUtil::getImageSizeBytes(const ImageRegion& imageRegion, uint32_t bytesPerPixel) {
     return ImageUtil::getImageSizeBytes(imageRegion.width, imageRegion.height, imageRegion.depth, bytesPerPixel);
 }
 
-vk::DeviceSize ImageUtil::getImageSizeBytes(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth, const uint32_t& bytesPerPixel) {
+vk::DeviceSize ImageUtil::getImageSizeBytes(ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth, uint32_t bytesPerPixel) {
     return (vk::DeviceSize)width * (vk::DeviceSize)height * (vk::DeviceSize)depth * (vk::DeviceSize)bytesPerPixel;
 }
 
-Buffer* ImageUtil::getImageStagingBuffer(const ImageRegion& imageRegion, const uint32_t& bytesPerPixel) {
+Buffer* ImageUtil::getImageStagingBuffer(const ImageRegion& imageRegion, uint32_t bytesPerPixel) {
     return ImageUtil::getImageStagingBuffer(imageRegion.width, imageRegion.height, imageRegion.depth, bytesPerPixel);
 }
 
@@ -1221,7 +1221,7 @@ void _ImageUtil_onCleanupGraphics(ShutdownGraphicsEvent* event) {
     delete g_imageStagingBuffer;
 }
 
-Buffer* ImageUtil::getImageStagingBuffer(const ImageRegion::size_type& width, const ImageRegion::size_type& height, const ImageRegion::size_type& depth, const uint32_t& bytesPerPixel) {
+Buffer* ImageUtil::getImageStagingBuffer(ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth, uint32_t bytesPerPixel) {
     constexpr uint32_t maxImageDimension = 32768;
     if (width > maxImageDimension || height > maxImageDimension || depth > maxImageDimension || bytesPerPixel > 64) {
         printf("Unable to get image data staging buffer: Requested dimensions too large\n");
@@ -1262,7 +1262,7 @@ Buffer* ImageUtil::getImageStagingBuffer(const ImageRegion::size_type& width, co
 }
 
 
-ImageTransitionState::ImageTransitionState(const vk::ImageLayout& layout, const vk::AccessFlagBits& accessMask, const vk::PipelineStageFlags& pipelineStages, const uint32_t& queueFamilyIndex):
+ImageTransitionState::ImageTransitionState(vk::ImageLayout layout, vk::AccessFlagBits accessMask, vk::PipelineStageFlags pipelineStages, uint32_t queueFamilyIndex):
         layout(layout),
         accessMask(accessMask),
         pipelineStages(pipelineStages),
@@ -1278,11 +1278,11 @@ bool ImageTransitionState::operator==(const ImageTransitionState& other) const {
 }
 
 
-ImageTransition::FromAny::FromAny(const vk::PipelineStageFlagBits& shaderPipelineStages):
+ImageTransition::FromAny::FromAny(vk::PipelineStageFlagBits shaderPipelineStages):
         ImageTransitionState(vk::ImageLayout::eUndefined, {}, shaderPipelineStages) {
 }
 
-ImageTransition::General::General(const vk::PipelineStageFlagBits& shaderPipelineStages):
+ImageTransition::General::General(vk::PipelineStageFlagBits shaderPipelineStages):
         ImageTransitionState(vk::ImageLayout::eGeneral, {}, shaderPipelineStages) {
 }
 
@@ -1294,7 +1294,7 @@ ImageTransition::TransferSrc::TransferSrc():
         ImageTransitionState(vk::ImageLayout::eTransferSrcOptimal, vk::AccessFlagBits::eTransferRead, vk::PipelineStageFlagBits::eTransfer) {
 }
 
-ImageTransition::ShaderAccess::ShaderAccess(const vk::PipelineStageFlags& shaderPipelineStages, const bool& read, const bool& write):
+ImageTransition::ShaderAccess::ShaderAccess(vk::PipelineStageFlags shaderPipelineStages, bool read, bool write):
         ImageTransitionState(vk::ImageLayout::eShaderReadOnlyOptimal, {}, shaderPipelineStages) {
 #if _DEBUG
     const vk::PipelineStageFlags validShaderStages =
@@ -1321,15 +1321,15 @@ ImageTransition::ShaderAccess::ShaderAccess(const vk::PipelineStageFlags& shader
     if (write) accessMask |= vk::AccessFlagBits::eShaderWrite;
 }
 
-ImageTransition::ShaderReadOnly::ShaderReadOnly(const vk::PipelineStageFlags& shaderPipelineStages):
+ImageTransition::ShaderReadOnly::ShaderReadOnly(vk::PipelineStageFlags shaderPipelineStages):
         ShaderAccess(shaderPipelineStages, true, false) {
 }
 
-ImageTransition::ShaderWriteOnly::ShaderWriteOnly(const vk::PipelineStageFlags& shaderPipelineStages):
+ImageTransition::ShaderWriteOnly::ShaderWriteOnly(vk::PipelineStageFlags shaderPipelineStages):
         ShaderAccess(shaderPipelineStages, false, true) {
 }
 
-ImageTransition::ShaderReadWrite::ShaderReadWrite(const vk::PipelineStageFlags& shaderPipelineStages):
+ImageTransition::ShaderReadWrite::ShaderReadWrite(vk::PipelineStageFlags shaderPipelineStages):
         ShaderAccess(shaderPipelineStages, true, true) {
 }
 

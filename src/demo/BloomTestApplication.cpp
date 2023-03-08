@@ -234,7 +234,7 @@ void BloomTestApplication::cleanup() {
         delete images[i];
 }
 
-void BloomTestApplication::render(const double& dt) {
+void BloomTestApplication::render(double dt) {
     PROFILE_SCOPE("custom render")
     handleUserInput(dt);
 
@@ -395,7 +395,7 @@ void BloomTestApplication::render(const double& dt) {
     Engine::immediateRenderer()->popMatrix(MatrixMode_Projection);
 }
 
-void BloomTestApplication::tick(const double& dt) {
+void BloomTestApplication::tick(double dt) {
     time += dt;
 
     Entity christmasBallEntity = Engine::scene()->findNamedEntity("christmasBallEntity");
@@ -406,7 +406,7 @@ void BloomTestApplication::tick(const double& dt) {
     }
 }
 
-void BloomTestApplication::handleUserInput(const double& dt) {
+void BloomTestApplication::handleUserInput(double dt) {
     if (input()->keyPressed(SDL_SCANCODE_ESCAPE)) {
         input()->toggleMouseGrabbed();
     }

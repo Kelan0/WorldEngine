@@ -35,7 +35,7 @@ private:
 public:
     static ShaderLoadingUpdater* instance();
 
-    LoadedShaderInfo* notifyShaderLoaded(const LoadedShaderInfo& shaderInfo, const bool& reloaded);
+    LoadedShaderInfo* notifyShaderLoaded(const LoadedShaderInfo& shaderInfo, bool reloaded);
 
     LoadedShaderInfo* getLoadedShaderInfo(const std::string& filePath, const std::string& entryPoint);
 
@@ -65,7 +65,7 @@ ShaderLoadingUpdater* ShaderLoadingUpdater::instance() {
     return s_instance;
 }
 
-LoadedShaderInfo* ShaderLoadingUpdater::notifyShaderLoaded(const LoadedShaderInfo& shaderInfo, const bool& reloaded) {
+LoadedShaderInfo* ShaderLoadingUpdater::notifyShaderLoaded(const LoadedShaderInfo& shaderInfo, bool reloaded) {
     std::string key = getShaderKey(shaderInfo.filePath, shaderInfo.entryPoint);
     auto [it0, inserted0] = m_loadedShaders.insert(std::make_pair(key, shaderInfo));
     LoadedShaderInfo* newShaderInfo = &it0->second;

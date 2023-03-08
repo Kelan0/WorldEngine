@@ -16,12 +16,12 @@ public:
 
     virtual void cleanup() override;
 
-    virtual void render(const double& dt) override;
+    virtual void render(double dt) override;
 
-    virtual void tick(const double& dt) override;
+    virtual void tick(double dt) override;
 
 private:
-    void handleUserInput(const double& dt);
+    void handleUserInput(double dt);
 
 private:
     double m_cameraPitch;

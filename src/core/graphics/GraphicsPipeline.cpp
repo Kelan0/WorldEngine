@@ -11,23 +11,23 @@
 #include "core/util/Util.h"
 
 
-AttachmentBlendState::AttachmentBlendState(const bool& blendEnable, const vk::ColorComponentFlags& colourWriteMask):
+AttachmentBlendState::AttachmentBlendState(bool blendEnable, vk::ColorComponentFlags colourWriteMask):
         blendEnable(blendEnable) {
     setColourWriteMask(colourWriteMask);
 }
 
-AttachmentBlendState::AttachmentBlendState(const bool& blendEnable, const uint32_t& colourWriteMask):
+AttachmentBlendState::AttachmentBlendState(bool blendEnable, uint32_t colourWriteMask):
         AttachmentBlendState(blendEnable, (vk::ColorComponentFlags)colourWriteMask) {
 }
 
-void AttachmentBlendState::setColourWriteMask(const vk::ColorComponentFlags& p_colourWriteMask) {
+void AttachmentBlendState::setColourWriteMask(vk::ColorComponentFlags p_colourWriteMask) {
 //    constexpr uint32_t ValidColourBits = (VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT);
     auto ValidColourBits = (vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA);
     assert(!(p_colourWriteMask & (~ValidColourBits))); // Colour write mask must only contain R,G,B or A bits.
     colourWriteMask = p_colourWriteMask;
 }
 
-void AttachmentBlendState::setColourWriteMask(const uint32_t& p_colourWriteMask) {
+void AttachmentBlendState::setColourWriteMask(uint32_t p_colourWriteMask) {
     setColourWriteMask((vk::ColorComponentFlags)colourWriteMask);
 }
 
@@ -35,7 +35,7 @@ void AttachmentBlendState::setColourBlendMode(const BlendMode& blendMode) {
     colourBlendMode = blendMode;
 }
 
-void AttachmentBlendState::setColourBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op) {
+void AttachmentBlendState::setColourBlendMode(vk::BlendFactor src, vk::BlendFactor dst, vk::BlendOp op) {
     colourBlendMode.src = src;
     colourBlendMode.dst = dst;
     colourBlendMode.op = op;
@@ -46,7 +46,7 @@ void AttachmentBlendState::setAlphaBlendMode(const BlendMode& blendMode) {
     alphaBlendMode = blendMode;
 }
 
-void AttachmentBlendState::setAlphaBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op) {
+void AttachmentBlendState::setAlphaBlendMode(vk::BlendFactor src, vk::BlendFactor dst, vk::BlendOp op) {
     alphaBlendMode.src = src;
     alphaBlendMode.dst = dst;
     alphaBlendMode.op = op;
@@ -57,11 +57,11 @@ void GraphicsPipelineConfiguration::setViewport(const vk::Viewport& p_viewport) 
     viewport = p_viewport;
 }
 
-void GraphicsPipelineConfiguration::setViewport(const glm::vec2& size, const glm::vec2& offset, const float& minDepth, const float& maxDepth) {
+void GraphicsPipelineConfiguration::setViewport(const glm::vec2& size, const glm::vec2& offset, float minDepth, float maxDepth) {
     setViewport(vk::Viewport(offset.x, offset.y, size.x, size.y, minDepth, maxDepth));
 }
 
-void GraphicsPipelineConfiguration::setViewport(const float& width, const float& height, const float& x, const float& y, const float& minDepth, const float& maxDepth) {
+void GraphicsPipelineConfiguration::setViewport(float width, float height, float x, float y, float minDepth, float maxDepth) {
     setViewport(vk::Viewport(x, y, width, height, minDepth, maxDepth));
 }
 
@@ -69,7 +69,7 @@ void GraphicsPipelineConfiguration::addVertexInputBinding(const vk::VertexInputB
     vertexInputBindings.emplace_back(vertexInputBinding);
 }
 
-void GraphicsPipelineConfiguration::addVertexInputBinding(const uint32_t& binding, const uint32_t& stride, const vk::VertexInputRate& vertexInputRate) {
+void GraphicsPipelineConfiguration::addVertexInputBinding(uint32_t binding, uint32_t stride, vk::VertexInputRate vertexInputRate) {
     addVertexInputBinding(vk::VertexInputBindingDescription(binding, stride, vertexInputRate));
 }
 
@@ -83,7 +83,7 @@ void GraphicsPipelineConfiguration::addVertexInputAttribute(const vk::VertexInpu
     vertexInputAttributes.emplace_back(vertexInputAttribute);
 }
 
-void GraphicsPipelineConfiguration::addVertexInputAttribute(const uint32_t& location, const uint32_t& binding, const vk::Format& format, const uint32_t& offset) {
+void GraphicsPipelineConfiguration::addVertexInputAttribute(uint32_t location, uint32_t binding, vk::Format format, uint32_t offset) {
     addVertexInputAttribute(vk::VertexInputAttributeDescription(location, binding, format, offset));
 }
 
@@ -119,55 +119,55 @@ void GraphicsPipelineConfiguration::addPushConstantRange(const vk::PushConstantR
     pushConstantRanges.emplace_back(pushConstantRange);
 }
 
-void GraphicsPipelineConfiguration::addPushConstantRange(const vk::ShaderStageFlags& stageFlags, const uint32_t& offset, const uint32_t& size) {
+void GraphicsPipelineConfiguration::addPushConstantRange(vk::ShaderStageFlags stageFlags, uint32_t offset, uint32_t size) {
     addPushConstantRange(vk::PushConstantRange(stageFlags, offset, size));
 }
 
-void GraphicsPipelineConfiguration::setDynamicState(const vk::DynamicState& dynamicState, const bool& isDynamic) {
+void GraphicsPipelineConfiguration::setDynamicState(vk::DynamicState dynamicState, bool isDynamic) {
     dynamicStates[dynamicState] = isDynamic;
 }
 
-void GraphicsPipelineConfiguration::setDynamicStates(const vk::ArrayProxy<const vk::DynamicState>& dynamicStates, const bool& isDynamic) {
+void GraphicsPipelineConfiguration::setDynamicStates(const vk::ArrayProxy<vk::DynamicState>& dynamicStates, bool isDynamic) {
     for (const auto& state : dynamicStates)
         setDynamicState(state, isDynamic);
 }
 
-AttachmentBlendState& GraphicsPipelineConfiguration::attachmentBlendState(const size_t& attachmentIndex) {
+AttachmentBlendState& GraphicsPipelineConfiguration::attachmentBlendState(size_t attachmentIndex) {
 //    assert(attachmentIndex < renderPass.lock()->getAttachmentCount());
     while (attachmentBlendStates.size() <= attachmentIndex)
         attachmentBlendStates.emplace_back();
     return attachmentBlendStates[attachmentIndex];
 }
 
-void GraphicsPipelineConfiguration::setAttachmentBlendState(const size_t& attachmentIndex, const AttachmentBlendState& p_attachmentBlendState) {
+void GraphicsPipelineConfiguration::setAttachmentBlendState(size_t attachmentIndex, const AttachmentBlendState& p_attachmentBlendState) {
     attachmentBlendState(attachmentIndex) = p_attachmentBlendState;
 }
 
-void GraphicsPipelineConfiguration::setAttachmentBlendEnabled(const size_t& attachmentIndex, const bool& blendEnabled) {
+void GraphicsPipelineConfiguration::setAttachmentBlendEnabled(size_t attachmentIndex, bool blendEnabled) {
     attachmentBlendState(attachmentIndex).blendEnable = blendEnabled;
 }
 
-void GraphicsPipelineConfiguration::setAttachmentColourWriteMask(const size_t& attachmentIndex, const vk::ColorComponentFlags& colourWriteMask) {
+void GraphicsPipelineConfiguration::setAttachmentColourWriteMask(size_t attachmentIndex, vk::ColorComponentFlags colourWriteMask) {
     attachmentBlendState(attachmentIndex).setColourWriteMask(colourWriteMask);
 }
 
-void GraphicsPipelineConfiguration::setAttachmentColourWriteMask(const size_t& attachmentIndex, const uint32_t& colourWriteMask) {
+void GraphicsPipelineConfiguration::setAttachmentColourWriteMask(size_t attachmentIndex, uint32_t colourWriteMask) {
     attachmentBlendState(attachmentIndex).setColourWriteMask(colourWriteMask);
 }
 
-void GraphicsPipelineConfiguration::setAttachmentColourBlendMode(const size_t& attachmentIndex, const BlendMode& blendMode) {
+void GraphicsPipelineConfiguration::setAttachmentColourBlendMode(size_t attachmentIndex, const BlendMode& blendMode) {
     attachmentBlendState(attachmentIndex).setColourBlendMode(blendMode);
 }
 
-void GraphicsPipelineConfiguration::setAttachmentColourBlendMode(const size_t& attachmentIndex, const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op) {
+void GraphicsPipelineConfiguration::setAttachmentColourBlendMode(size_t attachmentIndex, vk::BlendFactor src, vk::BlendFactor dst, vk::BlendOp op) {
     attachmentBlendState(attachmentIndex).setColourBlendMode(src, dst, op);
 }
 
-void GraphicsPipelineConfiguration::setAttachmentAlphaBlendMode(const size_t& attachmentIndex, const BlendMode& blendMode) {
+void GraphicsPipelineConfiguration::setAttachmentAlphaBlendMode(size_t attachmentIndex, const BlendMode& blendMode) {
     attachmentBlendState(attachmentIndex).setAlphaBlendMode(blendMode);
 }
 
-void GraphicsPipelineConfiguration::setAttachmentAlphaBlendMode(const size_t& attachmentIndex, const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op) {
+void GraphicsPipelineConfiguration::setAttachmentAlphaBlendMode(size_t attachmentIndex, vk::BlendFactor src, vk::BlendFactor dst, vk::BlendOp op) {
     attachmentBlendState(attachmentIndex).setAlphaBlendMode(src, dst, op);
 }
 
@@ -467,60 +467,60 @@ bool GraphicsPipeline::isValid() const {
     return !!m_pipeline && !!m_pipelineLayout && !!m_renderPass;
 }
 
-bool GraphicsPipeline::isStateDynamic(const vk::DynamicState& dynamicState) const {
+bool GraphicsPipeline::isStateDynamic(vk::DynamicState dynamicState) const {
     auto it = m_config.dynamicStates.find(dynamicState);
     return it != m_config.dynamicStates.end() && it->second;
 }
 
 
-void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const uint32_t& viewportCount, const vk::Viewport* viewports) {
+void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, uint32_t firstViewport, uint32_t viewportCount, const vk::Viewport* viewports) {
     validateDynamicState(vk::DynamicState::eViewport);
     commandBuffer.setViewport(firstViewport, viewportCount, viewports);
 }
 
-void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const std::vector<vk::Viewport>& viewports) {
+void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, uint32_t firstViewport, const std::vector<vk::Viewport>& viewports) {
     setViewport(commandBuffer, firstViewport, (uint32_t)viewports.size(), viewports.data());
 }
 
-void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const vk::Viewport& viewport) {
+void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, uint32_t firstViewport, const vk::Viewport& viewport) {
     setViewport(commandBuffer, firstViewport, 1, &viewport);
 }
 
-void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const float& width, const float& height, const float& x, const float& y, const float& minDepth, const float& maxDepth) {
+void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, uint32_t firstViewport, float width, float height, float x, float y, float minDepth, float maxDepth) {
     setViewport(commandBuffer, firstViewport, vk::Viewport(x, y, width, height, minDepth, maxDepth));
 }
 
-void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, const uint32_t& firstViewport, const glm::vec2& size, const glm::vec2& offset, const float& minDepth, const float& maxDepth) {
+void GraphicsPipeline::setViewport(const vk::CommandBuffer& commandBuffer, uint32_t firstViewport, const glm::vec2& size, const glm::vec2& offset, float minDepth, float maxDepth) {
     setViewport(commandBuffer, firstViewport, vk::Viewport(offset.x, offset.y, size.x, size.y, minDepth, maxDepth));
 }
 
-void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const uint32_t& scissorCount, const vk::Rect2D* scissorRects) {
+void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, uint32_t firstScissor, uint32_t scissorCount, const vk::Rect2D* scissorRects) {
     validateDynamicState(vk::DynamicState::eScissor);
     commandBuffer.setScissor(firstScissor, scissorCount, scissorRects);
 }
 
-void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const std::vector<vk::Rect2D>& scissorRects) {
+void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, uint32_t firstScissor, const std::vector<vk::Rect2D>& scissorRects) {
     setScissor(commandBuffer, firstScissor, (uint32_t)scissorRects.size(), scissorRects.data());
 }
 
-void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const vk::Rect2D& scissorRect) {
+void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, uint32_t firstScissor, const vk::Rect2D& scissorRect) {
     setScissor(commandBuffer, firstScissor, 1, &scissorRect);
 }
 
-void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height) {
+void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, uint32_t firstScissor, int32_t x, int32_t y, uint32_t width, uint32_t height) {
     setScissor(commandBuffer, firstScissor, vk::Rect2D(vk::Offset2D(x, y), vk::Extent2D(width, height)));
 }
 
-void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, const uint32_t& firstScissor, const glm::ivec2& offset, const glm::uvec2& size) {
+void GraphicsPipeline::setScissor(const vk::CommandBuffer& commandBuffer, uint32_t firstScissor, const glm::ivec2& offset, const glm::uvec2& size) {
     setScissor(commandBuffer, firstScissor, vk::Rect2D(vk::Offset2D(offset.x, offset.y), vk::Extent2D(size.x, size.y)));
 }
 
-void GraphicsPipeline::setLineWidth(const vk::CommandBuffer& commandBuffer, const float& lineWidth) {
+void GraphicsPipeline::setLineWidth(const vk::CommandBuffer& commandBuffer, float lineWidth) {
     validateDynamicState(vk::DynamicState::eLineWidth);
     commandBuffer.setLineWidth(lineWidth);
 }
 
-void GraphicsPipeline::setDepthBias(const vk::CommandBuffer& commandBuffer, const float& constantFactor, const float& clamp, const float& slopeFactor) {
+void GraphicsPipeline::setDepthBias(const vk::CommandBuffer& commandBuffer, float constantFactor, float clamp, float slopeFactor) {
     validateDynamicState(vk::DynamicState::eDepthBias);
     commandBuffer.setDepthBias(constantFactor, clamp, slopeFactor);
 }
@@ -530,26 +530,26 @@ void GraphicsPipeline::setBlendConstants(const vk::CommandBuffer& commandBuffer,
     commandBuffer.setBlendConstants(&constants[0]);
 }
 
-void GraphicsPipeline::setBlendConstants(const vk::CommandBuffer& commandBuffer, const float& r, const float& g, const float& b, const float& a) {
+void GraphicsPipeline::setBlendConstants(const vk::CommandBuffer& commandBuffer, float r, float g, float b, float a) {
     setBlendConstants(commandBuffer, glm::vec4(r, g, b, a));
 }
 
-void GraphicsPipeline::setDepthBounds(const vk::CommandBuffer& commandBuffer, const float& minDepthBound, const float& maxDepthBound) {
+void GraphicsPipeline::setDepthBounds(const vk::CommandBuffer& commandBuffer, float minDepthBound, float maxDepthBound) {
     validateDynamicState(vk::DynamicState::eDepthBounds);
     commandBuffer.setDepthBounds(minDepthBound, maxDepthBound);
 }
 
-void GraphicsPipeline::setStencilCompareMask(const vk::CommandBuffer& commandBuffer, const vk::StencilFaceFlags& faceMask, const uint32_t& compareMask) {
+void GraphicsPipeline::setStencilCompareMask(const vk::CommandBuffer& commandBuffer, vk::StencilFaceFlags faceMask, uint32_t compareMask) {
     validateDynamicState(vk::DynamicState::eStencilCompareMask);
     commandBuffer.setStencilCompareMask(faceMask, compareMask);
 }
 
-void GraphicsPipeline::setStencilWriteMask(const vk::CommandBuffer& commandBuffer, const vk::StencilFaceFlags& faceMask, const uint32_t& writeMask) {
+void GraphicsPipeline::setStencilWriteMask(const vk::CommandBuffer& commandBuffer, vk::StencilFaceFlags faceMask, uint32_t writeMask) {
     validateDynamicState(vk::DynamicState::eStencilWriteMask);
     commandBuffer.setStencilWriteMask(faceMask, writeMask);
 }
 
-void GraphicsPipeline::setStencilReference(const vk::CommandBuffer& commandBuffer, const vk::StencilFaceFlags& faceMask, const uint32_t& reference) {
+void GraphicsPipeline::setStencilReference(const vk::CommandBuffer& commandBuffer, vk::StencilFaceFlags faceMask, uint32_t reference) {
     validateDynamicState(vk::DynamicState::eStencilReference);
     commandBuffer.setStencilReference(faceMask, reference);
 }
@@ -559,130 +559,130 @@ void GraphicsPipeline::setSampleLocations(const vk::CommandBuffer& commandBuffer
     commandBuffer.setSampleLocationsEXT(sampleLocations);
 }
 
-void GraphicsPipeline::setSampleLocations(const vk::CommandBuffer& commandBuffer, const vk::SampleCountFlagBits& samplesPerPixel, const vk::Extent2D& sampleGridSize, const uint32_t& sampleLocationsCount, const vk::SampleLocationEXT* sampleLocations) {
+void GraphicsPipeline::setSampleLocations(const vk::CommandBuffer& commandBuffer, vk::SampleCountFlagBits samplesPerPixel, const vk::Extent2D& sampleGridSize, uint32_t sampleLocationsCount, const vk::SampleLocationEXT* sampleLocations) {
     setSampleLocations(commandBuffer, vk::SampleLocationsInfoEXT(samplesPerPixel, sampleGridSize, sampleLocationsCount, sampleLocations));
 }
 
-void GraphicsPipeline::setSampleLocations(const vk::CommandBuffer& commandBuffer, const vk::SampleCountFlagBits& samplesPerPixel, const vk::Extent2D& sampleGridSize, const std::vector<vk::SampleLocationEXT>& sampleLocations) {
+void GraphicsPipeline::setSampleLocations(const vk::CommandBuffer& commandBuffer, vk::SampleCountFlagBits samplesPerPixel, const vk::Extent2D& sampleGridSize, const std::vector<vk::SampleLocationEXT>& sampleLocations) {
     setSampleLocations(commandBuffer, samplesPerPixel, sampleGridSize, (uint32_t)sampleLocations.size(), sampleLocations.data());
 }
 
-void GraphicsPipeline::setLineStipple(const vk::CommandBuffer& commandBuffer, const uint32_t& lineStippleFactor, const uint16_t& lineStipplePattern) {
+void GraphicsPipeline::setLineStipple(const vk::CommandBuffer& commandBuffer, uint32_t lineStippleFactor, uint16_t lineStipplePattern) {
     validateDynamicState(vk::DynamicState::eLineStippleEXT);
     commandBuffer.setLineStippleEXT(lineStippleFactor, lineStipplePattern);
 }
 
-void GraphicsPipeline::setCullMode(const vk::CommandBuffer& commandBuffer, const vk::CullModeFlags& cullMode) {
+void GraphicsPipeline::setCullMode(const vk::CommandBuffer& commandBuffer, vk::CullModeFlags cullMode) {
     validateDynamicState(vk::DynamicState::eCullModeEXT);
     commandBuffer.setCullModeEXT(cullMode);
 }
 
-void GraphicsPipeline::setFrontFace(const vk::CommandBuffer& commandBuffer, const vk::FrontFace& frontFace) {
+void GraphicsPipeline::setFrontFace(const vk::CommandBuffer& commandBuffer, vk::FrontFace frontFace) {
     validateDynamicState(vk::DynamicState::eCullModeEXT);
     commandBuffer.setFrontFaceEXT(frontFace);
 }
 
-void GraphicsPipeline::setPrimitiveTopology(const vk::CommandBuffer& commandBuffer, const vk::PrimitiveTopology& primitiveTopology) {
+void GraphicsPipeline::setPrimitiveTopology(const vk::CommandBuffer& commandBuffer, vk::PrimitiveTopology primitiveTopology) {
     validateDynamicState(vk::DynamicState::ePrimitiveTopologyEXT);
     commandBuffer.setPrimitiveTopologyEXT(primitiveTopology);
 }
 
-void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const uint32_t& bindingCount, const vk::Buffer* buffers, const vk::DeviceSize* offsets) {
+void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, uint32_t firstBinding, uint32_t bindingCount, const vk::Buffer* buffers, const vk::DeviceSize* offsets) {
     commandBuffer.bindVertexBuffers(firstBinding, bindingCount, buffers, offsets);
 }
 
-void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const std::vector<vk::Buffer>& buffers, const std::vector<vk::DeviceSize>& offsets) {
+void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, uint32_t firstBinding, const std::vector<vk::Buffer>& buffers, const std::vector<vk::DeviceSize>& offsets) {
     bindVertexBuffers(commandBuffer, firstBinding, (uint32_t)buffers.size(), buffers.data(), offsets.data());
 }
 
-void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const uint32_t& bindingCount, const vk::Buffer* buffers, const vk::DeviceSize* offsets, const vk::DeviceSize* sizes, const vk::DeviceSize* strides) {
+void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, uint32_t firstBinding, uint32_t bindingCount, const vk::Buffer* buffers, const vk::DeviceSize* offsets, const vk::DeviceSize* sizes, const vk::DeviceSize* strides) {
     validateDynamicState(vk::DynamicState::eVertexInputBindingStrideEXT);
     commandBuffer.bindVertexBuffers2EXT(firstBinding, bindingCount, buffers, offsets, sizes, strides);
 }
 
-void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const std::vector<vk::Buffer>& buffers, const std::vector<vk::DeviceSize>& offsets, const std::vector<vk::DeviceSize>& sizes, const std::vector<vk::DeviceSize>& strides) {
+void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, uint32_t firstBinding, const std::vector<vk::Buffer>& buffers, const std::vector<vk::DeviceSize>& offsets, const std::vector<vk::DeviceSize>& sizes, const std::vector<vk::DeviceSize>& strides) {
     bindVertexBuffers(commandBuffer, firstBinding, (uint32_t)buffers.size(), buffers.data(), offsets.data(), sizes.empty() ? nullptr : sizes.data(), strides.empty() ? nullptr : strides.data());
 }
 
-void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const uint32_t& bindingCount, Buffer* const* buffers, const vk::DeviceSize* offsets) {
+void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, uint32_t firstBinding, uint32_t bindingCount, Buffer* const* buffers, const vk::DeviceSize* offsets) {
     std::vector<vk::Buffer> vkBuffers(bindingCount, VK_NULL_HANDLE);
     for (uint32_t i = 0; i < bindingCount; ++i)
         if (buffers[i] != nullptr) vkBuffers[i] = buffers[i]->getBuffer();
     bindVertexBuffers(commandBuffer, firstBinding, (uint32_t)vkBuffers.size(), vkBuffers.data(), offsets);
 }
 
-void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const std::vector<Buffer*>& buffers, const std::vector<vk::DeviceSize>& offsets) {
+void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, uint32_t firstBinding, const std::vector<Buffer*>& buffers, const std::vector<vk::DeviceSize>& offsets) {
     bindVertexBuffers(commandBuffer, firstBinding, (uint32_t)buffers.size(), buffers.data(), offsets.data());
 }
 
-void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const uint32_t& bindingCount, Buffer* const* buffers, const vk::DeviceSize* offsets, const vk::DeviceSize* sizes, const vk::DeviceSize* strides) {
+void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, uint32_t firstBinding, uint32_t bindingCount, Buffer* const* buffers, const vk::DeviceSize* offsets, const vk::DeviceSize* sizes, const vk::DeviceSize* strides) {
     std::vector<vk::Buffer> vkBuffers(bindingCount, VK_NULL_HANDLE);
     for (uint32_t i = 0; i < bindingCount; ++i)
         if (buffers[i] != nullptr) vkBuffers[i] = buffers[i]->getBuffer();
     bindVertexBuffers(commandBuffer, firstBinding, (uint32_t)vkBuffers.size(), vkBuffers.data(), offsets, sizes, strides);
 }
 
-void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, const uint32_t& firstBinding, const std::vector<Buffer*>& buffers, const std::vector<vk::DeviceSize>& offsets, const std::vector<vk::DeviceSize>& sizes, const std::vector<vk::DeviceSize>& strides) {
+void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, uint32_t firstBinding, const std::vector<Buffer*>& buffers, const std::vector<vk::DeviceSize>& offsets, const std::vector<vk::DeviceSize>& sizes, const std::vector<vk::DeviceSize>& strides) {
     bindVertexBuffers(commandBuffer, firstBinding, (uint32_t)buffers.size(), buffers.data(), offsets.data(), sizes.empty() ? nullptr : sizes.data(), strides.empty() ? nullptr : strides.data());
 }
 
 
-void GraphicsPipeline::setDepthTestEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled) {
+void GraphicsPipeline::setDepthTestEnabled(const vk::CommandBuffer& commandBuffer, bool enabled) {
     validateDynamicState(vk::DynamicState::eDepthTestEnableEXT);
     commandBuffer.setDepthTestEnableEXT(enabled);
 }
 
-void GraphicsPipeline::setDepthWriteEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled) {
+void GraphicsPipeline::setDepthWriteEnabled(const vk::CommandBuffer& commandBuffer, bool enabled) {
     validateDynamicState(vk::DynamicState::eDepthWriteEnableEXT);
     commandBuffer.setDepthWriteEnableEXT(enabled);
 }
 
-void GraphicsPipeline::setDepthCompareOp(const vk::CommandBuffer& commandBuffer, const vk::CompareOp& compareOp) {
+void GraphicsPipeline::setDepthCompareOp(const vk::CommandBuffer& commandBuffer, vk::CompareOp compareOp) {
     validateDynamicState(vk::DynamicState::eDepthCompareOpEXT);
     commandBuffer.setDepthCompareOpEXT(compareOp);
 }
 
-void GraphicsPipeline::setDepthBoundsTestEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled) {
+void GraphicsPipeline::setDepthBoundsTestEnabled(const vk::CommandBuffer& commandBuffer, bool enabled) {
     validateDynamicState(vk::DynamicState::eDepthBoundsTestEnableEXT);
     commandBuffer.setDepthBoundsTestEnableEXT(enabled);
 }
 
-void GraphicsPipeline::setStencilTestEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled) {
+void GraphicsPipeline::setStencilTestEnabled(const vk::CommandBuffer& commandBuffer, bool enabled) {
     validateDynamicState(vk::DynamicState::eStencilTestEnableEXT);
     commandBuffer.setStencilTestEnableEXT(enabled);
 }
 
-void GraphicsPipeline::setStencilOp(const vk::CommandBuffer& commandBuffer, const vk::StencilFaceFlags& faceMask, const vk::StencilOp& failOp, const vk::StencilOp& passOp, const vk::StencilOp& depthFailOp, const vk::CompareOp& compareOp) {
+void GraphicsPipeline::setStencilOp(const vk::CommandBuffer& commandBuffer, vk::StencilFaceFlags faceMask, vk::StencilOp failOp, vk::StencilOp passOp, vk::StencilOp depthFailOp, vk::CompareOp compareOp) {
     validateDynamicState(vk::DynamicState::eStencilOpEXT);
     commandBuffer.setStencilOpEXT(faceMask, failOp, passOp, depthFailOp, compareOp);
 }
 
-void GraphicsPipeline::setVertexInput(const vk::CommandBuffer& commandBuffer, const uint32_t& vertexBindingCount, const vk::VertexInputBindingDescription2EXT* vertexBindings, const uint32_t& vertexAttribCount, const vk::VertexInputAttributeDescription2EXT* vertexAttribs) {
+void GraphicsPipeline::setVertexInput(const vk::CommandBuffer& commandBuffer, uint32_t vertexBindingCount, const vk::VertexInputBindingDescription2EXT* vertexBindings, uint32_t vertexAttribCount, const vk::VertexInputAttributeDescription2EXT* vertexAttribs) {
     validateDynamicState(vk::DynamicState::eVertexInputEXT);
     commandBuffer.setVertexInputEXT(vertexBindingCount, vertexBindings, vertexAttribCount, vertexAttribs);
 }
 
-void GraphicsPipeline::setRasterizerDiscardEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled) {
+void GraphicsPipeline::setRasterizerDiscardEnabled(const vk::CommandBuffer& commandBuffer, bool enabled) {
     validateDynamicState(vk::DynamicState::eRasterizerDiscardEnableEXT);
     commandBuffer.setRasterizerDiscardEnableEXT(enabled);
 }
 
-void GraphicsPipeline::setDepthBiasEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled) {
+void GraphicsPipeline::setDepthBiasEnabled(const vk::CommandBuffer& commandBuffer, bool enabled) {
     validateDynamicState(vk::DynamicState::eDepthBiasEnableEXT);
     commandBuffer.setDepthBiasEnableEXT(enabled);
 }
 
-void GraphicsPipeline::setLogicOp(const vk::CommandBuffer& commandBuffer, const vk::LogicOp& logicOp) {
+void GraphicsPipeline::setLogicOp(const vk::CommandBuffer& commandBuffer, vk::LogicOp logicOp) {
     validateDynamicState(vk::DynamicState::eLogicOpEXT);
     commandBuffer.setLogicOpEXT(logicOp);
 }
 
-void GraphicsPipeline::setPrimitiveRestartEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled) {
+void GraphicsPipeline::setPrimitiveRestartEnabled(const vk::CommandBuffer& commandBuffer, bool enabled) {
     validateDynamicState(vk::DynamicState::ePrimitiveRestartEnableEXT);
     commandBuffer.setPrimitiveRestartEnableEXT(enabled);
 }
 
-void GraphicsPipeline::setColourWriteEnabled(const vk::CommandBuffer& commandBuffer, const bool& enabled) {
+void GraphicsPipeline::setColourWriteEnabled(const vk::CommandBuffer& commandBuffer, bool enabled) {
     validateDynamicState(vk::DynamicState::eColorWriteEnableEXT);
     commandBuffer.setColorWriteEnableEXT(enabled);
 }
@@ -693,11 +693,11 @@ vk::Viewport GraphicsPipeline::getScreenViewport(const vk::Viewport& viewport) {
     return viewport;
 }
 
-vk::Viewport GraphicsPipeline::getScreenViewport(const float& width, const float& height, const float& x, const float& y, const float& minDepth, const float& maxDepth) {
+vk::Viewport GraphicsPipeline::getScreenViewport(float width, float height, float x, float y, float minDepth, float maxDepth) {
     return getScreenViewport(vk::Viewport(x, y, width, height, minDepth, maxDepth));
 }
 
-vk::Viewport GraphicsPipeline::getScreenViewport(const glm::vec2& size, const glm::vec2& offset, const float& minDepth, const float& maxDepth) {
+vk::Viewport GraphicsPipeline::getScreenViewport(const glm::vec2& size, const glm::vec2& offset, float minDepth, float maxDepth) {
     return getScreenViewport(vk::Viewport(offset.x, offset.y, size.x, size.y, minDepth, maxDepth));
 }
 
@@ -709,7 +709,7 @@ void GraphicsPipeline::cleanup() {
     m_renderPass.reset();
 }
 
-void GraphicsPipeline::validateDynamicState(const vk::DynamicState& dynamicState) {
+void GraphicsPipeline::validateDynamicState(vk::DynamicState dynamicState) {
 #if _DEBUG || 1
     if (!isStateDynamic(dynamicState)) {
         printf("Cannot set immutable pipeline state %s for pipeline \"%s\"\n", vk::to_string(dynamicState).c_str(), m_name.c_str());

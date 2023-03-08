@@ -14,7 +14,7 @@ class DescriptorSet;
 
 struct ShutdownGraphicsEvent;
 
-enum ImageCubeFace {
+enum ImageCubeFace : uint8_t {
     ImageCubeFace_PosX = 0,
     ImageCubeFace_NegX = 1,
     ImageCubeFace_PosY = 2,
@@ -41,11 +41,11 @@ struct ImageCubeSource {
     std::array<ImageSource, 6> faceImages = {};
     ImageSource equirectangularImage = {};
 
-    void setFaceSource(const ImageCubeFace& face, const ImageSource& imageSource);
+    void setFaceSource(ImageCubeFace face, const ImageSource& imageSource);
 
-    void setFaceSource(const ImageCubeFace& face, ImageData* imageData, ImageData::ImageTransform* imageTransform = nullptr);
+    void setFaceSource(ImageCubeFace face, ImageData* imageData, ImageData::ImageTransform* imageTransform = nullptr);
 
-    void setFaceSource(const ImageCubeFace& face, const std::string& filePath, ImageData::ImageTransform* imageTransform = nullptr);
+    void setFaceSource(ImageCubeFace face, const std::string& filePath, ImageData::ImageTransform* imageTransform = nullptr);
 
     void setEquirectangularSource(const ImageSource& imageSource);
 
@@ -73,43 +73,43 @@ struct ImageCubeConfiguration {
 class ImageCube : public GraphicsResource {
     NO_COPY(ImageCube);
 private:
-    ImageCube(const WeakResource<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& size, const uint32_t& mipLevelCount, const vk::Format& format, const std::string& name);
+    ImageCube(const WeakResource<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, uint32_t size, uint32_t mipLevelCount, vk::Format format, const std::string& name);
 
 public:
     ~ImageCube() override;
 
     static ImageCube* create(const ImageCubeConfiguration& imageCubeConfiguration, const std::string& name);
 
-    static bool uploadFace(ImageCube* dstImage, const ImageCubeFace& face, void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
+    static bool uploadFace(ImageCube* dstImage, ImageCubeFace face, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
 
-    static bool uploadEquirectangular(ImageCube* dstImage, void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
+    static bool uploadEquirectangular(ImageCube* dstImage, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
 
-    bool uploadFace(const ImageCubeFace& face, void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
+    bool uploadFace(ImageCubeFace face, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
 
-    bool uploadEquirectangular(void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
+    bool uploadEquirectangular(void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
 
-    static bool generateMipmap(ImageCube* image, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState);
+    static bool generateMipmap(ImageCube* image, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& dstState);
 
-    bool generateMipmap(const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState);
+    bool generateMipmap(vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& dstState);
 
     const vk::Image& getImage() const;
 
-    const uint32_t& getSize() const;
+    uint32_t getSize() const;
 
-    const uint32_t& getWidth() const;
+    uint32_t getWidth() const;
 
-    const uint32_t& getHeight() const;
+    uint32_t getHeight() const;
 
     const uint32_t getMipLevelCount() const;
 
     vk::Format getFormat() const;
 
-    static std::array<bool, 6> loadCubeFacesImageData(const std::array<ImageSource, 6>& cubeFaceImageSources, const vk::Format& format, std::array<ImageData*, 6>& outImageData, std::vector<ImageData*>& allocatedImageData);
+    static std::array<bool, 6> loadCubeFacesImageData(const std::array<ImageSource, 6>& cubeFaceImageSources, vk::Format format, std::array<ImageData*, 6>& outImageData, std::vector<ImageData*>& allocatedImageData);
 
-    static bool loadImageData(const ImageSource& imageSource, const vk::Format& format, ImageData*& outImageData, std::vector<ImageData*>& allocatedImageData);
+    static bool loadImageData(const ImageSource& imageSource, vk::Format format, ImageData*& outImageData, std::vector<ImageData*>& allocatedImageData);
 
 private:
-    static bool validateFaceImageRegion(const ImageCube* image, const ImageCubeFace& face, ImageRegion& imageRegion);
+    static bool validateFaceImageRegion(const ImageCube* image, ImageCubeFace face, ImageRegion& imageRegion);
 
     static bool validateEquirectangularImageRegion(const ImageCube* image, ImageRegion& imageRegion);
 

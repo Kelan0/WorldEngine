@@ -168,13 +168,13 @@ public:
 
     const vk::PhysicalDeviceLimits& getPhysicalDeviceLimits() const;
 
-    vk::DeviceSize getAlignedUniformBufferOffset(const vk::DeviceSize& offset);
+    vk::DeviceSize getAlignedUniformBufferOffset(vk::DeviceSize offset);
 
     uint32_t getPreviousFrameIndex() const;
 
     uint32_t getNextFrameIndex() const;
 
-    const uint32_t& getCurrentFrameIndex() const;
+    uint32_t getCurrentFrameIndex() const;
 
     const vk::CommandBuffer& getCurrentCommandBuffer() const;
 
@@ -186,12 +186,12 @@ public:
 
     bool hasQueue(const std::string& name) const;
 
-    const uint32_t& getGraphicsQueueFamilyIndex() const;
-    const uint32_t& getComputeQueueFamilyIndex() const;
-    const uint32_t& getTransferQueueFamilyIndex() const;
-    const uint32_t& getSparseBindingQueueFamilyIndex() const;
-    const uint32_t& getProtectedQueueFamilyIndex() const;
-    const uint32_t& getPresentQueueFamilyIndex() const;
+    uint32_t getGraphicsQueueFamilyIndex() const;
+    uint32_t getComputeQueueFamilyIndex() const;
+    uint32_t getTransferQueueFamilyIndex() const;
+    uint32_t getSparseBindingQueueFamilyIndex() const;
+    uint32_t getProtectedQueueFamilyIndex() const;
+    uint32_t getPresentQueueFamilyIndex() const;
 
     const vk::CommandBuffer& beginOneTimeCommandBuffer();
 
@@ -224,13 +224,13 @@ public:
 
     bool didResolutionChange() const;
 
-    const bool& isDirectImagePresentEnabled() const;
+    bool isDirectImagePresentEnabled() const;
 
-    void setDirectImagePresentEnabled(const bool& directImagePresentEnabled);
+    void setDirectImagePresentEnabled(bool directImagePresentEnabled);
 
-    const bool& isSwapchainImageSampled() const;
+    bool isSwapchainImageSampled() const;
 
-    void setSwapchainImageSampled(const bool& swapchainImageSampled);
+    void setSwapchainImageSampled(bool swapchainImageSampled);
 
     DebugUtils::RenderInfo& debugInfo();
 
@@ -238,8 +238,8 @@ public:
 
     static ResourceId nextResourceId();
 
-    void setObjectName(const vk::Device& device, const uint64_t& objectHandle, const vk::ObjectType& objectType, const char* objectName);
-    void setObjectName(const vk::Device& device, const uint64_t& objectHandle, const vk::ObjectType& objectType, const std::string& objectName);
+    void setObjectName(const vk::Device& device, uint64_t objectHandle, vk::ObjectType objectType, const char* objectName);
+    void setObjectName(const vk::Device& device, uint64_t objectHandle, vk::ObjectType objectType, const std::string& objectName);
 
     void insertQueueDebugLabel(const vk::Queue& queue, const char* name);
     void beginQueueDebugLabel(const vk::Queue& queue, const char* name);
@@ -251,7 +251,7 @@ public:
 
     bool doAbortOnVulkanError();
 
-    void setAbortOnVulkanError(const bool& abortOnVulkanError);
+    void setAbortOnVulkanError(bool abortOnVulkanError);
 
 private:
     vkr::Context m_context;

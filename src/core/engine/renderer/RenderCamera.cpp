@@ -125,7 +125,7 @@ void RenderCamera::copyCameraData(GPUCamera* dst) const {
     dst->viewProjectionMatrix = m_viewProjectionMatrix;
 }
 
-size_t RenderCamera::uploadCameraData(Buffer* buffer, const size_t& offset) const {
+size_t RenderCamera::uploadCameraData(Buffer* buffer, size_t offset) const {
     GPUCamera cameraInfoUBO{};
     copyCameraData(&cameraInfoUBO);
     buffer->upload(offset, sizeof(GPUCamera), &cameraInfoUBO);

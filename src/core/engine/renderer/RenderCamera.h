@@ -66,7 +66,7 @@ public:
 
     void copyCameraData(GPUCamera* dst) const;
 
-    size_t uploadCameraData(Buffer* buffer, const size_t& offset) const;
+    size_t uploadCameraData(Buffer* buffer, size_t offset) const;
 
 private:
     Transform m_transform;

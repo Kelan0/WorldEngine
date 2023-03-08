@@ -16,19 +16,19 @@ struct SubpassConfiguration {
 
     void addColourAttachment(const vk::AttachmentReference& attachmentReference);
 
-    void addColourAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout);
+    void addColourAttachment(uint32_t attachment, const vk::ImageLayout& imageLayout);
 
     void addInputAttachment(const vk::AttachmentReference& attachmentReference);
 
-    void addInputAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout);
+    void addInputAttachment(uint32_t attachment, const vk::ImageLayout& imageLayout);
 
     void addPreserveAttachment(const vk::AttachmentReference& attachmentReference);
 
-    void addPreserveAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout);
+    void addPreserveAttachment(uint32_t attachment, const vk::ImageLayout& imageLayout);
 
     void setDepthStencilAttachment(const vk::AttachmentReference& attachmentReference);
 
-    void setDepthStencilAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout);
+    void setDepthStencilAttachment(uint32_t attachment, const vk::ImageLayout& imageLayout);
 };
 
 struct RenderPassConfiguration {
@@ -54,13 +54,13 @@ struct RenderPassConfiguration {
 
     void setClearValues(const std::unordered_map<uint32_t, vk::ClearValue>& clearValues);
 
-    void setClearValue(const uint32_t attachment, const vk::ClearValue& clearValue);
+    void setClearValue(uint32_t attachment, const vk::ClearValue& clearValue);
 
-    void setClearColour(const uint32_t attachment, const glm::vec4& colour);
+    void setClearColour(uint32_t attachment, const glm::vec4& colour);
 
-    void setClearDepth(const uint32_t attachment, const float& depth);
+    void setClearDepth(uint32_t attachment, float depth);
 
-    void setClearStencil(const uint32_t attachment, const uint32_t& stencil);
+    void setClearStencil(uint32_t attachment, uint32_t stencil);
 };
 
 class RenderPass : public GraphicsResource {
@@ -74,9 +74,9 @@ public:
 
     static RenderPass* create(const RenderPassConfiguration& renderPassConfiguration, const std::string& name);
 
-    void begin(const vk::CommandBuffer& commandBuffer, const vk::Framebuffer& framebuffer, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height, const vk::SubpassContents& subpassContents) const;
+    void begin(const vk::CommandBuffer& commandBuffer, const vk::Framebuffer& framebuffer, int32_t x, int32_t y, uint32_t width, uint32_t height, const vk::SubpassContents& subpassContents) const;
 
-    void begin(const vk::CommandBuffer& commandBuffer, const Framebuffer* framebuffer, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height, const vk::SubpassContents& subpassContents) const;
+    void begin(const vk::CommandBuffer& commandBuffer, const Framebuffer* framebuffer, int32_t x, int32_t y, uint32_t width, uint32_t height, const vk::SubpassContents& subpassContents) const;
 
     void begin(const vk::CommandBuffer& commandBuffer, const vk::Framebuffer& framebuffer, const vk::SubpassContents& subpassContents) const;
 
@@ -90,19 +90,19 @@ public:
 
     uint32_t getAttachmentCount() const;
 
-    uint32_t getAttachmentCount(const uint32_t& subpass) const;
+    uint32_t getAttachmentCount(uint32_t subpass) const;
 
-    uint32_t getColourAttachmentCount(const uint32_t& subpass) const;
+    uint32_t getColourAttachmentCount(uint32_t subpass) const;
 
-    bool hasDepthStencilAttachment(const uint32_t& subpass) const;
+    bool hasDepthStencilAttachment(uint32_t subpass) const;
 
-    void setClearValue(const uint32_t attachment, const vk::ClearValue& clearValue);
+    void setClearValue(uint32_t attachment, const vk::ClearValue& clearValue);
 
-    void setClearColour(const uint32_t attachment, const glm::vec4& colour);
+    void setClearColour(uint32_t attachment, const glm::vec4& colour);
 
-    void setClearDepth(const uint32_t attachment, const float& depth);
+    void setClearDepth(uint32_t attachment, float depth);
 
-    void setClearStencil(const uint32_t attachment, const uint32_t& stencil);
+    void setClearStencil(uint32_t attachment, uint32_t stencil);
 
 private:
     vk::RenderPass m_renderPass;

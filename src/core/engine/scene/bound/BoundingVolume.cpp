@@ -99,7 +99,7 @@ bool contains_AABB_Point(const AxisAlignedBoundingBox& a, const glm::dvec3& b) {
 // Implementation from https://github.com/erich666/GraphicsGems/blob/master/gems/BoxSphere.c (hollow box, solid sphere)
 bool contains_AABB_Sphere(const AxisAlignedBoundingBox& a, const BoundingSphere& b) {
     glm::dvec3 sphereCenter = b.getCenter();
-    const double& sphereRadius = b.getRadius();
+    double sphereRadius = b.getRadius();
     glm::dvec3 bMin = a.getBoundMin();
     glm::dvec3 bMax = a.getBoundMax();
     double dmin = 0.0;
@@ -205,26 +205,26 @@ glm::dvec3 calculateClosestPoint_AABB_Point(const AxisAlignedBoundingBox& a, con
 
 
 
-BoundingVolume::BoundingVolume(const Type& type):
+BoundingVolume::BoundingVolume(Type type):
     m_type(type) {
 }
 
 BoundingVolume::~BoundingVolume() = default;
 
-const BoundingVolume::Type& BoundingVolume::getType() const {
+BoundingVolume::Type BoundingVolume::getType() const {
     return m_type;
 }
 
 
 
 
-BoundingSphere::BoundingSphere(const glm::dvec3& center, const double& radius):
+BoundingSphere::BoundingSphere(const glm::dvec3& center, double radius):
     BoundingVolume(Type_Sphere),
     m_center(center),
     m_radius(radius) {
 }
 
-BoundingSphere::BoundingSphere(const double& centerX, const double& centerY, const double& centerZ, const double& radius):
+BoundingSphere::BoundingSphere(double centerX, double centerY, double centerZ, double radius):
     BoundingVolume(Type_Sphere),
     m_center(centerX, centerY, centerZ),
     m_radius(radius) {
@@ -240,17 +240,17 @@ void BoundingSphere::setCenter(const glm::dvec3& center) {
     m_center = center;
 }
 
-void BoundingSphere::setCenter(const double& centerX, const double& centerY, const double& centerZ) {
+void BoundingSphere::setCenter(double centerX, double centerY, double centerZ) {
     m_center.x = centerX;
     m_center.y = centerY;
     m_center.z = centerZ;
 }
 
-const double& BoundingSphere::getRadius() const {
+double BoundingSphere::getRadius() const {
     return m_radius;
 }
 
-void BoundingSphere::setRadius(const double& radius) {
+void BoundingSphere::setRadius(double radius) {
     m_radius = radius;
 }
 
@@ -355,7 +355,7 @@ void AxisAlignedBoundingBox::setCenter(const glm::dvec3& center) {
     m_center = center;
 }
 
-void AxisAlignedBoundingBox::setCenter(const double& centerX, const double& centerY, const double& centerZ) {
+void AxisAlignedBoundingBox::setCenter(double centerX, double centerY, double centerZ) {
     m_center.x = centerX;
     m_center.y = centerY;
     m_center.z = centerZ;
@@ -369,7 +369,7 @@ void AxisAlignedBoundingBox::setHalfExtents(const glm::dvec3& halfExtents) {
     m_halfExtents = glm::abs(halfExtents);
 }
 
-void AxisAlignedBoundingBox::setHalfExtents(const double& halfExtentX, const double& halfExtentY, const double& halfExtentZ) {
+void AxisAlignedBoundingBox::setHalfExtents(double halfExtentX, double halfExtentY, double halfExtentZ) {
     m_halfExtents.x = glm::abs(halfExtentX);
     m_halfExtents.y = glm::abs(halfExtentY);
     m_halfExtents.z = glm::abs(halfExtentZ);

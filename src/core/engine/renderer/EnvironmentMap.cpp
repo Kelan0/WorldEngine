@@ -42,7 +42,7 @@ Buffer* EnvironmentMap::s_uniformBuffer = nullptr;
 
 
 
-EnvironmentMap::EnvironmentMap(const uint32_t& irradianceMapSize, const uint32_t& specularMapSize):
+EnvironmentMap::EnvironmentMap(uint32_t irradianceMapSize, uint32_t specularMapSize):
     m_irradianceMapSize(irradianceMapSize),
     m_specularMapSize(specularMapSize),
     m_specularMapMipLevels(5),
@@ -469,7 +469,7 @@ Buffer* EnvironmentMap::getUniformBuffer() {
 }
 
 
-std::shared_ptr<Texture> EnvironmentMap::createTexture(const std::shared_ptr<ImageCube>& image, const uint32_t& baseMipLevel, const uint32_t mipLevelCount) const {
+std::shared_ptr<Texture> EnvironmentMap::createTexture(const std::shared_ptr<ImageCube>& image, uint32_t baseMipLevel, const uint32_t mipLevelCount) const {
     if (image == nullptr)
         return nullptr;
 

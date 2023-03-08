@@ -104,31 +104,31 @@ EventDispatcher* Engine::getEventDispatcher() const {
     return m_eventDispatcher;
 }
 
-const uint64_t& Engine::getCurrentFrameCount() const {
+uint64_t Engine::getCurrentFrameCount() const {
     return m_currentFrameCount;
 }
 
-const bool& Engine::isDebugCompositeEnabled() const {
+bool Engine::isDebugCompositeEnabled() const {
     return m_debugCompositeEnabled;
 }
 
-const double& Engine::getPartialFrames() const {
+double Engine::getPartialFrames() const {
     return Application::instance()->getPartialFrames();
 }
 
-const double& Engine::getPartialTicks() const {
+double Engine::getPartialTicks() const {
     return Application::instance()->getPartialTicks();
 }
 
-const double& Engine::getAccumulatedTime() {
+double Engine::getAccumulatedTime() {
     return m_accumulatedTime;
 }
 
-const double& Engine::getRunTime() {
+double Engine::getRunTime() {
     return m_runTime;
 }
 
-void Engine::setDebugCompositeEnabled(const bool& debugCompositeEnabled) {
+void Engine::setDebugCompositeEnabled(bool debugCompositeEnabled) {
     m_debugCompositeEnabled = debugCompositeEnabled;
 }
 
@@ -176,19 +176,19 @@ EventDispatcher* Engine::eventDispatcher() {
     return instance()->getEventDispatcher();
 }
 
-const uint64_t& Engine::currentFrameCount() {
+uint64_t Engine::currentFrameCount() {
     return instance()->getCurrentFrameCount();
 }
 
-const double& Engine::accumulatedTime() {
+double Engine::accumulatedTime() {
     return instance()->getAccumulatedTime();
 }
 
-const double& Engine::runTime() {
+double Engine::runTime() {
     return instance()->getRunTime();
 }
 
-const bool& Engine::debugCompositeEnabled() {
+bool Engine::debugCompositeEnabled() {
     return instance()->isDebugCompositeEnabled();
 }
 
@@ -253,13 +253,13 @@ bool Engine::init(SDL_Window* windowHandle) {
     return true;
 }
 
-void Engine::preRender(const double& dt) {
+void Engine::preRender(double dt) {
     PROFILE_SCOPE("Engine::preRender");
     m_uiRenderer->preRender(dt);
     m_physicsSystem->preRender(dt);
 }
 
-void Engine::render(const double& dt) {
+void Engine::render(double dt) {
     PROFILE_SCOPE("Engine::render");
 
 //    PROFILE_BEGIN_GPU_TIMESTAMP("Engine::render");
@@ -320,13 +320,13 @@ void Engine::render(const double& dt) {
     m_runTime = (double)std::chrono::duration_cast<dur>(now - m_startTime).count() / (double)res;
 }
 
-void Engine::preTick(const double& dt) {
+void Engine::preTick(double dt) {
     PROFILE_SCOPE("Engine::preTick");
     m_physicsSystem->preTick(dt);
     m_scene->preTick(dt);
 }
 
-void Engine::tick(const double& dt) {
+void Engine::tick(double dt) {
     PROFILE_SCOPE("Engine::tick");
     m_physicsSystem->tick(dt);
 }

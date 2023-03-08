@@ -59,9 +59,9 @@ public:
 
     bool init();
 
-    void preRender(const double& dt);
+    void preRender(double dt);
 
-    void render(const double& dt, const vk::CommandBuffer& commandBuffer);
+    void render(double dt, const vk::CommandBuffer& commandBuffer);
 
     void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
 
@@ -73,33 +73,33 @@ public:
 
     float getTaaHistoryFactor() const;
 
-    void setTaaHistoryFactor(const float& taaHistoryFactor);
+    void setTaaHistoryFactor(float taaHistoryFactor);
 
     bool getTaaUseCatmullRomFilter() const;
 
-    void setTaaUseCatmullRomFilter(const bool& useCatmullRomFilter);
+    void setTaaUseCatmullRomFilter(bool useCatmullRomFilter);
 
     ColourClippingMode getTaaColourClippingMode() const;
 
-    void setTaaColourClippingMode(const ColourClippingMode& colourClippingMode);
+    void setTaaColourClippingMode(ColourClippingMode colourClippingMode);
 
     glm::vec2 getTaaMitchellFilterCoefficients() const;
 
-    void setTaaMitchellFilterCoefficients(const float& B, const float& C);
+    void setTaaMitchellFilterCoefficients(float B, float C);
 
     bool getTaaUseMitchellFilter() const;
 
-    void setTaaUseMitchellFilter(const bool& useMitchellFilter);
+    void setTaaUseMitchellFilter(bool useMitchellFilter);
 
     bool isTaaEnabled() const;
 
-    void setTaaEnabled(const bool& taaEnabled);
+    void setTaaEnabled(bool taaEnabled);
 
     const glm::vec2& getTaaPreviousJitterOffset() const;
 
     const glm::vec2& getTaaCurrentJitterOffset() const;
 
-    void setTaaJitterSampleCount(const uint32_t& sampleCount);
+    void setTaaJitterSampleCount(uint32_t sampleCount);
 
 private:
     void recreateSwapchain(RecreateSwapchainEvent* event);

@@ -12,7 +12,7 @@
 #include "core/util/Profiler.h"
 
 
-ShadowMap::ShadowMap(const ShadowType& shadowType, const RenderType& renderType):
+ShadowMap::ShadowMap(ShadowType shadowType, RenderType renderType):
         m_shadowType(shadowType),
         m_renderType(renderType),
         m_resolution(0, 0),
@@ -31,7 +31,7 @@ const glm::uvec2& ShadowMap::getResolution() const {
     return m_resolution;
 }
 
-void ShadowMap::setResolution(const uint32_t& width, const uint32_t& height) {
+void ShadowMap::setResolution(uint32_t width, uint32_t height) {
     m_resolution.x = width;
     m_resolution.y = height;
 }
@@ -39,7 +39,7 @@ void ShadowMap::setResolution(const uint32_t& width, const uint32_t& height) {
 
 
 
-CascadedShadowMap::CascadedShadowMap(const RenderType& renderType):
+CascadedShadowMap::CascadedShadowMap(RenderType renderType):
         ShadowMap(ShadowType_CascadedShadowMap, renderType),
         m_numCascades(4) {
 }
@@ -67,44 +67,44 @@ size_t CascadedShadowMap::getNumCascades() const {
     return m_numCascades;
 }
 
-void CascadedShadowMap::setNumCascades(const size_t& numCascades) {
+void CascadedShadowMap::setNumCascades(size_t numCascades) {
     m_numCascades = numCascades;
     if (m_cascades.size() <= numCascades) {
         m_cascades.resize(numCascades);
     }
 }
 
-const double& CascadedShadowMap::getCascadeSplitDistance(const size_t& cascadeIndex) {
+double CascadedShadowMap::getCascadeSplitDistance(size_t cascadeIndex) {
     assert(cascadeIndex < m_cascades.size());
     return m_cascades[cascadeIndex].cascadeSplitDistance;
 }
 
-void CascadedShadowMap::setCascadeSplitDistance(const size_t& cascadeIndex, const double& distance) {
+void CascadedShadowMap::setCascadeSplitDistance(size_t cascadeIndex, double distance) {
     assert(cascadeIndex < m_cascades.size());
     m_cascades[cascadeIndex].cascadeSplitDistance = distance;
 }
 
-const Framebuffer* CascadedShadowMap::getCascadeFramebuffer(const size_t& cascadeIndex) {
+const Framebuffer* CascadedShadowMap::getCascadeFramebuffer(size_t cascadeIndex) {
     assert(cascadeIndex < m_cascades.size());
     return m_cascades[cascadeIndex].shadowMapFramebuffer;
 }
 
-const ImageView* CascadedShadowMap::getCascadeShadowVarianceImageView(const size_t& cascadeIndex) {
+const ImageView* CascadedShadowMap::getCascadeShadowVarianceImageView(size_t cascadeIndex) {
     assert(cascadeIndex < m_cascades.size());
     return m_cascades[cascadeIndex].shadowVarianceImageView;
 }
 
-const ImageView* CascadedShadowMap::getCascadeVsmBlurIntermediateImageView(const size_t& cascadeIndex) {
+const ImageView* CascadedShadowMap::getCascadeVsmBlurIntermediateImageView(size_t cascadeIndex) {
     assert(cascadeIndex < m_cascades.size());
     return m_cascades[cascadeIndex].vsmBlurIntermediateImageView;
 }
 
-const DescriptorSet* CascadedShadowMap::getCascadeVsmBlurXDescriptorSet(const size_t& cascadeIndex) {
+const DescriptorSet* CascadedShadowMap::getCascadeVsmBlurXDescriptorSet(size_t cascadeIndex) {
     assert(cascadeIndex < m_cascades.size());
     return m_cascades[cascadeIndex].vsmBlurDescriptorSetX.get();
 }
 
-const DescriptorSet* CascadedShadowMap::getCascadeVsmBlurYDescriptorSet(const size_t& cascadeIndex) {
+const DescriptorSet* CascadedShadowMap::getCascadeVsmBlurYDescriptorSet(size_t cascadeIndex) {
     assert(cascadeIndex < m_cascades.size());
     return m_cascades[cascadeIndex].vsmBlurDescriptorSetY.get();
 }

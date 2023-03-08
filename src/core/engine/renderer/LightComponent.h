@@ -15,39 +15,39 @@ public:
 
     ~LightComponent();
 
-    LightComponent& setType(const LightType& type);
+    LightComponent& setType(LightType type);
 
     LightComponent& setIntensity(const glm::vec3& intensity);
 
-    LightComponent& setIntensity(const float& r, const float& g, const float& b);
+    LightComponent& setIntensity(float r, float g, float b);
 
-    LightComponent& setAngularSize(const float& angularSize);
+    LightComponent& setAngularSize(float angularSize);
 
-    LightComponent& setShadowCaster(const bool& shadowCaster);
+    LightComponent& setShadowCaster(bool shadowCaster);
 
-    LightComponent& setCsmMapBasedSelection(const bool& csmMapBasedSelection);
+    LightComponent& setCsmMapBasedSelection(bool csmMapBasedSelection);
 
     LightComponent& setShadowResolution(const glm::uvec2& shadowResolution);
 
-    LightComponent& setShadowResolution(const uint32_t& shadowWidth, const uint32_t& shadowHeight);
+    LightComponent& setShadowResolution(uint32_t shadowWidth, uint32_t shadowHeight);
 
     LightComponent& setShadowCascadeDistances(const std::vector<double>& cascadeDistances);
 
-    [[nodiscard]] const LightType& getType() const;
+    LightType getType() const;
 
-    [[nodiscard]] const glm::vec3& getIntensity() const;
+    const glm::vec3& getIntensity() const;
 
-    [[nodiscard]] const float& getAngularSize() const;
+    float getAngularSize() const;
 
-    [[nodiscard]] bool isShadowCaster() const;
+    bool isShadowCaster() const;
 
-    [[nodiscard]] bool isCsmMapBasedSelection() const;
+    bool isCsmMapBasedSelection() const;
 
-    [[nodiscard]] const glm::uvec2& getShadowResolution() const;
+    const glm::uvec2& getShadowResolution() const;
 
-    [[nodiscard]] const std::vector<double>& getShadowCascadeDistances() const;
+    const std::vector<double>& getShadowCascadeDistances() const;
 
-    [[nodiscard]] ShadowMap* getShadowMap() const;
+    ShadowMap* getShadowMap() const;
 
 private:
     void setShadowMap(ShadowMap* shadowMap);

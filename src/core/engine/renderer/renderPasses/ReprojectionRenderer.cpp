@@ -99,11 +99,11 @@ bool ReprojectionRenderer::init() {
     return true;
 }
 
-void ReprojectionRenderer::preRender(const double& dt) {
+void ReprojectionRenderer::preRender(double dt) {
     swapFrames();
 }
 
-void ReprojectionRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer) {
+void ReprojectionRenderer::render(double dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("ReprojectionRenderer::render")
 
     m_uniformData.resolution = glm::vec2(Engine::graphics()->getResolution());
@@ -169,7 +169,7 @@ float ReprojectionRenderer::getTaaHistoryFactor() const {
     return m_uniformData.taaHistoryFadeFactor;
 }
 
-void ReprojectionRenderer::setTaaHistoryFactor(const float& taaHistoryFactor) {
+void ReprojectionRenderer::setTaaHistoryFactor(float taaHistoryFactor) {
     m_uniformData.taaHistoryFadeFactor = taaHistoryFactor;
 }
 
@@ -177,7 +177,7 @@ bool ReprojectionRenderer::getTaaUseCatmullRomFilter() const {
     return m_uniformData.useCatmullRomFilter;
 }
 
-void ReprojectionRenderer::setTaaUseCatmullRomFilter(const bool& useCatmullRomFilter) {
+void ReprojectionRenderer::setTaaUseCatmullRomFilter(bool useCatmullRomFilter) {
     m_uniformData.useCatmullRomFilter = useCatmullRomFilter;
 }
 
@@ -185,7 +185,7 @@ ReprojectionRenderer::ColourClippingMode ReprojectionRenderer::getTaaColourClipp
     return (ColourClippingMode)m_uniformData.colourClippingMode;
 }
 
-void ReprojectionRenderer::setTaaColourClippingMode(const ColourClippingMode& colourClippingMode) {
+void ReprojectionRenderer::setTaaColourClippingMode(ColourClippingMode colourClippingMode) {
     m_uniformData.colourClippingMode = (uint32_t)colourClippingMode;
 }
 
@@ -193,7 +193,7 @@ glm::vec2 ReprojectionRenderer::getTaaMitchellFilterCoefficients() const {
     return glm::vec2(m_uniformData.mitchellB, m_uniformData.mitchellC);
 }
 
-void ReprojectionRenderer::setTaaMitchellFilterCoefficients(const float& B, const float& C) {
+void ReprojectionRenderer::setTaaMitchellFilterCoefficients(float B, float C) {
     m_uniformData.mitchellB = B;
     m_uniformData.mitchellC = C;
 }
@@ -202,7 +202,7 @@ bool ReprojectionRenderer::getTaaUseMitchellFilter() const {
     return m_uniformData.useMitchellFilter;
 }
 
-void ReprojectionRenderer::setTaaUseMitchellFilter(const bool& useMitchellFilter) {
+void ReprojectionRenderer::setTaaUseMitchellFilter(bool useMitchellFilter) {
     m_uniformData.useMitchellFilter = useMitchellFilter;
 }
 
@@ -210,7 +210,7 @@ bool ReprojectionRenderer::isTaaEnabled() const {
     return m_uniformData.taaEnabled;
 }
 
-void ReprojectionRenderer::setTaaEnabled(const bool& taaEnabled) {
+void ReprojectionRenderer::setTaaEnabled(bool taaEnabled) {
     m_uniformData.taaEnabled = taaEnabled;
 }
 
@@ -222,7 +222,7 @@ const glm::vec2& ReprojectionRenderer::getTaaCurrentJitterOffset() const {
     return m_uniformData.taaCurrentJitterOffset;
 }
 
-void ReprojectionRenderer::setTaaJitterSampleCount(const uint32_t& sampleCount) {
+void ReprojectionRenderer::setTaaJitterSampleCount(uint32_t sampleCount) {
     m_haltonSequence.resize(sampleCount);
     for (uint32_t i = 0; i < sampleCount; ++i) {
         m_haltonSequence[i].x = Util::createHaltonSequence<float>(i + 1, 2) * 2.0F - 1.0F;

@@ -33,11 +33,11 @@ class Light {
 public:
 
 public:
-    Light(const LightType& type);
+    Light(LightType type);
 
     virtual ~Light() = default;
 
-    const LightType& getType() const;
+    LightType getType() const;
 
     virtual void copyLightData(GPULight* dst) const = 0;
 
@@ -57,9 +57,9 @@ public:
 
     void setIntensity(const glm::vec3& intensity);
 
-    const float& getAngularSize() const;
+    float getAngularSize() const;
 
-    void setAngularSize(const float& angularSize);
+    void setAngularSize(float angularSize);
 
     virtual void copyLightData(GPULight* dst) const override;
 

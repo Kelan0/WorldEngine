@@ -9,7 +9,7 @@
 FrameResource<Buffer> Buffer::s_stagingBuffer = nullptr;
 vk::DeviceSize Buffer::s_maxStagingBufferSize = 128 * 1024 * 1024; // 128 MiB
 
-Buffer::Buffer(const WeakResource<vkr::Device>& device, const vk::Buffer& buffer, DeviceMemoryBlock* memory, const vk::DeviceSize& size, const vk::MemoryPropertyFlags& memoryProperties, const ResourceId& resourceId, const std::string& name):
+Buffer::Buffer(const WeakResource<vkr::Device>& device, const vk::Buffer& buffer, DeviceMemoryBlock* memory, vk::DeviceSize size, const vk::MemoryPropertyFlags& memoryProperties, const ResourceId& resourceId, const std::string& name):
         GraphicsResource(ResourceType_Buffer, device, name),
         m_buffer(buffer),
         m_memory(memory),
@@ -85,7 +85,7 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration, const std
     return returnBuffer;
 }
 
-bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, const vk::DeviceSize& size, const vk::DeviceSize& srcOffset, const vk::DeviceSize& dstOffset) {
+bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset, vk::DeviceSize dstOffset) {
 #if _DEBUG
     if (srcBuffer == nullptr || dstBuffer == nullptr) {
         printf("Unable to copy NULL buffers\n");
@@ -138,7 +138,7 @@ bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, const vk::DeviceSize& si
     return true;
 }
 
-bool Buffer::upload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data, const vk::DeviceSize& srcStride, const vk::DeviceSize& dstStride, const vk::DeviceSize& elementSize) {
+bool Buffer::upload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data, vk::DeviceSize srcStride, vk::DeviceSize dstStride, vk::DeviceSize elementSize) {
 #if _DEBUG
     if (dstBuffer == nullptr) {
         printf("Cannot upload to NULL buffer\n");
@@ -212,15 +212,15 @@ bool Buffer::upload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::D
     }
 }
 
-bool Buffer::copyFrom(Buffer* srcBuffer, const vk::DeviceSize& size, const vk::DeviceSize& srcOffset, const vk::DeviceSize& dstOffset) {
+bool Buffer::copyFrom(Buffer* srcBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset, vk::DeviceSize dstOffset) {
     return Buffer::copy(srcBuffer, this, size, srcOffset, dstOffset);
 }
 
-bool Buffer::copyTo(Buffer* dstBuffer, const vk::DeviceSize& size, const vk::DeviceSize& srcOffset, const vk::DeviceSize& dstOffset) {
+bool Buffer::copyTo(Buffer* dstBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset, vk::DeviceSize dstOffset) {
     return Buffer::copy(this, dstBuffer, size, srcOffset, dstOffset);
 }
 
-bool Buffer::upload(const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data, const vk::DeviceSize& srcStride, const vk::DeviceSize& dstStride, const vk::DeviceSize& elementSize) {
+bool Buffer::upload(vk::DeviceSize offset, vk::DeviceSize size, const void* data, vk::DeviceSize srcStride, vk::DeviceSize dstStride, vk::DeviceSize elementSize) {
     return Buffer::upload(this, offset, size, data, srcStride, dstStride, elementSize);
 }
 
@@ -236,7 +236,7 @@ vk::MemoryPropertyFlags Buffer::getMemoryProperties() const {
     return m_memoryProperties;
 }
 
-bool Buffer::hasMemoryProperties(const vk::MemoryPropertyFlags& memoryProperties, const bool& any) {
+bool Buffer::hasMemoryProperties(const vk::MemoryPropertyFlags& memoryProperties, bool any) {
     if (any) {
         return (uint32_t)(m_memoryProperties & memoryProperties) != 0;
     } else {
@@ -260,7 +260,7 @@ const Buffer* Buffer::getStagingBuffer() {
     return s_stagingBuffer.get();
 }
 
-bool Buffer::stagedUpload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data, const vk::DeviceSize& srcStride, const vk::DeviceSize& dstStride, const vk::DeviceSize& elementSize) {
+bool Buffer::stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data, vk::DeviceSize srcStride, vk::DeviceSize dstStride, vk::DeviceSize elementSize) {
     if (size == 0) {
         return true; // We "successfully" uploaded nothing... This is valid
     }
@@ -302,7 +302,7 @@ bool Buffer::stagedUpload(Buffer* dstBuffer, const vk::DeviceSize& offset, const
     return true;
 }
 
-bool Buffer::mappedUpload(Buffer* dstBuffer, const vk::DeviceSize& offset, const vk::DeviceSize& size, const void* data, const vk::DeviceSize& srcStride, const vk::DeviceSize& dstStride, const vk::DeviceSize& elementSize) {
+bool Buffer::mappedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data, vk::DeviceSize srcStride, vk::DeviceSize dstStride, vk::DeviceSize elementSize) {
     if (size == 0) {
         return true; // We "successfully" uploaded nothing... This is valid
     }
@@ -342,7 +342,7 @@ bool Buffer::mappedUpload(Buffer* dstBuffer, const vk::DeviceSize& offset, const
     return true;
 }
 
-void Buffer::resizeStagingBuffer(const WeakResource<vkr::Device>& device, const vk::DeviceSize& size) {
+void Buffer::resizeStagingBuffer(const WeakResource<vkr::Device>& device, vk::DeviceSize size) {
     vk::DeviceSize stagingBufferSize = glm::min(size, s_maxStagingBufferSize);
 
     if (!s_stagingBuffer)
@@ -369,7 +369,7 @@ void Buffer::resizeStagingBuffer(const WeakResource<vkr::Device>& device, const 
     assert(s_stagingBuffer != nullptr);
 }
 
-void Buffer::reserveStagingBuffer(const WeakResource<vkr::Device>& device, const vk::DeviceSize& size) {
+void Buffer::reserveStagingBuffer(const WeakResource<vkr::Device>& device, vk::DeviceSize size) {
     if (!s_stagingBuffer || size > s_stagingBuffer->getSize()) {
         Buffer::resizeStagingBuffer(device, size);
     }

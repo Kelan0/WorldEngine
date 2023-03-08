@@ -11,7 +11,7 @@ void SubpassConfiguration::addColourAttachment(const vk::AttachmentReference& at
     attachmentReferences.emplace_back(attachmentReference);
 }
 
-void SubpassConfiguration::addColourAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout) {
+void SubpassConfiguration::addColourAttachment(uint32_t attachment, const vk::ImageLayout& imageLayout) {
     addColourAttachment(vk::AttachmentReference(attachment, imageLayout));
 }
 
@@ -20,7 +20,7 @@ void SubpassConfiguration::addInputAttachment(const vk::AttachmentReference& att
     attachmentReferences.emplace_back(attachmentReference);
 }
 
-void SubpassConfiguration::addInputAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout) {
+void SubpassConfiguration::addInputAttachment(uint32_t attachment, const vk::ImageLayout& imageLayout) {
     addInputAttachment(vk::AttachmentReference(attachment, imageLayout));
 }
 
@@ -29,7 +29,7 @@ void SubpassConfiguration::addPreserveAttachment(const vk::AttachmentReference& 
     attachmentReferences.emplace_back(attachmentReference);
 }
 
-void SubpassConfiguration::addPreserveAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout) {
+void SubpassConfiguration::addPreserveAttachment(uint32_t attachment, const vk::ImageLayout& imageLayout) {
     addPreserveAttachment(vk::AttachmentReference(attachment, imageLayout));
 }
 
@@ -38,7 +38,7 @@ void SubpassConfiguration::setDepthStencilAttachment(const vk::AttachmentReferen
     attachmentReferences.emplace_back(attachmentReference);
 }
 
-void SubpassConfiguration::setDepthStencilAttachment(const uint32_t& attachment, const vk::ImageLayout& imageLayout) {
+void SubpassConfiguration::setDepthStencilAttachment(uint32_t attachment, const vk::ImageLayout& imageLayout) {
     setDepthStencilAttachment(vk::AttachmentReference(attachment, imageLayout));
 }
 
@@ -88,13 +88,13 @@ void RenderPassConfiguration::setClearValues(const std::unordered_map<uint32_t, 
         setClearValue(it->first, it->second);
 }
 
-void RenderPassConfiguration::setClearValue(const uint32_t attachment, const vk::ClearValue& clearValue) {
+void RenderPassConfiguration::setClearValue(uint32_t attachment, const vk::ClearValue& clearValue) {
     if (attachmentClearValues.size() < attachment)
         attachmentClearValues.resize(attachment);
     attachmentClearValues[attachment] = clearValue;
 }
 
-void RenderPassConfiguration::setClearColour(const uint32_t attachment, const glm::vec4& colour) {
+void RenderPassConfiguration::setClearColour(uint32_t attachment, const glm::vec4& colour) {
     if (attachment < attachmentClearValues.size()) {
         attachmentClearValues[attachment].color.setFloat32({colour.r, colour.g, colour.b, colour.a});
     } else {
@@ -104,7 +104,7 @@ void RenderPassConfiguration::setClearColour(const uint32_t attachment, const gl
     }
 }
 
-void RenderPassConfiguration::setClearDepth(const uint32_t attachment, const float& depth) {
+void RenderPassConfiguration::setClearDepth(uint32_t attachment, float depth) {
     if (attachment < attachmentClearValues.size()) {
         attachmentClearValues[attachment].depthStencil.setDepth(depth);
     } else {
@@ -114,7 +114,7 @@ void RenderPassConfiguration::setClearDepth(const uint32_t attachment, const flo
     }
 }
 
-void RenderPassConfiguration::setClearStencil(const uint32_t attachment, const uint32_t& stencil) {
+void RenderPassConfiguration::setClearStencil(uint32_t attachment, uint32_t stencil) {
     if (attachment < attachmentClearValues.size()) {
         attachmentClearValues[attachment].depthStencil.setStencil(stencil);
     } else {
@@ -202,7 +202,7 @@ RenderPass* RenderPass::create(const RenderPassConfiguration& renderPassConfigur
     return new RenderPass(renderPassConfiguration.device, renderPass, renderPassConfiguration, name);
 }
 
-void RenderPass::begin(const vk::CommandBuffer& commandBuffer, const vk::Framebuffer& framebuffer, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height, const vk::SubpassContents& subpassContents) const {
+void RenderPass::begin(const vk::CommandBuffer& commandBuffer, const vk::Framebuffer& framebuffer, int32_t x, int32_t y, uint32_t width, uint32_t height, const vk::SubpassContents& subpassContents) const {
     vk::RenderPassBeginInfo beginInfo;
     beginInfo.setRenderPass(m_renderPass);
     beginInfo.setFramebuffer(framebuffer);
@@ -214,7 +214,7 @@ void RenderPass::begin(const vk::CommandBuffer& commandBuffer, const vk::Framebu
     commandBuffer.beginRenderPass(beginInfo, subpassContents);
 }
 
-void RenderPass::begin(const vk::CommandBuffer& commandBuffer, const Framebuffer* framebuffer, const int32_t& x, const int32_t& y, const uint32_t& width, const uint32_t& height, const vk::SubpassContents& subpassContents) const {
+void RenderPass::begin(const vk::CommandBuffer& commandBuffer, const Framebuffer* framebuffer, int32_t x, int32_t y, uint32_t width, uint32_t height, const vk::SubpassContents& subpassContents) const {
     begin(commandBuffer, framebuffer->getFramebuffer(), x, y, width, height, subpassContents);
 }
 
@@ -243,37 +243,37 @@ uint32_t RenderPass::getAttachmentCount() const {
     return (uint32_t)m_config.renderPassAttachments.size();
 }
 
-uint32_t RenderPass::getAttachmentCount(const uint32_t& subpass) const {
+uint32_t RenderPass::getAttachmentCount(uint32_t subpass) const {
     assert(subpass < getSubpassCount());
     const SubpassConfiguration& subpassConfiguration = m_config.subpassConfigurations[subpass];
     return (uint32_t)subpassConfiguration.attachmentReferences.size();
 }
 
-uint32_t RenderPass::getColourAttachmentCount(const uint32_t& subpass) const {
+uint32_t RenderPass::getColourAttachmentCount(uint32_t subpass) const {
     assert(subpass < getSubpassCount());
     const SubpassConfiguration& subpassConfiguration = m_config.subpassConfigurations[subpass];
     return (uint32_t)subpassConfiguration.colourAttachments.size();
 }
 
-bool RenderPass::hasDepthStencilAttachment(const uint32_t& subpass) const {
+bool RenderPass::hasDepthStencilAttachment(uint32_t subpass) const {
     assert(subpass < getSubpassCount());
     const SubpassConfiguration& subpassConfiguration = m_config.subpassConfigurations[subpass];
     return subpassConfiguration.depthStencilAttachment >= 0 && subpassConfiguration.depthStencilAttachment < subpassConfiguration.attachmentReferences.size();
 }
 
-void RenderPass::setClearValue(const uint32_t attachment, const vk::ClearValue& clearValue) {
+void RenderPass::setClearValue(uint32_t attachment, const vk::ClearValue& clearValue) {
     m_config.setClearValue(attachment, clearValue);
 }
 
-void RenderPass::setClearColour(const uint32_t attachment, const glm::vec4& colour) {
+void RenderPass::setClearColour(uint32_t attachment, const glm::vec4& colour) {
     m_config.setClearColour(attachment, colour);
 }
 
-void RenderPass::setClearDepth(const uint32_t attachment, const float& depth) {
+void RenderPass::setClearDepth(uint32_t attachment, float depth) {
     m_config.setClearDepth(attachment, depth);
 }
 
-void RenderPass::setClearStencil(const uint32_t attachment, const uint32_t& stencil) {
+void RenderPass::setClearStencil(uint32_t attachment, uint32_t stencil) {
     m_config.setClearStencil(attachment, stencil);
 }
 

@@ -20,9 +20,9 @@ public:
 
     bool hasChanged(const entity_index& entityIndex);
 
-    void setChanged(const entity_index& entityIndex, const bool& changed);
+    void setChanged(const entity_index& entityIndex, bool changed);
 
-    void setChanged(const entity_index& entityIndex, const size_t& count, const bool& changed);
+    void setChanged(const entity_index& entityIndex, size_t count, bool changed);
 
 private:
     DenseFlagArray m_changedFlags;

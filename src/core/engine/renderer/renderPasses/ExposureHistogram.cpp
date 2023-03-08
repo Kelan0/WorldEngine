@@ -107,7 +107,7 @@ bool ExposureHistogram::init() {
     return true;
 }
 
-void ExposureHistogram::update(const double& dt, const vk::CommandBuffer& commandBuffer) {
+void ExposureHistogram::update(double dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("ExposureHistogram::update");
     PROFILE_BEGIN_GPU_CMD("ExposureHistogram::update", commandBuffer);
 
@@ -203,7 +203,7 @@ uint32_t ExposureHistogram::getBinCount() const {
     return m_binCount;
 }
 
-void ExposureHistogram::setBinCount(const uint32_t& binCount) {
+void ExposureHistogram::setBinCount(uint32_t binCount) {
     m_binCount = glm::clamp(binCount, (uint32_t)32, (uint32_t)8192);
 }
 
@@ -211,7 +211,7 @@ uint32_t ExposureHistogram::getDownsampleFactor() const {
     return m_downsampleFactor;
 }
 
-void ExposureHistogram::setDownsampleFactor(const uint32_t& downsampleFactor) {
+void ExposureHistogram::setDownsampleFactor(uint32_t downsampleFactor) {
     m_downsampleFactor = glm::min(downsampleFactor, (uint32_t)8);
 }
 
@@ -219,7 +219,7 @@ float ExposureHistogram::getMinLogLuminance() const {
     return m_minLogLuminance;
 }
 
-void ExposureHistogram::setMinLogLuminance(const float& minLogLuminance) {
+void ExposureHistogram::setMinLogLuminance(float minLogLuminance) {
     m_minLogLuminance = minLogLuminance;
 }
 
@@ -227,7 +227,7 @@ float ExposureHistogram::getLogLuminanceRange() const {
     return m_logLuminanceRange;
 }
 
-void ExposureHistogram::setLogLuminanceRange(const float& logLuminanceRange) {
+void ExposureHistogram::setLogLuminanceRange(float logLuminanceRange) {
     m_logLuminanceRange = logLuminanceRange;
 }
 
@@ -235,7 +235,7 @@ float ExposureHistogram::getLowPercent() const {
     return m_lowPercent;
 }
 
-void ExposureHistogram::setLowPercent(const float& lowPercent) {
+void ExposureHistogram::setLowPercent(float lowPercent) {
     m_lowPercent = lowPercent;
 }
 
@@ -243,7 +243,7 @@ float ExposureHistogram::getHighPercent() const {
     return m_highPercent;
 }
 
-void ExposureHistogram::setHighPercent(const float& highPercent) {
+void ExposureHistogram::setHighPercent(float highPercent) {
     m_highPercent = highPercent;
 }
 
@@ -251,7 +251,7 @@ float ExposureHistogram::getExposureSpeedUp() const {
     return m_exposureSpeedUp;
 }
 
-void ExposureHistogram::setExposureSpeedUp(const float& exposureSpeedUp) {
+void ExposureHistogram::setExposureSpeedUp(float exposureSpeedUp) {
     m_exposureSpeedUp = exposureSpeedUp;
 }
 
@@ -259,7 +259,7 @@ float ExposureHistogram::getExposureSpeedDown() const {
     return m_exposureSpeedDown;
 }
 
-void ExposureHistogram::setExposureSpeedDown(const float& exposureSpeedDown) {
+void ExposureHistogram::setExposureSpeedDown(float exposureSpeedDown) {
     m_exposureSpeedDown = exposureSpeedDown;
 }
 
@@ -267,7 +267,7 @@ float ExposureHistogram::getExposureCompensation() const {
     return m_exposureCompensation;
 }
 
-void ExposureHistogram::setExposureCompensation(const float& exposureCompensation) {
+void ExposureHistogram::setExposureCompensation(float exposureCompensation) {
     m_exposureCompensation = exposureCompensation;
 }
 

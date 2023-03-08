@@ -1058,8 +1058,8 @@ const vk::PhysicalDeviceLimits& GraphicsManager::getPhysicalDeviceLimits() const
     return m_device.physicalDeviceProperties.limits;
 }
 
-vk::DeviceSize GraphicsManager::getAlignedUniformBufferOffset(const vk::DeviceSize& offset) {
-    const vk::DeviceSize& minOffsetAlignment = Engine::graphics()->getPhysicalDeviceLimits().minUniformBufferOffsetAlignment;
+vk::DeviceSize GraphicsManager::getAlignedUniformBufferOffset(vk::DeviceSize offset) {
+    vk::DeviceSize minOffsetAlignment = Engine::graphics()->getPhysicalDeviceLimits().minUniformBufferOffsetAlignment;
     return CEIL_TO_MULTIPLE(offset, minOffsetAlignment);
 }
 
@@ -1071,7 +1071,7 @@ uint32_t GraphicsManager::getNextFrameIndex() const {
     return (m_swapchain.currentFrameIndex + 1) % CONCURRENT_FRAMES;
 }
 
-const uint32_t& GraphicsManager::getCurrentFrameIndex() const {
+uint32_t GraphicsManager::getCurrentFrameIndex() const {
     return m_swapchain.currentFrameIndex;
 }
 
@@ -1098,27 +1098,27 @@ bool GraphicsManager::hasQueue(const std::string& name) const {
     return m_queues.queues.count(name) > 0;
 }
 
-const uint32_t& GraphicsManager::getGraphicsQueueFamilyIndex() const {
+uint32_t GraphicsManager::getGraphicsQueueFamilyIndex() const {
     return m_queues.queueFamilies.graphicsQueueFamilyIndex.value();
 }
 
-const uint32_t& GraphicsManager::getComputeQueueFamilyIndex() const {
+uint32_t GraphicsManager::getComputeQueueFamilyIndex() const {
     return m_queues.queueFamilies.computeQueueFamilyIndex.value();
 }
 
-const uint32_t& GraphicsManager::getTransferQueueFamilyIndex() const {
+uint32_t GraphicsManager::getTransferQueueFamilyIndex() const {
     return m_queues.queueFamilies.transferQueueFamilyIndex.value();
 }
 
-const uint32_t& GraphicsManager::getSparseBindingQueueFamilyIndex() const {
+uint32_t GraphicsManager::getSparseBindingQueueFamilyIndex() const {
     return m_queues.queueFamilies.sparseBindingQueueFamilyIndex.value();
 }
 
-const uint32_t& GraphicsManager::getProtectedQueueFamilyIndex() const {
+uint32_t GraphicsManager::getProtectedQueueFamilyIndex() const {
     return m_queues.queueFamilies.protectedQueueFamilyIndex.value();
 }
 
-const uint32_t& GraphicsManager::getPresentQueueFamilyIndex() const {
+uint32_t GraphicsManager::getPresentQueueFamilyIndex() const {
     return m_queues.queueFamilies.presentQueueFamilyIndex.value();
 }
 
@@ -1163,22 +1163,22 @@ bool GraphicsManager::didResolutionChange() const {
     return m_resolutionChanged;
 }
 
-const bool& GraphicsManager::isDirectImagePresentEnabled() const {
+bool GraphicsManager::isDirectImagePresentEnabled() const {
     return m_directImagePresentEnabled;
 }
 
-void GraphicsManager::setDirectImagePresentEnabled(const bool& directImagePresentEnabled) {
+void GraphicsManager::setDirectImagePresentEnabled(bool directImagePresentEnabled) {
     if (m_directImagePresentEnabled != directImagePresentEnabled) {
         m_directImagePresentEnabled = directImagePresentEnabled;
         m_recreateSwapchain = true;
     }
 }
 
-const bool& GraphicsManager::isSwapchainImageSampled() const {
+bool GraphicsManager::isSwapchainImageSampled() const {
     return m_swapchainImageSampled;
 }
 
-void GraphicsManager::setSwapchainImageSampled(const bool& swapchainImageSampled) {
+void GraphicsManager::setSwapchainImageSampled(bool swapchainImageSampled) {
     if (m_swapchainImageSampled != swapchainImageSampled) {
         m_swapchainImageSampled = swapchainImageSampled;
         m_recreateSwapchain = true;
@@ -1241,7 +1241,7 @@ vk::ColorSpaceKHR GraphicsManager::getColourSpace() const {
     return m_surface.surfaceFormat.colorSpace;
 }
 
-void GraphicsManager::setObjectName(const vk::Device& device, const uint64_t& objectHandle, const vk::ObjectType& objectType, const char* objectName) {
+void GraphicsManager::setObjectName(const vk::Device& device, uint64_t objectHandle, vk::ObjectType objectType, const char* objectName) {
     if (objectName != nullptr) {
         vk::DebugUtilsObjectNameInfoEXT objectNameInfo{};
         objectNameInfo.objectHandle = objectHandle;
@@ -1251,7 +1251,7 @@ void GraphicsManager::setObjectName(const vk::Device& device, const uint64_t& ob
     }
 }
 
-void GraphicsManager::setObjectName(const vk::Device& device, const uint64_t& objectHandle, const vk::ObjectType& objectType, const std::string& objectName) {
+void GraphicsManager::setObjectName(const vk::Device& device, uint64_t objectHandle, vk::ObjectType objectType, const std::string& objectName) {
     setObjectName(device, objectHandle, objectType, objectName.c_str());
 }
 
@@ -1318,6 +1318,6 @@ bool GraphicsManager::doAbortOnVulkanError() {
     return m_abortOnVulkanError;
 }
 
-void GraphicsManager::setAbortOnVulkanError(const bool& abortOnVulkanError) {
+void GraphicsManager::setAbortOnVulkanError(bool abortOnVulkanError) {
     m_abortOnVulkanError = abortOnVulkanError;
 }

@@ -27,7 +27,7 @@ PerformanceGraphUI::PerformanceGraphUI():
 PerformanceGraphUI::~PerformanceGraphUI() = default;
 
 
-void PerformanceGraphUI::update(const double& dt) {
+void PerformanceGraphUI::update(double dt) {
     PROFILE_SCOPE("PerformanceGraphUI::update")
 
     if (m_clearFrames) {
@@ -180,7 +180,7 @@ void PerformanceGraphUI::update(const double& dt) {
     flushOldFrames();
 }
 
-void PerformanceGraphUI::draw(const double& dt) {
+void PerformanceGraphUI::draw(double dt) {
     PROFILE_SCOPE("PerformanceGraphUI::draw")
 
 //    ImGuiWindow* window = ImGui::GetCurrentWindow();
@@ -306,7 +306,7 @@ void PerformanceGraphUI::drawHeaderBar() {
     ImGui::EndGroup();
 }
 
-void PerformanceGraphUI::drawProfileContent(const double& dt) {
+void PerformanceGraphUI::drawProfileContent(double dt) {
     PROFILE_SCOPE("PerformanceGraphUI::drawProfileContent")
 
     ImGuiWindow* window = ImGui::GetCurrentWindow();
@@ -332,7 +332,7 @@ void PerformanceGraphUI::drawProfileContent(const double& dt) {
     ImGui::EndGroup();
 }
 
-void PerformanceGraphUI::drawProfileCallStackTree(const double& dt) {
+void PerformanceGraphUI::drawProfileCallStackTree(double dt) {
     PROFILE_SCOPE("PerformanceGraphUI::drawProfileCallStackTree")
 
     ImGuiWindow* window = ImGui::GetCurrentWindow();
@@ -410,7 +410,7 @@ void PerformanceGraphUI::drawProfileCallStackTree(const double& dt) {
     ImGui::EndChild();
 }
 
-void PerformanceGraphUI::drawProfileHotFunctionList(const double& dt) {
+void PerformanceGraphUI::drawProfileHotFunctionList(double dt) {
     PROFILE_SCOPE("PerformanceGraphUI::drawProfileHotFunctionList")
 
     ImGuiWindow* window = ImGui::GetCurrentWindow();
@@ -446,7 +446,7 @@ void PerformanceGraphUI::drawProfileHotFunctionList(const double& dt) {
                 uint64_t mainThreadId = Application::instance()->getHashedMainThreadId();
                 auto it = m_threadFrameProfileData.find(mainThreadId);
                 if (it != m_threadFrameProfileData.end() && !it->second.empty()) {
-                    const uint64_t& threadId = it->first;
+                    uint64_t threadId = it->first;
                     const std::vector<FrameProfileData>& allFrames = it->second;
                     if (!allFrames.empty()) {
                         const FrameProfileData& currentFrame = allFrames.back();
@@ -479,11 +479,11 @@ void PerformanceGraphUI::drawProfileHotFunctionList(const double& dt) {
     ImGui::EndChild();
 }
 
-void PerformanceGraphUI::drawProfileHotFunctionListBody(const double& dt, const std::vector<ProfileData>& profileData, const std::unordered_map<uint32_t, LayerInstanceInfo>& layerInstanceInfoMap, const float& lineHeight) {
+void PerformanceGraphUI::drawProfileHotFunctionListBody(double dt, const std::vector<ProfileData>& profileData, const std::unordered_map<uint32_t, LayerInstanceInfo>& layerInstanceInfoMap, float lineHeight) {
     PROFILE_SCOPE("PerformanceGraphUI::drawProfileHotFunctionListBody")
 
     const ProfileData& rootProfile = profileData[0];
-    const uint32_t& rootLayerIndex = m_profilerDisplayMode == ProfilerDisplayMode_HotPathList ? rootProfile.pathIndex : rootProfile.layerIndex;
+    uint32_t rootLayerIndex = m_profilerDisplayMode == ProfilerDisplayMode_HotPathList ? rootProfile.pathIndex : rootProfile.layerIndex;
     const LayerInstanceInfo* rootProfileLayerInstance = &layerInstanceInfoMap.at(rootLayerIndex);
 
     PROFILE_REGION("PerformanceGraphUI::drawProfileHotFunctionListBody - Get layers")
@@ -538,7 +538,7 @@ void PerformanceGraphUI::drawProfileHotFunctionListBody(const double& dt, const 
         ProfileLayer& uniqueLayer = m_layers[layerInstance->layerIndex];
 
         // The first layer is always for the root level, so we want to show the total frame time here.
-        const float& layerTime = i == 0 ? layerInstance->accumulatedTotalTimeAvg : layerInstance->accumulatedSelfTimeAvg;
+        float layerTime = i == 0 ? layerInstance->accumulatedTotalTimeAvg : layerInstance->accumulatedSelfTimeAvg;
 
         if (includeColourColumn) {
             id.reserve(uniqueLayer.layerName.size() + 2);
@@ -566,7 +566,7 @@ void PerformanceGraphUI::drawProfileHotFunctionListBody(const double& dt, const 
     PROFILE_END_REGION()
 }
 
-void PerformanceGraphUI::drawFrameGraphs(const double& dt) {
+void PerformanceGraphUI::drawFrameGraphs(double dt) {
     PROFILE_SCOPE("PerformanceGraphUI::drawFrameGraphs")
 
     if (!ImGui::BeginChild("FrameGraphContainer")) {
@@ -634,7 +634,7 @@ void PerformanceGraphUI::drawFrameGraphs(const double& dt) {
     ImGui::EndChild();
 }
 
-void PerformanceGraphUI::drawFrameGraph(const double& dt, const char* strId, const std::vector<FrameProfileData>& frameData, FrameGraphInfo& frameGraphInfo, const float& x, const float& y, const float& w, const float& h, const float& padding) {
+void PerformanceGraphUI::drawFrameGraph(double dt, const char* strId, const std::vector<FrameProfileData>& frameData, FrameGraphInfo& frameGraphInfo, float x, float y, float w, float h, float padding) {
     PROFILE_SCOPE("PerformanceGraphUI::drawFrameGraph")
 
     if (frameData.empty())
@@ -748,9 +748,9 @@ void PerformanceGraphUI::drawFrameGraph(const double& dt, const char* strId, con
     }
 }
 
-bool PerformanceGraphUI::buildFrameSlice(const std::vector<ProfileData>& profileData, const size_t& index, const float& y0, const float& y1, const uint32_t& treeDepthLimit, FrameGraphSlice& outFrameGraphSlice) {
+bool PerformanceGraphUI::buildFrameSlice(const std::vector<ProfileData>& profileData, size_t index, float y0, float y1, uint32_t treeDepthLimit, FrameGraphSlice& outFrameGraphSlice) {
 //    const ProfileData& profile = profileData[index];
-//    const uint32_t& layerIndex = m_profilerDisplayMode == ProfilerDisplayMode_HotFunctionList ? profile.layerIndex : profile.pathIndex;
+//    uint32_t layerIndex = m_profilerDisplayMode == ProfilerDisplayMode_HotFunctionList ? profile.layerIndex : profile.pathIndex;
 //    const ProfileLayer& layer = m_layers[layerIndex];
 //
 //    const float h = y1 - y0;
@@ -791,11 +791,11 @@ bool PerformanceGraphUI::buildFrameSlice(const std::vector<ProfileData>& profile
     return true;
 }
 
-bool PerformanceGraphUI::drawFrameSlice(const std::vector<ProfileData>& profileData, const size_t& index, const float& x0, const float& y0, const float& x1, const float& y1, const uint32_t& treeDepthLimit) {
+bool PerformanceGraphUI::drawFrameSlice(const std::vector<ProfileData>& profileData, size_t index, float x0, float y0, float x1, float y1, uint32_t treeDepthLimit) {
     // TODO: this needs optimising big time
 
     const ProfileData& profile = profileData[index];
-    const uint32_t& layerIndex = m_profilerDisplayMode == ProfilerDisplayMode_HotFunctionList ? profile.layerIndex : profile.pathIndex;
+    uint32_t layerIndex = m_profilerDisplayMode == ProfilerDisplayMode_HotFunctionList ? profile.layerIndex : profile.pathIndex;
     const ProfileLayer& layer = m_layers[layerIndex];
 
     if (isProfileHidden(profile))
@@ -838,7 +838,7 @@ bool PerformanceGraphUI::drawFrameSlice(const std::vector<ProfileData>& profileD
     return true;
 }
 
-void PerformanceGraphUI::drawFrameTimeOverlays(const FrameGraphInfo& frameGraphInfo, const float& xmin, const float& ymin, const float& xmax, const float& ymax) {
+void PerformanceGraphUI::drawFrameTimeOverlays(const FrameGraphInfo& frameGraphInfo, float xmin, float ymin, float xmax, float ymax) {
 
     if (isGraphNormalized()) {
         return; // Don't draw these absolute frame time values if the graph is normalized
@@ -915,7 +915,7 @@ void PerformanceGraphUI::drawFrameTimeOverlays(const FrameGraphInfo& frameGraphI
     }
 }
 
-float PerformanceGraphUI::drawFrameTimeOverlayText(const char* str, float x, float y, const float& xmin, const float& ymin, const float& xmax, const float& ymax) {
+float PerformanceGraphUI::drawFrameTimeOverlayText(const char* str, float x, float y, float xmin, float ymin, float xmax, float ymax) {
     ImVec2 size = ImGui::CalcTextSize(str);
     y -= (size.y / 2.0F);
 
@@ -928,7 +928,7 @@ float PerformanceGraphUI::drawFrameTimeOverlayText(const char* str, float x, flo
 }
 
 
-void PerformanceGraphUI::buildProfileTree(std::vector<FrameProfileData>& frameData, FrameGraphInfo& frameGraphInfo, const size_t& index, const ProfileTreeSortOrder& sortOrder, std::vector<size_t>& tempReorderBuffer) {
+void PerformanceGraphUI::buildProfileTree(std::vector<FrameProfileData>& frameData, FrameGraphInfo& frameGraphInfo, size_t index, const ProfileTreeSortOrder& sortOrder, std::vector<size_t>& tempReorderBuffer) {
     const FrameProfileData& currentFrame = frameData.back();
     const ProfileData& rootProfile = currentFrame.profileData[0];
     const ProfileData& currProfile = currentFrame.profileData[index];
@@ -1028,17 +1028,17 @@ void PerformanceGraphUI::buildProfileTree(std::vector<FrameProfileData>& frameDa
 
             if (sortOrder != ProfileTreeSortOrder_Default) {
                 if (sortOrder == ProfileTreeSortOrder_CpuTimeDescending) {
-                    std::sort(tempReorderBuffer.begin(), tempReorderBuffer.end(), [&currentFrame](const size_t& lhs, const size_t& rhs) {
+                    std::sort(tempReorderBuffer.begin(), tempReorderBuffer.end(), [&currentFrame](size_t lhs, size_t rhs) {
                         return currentFrame.profileData[lhs].elapsedMillis > currentFrame.profileData[rhs].elapsedMillis;
                     });
                 }
                 if (sortOrder == ProfileTreeSortOrder_CpuTimeAscending) {
-                    std::sort(tempReorderBuffer.begin(), tempReorderBuffer.end(), [&currentFrame](const size_t& lhs, const size_t& rhs) {
+                    std::sort(tempReorderBuffer.begin(), tempReorderBuffer.end(), [&currentFrame](size_t lhs, size_t rhs) {
                         return currentFrame.profileData[lhs].elapsedMillis < currentFrame.profileData[rhs].elapsedMillis;
                     });
                 }
 
-                for (const size_t& sequenceIndex : tempReorderBuffer) {
+                for (size_t sequenceIndex : tempReorderBuffer) {
                     buildProfileTree(frameData, frameGraphInfo, sequenceIndex, sortOrder, tempReorderBuffer);
                 }
             }
@@ -1047,7 +1047,7 @@ void PerformanceGraphUI::buildProfileTree(std::vector<FrameProfileData>& frameDa
     }
 }
 
-void PerformanceGraphUI::initializeProfileDataTree(FrameProfileData* currentFrame, const Profiler::Profile* profiles, const size_t& count, const size_t& stride) {
+void PerformanceGraphUI::initializeProfileDataTree(FrameProfileData* currentFrame, const Profiler::Profile* profiles, size_t count, size_t stride) {
     PROFILE_SCOPE("PerformanceGraphUI::initializeProfileDataTree")
     currentFrame->profileData.clear();
     currentFrame->profileData.reserve(count);
@@ -1080,7 +1080,7 @@ void PerformanceGraphUI::initializeProfileDataTree(FrameProfileData* currentFram
     }
 }
 
-void PerformanceGraphUI::initializeProfileTreeLayers(FrameProfileData* currentFrame, const Profiler::Profile* profiles, const size_t& count, const size_t& stride, std::vector<uint32_t>& layerPath) {
+void PerformanceGraphUI::initializeProfileTreeLayers(FrameProfileData* currentFrame, const Profiler::Profile* profiles, size_t count, size_t stride, std::vector<uint32_t>& layerPath) {
     PROFILE_SCOPE("PerformanceGraphUI::initializeProfileTreeLayers")
 
     std::vector<std::string> debugLayerPath;
@@ -1096,7 +1096,7 @@ void PerformanceGraphUI::initializeProfileTreeLayers(FrameProfileData* currentFr
         const Profiler::Profile& profile = *reinterpret_cast<const Profiler::Profile*>(rawPtr + i * stride);
         ProfileData& profileData = currentFrame->profileData[i];
 
-        const uint32_t& layerIndex = getUniqueLayerIndex(profile.id->name);
+        uint32_t layerIndex = getUniqueLayerIndex(profile.id->name);
         popCount = 0;
         // Profile tree is sorted depth-first, we pop until we reach the root or the common parent wit the previous node
         while (parentIndex != SIZE_MAX && profile.parentIndex <= parentIndex) {
@@ -1208,7 +1208,7 @@ void PerformanceGraphUI::updateFrameGraphLayerInstances(const std::vector<Profil
     }
 }
 
-void PerformanceGraphUI::updateFrameGraphInfo(FrameGraphInfo& frameGraphInfo, const float& rootElapsed) {
+void PerformanceGraphUI::updateFrameGraphInfo(FrameGraphInfo& frameGraphInfo, float rootElapsed) {
     PROFILE_SCOPE("PerformanceGraphUI::updateFrameGraphInfo")
     frameGraphInfo.frameTimes.emplace_back(rootElapsed);
 
@@ -1359,7 +1359,7 @@ double PerformanceGraphUI::calculateFrameTimePercentile(const std::vector<double
     return sum / (double)tempContainer.size();
 }
 
-const uint32_t& PerformanceGraphUI::getUniqueLayerIndex(const std::string& layerName) {
+uint32_t PerformanceGraphUI::getUniqueLayerIndex(const std::string& layerName) {
 //    PROFILE_SCOPE("PerformanceGraphUI::getUniqueLayerIndex")
     auto it = m_uniqueLayerIndexMap.find(layerName);
     if (it == m_uniqueLayerIndexMap.end()) {
@@ -1382,7 +1382,7 @@ const uint32_t& PerformanceGraphUI::getUniqueLayerIndex(const std::string& layer
     return it->second;
 }
 
-const uint32_t& PerformanceGraphUI::getPathLayerIndex(const std::vector<uint32_t>& layerPath) {
+uint32_t PerformanceGraphUI::getPathLayerIndex(const std::vector<uint32_t>& layerPath) {
 //    PROFILE_SCOPE("PerformanceGraphUI::getPathLayerIndex")
     auto it = m_pathLayerIndexMap.find(layerPath);
     if (it == m_pathLayerIndexMap.end()) {
@@ -1452,7 +1452,7 @@ size_t PerformanceGraphUI::getProfileIndexFromPath(const std::vector<ProfileData
     return currentIndex;
 }
 
-size_t PerformanceGraphUI::findChildIndexForLayer(const std::vector<ProfileData>& profileData, const size_t& parentProfileIndex, const uint32_t& layerIndex) {
+size_t PerformanceGraphUI::findChildIndexForLayer(const std::vector<ProfileData>& profileData, size_t parentProfileIndex, uint32_t layerIndex) {
     if (hasVisibleChildren(profileData[parentProfileIndex])) {
         size_t firstChildIndex = parentProfileIndex + 1;
         return findSiblingIndexForLayer(profileData, firstChildIndex, layerIndex);
@@ -1460,7 +1460,7 @@ size_t PerformanceGraphUI::findChildIndexForLayer(const std::vector<ProfileData>
     return SIZE_MAX;
 }
 
-size_t PerformanceGraphUI::findSiblingIndexForLayer(const std::vector<ProfileData>& profileData, const size_t& firstSiblingProfileIndex, const uint32_t& layerIndex) {
+size_t PerformanceGraphUI::findSiblingIndexForLayer(const std::vector<ProfileData>& profileData, size_t firstSiblingProfileIndex, uint32_t layerIndex) {
     size_t siblingIndex = firstSiblingProfileIndex;
     while (siblingIndex < profileData.size()) {
         if (profileData[siblingIndex].layerIndex == layerIndex)
@@ -1510,7 +1510,7 @@ bool PerformanceGraphUI::hasVisibleChildren(const ProfileData& profile) {
     return profile.childCount > 0;
 }
 
-PerformanceGraphUI::ProfileData* PerformanceGraphUI::getProfileParent(std::vector<ProfileData>& profiles, const size_t& index) {
+PerformanceGraphUI::ProfileData* PerformanceGraphUI::getProfileParent(std::vector<ProfileData>& profiles, size_t index) {
     ProfileData& profile = profiles[index];
     if (profile.parentOffset == 0)
         return nullptr;

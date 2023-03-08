@@ -51,11 +51,11 @@ public:
 
         ColouredVertex(const glm::vec3& position, const glm::vec3& normal, const glm::vec2& texture, const glm::vec4& colour = glm::vec4(1.0F));
 
-        ColouredVertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty, const uint8_t& r = 255, const uint8_t& g = 255, const uint8_t& b = 255, const uint8_t& a = 255);
+        ColouredVertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255, uint8_t a = 255);
 
-        ColouredVertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty, const float& r = 1.0F, const float& g = 1.0F, const float& b = 1.0F, const float& a = 1.0F);
+        ColouredVertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty, float r = 1.0F, float g = 1.0F, float b = 1.0F, float a = 1.0F);
 
-        bool equalsEpsilon(const ColouredVertex& vertex, const float& epsilon) const;
+        bool equalsEpsilon(const ColouredVertex& vertex, float epsilon) const;
     };
 
 private:
@@ -102,20 +102,20 @@ public:
 
     bool init();
 
-    void render(const double& dt, const vk::CommandBuffer& commandBuffer);
+    void render(double dt, const vk::CommandBuffer& commandBuffer);
 
-    void begin(const MeshPrimitiveType& primitiveType);
+    void begin(MeshPrimitiveType primitiveType);
 
     void end();
 
     void vertex(const glm::vec3& position);
-    void vertex(const float& x, const float& y, const float& z);
+    void vertex(float x, float y, float z);
 
     void normal(const glm::vec3& normal);
-    void normal(const float& x, const float& y, const float& z);
+    void normal(float x, float y, float z);
 
     void texture(const glm::vec2& texture);
-    void texture(const float& x, const float& y);
+    void texture(float x, float y);
 
     void colour(const glm::u8vec4& colour);
     void colour(const glm::u8vec3& colour);
@@ -123,50 +123,50 @@ public:
     void colour(const glm::uvec3& colour);
     void colour(const glm::vec4& colour);
     void colour(const glm::vec3& colour);
-    void colour(const float& r, const float& g, const float& b, const float& a);
-    void colour(const float& r, const float& g, const float& b);
+    void colour(float r, float g, float b, float a);
+    void colour(float r, float g, float b);
 
-    void pushMatrix(const MatrixMode& matrixMode);
+    void pushMatrix(MatrixMode matrixMode);
     void pushMatrix();
 
-    void popMatrix(const MatrixMode& matrixMode);
+    void popMatrix(MatrixMode matrixMode);
     void popMatrix();
 
     void translate(const glm::vec3& translation);
-    void translate(const float& x, const float& y, const float& z);
+    void translate(float x, float y, float z);
 
-    void rotate(const glm::vec3& axis, const float& angle);
-    void rotate(const float& x, const float& y, const float& z, const float& angle);
+    void rotate(const glm::vec3& axis, float angle);
+    void rotate(float x, float y, float z, float angle);
 
     void scale(const glm::vec3& scale);
-    void scale(const float& x, const float& y, const float& z);
-    void scale(const float& scale);
+    void scale(float x, float y, float z);
+    void scale(float scale);
 
     void loadIdentity();
     void loadMatrix(const glm::mat4& matrix);
     void multMatrix(const glm::mat4& matrix);
 
-    void matrixMode(const MatrixMode& matrixMode);
+    void matrixMode(MatrixMode matrixMode);
 
-    void setDepthTestEnabled(const bool& enabled);
+    void setDepthTestEnabled(bool enabled);
 
     void setCullMode(const vk::CullModeFlags& cullMode);
 
-    void setBlendEnabled(const bool& enabled);
-    void setColourBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op);
-    void setAlphaBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op);
+    void setBlendEnabled(bool enabled);
+    void setColourBlendMode(vk::BlendFactor src, vk::BlendFactor dst, vk::BlendOp op);
+    void setAlphaBlendMode(vk::BlendFactor src, vk::BlendFactor dst, vk::BlendOp op);
 
-    void setLineWidth(const float& lineWidth);
+    void setLineWidth(float lineWidth);
 
     ImageView* getOutputFrameImageView() const;
 
 private:
     void addVertex(const ColouredVertex& vertex);
 
-    void addIndex(const uint32_t& index);
+    void addIndex(uint32_t index);
 
-    glm::mat4& currentMatrix(const MatrixMode& matrixMode);
-    std::stack<glm::mat4>& matrixStack(const MatrixMode& matrixMode);
+    glm::mat4& currentMatrix(MatrixMode matrixMode);
+    std::stack<glm::mat4>& matrixStack(MatrixMode matrixMode);
 
     glm::mat4& currentMatrix();
     std::stack<glm::mat4>& matrixStack();

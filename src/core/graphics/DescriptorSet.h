@@ -74,23 +74,23 @@ public:
 
     DescriptorSet* createDescriptorSet(const SharedResource<DescriptorPool>& descriptorPool, const std::string& name);
 
-    bool createDescriptorSets(const SharedResource<DescriptorPool>& descriptorPool, const uint32_t& count, DescriptorSet** outDescriptorSets, const std::string& name);
+    bool createDescriptorSets(const SharedResource<DescriptorPool>& descriptorPool, uint32_t count, DescriptorSet** outDescriptorSets, const std::string& name);
 
-    bool createDescriptorSets(const SharedResource<DescriptorPool>& descriptorPool, const uint32_t& count, SharedResource<DescriptorSet>* outDescriptorSets, const std::string& name);
+    bool createDescriptorSets(const SharedResource<DescriptorPool>& descriptorPool, uint32_t count, SharedResource<DescriptorSet>* outDescriptorSets, const std::string& name);
 
     const vk::DescriptorSetLayout& getDescriptorSetLayout() const;
 
     std::vector<vk::DescriptorSetLayoutBinding> getBindings() const;
 
-    bool hasBinding(const uint32_t& binding) const;
+    bool hasBinding(uint32_t binding) const;
 
-    int32_t findBindingIndex(const uint32_t& binding) const;
+    int32_t findBindingIndex(uint32_t binding) const;
 
-    const vk::DescriptorSetLayoutBinding& findBinding(const uint32_t& binding) const;
+    const vk::DescriptorSetLayoutBinding& findBinding(uint32_t binding) const;
 
-    const vk::DescriptorSetLayoutBinding& getBinding(const int32_t& index) const;
+    const vk::DescriptorSetLayoutBinding& getBinding(int32_t index) const;
 
-    const uint32_t& getBindingCount() const;
+    uint32_t getBindingCount() const;
 
     bool operator==(const DescriptorSetLayout& rhs) const;
 
@@ -113,21 +113,21 @@ public:
 
     ~DescriptorSetLayoutBuilder();
 
-    DescriptorSetLayoutBuilder& addUniformBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const bool& dynamic = false);
+    DescriptorSetLayoutBuilder& addUniformBuffer(uint32_t binding, vk::ShaderStageFlags shaderStages, bool dynamic = false);
 
-    DescriptorSetLayoutBuilder& addStorageBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const bool& dynamic = false);
+    DescriptorSetLayoutBuilder& addStorageBuffer(uint32_t binding, vk::ShaderStageFlags shaderStages, bool dynamic = false);
 
-    DescriptorSetLayoutBuilder& addStorageTexelBuffer(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages);
+    DescriptorSetLayoutBuilder& addStorageTexelBuffer(uint32_t binding, vk::ShaderStageFlags shaderStages);
 
-    DescriptorSetLayoutBuilder& addSampler(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const uint32_t& arraySize = 1);
+    DescriptorSetLayoutBuilder& addSampler(uint32_t binding, vk::ShaderStageFlags shaderStages, uint32_t arraySize = 1);
 
-    DescriptorSetLayoutBuilder& addSampledImage(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const uint32_t& arraySize = 1);
+    DescriptorSetLayoutBuilder& addSampledImage(uint32_t binding, vk::ShaderStageFlags shaderStages, uint32_t arraySize = 1);
 
-    DescriptorSetLayoutBuilder& addCombinedImageSampler(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const uint32_t& arraySize = 1);
+    DescriptorSetLayoutBuilder& addCombinedImageSampler(uint32_t binding, vk::ShaderStageFlags shaderStages, uint32_t arraySize = 1);
 
-    DescriptorSetLayoutBuilder& addInputAttachment(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const uint32_t& arraySize = 1);
+    DescriptorSetLayoutBuilder& addInputAttachment(uint32_t binding, vk::ShaderStageFlags shaderStages, uint32_t arraySize = 1);
 
-    DescriptorSetLayoutBuilder& addStorageImage(const uint32_t& binding, const vk::ShaderStageFlags& shaderStages, const uint32_t& arraySize = 1);
+    DescriptorSetLayoutBuilder& addStorageImage(uint32_t binding, vk::ShaderStageFlags shaderStages, uint32_t arraySize = 1);
 
     SharedResource<DescriptorSetLayout> build(const std::string& name);
 
@@ -156,7 +156,7 @@ public:
 
     void free(const vk::DescriptorSet& descriptorSet);
 
-    const bool& canFreeDescriptorSets() const;
+    bool canFreeDescriptorSets() const;
 
 private:
     vk::DescriptorPool m_descriptorPool;
@@ -202,24 +202,24 @@ public:
 
     ~DescriptorSetWriter();
 
-    DescriptorSetWriter& writeBuffer(const uint32_t& binding, const vk::DescriptorBufferInfo& bufferInfo);
-    DescriptorSetWriter& writeBuffer(const uint32_t& binding, const vk::Buffer& buffer, const vk::DeviceSize& offset = 0, const vk::DeviceSize& range = VK_WHOLE_SIZE);
-    DescriptorSetWriter& writeBuffer(const uint32_t& binding, const Buffer* buffer, const vk::DeviceSize& offset = 0, const vk::DeviceSize& range = VK_WHOLE_SIZE);
+    DescriptorSetWriter& writeBuffer(uint32_t binding, const vk::DescriptorBufferInfo& bufferInfo);
+    DescriptorSetWriter& writeBuffer(uint32_t binding, const vk::Buffer& buffer, vk::DeviceSize offset = 0, vk::DeviceSize range = VK_WHOLE_SIZE);
+    DescriptorSetWriter& writeBuffer(uint32_t binding, const Buffer* buffer, vk::DeviceSize offset = 0, vk::DeviceSize range = VK_WHOLE_SIZE);
 
-    DescriptorSetWriter& writeTexelBufferView(const uint32_t& binding, const vk::BufferView& bufferView);
-    DescriptorSetWriter& writeTexelBufferView(const uint32_t& binding, const BufferView* bufferView);
+    DescriptorSetWriter& writeTexelBufferView(uint32_t binding, const vk::BufferView& bufferView);
+    DescriptorSetWriter& writeTexelBufferView(uint32_t binding, const BufferView* bufferView);
 
-    DescriptorSetWriter& writeImage(const uint32_t& binding, const vk::DescriptorImageInfo* imageInfos, const uint32_t& arrayIndex, const uint32_t& arrayCount);
-    DescriptorSetWriter& writeImage(const uint32_t& binding, const vk::DescriptorImageInfo& imageInfo, const uint32_t& arrayIndex, const uint32_t& arrayCount);
-    DescriptorSetWriter& writeImage(const uint32_t& binding, const vk::Sampler* samplers, const vk::ImageView* imageViews, const vk::ImageLayout* imageLayouts, const uint32_t& arrayIndex, const uint32_t& arrayCount);
-    DescriptorSetWriter& writeImage(const uint32_t& binding, const vk::Sampler& sampler, const vk::ImageView& imageView, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex, const uint32_t& arrayCount);
-    DescriptorSetWriter& writeImage(const uint32_t& binding, const Sampler* const* samplers, const ImageView* const* imageViews, const vk::ImageLayout* imageLayouts, const uint32_t& arrayIndex, const uint32_t& arrayCount);
-    DescriptorSetWriter& writeImage(const uint32_t& binding, const Sampler* sampler, const ImageView* const* imageViews, const vk::ImageLayout* imageLayouts, const uint32_t& arrayIndex, const uint32_t& arrayCount);
-    DescriptorSetWriter& writeImage(const uint32_t& binding, const Sampler* sampler, const ImageView* const* imageViews, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex, const uint32_t& arrayCount);
-    DescriptorSetWriter& writeImage(const uint32_t& binding, const Sampler* sampler, const ImageView* imageView, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex, const uint32_t& arrayCount);
-    DescriptorSetWriter& writeImage(const uint32_t& binding, const Texture* const* textures, const vk::ImageLayout* imageLayouts, const uint32_t& arrayIndex, const uint32_t& arrayCount);
-    DescriptorSetWriter& writeImage(const uint32_t& binding, const Texture* const* textures, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex, const uint32_t& arrayCount);
-    DescriptorSetWriter& writeImage(const uint32_t& binding, const Texture* texture, const vk::ImageLayout& imageLayout, const uint32_t& arrayIndex, const uint32_t& arrayCount);
+    DescriptorSetWriter& writeImage(uint32_t binding, const vk::DescriptorImageInfo* imageInfos, uint32_t arrayIndex, uint32_t arrayCount);
+    DescriptorSetWriter& writeImage(uint32_t binding, const vk::DescriptorImageInfo& imageInfo, uint32_t arrayIndex, uint32_t arrayCount);
+    DescriptorSetWriter& writeImage(uint32_t binding, const vk::Sampler* samplers, const vk::ImageView* imageViews, const vk::ImageLayout* imageLayouts, uint32_t arrayIndex, uint32_t arrayCount);
+    DescriptorSetWriter& writeImage(uint32_t binding, const vk::Sampler& sampler, const vk::ImageView& imageView, const vk::ImageLayout& imageLayout, uint32_t arrayIndex, uint32_t arrayCount);
+    DescriptorSetWriter& writeImage(uint32_t binding, const Sampler* const* samplers, const ImageView* const* imageViews, const vk::ImageLayout* imageLayouts, uint32_t arrayIndex, uint32_t arrayCount);
+    DescriptorSetWriter& writeImage(uint32_t binding, const Sampler* sampler, const ImageView* const* imageViews, const vk::ImageLayout* imageLayouts, uint32_t arrayIndex, uint32_t arrayCount);
+    DescriptorSetWriter& writeImage(uint32_t binding, const Sampler* sampler, const ImageView* const* imageViews, const vk::ImageLayout& imageLayout, uint32_t arrayIndex, uint32_t arrayCount);
+    DescriptorSetWriter& writeImage(uint32_t binding, const Sampler* sampler, const ImageView* imageView, const vk::ImageLayout& imageLayout, uint32_t arrayIndex, uint32_t arrayCount);
+    DescriptorSetWriter& writeImage(uint32_t binding, const Texture* const* textures, const vk::ImageLayout* imageLayouts, uint32_t arrayIndex, uint32_t arrayCount);
+    DescriptorSetWriter& writeImage(uint32_t binding, const Texture* const* textures, const vk::ImageLayout& imageLayout, uint32_t arrayIndex, uint32_t arrayCount);
+    DescriptorSetWriter& writeImage(uint32_t binding, const Texture* texture, const vk::ImageLayout& imageLayout, uint32_t arrayIndex, uint32_t arrayCount);
 
     bool write();
 

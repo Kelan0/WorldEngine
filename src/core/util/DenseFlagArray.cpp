@@ -27,11 +27,11 @@ void DenseFlagArray::clear() {
     m_size = 0;
 }
 
-void DenseFlagArray::reserve(const size_t& capacity) {
+void DenseFlagArray::reserve(size_t capacity) {
     m_data.reserve(capacity * pack_bits);
 }
 
-void DenseFlagArray::resize(const size_t& size, const bool& flag) {
+void DenseFlagArray::resize(size_t size, bool flag) {
     PROFILE_SCOPE("DenseFlagArray::resize")
     size_t packedSize = INT_DIV_CEIL(size, pack_bits);
     
@@ -41,12 +41,12 @@ void DenseFlagArray::resize(const size_t& size, const bool& flag) {
     m_size = size;
 }
 
-void DenseFlagArray::ensureSize(const size_t& size, const bool& flag) {
+void DenseFlagArray::ensureSize(size_t size, bool flag) {
     if (m_size < size)
         resize(size, flag);
 }
 
-void DenseFlagArray::expand(const size_t& index, const bool& flag) {
+void DenseFlagArray::expand(size_t index, bool flag) {
     if (m_size <= index) {
         size_t next = index + 1;
         if (next >= capacity())
@@ -55,7 +55,7 @@ void DenseFlagArray::expand(const size_t& index, const bool& flag) {
     }
 }
 
-bool DenseFlagArray::get(const size_t& index) const {
+bool DenseFlagArray::get(size_t index) const {
     if (index >= size()) {
         assert(false);
     }
@@ -68,7 +68,7 @@ bool DenseFlagArray::get(const size_t& index) const {
     }
 }
 
-void DenseFlagArray::set(const size_t& index, const bool& flag) {
+void DenseFlagArray::set(size_t index, bool flag) {
     assert(index < size());
 
 //    ensureCapacity(index);
@@ -76,7 +76,7 @@ void DenseFlagArray::set(const size_t& index, const bool& flag) {
     SET_BIT(m_data[index / pack_bits], index % pack_bits, flag);
 }
 
-void DenseFlagArray::set(const size_t& index, const size_t& count, const bool& flag) {
+void DenseFlagArray::set(size_t index, size_t count, bool flag) {
     PROFILE_SCOPE("DenseFlagArray::set");
 
     assert(index + count <= size());
@@ -120,11 +120,11 @@ void DenseFlagArray::set(const size_t& index, const size_t& count, const bool& f
 
 }
 
-bool DenseFlagArray::operator[](const size_t& index) const {
+bool DenseFlagArray::operator[](size_t index) const {
     return get(index);
 }
 
-void DenseFlagArray::push_back(const bool& flag) {
+void DenseFlagArray::push_back(bool flag) {
     size_t index = size();
     expand(index);
     set(index, flag);

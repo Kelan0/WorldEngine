@@ -22,9 +22,9 @@ public:
 
     virtual void cleanup() = 0;
 
-    virtual void render(const double& dt) = 0;
+    virtual void render(double dt) = 0;
 
-    virtual void tick(const double& dt) = 0;
+    virtual void tick(double dt) = 0;
 
     template<class T>
     static int create(int argc, char* argv[]);
@@ -41,17 +41,17 @@ public:
 
     double getWindowAspectRatio() const;
 
-    const double& getFramerateLimit() const;
+    double getFramerateLimit() const;
 
-    void setFramerateLimit(const double& framerateLimit);
+    void setFramerateLimit(double framerateLimit);
 
-    const double& getTickrate() const;
+    double getTickrate() const;
 
-    void setTickrate(const double& tickrate);
+    void setTickrate(double tickrate);
 
-    const double& getPartialFrames() const;
+    double getPartialFrames() const;
 
-    const double& getPartialTicks() const;
+    double getPartialTicks() const;
 
     bool isViewportInverted() const;
 
@@ -80,9 +80,9 @@ private:
 
     void cleanupInternal();
 
-    void renderInternal(const double& dt);
+    void renderInternal(double dt);
 
-    void tickInternal(const double& dt);
+    void tickInternal(double dt);
 
     void processEventsInternal();
 

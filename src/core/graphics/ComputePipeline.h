@@ -29,7 +29,7 @@ struct ComputePipelineConfiguration {
 
     void addPushConstantRange(const vk::PushConstantRange& pushConstantRange);
 
-    void addPushConstantRange(const vk::ShaderStageFlags& stageFlags, const uint32_t& offset, const uint32_t& size);
+    void addPushConstantRange(vk::ShaderStageFlags stageFlags, uint32_t offset, uint32_t size);
 };
 
 class ComputePipeline : public GraphicsResource {
@@ -51,9 +51,9 @@ public:
 
     void bind(const vk::CommandBuffer& commandBuffer) const;
 
-    void dispatch(const vk::CommandBuffer& commandBuffer, const uint32_t& workgroupCountX, const uint32_t& workgroupCountY, const uint32_t& workgroupCountZ) const;
+    void dispatch(const vk::CommandBuffer& commandBuffer, uint32_t workgroupCountX, uint32_t workgroupCountY, uint32_t workgroupCountZ) const;
 
-    void dispatchBase(const vk::CommandBuffer& commandBuffer, const uint32_t& workgroupOffsetX, const uint32_t& workgroupOffsetY, const uint32_t& workgroupOffsetZ, const uint32_t& workgroupCountX, const uint32_t& workgroupCountY, const uint32_t& workgroupCountZ) const;
+    void dispatchBase(const vk::CommandBuffer& commandBuffer, uint32_t workgroupOffsetX, uint32_t workgroupOffsetY, uint32_t workgroupOffsetZ, uint32_t workgroupCountX, uint32_t workgroupCountY, uint32_t workgroupCountZ) const;
 
     const vk::Pipeline& getPipeline() const;
 

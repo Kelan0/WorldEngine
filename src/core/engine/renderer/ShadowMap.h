@@ -13,7 +13,7 @@ class Buffer;
 class DescriptorSet;
 class DescriptorSetLayout;
 
-enum ShadowMapType {
+enum ShadowMapType : uint8_t {
     ShadowMapType_Simple = 0,
     ShadowMapType_Variance = 1,
 };
@@ -37,7 +37,7 @@ public:
         ShadowType_CascadedShadowMap = 0,
     };
 public:
-    ShadowMap(const ShadowType& shadowType, const RenderType& renderType);
+    ShadowMap(ShadowType shadowType, RenderType renderType);
 
     virtual ~ShadowMap() = default;
 
@@ -49,7 +49,7 @@ public:
 
     const glm::uvec2& getResolution() const;
 
-    void setResolution(const uint32_t& width, const uint32_t& height);
+    void setResolution(uint32_t width, uint32_t height);
 
 protected:
     ShadowType m_shadowType;
@@ -78,7 +78,7 @@ private:
         glm::mat4 viewProjectionMatrix;
     };
 public:
-    CascadedShadowMap(const RenderType& renderType);
+    CascadedShadowMap(RenderType renderType);
 
     virtual ~CascadedShadowMap() override;
 
@@ -86,22 +86,22 @@ public:
 
     size_t getNumCascades() const;
 
-    void setNumCascades(const size_t& numCascades);
+    void setNumCascades(size_t numCascades);
 
-    const double& getCascadeSplitDistance(const size_t& cascadeIndex);
+    double getCascadeSplitDistance(size_t cascadeIndex);
 
-    void setCascadeSplitDistance(const size_t& cascadeIndex, const double& distance);
+    void setCascadeSplitDistance(size_t cascadeIndex, double distance);
 
 private:
-    const Framebuffer* getCascadeFramebuffer(const size_t& cascadeIndex);
+    const Framebuffer* getCascadeFramebuffer(size_t cascadeIndex);
 
-    const ImageView* getCascadeShadowVarianceImageView(const size_t& cascadeIndex);
+    const ImageView* getCascadeShadowVarianceImageView(size_t cascadeIndex);
 
-    const ImageView* getCascadeVsmBlurIntermediateImageView(const size_t& cascadeIndex);
+    const ImageView* getCascadeVsmBlurIntermediateImageView(size_t cascadeIndex);
 
-    const DescriptorSet* getCascadeVsmBlurXDescriptorSet(const size_t& cascadeIndex);
+    const DescriptorSet* getCascadeVsmBlurXDescriptorSet(size_t cascadeIndex);
 
-    const DescriptorSet* getCascadeVsmBlurYDescriptorSet(const size_t& cascadeIndex);
+    const DescriptorSet* getCascadeVsmBlurYDescriptorSet(size_t cascadeIndex);
 
     void updateCascade(Cascade& cascade);
 

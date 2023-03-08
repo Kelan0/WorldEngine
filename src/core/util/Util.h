@@ -54,7 +54,7 @@ namespace Util {
     }
 
     template<typename T>
-    size_t removeVectorOverflowStart(std::vector<T>& vec, const size_t& maxSize) {
+    size_t removeVectorOverflowStart(std::vector<T>& vec, size_t maxSize) {
         if (vec.size() > maxSize) {
             int64_t removeCount = vec.size() - maxSize;
             vec.erase(vec.begin(), vec.begin() + removeCount);
@@ -110,7 +110,7 @@ namespace Util {
     }
 
     template<typename T>
-    T createHaltonSequence(const uint32_t& index, const uint32_t& base) {
+    T createHaltonSequence(uint32_t index, uint32_t base) {
         static_assert(std::is_floating_point_v<T>);
         T f = T(1);
         T r = T(0);

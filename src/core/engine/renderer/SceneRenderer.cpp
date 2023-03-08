@@ -91,7 +91,7 @@ bool SceneRenderer::init() {
     return true;
 }
 
-void SceneRenderer::preRender(const double& dt) {
+void SceneRenderer::preRender(double dt) {
     PROFILE_SCOPE("SceneRenderer::preRender")
 
     const auto& renderEntities = m_scene->registry()->group<RenderComponent, RenderInfo, Transform>();
@@ -106,7 +106,7 @@ void SceneRenderer::preRender(const double& dt) {
     m_numAddedRenderEntities = 0;
 }
 
-void SceneRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera) {
+void SceneRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera) {
     PROFILE_SCOPE("SceneRenderer::render")
     PROFILE_BEGIN_GPU_CMD("SceneRenderer::render", commandBuffer);
 
@@ -262,7 +262,7 @@ void SceneRenderer::onRenderComponentRemoved(ComponentRemovedEvent<RenderCompone
     event->entity.removeComponent<WorldRenderBounds>();
 }
 
-void SceneRenderer::recordRenderCommands(const double& dt, const vk::CommandBuffer& commandBuffer) {
+void SceneRenderer::recordRenderCommands(double dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("SceneRenderer::recordRenderCommands");
 
     if (m_objectIndicesBuffer.empty()) {
@@ -455,7 +455,7 @@ void SceneRenderer::streamEntityRenderData() {
     }
 }
 
-void* SceneRenderer::mapObjectIndicesBuffer(const size_t& maxObjects) {
+void* SceneRenderer::mapObjectIndicesBuffer(size_t maxObjects) {
     PROFILE_SCOPE("SceneRenderer::mapObjectIndicesBuffer")
 
     vk::DeviceSize newBufferSize = sizeof(uint32_t) * maxObjects;
@@ -481,7 +481,7 @@ void* SceneRenderer::mapObjectIndicesBuffer(const size_t& maxObjects) {
     return mappedBuffer;
 }
 
-void* SceneRenderer::mapObjectDataBuffer(const size_t& maxObjects) {
+void* SceneRenderer::mapObjectDataBuffer(size_t maxObjects) {
     PROFILE_SCOPE("SceneRenderer::mapObjectDataBuffer")
 
     vk::DeviceSize newBufferSize = sizeof(GPUObjectData) * maxObjects;
@@ -507,7 +507,7 @@ void* SceneRenderer::mapObjectDataBuffer(const size_t& maxObjects) {
     return mappedBuffer;
 }
 
-void* SceneRenderer::mapMaterialDataBuffer(const size_t& maxObjects) {
+void* SceneRenderer::mapMaterialDataBuffer(size_t maxObjects) {
     PROFILE_SCOPE("SceneRenderer::mapMaterialDataBuffer")
 
     vk::DeviceSize newBufferSize = sizeof(GPUMaterial) * maxObjects;

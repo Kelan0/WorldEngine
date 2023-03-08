@@ -6,7 +6,7 @@
 #include "core/application/Engine.h"
 
 
-void Image2DConfiguration::setSize(const uint32_t& p_width, const uint32_t& p_height) {
+void Image2DConfiguration::setSize(uint32_t p_width, uint32_t p_height) {
     width = p_width;
     height = p_height;
 }
@@ -29,7 +29,7 @@ void Image2DConfiguration::setSource(const std::string& p_filePath) {
     filePath = p_filePath;
 }
 
-Image2D::Image2D(const WeakResource<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, const uint32_t& width, const uint32_t& height, const uint32_t& mipLevelCount, const vk::Format& format, const std::string& name):
+Image2D::Image2D(const WeakResource<vkr::Device>& device, const vk::Image& image, DeviceMemoryBlock* memory, uint32_t width, uint32_t height, uint32_t mipLevelCount, vk::Format format, const std::string& name):
         GraphicsResource(ResourceType_Image2D, device, name),
         m_image(image),
         m_memory(memory),
@@ -160,7 +160,7 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration, const
     return returnImage;
 }
 
-bool Image2D::upload(Image2D* dstImage, void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
+bool Image2D::upload(Image2D* dstImage, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
 
     assert(dstImage != nullptr);
     assert(data != nullptr);
@@ -223,15 +223,15 @@ bool Image2D::upload(Image2D* dstImage, void* data, const ImagePixelLayout& pixe
     return success;
 }
 
-bool Image2D::upload(void* data, const ImagePixelLayout& pixelLayout, const ImagePixelFormat& pixelFormat, const vk::ImageAspectFlags& aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
+bool Image2D::upload(void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
     return Image2D::upload(this, data, pixelLayout, pixelFormat, aspectMask, imageRegion, dstState);
 }
 
-bool Image2D::generateMipmap(Image2D* image, const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState) {
+bool Image2D::generateMipmap(Image2D* image, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& dstState) {
     return ImageUtil::generateMipmap(image->getImage(), image->getFormat(), filter, aspectMask, 0, 1, image->getWidth(), image->getHeight(), 1, mipLevels, dstState);
 }
 
-bool Image2D::generateMipmap(const vk::Filter& filter, const vk::ImageAspectFlags& aspectMask, const uint32_t& mipLevels, const ImageTransitionState& dstState) {
+bool Image2D::generateMipmap(vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& dstState) {
     return Image2D::generateMipmap(this, filter, aspectMask, mipLevels, dstState);
 }
 
@@ -239,11 +239,11 @@ const vk::Image& Image2D::getImage() const {
     return m_image;
 }
 
-const uint32_t& Image2D::getWidth() const {
+uint32_t Image2D::getWidth() const {
     return m_width;
 }
 
-const uint32_t& Image2D::getHeight() const {
+uint32_t Image2D::getHeight() const {
     return m_height;
 }
 
@@ -251,11 +251,11 @@ glm::uvec2 Image2D::getResolution() const {
     return glm::uvec2(m_width, m_height);
 }
 
-const uint32_t Image2D::getMipLevelCount() const {
+uint32_t Image2D::getMipLevelCount() const {
     return m_mipLevelCount;
 }
 
-const vk::Format& Image2D::getFormat() const {
+vk::Format Image2D::getFormat() const {
     return m_format;
 }
 

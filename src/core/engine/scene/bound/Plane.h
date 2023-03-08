@@ -14,7 +14,7 @@ public:
 public:
     Plane();
 
-    Plane(const double& a, const double& b, const double& c, const double& d);
+    Plane(double a, double b, double c, double d);
 
     Plane(const glm::dvec3& point, const glm::dvec3& normal);
 
@@ -38,7 +38,7 @@ public:
 
     const glm::dvec3& getNormal() const;
 
-    const double& getOffset() const;
+    double getOffset() const;
 
     double calculateSignedDistance(const glm::dvec3& point) const;
 

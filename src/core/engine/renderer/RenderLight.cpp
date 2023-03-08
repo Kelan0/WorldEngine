@@ -1,11 +1,11 @@
 
 #include "core/engine/renderer/RenderLight.h"
 
-Light::Light(const LightType& type):
+Light::Light(LightType type):
     m_type(type) {
 }
 
-const LightType& Light::getType() const {
+LightType Light::getType() const {
     return m_type;
 }
 
@@ -29,11 +29,11 @@ void DirectionalLight::setIntensity(const glm::vec3& intensity) {
     m_intensity = intensity;
 }
 
-const float& DirectionalLight::getAngularSize() const {
+float DirectionalLight::getAngularSize() const {
     return m_angularSize;
 }
 
-void DirectionalLight::setAngularSize(const float& angularSize) {
+void DirectionalLight::setAngularSize(float angularSize) {
     m_angularSize = angularSize;
 }
 

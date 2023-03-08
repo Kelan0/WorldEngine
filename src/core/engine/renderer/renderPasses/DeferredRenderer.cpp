@@ -154,7 +154,7 @@ bool DeferredRenderer::init() {
     return true;
 }
 
-void DeferredRenderer::preRender(const double& dt) {
+void DeferredRenderer::preRender(double dt) {
 //    if (CONCURRENT_FRAMES > 1) {
 //        m_prevFrameImage = &m_resources[Engine::graphics()->getPreviousFrameIndex()]->frameImage;
 //    } else {
@@ -163,7 +163,7 @@ void DeferredRenderer::preRender(const double& dt) {
     swapFrame();
 }
 
-void DeferredRenderer::renderGeometryPass(const double& dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera) {
+void DeferredRenderer::renderGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera) {
     PROFILE_SCOPE("DeferredRenderer::renderGeometryPass");
     PROFILE_BEGIN_GPU_CMD("DeferredRenderer::renderGeometryPass", commandBuffer);
 
@@ -209,7 +209,7 @@ void DeferredRenderer::renderGeometryPass(const double& dt, const vk::CommandBuf
     PROFILE_END_GPU_CMD(commandBuffer);
 }
 
-void DeferredRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer) {
+void DeferredRenderer::render(double dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("DeferredRenderer::render")
     const Entity& cameraEntity = Engine::scene()->getMainCameraEntity();
     m_renderCamera.setProjection(cameraEntity.getComponent<Camera>());
@@ -347,7 +347,7 @@ ImageView* DeferredRenderer::getPreviousOutputFrameImageView() const {
     return hasPreviousFrame() ? m_previousFrame.imageViews[Attachment_LightingRGB] : getOutputFrameImageView();
 }
 
-vk::Format DeferredRenderer::getAttachmentFormat(const uint32_t& attachment) const {
+vk::Format DeferredRenderer::getAttachmentFormat(uint32_t attachment) const {
     switch (attachment) {
         case Attachment_AlbedoRGB_Roughness: return vk::Format::eR8G8B8A8Unorm;
         case Attachment_NormalXYZ_Metallic: return vk::Format::eR16G16B16A16Sfloat;

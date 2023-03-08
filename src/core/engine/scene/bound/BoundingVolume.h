@@ -14,7 +14,7 @@ public:
     };
 
 public:
-    explicit BoundingVolume(const Type& type);
+    explicit BoundingVolume(Type type);
 
     virtual ~BoundingVolume() = 0;
 
@@ -68,7 +68,7 @@ public:
      */
     virtual glm::dvec3 calculateClosestPoint(const glm::dvec3& point) const = 0;
 
-    const Type& getType() const;
+    Type getType() const;
 
     template<typename T>
     static const T& cast(const BoundingVolume& bv);
@@ -82,8 +82,8 @@ private:
 
 class BoundingSphere : public BoundingVolume {
 public:
-    BoundingSphere(const glm::dvec3& center, const double& radius);
-    BoundingSphere(const double& centerX, const double& centerY, const double& centerZ, const double& radius);
+    BoundingSphere(const glm::dvec3& center, double radius);
+    BoundingSphere(double centerX, double centerY, double centerZ, double radius);
 
     ~BoundingSphere() override;
 
@@ -91,11 +91,11 @@ public:
 
     void setCenter(const glm::dvec3& center);
 
-    void setCenter(const double& centerX, const double& centerY, const double& centerZ);
+    void setCenter(double centerX, double centerY, double centerZ);
 
-    const double& getRadius() const;
+    double getRadius() const;
 
-    void setRadius(const double& radius);
+    void setRadius(double radius);
 
     bool intersects(const BoundingVolume& other) const override;
 
@@ -126,13 +126,13 @@ public:
 
     void setCenter(const glm::dvec3& center);
 
-    void setCenter(const double& centerX, const double& centerY, const double& centerZ);
+    void setCenter(double centerX, double centerY, double centerZ);
 
     const glm::dvec3& getHalfExtents() const;
 
     void setHalfExtents(const glm::dvec3& halfExtents);
 
-    void setHalfExtents(const double& halfExtentX, const double& halfExtentY, const double& halfExtentZ);
+    void setHalfExtents(double halfExtentX, double halfExtentY, double halfExtentZ);
 
     glm::dvec3 getBoundMin() const;
 

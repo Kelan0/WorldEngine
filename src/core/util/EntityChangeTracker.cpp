@@ -13,7 +13,7 @@ bool EntityChangeTracker::hasChanged(const entity_index& entityIndex) {
     return m_changedFlags.get(entityIndex);
 }
 
-void EntityChangeTracker::setChanged(const entity_index& entityIndex, const bool& changed) {
+void EntityChangeTracker::setChanged(const entity_index& entityIndex, bool changed) {
     if (entityIndex == INVALID_INDEX)
         return;
 
@@ -21,7 +21,7 @@ void EntityChangeTracker::setChanged(const entity_index& entityIndex, const bool
     m_changedFlags.set(entityIndex, changed);
 }
 
-void EntityChangeTracker::setChanged(const EntityChangeTracker::entity_index& entityIndex, const size_t& count, const bool& changed) {
+void EntityChangeTracker::setChanged(const EntityChangeTracker::entity_index& entityIndex, size_t count, bool changed) {
     PROFILE_SCOPE("EntityChangeTracker::setChanged");
     if (entityIndex == INVALID_INDEX)
         return;

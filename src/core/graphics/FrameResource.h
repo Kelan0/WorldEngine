@@ -37,13 +37,13 @@ public:
 
     const Type& operator->() const;
 
-    const Type& operator[](const size_t& index) const;
+    const Type& operator[](size_t index) const;
 
-    const Type& get(const size_t& index) const;
+    const Type& get(size_t index) const;
 
     const Type& get() const;
 
-    void set(const size_t& index, const Type& resource);
+    void set(size_t index, const Type& resource);
 
     void set(const Type& resource);
 
@@ -120,12 +120,12 @@ inline const FrameResource<T, is_ptr>::Type& FrameResource<T, is_ptr>::operator-
 }
 
 template<typename T, bool is_ptr>
-inline const FrameResource<T, is_ptr>::Type& FrameResource<T, is_ptr>::operator[](const size_t& index) const {
+inline const FrameResource<T, is_ptr>::Type& FrameResource<T, is_ptr>::operator[](size_t index) const {
     return ArrayType::at(index);
 }
 
 template<typename T, bool is_ptr>
-inline const FrameResource<T, is_ptr>::Type& FrameResource<T, is_ptr>::get(const size_t& index) const {
+inline const FrameResource<T, is_ptr>::Type& FrameResource<T, is_ptr>::get(size_t index) const {
     return ArrayType::at(index);
 }
 
@@ -135,7 +135,7 @@ inline const FrameResource<T, is_ptr>::Type& FrameResource<T, is_ptr>::get() con
 }
 
 template<typename T, bool is_ptr>
-inline void FrameResource<T, is_ptr>::set(const size_t& index, const Type& resource) {
+inline void FrameResource<T, is_ptr>::set(size_t index, const Type& resource) {
     if (get(index) == resource)
         return;
     if constexpr (is_ptr)

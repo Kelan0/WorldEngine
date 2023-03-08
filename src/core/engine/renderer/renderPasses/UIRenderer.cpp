@@ -94,7 +94,7 @@ void UIRenderer::processEvent(const SDL_Event* event) {
     ImGui_ImplSDL2_ProcessEvent(event);
 }
 
-void UIRenderer::preRender(const double& dt) {
+void UIRenderer::preRender(double dt) {
     PROFILE_SCOPE("UIRenderer::preRender")
 
     if (!m_createdFontsTexture) {
@@ -119,7 +119,7 @@ void UIRenderer::preRender(const double& dt) {
     }
 }
 
-void UIRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer) {
+void UIRenderer::render(double dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("UIRenderer::render")
     PROFILE_BEGIN_GPU_CMD("UIRenderer::render", commandBuffer);
 
@@ -127,7 +127,7 @@ void UIRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer
 //    ImPlot::ShowDemoWindow();
 
     for (auto it = m_uis.begin(); it != m_uis.end(); ++it) {
-        const bool& visible = it->second.second;
+        bool visible = it->second.second;
         UI* ui = it->second.first;
         ui->update(dt);
         if (visible)

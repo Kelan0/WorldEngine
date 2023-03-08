@@ -29,9 +29,9 @@ public:
 
     ~DeviceMemoryManager();
 
-    static bool selectMemoryType(const uint32_t& memoryTypeBits, const vk::MemoryPropertyFlags& memoryPropertyFlags, uint32_t& outMemoryType);
+    static bool selectMemoryType(uint32_t memoryTypeBits, const vk::MemoryPropertyFlags& memoryPropertyFlags, uint32_t& outMemoryType);
 
-    static vk::DeviceSize getAlignedOffset(const vk::DeviceSize& offset, const vk::DeviceSize& alignment);
+    static vk::DeviceSize getAlignedOffset(vk::DeviceSize offset, vk::DeviceSize alignment);
 
     DeviceMemoryBlock* allocate(const vk::MemoryRequirements& requirements, const vk::MemoryPropertyFlags& memoryProperties, const std::string& name);
 
@@ -61,7 +61,7 @@ public:
     };
 
 private:
-    DeviceMemoryHeap(const WeakResource<vkr::Device>& device, const vk::DeviceMemory& deviceMemory, const vk::DeviceSize& size, const std::string& name);
+    DeviceMemoryHeap(const WeakResource<vkr::Device>& device, const vk::DeviceMemory& deviceMemory, vk::DeviceSize size, const std::string& name);
 
 public:
     ~DeviceMemoryHeap() override;
@@ -72,22 +72,22 @@ public:
 
     vk::DeviceSize getSize() const;
 
-    void bindBufferMemory(const vk::Buffer& buffer, const vk::DeviceSize& offset) const;
+    void bindBufferMemory(const vk::Buffer& buffer, vk::DeviceSize offset) const;
 
-    void bindBufferMemory(const Buffer* buffer, const vk::DeviceSize& offset) const;
+    void bindBufferMemory(const Buffer* buffer, vk::DeviceSize offset) const;
 
-    void bindImageMemory(const vk::Image& image, const vk::DeviceSize& offset) const;
+    void bindImageMemory(const vk::Image& image, vk::DeviceSize offset) const;
 
-    void bindImageMemory(const Image2D* image, const vk::DeviceSize& offset) const;
+    void bindImageMemory(const Image2D* image, vk::DeviceSize offset) const;
 
-    DeviceMemoryBlock* allocateBlock(const vk::DeviceSize& size, const vk::DeviceSize& alignment, const std::string& name);
+    DeviceMemoryBlock* allocateBlock(vk::DeviceSize size, vk::DeviceSize alignment, const std::string& name);
 
     bool freeBlock(DeviceMemoryBlock* block);
 
-    vk::DeviceSize getMaxAllocatableSize(const vk::DeviceSize& alignment = 0) const;
+    vk::DeviceSize getMaxAllocatableSize(vk::DeviceSize alignment = 0) const;
 
 private:
-    size_t findBlockIndex(const vk::DeviceSize& size, const vk::DeviceSize& alignment);
+    size_t findBlockIndex(vk::DeviceSize size, vk::DeviceSize alignment);
 
     size_t freeBlocksBeginIndex();
 
@@ -97,19 +97,19 @@ private:
 
     size_t allocatedBlocksEndIndex();
 
-    bool moveBlock(const size_t& srcBlockIndex, const size_t& dstBlockIndex);
+    bool moveBlock(size_t srcBlockIndex, size_t dstBlockIndex);
 
-    size_t resizeBlock(const size_t& blockIndex, const vk::DeviceSize& newSize);
+    size_t resizeBlock(size_t blockIndex, vk::DeviceSize newSize);
 
-    size_t updateBlock(const size_t& blockIndex, const BlockRange& newBlock);
+    size_t updateBlock(size_t blockIndex, const BlockRange& newBlock);
 
     void insertBlock(const BlockRange& block);
 
     size_t getBlockSequenceIndex(const BlockRange& block);
 
-    void insertBlockSequence(const size_t& index);
+    void insertBlockSequence(size_t index);
 
-    void eraseBlockSequence(const size_t& index);
+    void eraseBlockSequence(size_t index);
 
     bool isContiguous(const BlockRange& firstBlock, const BlockRange& secondBlock);
 
@@ -145,7 +145,7 @@ class DeviceMemoryBlock {
     friend class DeviceMemoryHeap;
 
 private:
-    DeviceMemoryBlock(DeviceMemoryHeap* heap, const vk::DeviceSize& offset, const vk::DeviceSize& size, const vk::DeviceSize& alignment);
+    DeviceMemoryBlock(DeviceMemoryHeap* heap, vk::DeviceSize offset, vk::DeviceSize size, vk::DeviceSize alignment);
 
     ~DeviceMemoryBlock();
 
@@ -153,9 +153,9 @@ public:
 
     DeviceMemoryHeap* getHeap() const;
 
-    const vk::DeviceSize& getOffset() const;
+    vk::DeviceSize getOffset() const;
 
-    const vk::DeviceSize& getSize() const;
+    vk::DeviceSize getSize() const;
 
     void bindBuffer(const vk::Buffer& buffer) const;
 

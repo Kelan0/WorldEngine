@@ -24,23 +24,23 @@ public:
 
     void clear();
 
-    void reserve(const size_t& capacity);
+    void reserve(size_t capacity);
 
-    void resize(const size_t& size, const bool& flag = false);
+    void resize(size_t size, bool flag = false);
 
-    void ensureSize(const size_t& size, const bool& flag = false);
+    void ensureSize(size_t size, bool flag = false);
 
-    void expand(const size_t& index, const bool& flag = false);
+    void expand(size_t index, bool flag = false);
 
-    bool get(const size_t& index) const;
+    bool get(size_t index) const;
 
-    void set(const size_t& index, const bool& flag);
+    void set(size_t index, bool flag);
 
-    void set(const size_t& index, const size_t& count, const bool& flag);
+    void set(size_t index, size_t count, bool flag);
 
-    void push_back(const bool& flag);
+    void push_back(bool flag);
 
-    bool operator[](const size_t& index) const;
+    bool operator[](size_t index) const;
 private:
     std::vector<pack_t> m_data;
     size_t m_size;

@@ -36,9 +36,9 @@ public:
 
     bool init();
 
-    void preRender(const double& dt);
+    void preRender(double dt);
 
-    void render(const double& dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera);
+    void render(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera);
 
     const SharedResource<RenderPass>& getRenderPass() const;
 
@@ -60,7 +60,7 @@ private:
 
     void markShadowMapInactive(ShadowMap* shadowMap);
 
-    ShadowMap* getShadowMap(const uint32_t& width, const uint32_t& height, const ShadowMap::ShadowType& shadowType, const ShadowMap::RenderType& renderType);
+    ShadowMap* getShadowMap(uint32_t width, uint32_t height, ShadowMap::ShadowType shadowType, ShadowMap::RenderType renderType);
 
     size_t getNumInactiveShadowMaps() const;
 
@@ -72,13 +72,13 @@ private:
 
     void prepareVsmBlurDescriptorSets();
 
-    void prepareVsmBlurIntermediateImage(const vk::CommandBuffer& commandBuffer, const uint32_t& maxWidth, const uint32_t& maxHeight);
+    void prepareVsmBlurIntermediateImage(const vk::CommandBuffer& commandBuffer, uint32_t maxWidth, uint32_t maxHeight);
 
-    void vsmBlurShadowImage(const vk::CommandBuffer& commandBuffer, const glm::uvec2& resolution, const vk::Image& varianceShadowImage, const vk::Image& intermediateImage, const vk::DescriptorSet& descriptorSetBlurX, const vk::DescriptorSet& descriptorSetBlurY);
+    void vsmBlurShadowImage(const vk::CommandBuffer& commandBuffer, glm::uvec2 resolution, const vk::Image& varianceShadowImage, const vk::Image& intermediateImage, const vk::DescriptorSet& descriptorSetBlurX, const vk::DescriptorSet& descriptorSetBlurY);
 
     void vsmBlurActiveShadowMaps(const vk::CommandBuffer& commandBuffer);
 
-    void calculateDirectionalShadowCascadeRenderCamera(const RenderCamera* viewerRenderCamera, const Transform& lightTransform, const double& cascadeStartDist, const double& cascadeEndDist, const double& shadowNearPlane, const double shadowFarPlane, RenderCamera* outShadowRenderCamera);
+    void calculateDirectionalShadowCascadeRenderCamera(const RenderCamera* viewerRenderCamera, const Transform& lightTransform, double cascadeStartDist, double cascadeEndDist, double shadowNearPlane, double shadowFarPlane, RenderCamera* outShadowRenderCamera);
 
 private:
     struct VSMBlurResources {

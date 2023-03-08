@@ -145,7 +145,7 @@ bool PostProcessRenderer::init() {
     return true;
 }
 
-void PostProcessRenderer::updateExposure(const double& dt, const vk::CommandBuffer& commandBuffer) {
+void PostProcessRenderer::updateExposure(double dt, const vk::CommandBuffer& commandBuffer) {
     Buffer* prevExposureBuffer = m_exposureHistogram->getHistogramBuffer();
     m_exposureHistogram->update(dt, commandBuffer);
 
@@ -161,7 +161,7 @@ void PostProcessRenderer::updateExposure(const double& dt, const vk::CommandBuff
     }
 }
 
-void PostProcessRenderer::renderBloomBlur(const double& dt, const vk::CommandBuffer& commandBuffer) {
+void PostProcessRenderer::renderBloomBlur(double dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("PostProcessRenderer::renderBloomBlur")
 
     if (!m_postProcessUniformData.bloomEnabled) {
@@ -263,7 +263,7 @@ void PostProcessRenderer::renderBloomBlur(const double& dt, const vk::CommandBuf
     PROFILE_END_GPU_CMD(commandBuffer)
 }
 
-void PostProcessRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer) {
+void PostProcessRenderer::render(double dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("PostProcessRenderer::render")
     PROFILE_BEGIN_GPU_CMD("PostProcessRenderer::render", commandBuffer)
 
@@ -335,7 +335,7 @@ bool PostProcessRenderer::isBloomEnabled() const {
     return m_postProcessUniformData.bloomEnabled;
 }
 
-void PostProcessRenderer::setBloomEnabled(const bool& bloomEnabled) {
+void PostProcessRenderer::setBloomEnabled(bool bloomEnabled) {
     if (m_postProcessUniformData.bloomEnabled != bloomEnabled) {
         m_postProcessUniformData.bloomEnabled = bloomEnabled;
         setPostProcessUniformDataChanged(true);
@@ -346,7 +346,7 @@ float PostProcessRenderer::getBloomIntensity() const {
     return m_postProcessUniformData.bloomIntensity;
 }
 
-void PostProcessRenderer::setBloomIntensity(const float& bloomIntensity) {
+void PostProcessRenderer::setBloomIntensity(float bloomIntensity) {
     if (glm::notEqual(m_postProcessUniformData.bloomIntensity, bloomIntensity, 1e-5F)) {
         m_postProcessUniformData.bloomIntensity = bloomIntensity;
         setPostProcessUniformDataChanged(true);
@@ -357,7 +357,7 @@ float PostProcessRenderer::getBloomBlurFilterRadius() const {
     return m_bloomBlurUniformData.filterRadius;
 }
 
-void PostProcessRenderer::setBloomBlurFilterRadius(const float& bloomBlurFilterRadius) {
+void PostProcessRenderer::setBloomBlurFilterRadius(float bloomBlurFilterRadius) {
     if (glm::notEqual(m_bloomBlurUniformData.filterRadius, bloomBlurFilterRadius, 1e-5F)) {
         m_bloomBlurUniformData.filterRadius = bloomBlurFilterRadius;
         setBloomBlurUniformDataChanged(true);
@@ -368,7 +368,7 @@ float PostProcessRenderer::getBloomThreshold() const {
     return m_bloomBlurUniformData.threshold;
 }
 
-void PostProcessRenderer::setBloomThreshold(const float& bloomThreshold) {
+void PostProcessRenderer::setBloomThreshold(float bloomThreshold) {
     if (glm::notEqual(m_bloomBlurUniformData.threshold, bloomThreshold, 1e-5F)) {
         m_bloomBlurUniformData.threshold = bloomThreshold;
         setBloomBlurUniformDataChanged(true);
@@ -379,7 +379,7 @@ float PostProcessRenderer::getBloomSoftThreshold() const {
     return m_bloomBlurUniformData.softThreshold;
 }
 
-void PostProcessRenderer::setBloomSoftThreshold(const float& bloomSoftThreshold) {
+void PostProcessRenderer::setBloomSoftThreshold(float bloomSoftThreshold) {
     if (glm::notEqual(m_bloomBlurUniformData.softThreshold, bloomSoftThreshold, 1e-5F)) {
         m_bloomBlurUniformData.softThreshold = bloomSoftThreshold;
         setBloomBlurUniformDataChanged(true);
@@ -390,7 +390,7 @@ float PostProcessRenderer::getBloomMaxBrightness() const {
     return m_bloomBlurUniformData.maxBrightness;
 }
 
-void PostProcessRenderer::setBloomMaxBrightness(const float& bloomMaxBrightness) {
+void PostProcessRenderer::setBloomMaxBrightness(float bloomMaxBrightness) {
     if (glm::notEqual(m_bloomBlurUniformData.maxBrightness, bloomMaxBrightness, 1e-5F)) {
         m_bloomBlurUniformData.maxBrightness = bloomMaxBrightness;
         setBloomBlurUniformDataChanged(true);
@@ -405,11 +405,11 @@ uint32_t PostProcessRenderer::getBloomBlurIterations() const {
     return m_bloomBlurIterations;
 }
 
-void PostProcessRenderer::setBloomBlurIterations(const uint32_t& bloomBlurIterations) {
+void PostProcessRenderer::setBloomBlurIterations(uint32_t bloomBlurIterations) {
     m_bloomBlurIterations = glm::min(bloomBlurIterations, m_bloomBlurMaxIterations);
 }
 
-void PostProcessRenderer::setTest(const float& test) {
+void PostProcessRenderer::setTest(float test) {
     m_test = test;
 }
 
@@ -417,12 +417,12 @@ ExposureHistogram* PostProcessRenderer::exposureHistogram() {
     return m_exposureHistogram;
 }
 
-void PostProcessRenderer::setPostProcessUniformDataChanged(const bool& didChange) {
+void PostProcessRenderer::setPostProcessUniformDataChanged(bool didChange) {
     for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i)
         m_resources[i]->postProcessUniformDataChanged = true;
 }
 
-void PostProcessRenderer::setBloomBlurUniformDataChanged(const bool& didChange) {
+void PostProcessRenderer::setBloomBlurUniformDataChanged(bool didChange) {
     for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i)
         m_resources[i]->bloomBlurUniformDataChanged = true;
 }

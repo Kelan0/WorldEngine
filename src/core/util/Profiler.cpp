@@ -285,7 +285,7 @@ void Profiler::endGraphicsFrame() {
 //    uniqueIds.clear();
 
     // Loop over all pending frames and try to retrieve the results.
-    const double& timestampPeriodMsec = (double)Engine::graphics()->getPhysicalDeviceLimits().timestampPeriod / 1000000.0;
+    double timestampPeriodMsec = (double)Engine::graphics()->getPhysicalDeviceLimits().timestampPeriod / 1000000.0;
     for (size_t i = 0; i < ctx.allFrameStartIndexOffsets.size(); ++i) {
         size_t& frameStartIndexOffset = ctx.allFrameStartIndexOffsets[i];
         size_t frameEndIndexOffset = (i < ctx.allFrameStartIndexOffsets.size() - 1)
@@ -424,7 +424,7 @@ void Profiler::beginGPU(const profile_id& id, const vk::CommandBuffer& commandBu
     if (!ctx.frameStarted)
         return;
 
-    const size_t& startIndex = ctx.allFrameStartIndexOffsets.back();
+    size_t startIndex = ctx.allFrameStartIndexOffsets.back();
 
     size_t parentIndex = ctx.currentIndex;
     ctx.currentIndex = ctx.allFrameProfiles.size() - startIndex;
@@ -455,7 +455,7 @@ void Profiler::endGPU(const vk::CommandBuffer& commandBuffer) {
     if (!ctx.frameStarted)
         return;
 
-    const size_t& startIndex = ctx.allFrameStartIndexOffsets.back();
+    size_t startIndex = ctx.allFrameStartIndexOffsets.back();
 
     assert(ctx.currentIndex < ctx.allFrameProfiles.size() - startIndex);
     GPUProfile* profile = &ctx.allFrameProfiles[ctx.currentIndex + startIndex];
@@ -598,7 +598,7 @@ bool Profiler::getNextQueryPool(GPUQueryPool** queryPool) {
     return true;
 }
 
-bool Profiler::createGpuTimestampQueryPool(const vk::Device& device, const uint32_t& capacity, vk::QueryPool* queryPool) {
+bool Profiler::createGpuTimestampQueryPool(const vk::Device& device, uint32_t capacity, vk::QueryPool* queryPool) {
     vk::QueryPoolCreateInfo createInfo{};
     createInfo.flags = {};
     createInfo.queryType = vk::QueryType::eTimestamp;
@@ -618,7 +618,7 @@ void Profiler::destroyQueryPool(GPUQueryPool* queryPool) {
     delete queryPool;
 }
 
-void Profiler::resetQueryPools(GPUQueryPool** queryPools, const size_t& count) {
+void Profiler::resetQueryPools(GPUQueryPool** queryPools, size_t count) {
     GPUContext& ctx = gpuContext();
     vk::CommandBuffer commandBuffer = VK_NULL_HANDLE;
 

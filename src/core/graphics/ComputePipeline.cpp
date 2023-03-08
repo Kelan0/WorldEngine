@@ -40,7 +40,7 @@ void ComputePipelineConfiguration::addPushConstantRange(const vk::PushConstantRa
     pushConstantRanges.emplace_back(pushConstantRange);
 }
 
-void ComputePipelineConfiguration::addPushConstantRange(const vk::ShaderStageFlags& stageFlags, const uint32_t& offset, const uint32_t& size) {
+void ComputePipelineConfiguration::addPushConstantRange(vk::ShaderStageFlags stageFlags, uint32_t offset, uint32_t size) {
     addPushConstantRange(vk::PushConstantRange(stageFlags, offset, size));
 }
 
@@ -152,13 +152,13 @@ void ComputePipeline::bind(const vk::CommandBuffer& commandBuffer) const {
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline);
 }
 
-void ComputePipeline::dispatch(const vk::CommandBuffer& commandBuffer, const uint32_t& workgroupCountX, const uint32_t& workgroupCountY, const uint32_t& workgroupCountZ) const {
+void ComputePipeline::dispatch(const vk::CommandBuffer& commandBuffer, uint32_t workgroupCountX, uint32_t workgroupCountY, uint32_t workgroupCountZ) const {
     PROFILE_BEGIN_GPU_CMD("ComputePipeline::dispatch", commandBuffer);
     commandBuffer.dispatch(workgroupCountX, workgroupCountY, workgroupCountZ);
     PROFILE_END_GPU_CMD(commandBuffer);
 }
 
-void ComputePipeline::dispatchBase(const vk::CommandBuffer& commandBuffer, const uint32_t& workgroupOffsetX, const uint32_t& workgroupOffsetY, const uint32_t& workgroupOffsetZ, const uint32_t& workgroupCountX, const uint32_t& workgroupCountY, const uint32_t& workgroupCountZ) const {
+void ComputePipeline::dispatchBase(const vk::CommandBuffer& commandBuffer, uint32_t workgroupOffsetX, uint32_t workgroupOffsetY, uint32_t workgroupOffsetZ, uint32_t workgroupCountX, uint32_t workgroupCountY, uint32_t workgroupCountZ) const {
     PROFILE_BEGIN_GPU_CMD("ComputePipeline::dispatchBase", commandBuffer);
     commandBuffer.dispatchBase(workgroupOffsetX, workgroupOffsetY, workgroupOffsetZ, workgroupCountX, workgroupCountY, workgroupCountZ);
     PROFILE_END_GPU_CMD(commandBuffer);

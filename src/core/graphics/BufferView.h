@@ -18,16 +18,16 @@ struct BufferViewConfiguration {
 
     void setBuffer(const Buffer* buffer);
 
-    void setFormat(const vk::Format& format);
+    void setFormat(vk::Format format);
 
-    void setOffsetRange(const vk::DeviceSize& offset, const vk::DeviceSize& range);
+    void setOffsetRange(vk::DeviceSize offset, vk::DeviceSize range);
 };
 
 class BufferView : public GraphicsResource {
     NO_COPY(BufferView)
 
 private:
-    BufferView(const WeakResource<vkr::Device>& device, const vk::BufferView& bufferView, const vk::Format& format, const vk::DeviceSize& offset, const vk::DeviceSize& range, const std::string& name);
+    BufferView(const WeakResource<vkr::Device>& device, const vk::BufferView& bufferView, vk::Format format, vk::DeviceSize offset, vk::DeviceSize range, const std::string& name);
 
 public:
     ~BufferView() override;
@@ -36,11 +36,11 @@ public:
 
     const vk::BufferView& getBufferView() const;
 
-    const vk::Format& getFormat() const;
+    vk::Format getFormat() const;
 
-    const vk::DeviceSize& getOffset() const;
+    vk::DeviceSize getOffset() const;
 
-    const vk::DeviceSize& getRange() const;
+    vk::DeviceSize getRange() const;
 
 private:
     vk::BufferView m_bufferView;

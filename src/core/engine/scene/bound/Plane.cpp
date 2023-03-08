@@ -6,7 +6,7 @@ Plane::Plane():
     offset(0.0) { // Initialize as degenerate plane (zero-length normal)
 }
 
-Plane::Plane(const double& a, const double& b, const double& c, const double& d):
+Plane::Plane(double a, double b, double c, double d):
     normal(a, b, c), offset(d) {
 }
 
@@ -65,7 +65,7 @@ const glm::dvec3& Plane::getNormal() const {
     return normal;
 }
 
-const double& Plane::getOffset() const {
+double Plane::getOffset() const {
     return offset;
 }
 

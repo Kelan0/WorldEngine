@@ -28,11 +28,11 @@ struct FramebufferConfiguration {
 
     void setAttachments(const vk::ArrayProxy<ImageView*>& imageViews);
 
-    void setAttachment(const uint32_t& index, const vk::ImageView& imageView);
+    void setAttachment(uint32_t index, const vk::ImageView& imageView);
 
-    void setAttachment(const uint32_t& index, const ImageView* imageView);
+    void setAttachment(uint32_t index, const ImageView* imageView);
 
-    void setSize(const uint32_t& width, const uint32_t& height);
+    void setSize(uint32_t width, uint32_t height);
 
     void setSize(const glm::uvec2& size);
 
@@ -52,9 +52,9 @@ public:
 
     const glm::uvec2& getResolution() const;
 
-    const uint32_t& getWidth() const;
+    uint32_t getWidth() const;
 
-    const uint32_t& getHeight() const;
+    uint32_t getHeight() const;
 
 private:
     vk::Framebuffer m_framebuffer;

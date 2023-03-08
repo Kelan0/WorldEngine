@@ -42,7 +42,7 @@ Mesh* Mesh::create(const MeshConfiguration& meshConfiguration, const std::string
     return mesh;
 }
 
-bool Mesh::uploadVertices(const void* vertices, const vk::DeviceSize& vertexSize, const size_t& vertexCount) {
+bool Mesh::uploadVertices(const void* vertices, vk::DeviceSize vertexSize, size_t vertexCount) {
     PROFILE_SCOPE("Mesh::uploadVertices")
     delete m_vertexBuffer;
     m_vertexBuffer = nullptr;
@@ -72,7 +72,7 @@ bool Mesh::uploadVertices(const void* vertices, const vk::DeviceSize& vertexSize
     return true;
 }
 
-bool Mesh::uploadIndices(const void* indices, const vk::DeviceSize& indexSize, const size_t& indexCount) {
+bool Mesh::uploadIndices(const void* indices, vk::DeviceSize indexSize, size_t indexCount) {
     PROFILE_SCOPE("Mesh::uploadIndices")
     delete m_indexBuffer;
     m_indexBuffer = nullptr;
@@ -103,7 +103,7 @@ bool Mesh::uploadIndices(const void* indices, const vk::DeviceSize& indexSize, c
     return true;
 }
 
-void Mesh::draw(const vk::CommandBuffer& commandBuffer, const uint32_t& instanceCount, const uint32_t& firstInstance) {
+void Mesh::draw(const vk::CommandBuffer& commandBuffer, uint32_t instanceCount, uint32_t firstInstance) {
     PROFILE_SCOPE("Mesh::draw")
 
 #if TRACK_DRAW_DEBUG_INFO

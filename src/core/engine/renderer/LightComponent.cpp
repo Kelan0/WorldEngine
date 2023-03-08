@@ -12,7 +12,7 @@ LightComponent::LightComponent():
 
 LightComponent::~LightComponent() = default;
 
-LightComponent& LightComponent::setType(const LightType& type) {
+LightComponent& LightComponent::setType(LightType type) {
     m_type = type;
     return *this;
 }
@@ -22,21 +22,21 @@ LightComponent& LightComponent::setIntensity(const glm::vec3& intensity) {
     return *this;
 }
 
-LightComponent& LightComponent::setIntensity(const float& r, const float& g, const float& b) {
+LightComponent& LightComponent::setIntensity(float r, float g, float b) {
     return setIntensity(glm::vec3(r, g, b));
 }
 
-LightComponent& LightComponent::setAngularSize(const float& angularSize) {
+LightComponent& LightComponent::setAngularSize(float angularSize) {
     m_angularSize = angularSize;
     return *this;
 }
 
-LightComponent& LightComponent::setShadowCaster(const bool& shadowCaster) {
+LightComponent& LightComponent::setShadowCaster(bool shadowCaster) {
     m_flags_shadowCaster = shadowCaster;
     return *this;
 }
 
-LightComponent& LightComponent::setCsmMapBasedSelection(const bool& csmMapBasedSelection) {
+LightComponent& LightComponent::setCsmMapBasedSelection(bool csmMapBasedSelection) {
     m_flags_csmMapBasedSelection = csmMapBasedSelection;
     return *this;
 }
@@ -46,7 +46,7 @@ LightComponent& LightComponent::setShadowResolution(const glm::uvec2& shadowReso
     return *this;
 }
 
-LightComponent& LightComponent::setShadowResolution(const uint32_t& shadowWidth, const uint32_t& shadowHeight) {
+LightComponent& LightComponent::setShadowResolution(uint32_t shadowWidth, uint32_t shadowHeight) {
     return setShadowResolution(glm::uvec2(shadowWidth, shadowHeight));
 }
 
@@ -55,7 +55,7 @@ LightComponent& LightComponent::setShadowCascadeDistances(const std::vector<doub
     return *this;
 }
 
-const LightType& LightComponent::getType() const {
+LightType LightComponent::getType() const {
     return m_type;
 }
 
@@ -63,7 +63,7 @@ const glm::vec3& LightComponent::getIntensity() const {
     return m_intensity;
 }
 
-const float& LightComponent::getAngularSize() const {
+float LightComponent::getAngularSize() const {
     return m_angularSize;
 }
 

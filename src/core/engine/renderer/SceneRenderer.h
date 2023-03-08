@@ -23,9 +23,9 @@ public:
 
     bool init();
 
-    void preRender(const double& dt);
+    void preRender(double dt);
 
-    void render(const double& dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera);
+    void render(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera);
 
     void setScene(Scene* scene);
 
@@ -50,7 +50,7 @@ private:
 
     void onRenderComponentRemoved(ComponentRemovedEvent<RenderComponent>* event);
 
-    void recordRenderCommands(const double& dt, const vk::CommandBuffer& commandBuffer);
+    void recordRenderCommands(double dt, const vk::CommandBuffer& commandBuffer);
 
     void applyFrustumCulling(const RenderCamera* renderCamera);
 
@@ -62,11 +62,11 @@ private:
 
     void streamEntityRenderData();
 
-    void* mapObjectIndicesBuffer(const size_t& maxObjects);
+    void* mapObjectIndicesBuffer(size_t maxObjects);
 
-    void* mapObjectDataBuffer(const size_t& maxObjects);
+    void* mapObjectDataBuffer(size_t maxObjects);
 
-    void* mapMaterialDataBuffer(const size_t& maxObjects);
+    void* mapMaterialDataBuffer(size_t maxObjects);
 private:
     struct GPUObjectData {
         glm::mat4 prevModelMatrix;

@@ -16,7 +16,7 @@ struct ShutdownGraphicsEvent;
 
 class EnvironmentMap {
 public:
-    explicit EnvironmentMap(const uint32_t& irradianceMapSize = 32, const uint32_t& specularMapSize = 256);
+    explicit EnvironmentMap(uint32_t irradianceMapSize = 32, uint32_t specularMapSize = 256);
 
     ~EnvironmentMap();
 
@@ -47,7 +47,7 @@ private:
 
     static void calculateBRDFIntegrationMap(const vk::CommandBuffer& commandBuffer);
 
-    std::shared_ptr<Texture> createTexture(const std::shared_ptr<ImageCube>& image, const uint32_t& baseMipLevel, const uint32_t mipLevelCount) const;
+    std::shared_ptr<Texture> createTexture(const std::shared_ptr<ImageCube>& image, uint32_t baseMipLevel, const uint32_t mipLevelCount) const;
 
     static DescriptorSet* getDiffuseIrradianceComputeDescriptorSet();
 

@@ -68,52 +68,52 @@ public:
 
     bool init();
 
-    void updateExposure(const double& dt, const vk::CommandBuffer& commandBuffer);
+    void updateExposure(double dt, const vk::CommandBuffer& commandBuffer);
 
-    void renderBloomBlur(const double& dt, const vk::CommandBuffer& commandBuffer);
+    void renderBloomBlur(double dt, const vk::CommandBuffer& commandBuffer);
 
-    void render(const double& dt, const vk::CommandBuffer& commandBuffer);
+    void render(double dt, const vk::CommandBuffer& commandBuffer);
 
     void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
 
     bool isBloomEnabled() const;
 
-    void setBloomEnabled(const bool& bloomEnabled);
+    void setBloomEnabled(bool bloomEnabled);
 
     float getBloomIntensity() const;
 
-    void setBloomIntensity(const float& bloomIntensity);
+    void setBloomIntensity(float bloomIntensity);
 
     float getBloomBlurFilterRadius() const;
 
-    void setBloomBlurFilterRadius(const float& bloomBlurFilterRadius);
+    void setBloomBlurFilterRadius(float bloomBlurFilterRadius);
 
     float getBloomThreshold() const;
 
-    void setBloomThreshold(const float& bloomThreshold);
+    void setBloomThreshold(float bloomThreshold);
 
     float getBloomSoftThreshold() const;
 
-    void setBloomSoftThreshold(const float& bloomSoftThreshold);
+    void setBloomSoftThreshold(float bloomSoftThreshold);
 
     float getBloomMaxBrightness() const;
 
-    void setBloomMaxBrightness(const float& bloomMaxBrightness);
+    void setBloomMaxBrightness(float bloomMaxBrightness);
 
     uint32_t getMaxBloomBlurIterations() const;
 
     uint32_t getBloomBlurIterations() const;
 
-    void setBloomBlurIterations(const uint32_t& bloomBlurIterations);
+    void setBloomBlurIterations(uint32_t bloomBlurIterations);
 
-    void setTest(const float& test);
+    void setTest(float test);
 
     ExposureHistogram* exposureHistogram();
 
 private:
-    void setPostProcessUniformDataChanged(const bool& didChange);
+    void setPostProcessUniformDataChanged(bool didChange);
 
-    void setBloomBlurUniformDataChanged(const bool& didChange);
+    void setBloomBlurUniformDataChanged(bool didChange);
 
     void recreateSwapchain(RecreateSwapchainEvent* event);
 

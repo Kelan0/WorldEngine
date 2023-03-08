@@ -20,12 +20,12 @@ public:
 
     virtual void cleanup() override;
 
-    virtual void render(const double& dt) override;
+    virtual void render(double dt) override;
 
-    virtual void tick(const double& dt) override;
+    virtual void tick(double dt) override;
 
 private:
-    void handleUserInput(const double& dt);
+    void handleUserInput(double dt);
 
     std::shared_ptr<Texture> loadTexture(const std::string& filePath, vk::Format format, std::weak_ptr<Sampler> sampler);
 

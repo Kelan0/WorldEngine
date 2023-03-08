@@ -13,6 +13,7 @@
 #define sanity_check_size_sequence() sanityCheckSizeSequence()
 #else
 #define sanity_check_blocks()
+#define sanity_check_size_sequence()
 #endif
 
 struct SizeAlignment {
@@ -67,7 +68,7 @@ DeviceMemoryManager::~DeviceMemoryManager() {
     m_memoryHeaps.clear();
 }
 
-bool DeviceMemoryManager::selectMemoryType(const uint32_t& memoryTypeBits, const vk::MemoryPropertyFlags& memoryPropertyFlags, uint32_t& outMemoryType) {
+bool DeviceMemoryManager::selectMemoryType(uint32_t memoryTypeBits, const vk::MemoryPropertyFlags& memoryPropertyFlags, uint32_t& outMemoryType) {
 
     const vk::PhysicalDeviceMemoryProperties& deviceMemProps = Engine::graphics()->getDeviceMemoryProperties();
 
@@ -81,7 +82,7 @@ bool DeviceMemoryManager::selectMemoryType(const uint32_t& memoryTypeBits, const
     return false;
 }
 
-vk::DeviceSize DeviceMemoryManager::getAlignedOffset(const vk::DeviceSize& offset, const vk::DeviceSize& alignment) {
+vk::DeviceSize DeviceMemoryManager::getAlignedOffset(vk::DeviceSize offset, vk::DeviceSize alignment) {
     if (alignment <= 1)
         return offset;
     return offset + (alignment - (offset % alignment)) % alignment;
@@ -136,7 +137,7 @@ DeviceMemoryHeap* DeviceMemoryManager::getHeap(const vk::MemoryRequirements& req
 }
 
 
-DeviceMemoryHeap::DeviceMemoryHeap(const WeakResource<vkr::Device>& device, const vk::DeviceMemory& deviceMemory, const vk::DeviceSize& size, const std::string& name):
+DeviceMemoryHeap::DeviceMemoryHeap(const WeakResource<vkr::Device>& device, const vk::DeviceMemory& deviceMemory, vk::DeviceSize size, const std::string& name):
         GraphicsResource(ResourceType_DeviceMemoryHeap, device, name),
         m_deviceMemory(deviceMemory),
         m_size(size) {
@@ -207,25 +208,25 @@ vk::DeviceSize DeviceMemoryHeap::getSize() const {
     return m_size;
 }
 
-void DeviceMemoryHeap::bindBufferMemory(const vk::Buffer& buffer, const vk::DeviceSize& offset) const {
+void DeviceMemoryHeap::bindBufferMemory(const vk::Buffer& buffer, vk::DeviceSize offset) const {
     vk::MemoryRequirements bufferRequirements = (**m_device).getBufferMemoryRequirements(buffer);
     assert(offset + bufferRequirements.size <= m_size);
     (**m_device).bindBufferMemory(buffer, m_deviceMemory, offset);
 }
 
-void DeviceMemoryHeap::bindBufferMemory(const Buffer* buffer, const vk::DeviceSize& offset) const {
+void DeviceMemoryHeap::bindBufferMemory(const Buffer* buffer, vk::DeviceSize offset) const {
     bindBufferMemory(buffer->getBuffer(), offset);
 }
 
-void DeviceMemoryHeap::bindImageMemory(const vk::Image& image, const vk::DeviceSize& offset) const {
+void DeviceMemoryHeap::bindImageMemory(const vk::Image& image, vk::DeviceSize offset) const {
     (**m_device).bindImageMemory(image, m_deviceMemory, offset);
 }
 
-void DeviceMemoryHeap::bindImageMemory(const Image2D* image, const vk::DeviceSize& offset) const {
+void DeviceMemoryHeap::bindImageMemory(const Image2D* image, vk::DeviceSize offset) const {
     bindImageMemory(image->getImage(), offset);
 }
 
-DeviceMemoryBlock* DeviceMemoryHeap::allocateBlock(const vk::DeviceSize& size, const vk::DeviceSize& alignment, const std::string& name) {
+DeviceMemoryBlock* DeviceMemoryHeap::allocateBlock(vk::DeviceSize size, vk::DeviceSize alignment, const std::string& name) {
     if (size == 0)
         return nullptr;
 
@@ -360,7 +361,7 @@ bool DeviceMemoryHeap::freeBlock(DeviceMemoryBlock* block) {
     return true;
 }
 
-vk::DeviceSize DeviceMemoryHeap::getMaxAllocatableSize(const vk::DeviceSize& alignment) const {
+vk::DeviceSize DeviceMemoryHeap::getMaxAllocatableSize(vk::DeviceSize alignment) const {
     if (m_blockSizeSequence.empty())
         return 0;
 
@@ -375,13 +376,13 @@ vk::DeviceSize DeviceMemoryHeap::getMaxAllocatableSize(const vk::DeviceSize& ali
     return size;
 }
 
-size_t DeviceMemoryHeap::findBlockIndex(const vk::DeviceSize& size, const vk::DeviceSize& alignment) {
+size_t DeviceMemoryHeap::findBlockIndex(vk::DeviceSize size, vk::DeviceSize alignment) {
     // // Returns first free Block with a size greater than or equal to the required size
     // // Assuming m_blocks is sorted, this should be the smallest such block.
     // return std::lower_bound(m_blocks.begin(), m_blocks.end(), size, findSmallestFreeBlock);
 
     SizeAlignment alignedSize{size, alignment};
-    auto it = std::lower_bound(m_blockSizeSequence.begin(), m_blockSizeSequence.end(), alignedSize, [this](const size_t& blockIndex, const SizeAlignment& alignedSize) {
+    auto it = std::lower_bound(m_blockSizeSequence.begin(), m_blockSizeSequence.end(), alignedSize, [this](size_t blockIndex, const SizeAlignment& alignedSize) {
         return findSmallestFreeBlock(m_blocks[blockIndex], alignedSize);
     });
 
@@ -410,7 +411,7 @@ size_t DeviceMemoryHeap::allocatedBlocksEndIndex() {
     return m_blocks.size();
 }
 
-bool DeviceMemoryHeap::moveBlock(const size_t& srcBlockIndex, const size_t& dstBlockIndex) {
+bool DeviceMemoryHeap::moveBlock(size_t srcBlockIndex, size_t dstBlockIndex) {
     assert(srcBlockIndex < m_blocks.size() && dstBlockIndex < m_blocks.size());
 
     if (srcBlockIndex == dstBlockIndex)
@@ -439,7 +440,7 @@ bool DeviceMemoryHeap::moveBlock(const size_t& srcBlockIndex, const size_t& dstB
     return moved;
 }
 
-size_t DeviceMemoryHeap::resizeBlock(const size_t& blockIndex, const vk::DeviceSize& newSize) {
+size_t DeviceMemoryHeap::resizeBlock(size_t blockIndex, vk::DeviceSize newSize) {
     assert(blockIndex < m_blocks.size());
 
     BlockRange oldBlock = m_blocks[blockIndex];
@@ -497,7 +498,7 @@ size_t DeviceMemoryHeap::resizeBlock(const size_t& blockIndex, const vk::DeviceS
     return blockIndex;
 }
 
-size_t DeviceMemoryHeap::updateBlock(const size_t& blockIndex, const BlockRange& newBlock) {
+size_t DeviceMemoryHeap::updateBlock(size_t blockIndex, const BlockRange& newBlock) {
     BlockRange oldBlock = m_blocks[blockIndex];
 
     sanity_check_size_sequence();
@@ -556,7 +557,7 @@ size_t DeviceMemoryHeap::getBlockSequenceIndex(const BlockRange& block) {
         return (size_t)(-1);
 
     // Find first element where comparator returns true
-    auto it = std::upper_bound(m_blockSizeSequence.begin(), m_blockSizeSequence.end(), block, [this](const BlockRange& block, const size_t& blockIndex) {
+    auto it = std::upper_bound(m_blockSizeSequence.begin(), m_blockSizeSequence.end(), block, [this](const BlockRange& block, size_t blockIndex) {
         assert(blockIndex < m_blocks.size());
         if (block.size == m_blocks[blockIndex].size)
             return block.offset <= m_blocks[blockIndex].offset;
@@ -566,11 +567,11 @@ size_t DeviceMemoryHeap::getBlockSequenceIndex(const BlockRange& block) {
     return it - m_blockSizeSequence.begin();
 }
 
-void DeviceMemoryHeap::insertBlockSequence(const size_t& index) {
+void DeviceMemoryHeap::insertBlockSequence(size_t index) {
 
 }
 
-void DeviceMemoryHeap::eraseBlockSequence(const size_t& index) {
+void DeviceMemoryHeap::eraseBlockSequence(size_t index) {
     assert(index < m_blockSizeSequence.size());
 
     size_t sequence = m_blockSizeSequence[index];
@@ -639,6 +640,7 @@ void DeviceMemoryHeap::unmap(DeviceMemoryBlock* block) {
     //}
 }
 
+#if _DEBUG
 void DeviceMemoryHeap::sanityCheckBlocks() {
     // If we need to use this method, things are going pretty bad... good luck :(
 
@@ -680,8 +682,9 @@ void DeviceMemoryHeap::sanityCheckSizeSequence() {
         }
     }
 }
+#endif
 
-DeviceMemoryBlock::DeviceMemoryBlock(DeviceMemoryHeap* heap, const vk::DeviceSize& offset, const vk::DeviceSize& size, const vk::DeviceSize& alignment):
+DeviceMemoryBlock::DeviceMemoryBlock(DeviceMemoryHeap* heap, vk::DeviceSize offset, vk::DeviceSize size, vk::DeviceSize alignment):
         m_heap(heap),
         m_offset(offset),
         m_size(size),
@@ -691,11 +694,11 @@ DeviceMemoryBlock::DeviceMemoryBlock(DeviceMemoryHeap* heap, const vk::DeviceSiz
 
 DeviceMemoryBlock::~DeviceMemoryBlock() = default;
 
-const vk::DeviceSize& DeviceMemoryBlock::getOffset() const {
+vk::DeviceSize DeviceMemoryBlock::getOffset() const {
     return m_offset;
 }
 
-const vk::DeviceSize& DeviceMemoryBlock::getSize() const {
+vk::DeviceSize DeviceMemoryBlock::getSize() const {
     return m_size;
 }
 

@@ -81,7 +81,7 @@ void RenderStressTestApplication::cleanup() {
 }
 
 uint32_t sphereCount = 0;
-void RenderStressTestApplication::render(const double& dt) {
+void RenderStressTestApplication::render(double dt) {
     PROFILE_SCOPE("custom render")
     handleUserInput(dt);
 
@@ -96,11 +96,11 @@ void RenderStressTestApplication::render(const double& dt) {
     }
 }
 
-void RenderStressTestApplication::tick(const double& dt) {
+void RenderStressTestApplication::tick(double dt) {
 
 }
 
-void RenderStressTestApplication::handleUserInput(const double& dt) {
+void RenderStressTestApplication::handleUserInput(double dt) {
     if (input()->keyPressed(SDL_SCANCODE_ESCAPE)) {
         input()->toggleMouseGrabbed();
     }

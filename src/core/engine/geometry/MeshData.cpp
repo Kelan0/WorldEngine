@@ -52,14 +52,14 @@ Vertex::Vertex(const glm::vec3& position, const glm::vec3& normal, const glm::ve
     texture(texture) {
 }
 
-Vertex::Vertex(const float& px, const float& py, const float& pz, const float& nx, const float& ny, const float& nz, const float& tu, const float& tv) :
+Vertex::Vertex(float px, float py, float pz, float nx, float ny, float nz, float tu, float tv) :
     position(px, py, pz),
     normal(nx, ny, nz),
     tangent(0.0F, 0.0F, 0.0F),
     texture(tu, tv) {
 }
 
-Vertex::Vertex(const float& px, const float& py, const float& pz, const float& nx, const float& ny, const float& nz, const float& tx, const float& ty, const float& tz, const float& tu, const float& tv) :
+Vertex::Vertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty, float tz, float tu, float tv) :
     position(px, py, pz),
     normal(nx, ny, nz),
     tangent(tx, ty, tz),
@@ -517,7 +517,7 @@ bool MeshUtils::loadMeshData(const std::string& filePath, MeshUtils::OBJMeshData
     return true;
 }
 
-size_t MeshUtils::getPolygonCount(const size_t& numIndices, const MeshPrimitiveType& primitiveType)  {
+size_t MeshUtils::getPolygonCount(size_t numIndices, MeshPrimitiveType primitiveType)  {
     switch (primitiveType) {
         case PrimitiveType_Point: return numIndices;
         case PrimitiveType_Line: return numIndices / 2;

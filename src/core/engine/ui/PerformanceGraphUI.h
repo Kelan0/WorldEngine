@@ -104,38 +104,38 @@ public:
 
     ~PerformanceGraphUI() override;
 
-    void update(const double& dt) override;
+    void update(double dt) override;
 
-    void draw(const double& dt) override;
+    void draw(double dt) override;
 
 private:
     void drawHeaderBar();
 
-    void drawProfileContent(const double& dt);
+    void drawProfileContent(double dt);
 
-    void drawProfileCallStackTree(const double& dt);
+    void drawProfileCallStackTree(double dt);
 
-    void drawProfileHotFunctionList(const double& dt);
+    void drawProfileHotFunctionList(double dt);
 
-    void drawProfileHotFunctionListBody(const double& dt, const std::vector<ProfileData>& profileData, const std::unordered_map<uint32_t, LayerInstanceInfo>& layerInstanceInfoMap, const float& lineHeight);
+    void drawProfileHotFunctionListBody(double dt, const std::vector<ProfileData>& profileData, const std::unordered_map<uint32_t, LayerInstanceInfo>& layerInstanceInfoMap, float lineHeight);
 
-    void drawFrameGraphs(const double& dt);
+    void drawFrameGraphs(double dt);
 
-    void drawFrameGraph(const double& dt, const char* strId, const std::vector<FrameProfileData>& frameData, FrameGraphInfo& frameGraphInfo, const float& x, const float& y, const float& w, const float& h, const float& padding);
+    void drawFrameGraph(double dt, const char* strId, const std::vector<FrameProfileData>& frameData, FrameGraphInfo& frameGraphInfo, float x, float y, float w, float h, float padding);
 
-    bool buildFrameSlice(const std::vector<ProfileData>& profileData, const size_t& index, const float& y0, const float& y1, const uint32_t& treeDepthLimit, FrameGraphSlice& outFrameGraphSlice);
+    bool buildFrameSlice(const std::vector<ProfileData>& profileData, size_t index, float y0, float y1, uint32_t treeDepthLimit, FrameGraphSlice& outFrameGraphSlice);
 
-    bool drawFrameSlice(const std::vector<ProfileData>& profileData, const size_t& index, const float& x0, const float& y0, const float& x1, const float& y1, const uint32_t& treeDepthLimit);
+    bool drawFrameSlice(const std::vector<ProfileData>& profileData, size_t index, float x0, float y0, float x1, float y1, uint32_t treeDepthLimit);
 
-    void drawFrameTimeOverlays(const FrameGraphInfo& frameGraphInfo, const float& xmin, const float& ymin, const float& xmax, const float& ymax);
+    void drawFrameTimeOverlays(const FrameGraphInfo& frameGraphInfo, float xmin, float ymin, float xmax, float ymax);
 
-    float drawFrameTimeOverlayText(const char* str, float x, float y, const float& xmin, const float& ymin, const float& xmax, const float& ymax);
+    float drawFrameTimeOverlayText(const char* str, float x, float y, float xmin, float ymin, float xmax, float ymax);
 
-    void buildProfileTree(std::vector<FrameProfileData>& frameData, FrameGraphInfo& frameGraphInfo, const size_t& index, const ProfileTreeSortOrder& sortOrder, std::vector<size_t>& tempReorderBuffer);
+    void buildProfileTree(std::vector<FrameProfileData>& frameData, FrameGraphInfo& frameGraphInfo, size_t index, const ProfileTreeSortOrder& sortOrder, std::vector<size_t>& tempReorderBuffer);
 
-    void initializeProfileDataTree(FrameProfileData* currentFrame, const Profiler::Profile* profiles, const size_t& count, const size_t& stride);
+    void initializeProfileDataTree(FrameProfileData* currentFrame, const Profiler::Profile* profiles, size_t count, size_t stride);
 
-    void initializeProfileTreeLayers(FrameProfileData* currentFrame, const Profiler::Profile* profiles, const size_t& count, const size_t& stride, std::vector<uint32_t>& layerPath);
+    void initializeProfileTreeLayers(FrameProfileData* currentFrame, const Profiler::Profile* profiles, size_t count, size_t stride, std::vector<uint32_t>& layerPath);
 
     void compressProfileTreeLayers(FrameProfileData* currentFrame);
 
@@ -143,7 +143,7 @@ private:
 
     void updateFrameGraphLayerInstances(const std::vector<ProfileData>& profileData, FrameGraphInfo& frameGraphInfo);
 
-    void updateFrameGraphInfo(FrameGraphInfo& frameGraphInfo, const float& rootElapsed);
+    void updateFrameGraphInfo(FrameGraphInfo& frameGraphInfo, float rootElapsed);
 
     void updateAccumulatedAverages();
 
@@ -151,9 +151,9 @@ private:
 
     double calculateFrameTimePercentile(const std::vector<double>& frameTimes, std::deque<double>& tempContainer, double percentile);
 
-    const uint32_t& getUniqueLayerIndex(const std::string& layerName);
+    uint32_t getUniqueLayerIndex(const std::string& layerName);
 
-    const uint32_t& getPathLayerIndex(const std::vector<uint32_t>& layerPath);
+    uint32_t getPathLayerIndex(const std::vector<uint32_t>& layerPath);
 
     bool isGraphNormalized() const;
 
@@ -163,9 +163,9 @@ private:
 
     size_t getProfileIndexFromPath(const std::vector<ProfileData>& profileData, const std::vector<uint32_t>& path);
 
-    size_t findChildIndexForLayer(const std::vector<ProfileData>& profileData, const size_t& parentProfileIndex, const uint32_t& layerIndex);
+    size_t findChildIndexForLayer(const std::vector<ProfileData>& profileData, size_t parentProfileIndex, uint32_t layerIndex);
 
-    size_t findSiblingIndexForLayer(const std::vector<ProfileData>& profileData, const size_t& firstSiblingProfileIndex, const uint32_t& layerIndex);
+    size_t findSiblingIndexForLayer(const std::vector<ProfileData>& profileData, size_t firstSiblingProfileIndex, uint32_t layerIndex);
 
     void updateFilteredLayerPaths(const std::vector<ProfileData>& profileData);
 
@@ -175,11 +175,11 @@ private:
 
     bool hasVisibleChildren(const ProfileData& profile);
 
-    ProfileData* getProfileParent(std::vector<ProfileData>& profiles, const size_t& index);
+    ProfileData* getProfileParent(std::vector<ProfileData>& profiles, size_t index);
 
     size_t findCommonParent(const std::vector<ProfileData>& profiles, size_t profileIndex1, size_t profileIndex2);
 
-//    void removeChildFromParent(std::vector<ProfileData>& profiles, const size_t& parentIndex);
+//    void removeChildFromParent(std::vector<ProfileData>& profiles, size_t parentIndex);
 
     void forEachFrameGraphInfo();
 

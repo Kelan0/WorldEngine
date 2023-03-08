@@ -225,7 +225,7 @@ bool LightRenderer::init() {
     return true;
 }
 
-void LightRenderer::preRender(const double& dt) {
+void LightRenderer::preRender(double dt) {
     PROFILE_SCOPE("LightRenderer::preRender")
     const auto& lightEntities = Engine::scene()->registry()->group<LightComponent>(entt::get<Transform>);
     m_numLightEntities = (uint32_t)lightEntities.size();
@@ -239,7 +239,7 @@ void LightRenderer::preRender(const double& dt) {
     m_lightingRenderPassResources->uniformBuffer->upload(0, sizeof(LightingRenderPassUBO), &uniformData);
 }
 
-void LightRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer, RenderCamera* renderCamera) {
+void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera) {
     PROFILE_SCOPE("LightRenderer::render");
     PROFILE_BEGIN_GPU_CMD("LightRenderer::render", commandBuffer);
 
@@ -283,7 +283,7 @@ void LightRenderer::render(const double& dt, const vk::CommandBuffer& commandBuf
 
             double cascadeStartDistance = 0.0;
             for (size_t i = 0; i < cascadedShadowMap->getNumCascades(); ++i) {
-                const double& cascadeEndDistance = cascadedShadowMap->getCascadeSplitDistance(i);
+                double cascadeEndDistance = cascadedShadowMap->getCascadeSplitDistance(i);
                 RenderCamera& shadowRenderCamera = visibleShadowRenderCameras.emplace_back(RenderCamera{});
                 const double nearPlane = -64.0F;
                 const double farPlane = +64.0F;
@@ -510,7 +510,7 @@ void LightRenderer::markShadowMapInactive(ShadowMap* shadowMap) {
     inactiveShadowMaps.insert(it, shadowMap);
 }
 
-ShadowMap* LightRenderer::getShadowMap(const uint32_t& width, const uint32_t& height, const ShadowMap::ShadowType& shadowType, const ShadowMap::RenderType& renderType) {
+ShadowMap* LightRenderer::getShadowMap(uint32_t width, uint32_t height, ShadowMap::ShadowType shadowType, ShadowMap::RenderType renderType) {
     std::vector<ShadowMap*>& inactiveShadowMaps = m_inactiveShadowMaps[shadowType];
     auto it = std::upper_bound(inactiveShadowMaps.begin(), inactiveShadowMaps.end(), glm::uvec2(width, height), [](const glm::uvec2& lhs, const ShadowMap* rhs) {
         return (lhs.x < rhs->getResolution().x) || (lhs.x == rhs->getResolution().x && lhs.y < rhs->getResolution().y);
@@ -717,15 +717,15 @@ void LightRenderer::prepareVsmBlurDescriptorSets() {
 //    }
 }
 
-void LightRenderer::prepareVsmBlurIntermediateImage(const vk::CommandBuffer& commandBuffer, const uint32_t& maxWidth, const uint32_t& maxHeight) {
+void LightRenderer::prepareVsmBlurIntermediateImage(const vk::CommandBuffer& commandBuffer, uint32_t maxWidth, uint32_t maxHeight) {
 //    PROFILE_SCOPE("LightRenderer::prepareVsmBlurIntermediateImage");
 //    PROFILE_BEGIN_GPU_CMD("LightRenderer::prepareVsmBlurIntermediateImage", commandBuffer);
 //
 //    vk::ImageSubresourceRange subresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
 //
 //    if (m_vsmBlurIntermediateImage == nullptr || m_vsmBlurIntermediateImage->getWidth() < maxWidth || m_vsmBlurIntermediateImage->getHeight() < maxHeight) {
-//        const uint32_t& w = (uint32_t)Util::nextPowerOf2(maxWidth);
-//        const uint32_t& h = (uint32_t)Util::nextPowerOf2(maxHeight);
+//        uint32_t w = (uint32_t)Util::nextPowerOf2(maxWidth);
+//        uint32_t h = (uint32_t)Util::nextPowerOf2(maxHeight);
 //        printf("Creating intermediate image for gaussian blur [%d x %d]\n", w, h);
 //        delete m_vsmBlurIntermediateImageView;
 //        delete m_vsmBlurIntermediateImage;
@@ -756,7 +756,7 @@ void LightRenderer::prepareVsmBlurIntermediateImage(const vk::CommandBuffer& com
 //    PROFILE_END_GPU_CMD(commandBuffer);
 }
 
-void LightRenderer::vsmBlurShadowImage(const vk::CommandBuffer& commandBuffer, const glm::uvec2& resolution, const vk::Image& varianceShadowImage, const vk::Image& intermediateImage, const vk::DescriptorSet& descriptorSetBlurX, const vk::DescriptorSet& descriptorSetBlurY) {
+void LightRenderer::vsmBlurShadowImage(const vk::CommandBuffer& commandBuffer, glm::uvec2 resolution, const vk::Image& varianceShadowImage, const vk::Image& intermediateImage, const vk::DescriptorSet& descriptorSetBlurX, const vk::DescriptorSet& descriptorSetBlurY) {
     PROFILE_SCOPE("LightRenderer::vsmBlurShadowImage");
     PROFILE_BEGIN_GPU_CMD("LightRenderer::vsmBlurShadowImage", commandBuffer);
 
@@ -907,7 +907,7 @@ void LightRenderer::vsmBlurActiveShadowMaps(const vk::CommandBuffer& commandBuff
     PROFILE_END_GPU_CMD(commandBuffer);
 }
 
-void LightRenderer::calculateDirectionalShadowCascadeRenderCamera(const RenderCamera* viewerRenderCamera, const Transform& lightTransform, const double& cascadeStartDist, const double& cascadeEndDist, const double& shadowNearPlane, const double shadowFarPlane, RenderCamera* outShadowRenderCamera) {
+void LightRenderer::calculateDirectionalShadowCascadeRenderCamera(const RenderCamera* viewerRenderCamera, const Transform& lightTransform, double cascadeStartDist, double cascadeEndDist, double shadowNearPlane, double shadowFarPlane, RenderCamera* outShadowRenderCamera) {
     PROFILE_SCOPE("LightRenderer::calculateDirectionalShadowCascadeRenderCamera");
 
     std::array<glm::dvec3, Frustum::NumCorners> viewerFrustumCorners = Frustum::getCornersNDC();

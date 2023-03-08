@@ -52,19 +52,19 @@ public:
 
     EventDispatcher* getEventDispatcher() const;
 
-    const uint64_t& getCurrentFrameCount() const;
+    uint64_t getCurrentFrameCount() const;
 
-    const double& getPartialFrames() const;
+    double getPartialFrames() const;
 
-    const double& getPartialTicks() const;
+    double getPartialTicks() const;
 
-    const double& getAccumulatedTime();
+    double getAccumulatedTime();
 
-    const double& getRunTime();
+    double getRunTime();
 
-    const bool& isDebugCompositeEnabled() const;
+    bool isDebugCompositeEnabled() const;
 
-    void setDebugCompositeEnabled(const bool& debugCompositeEnabled);
+    void setDebugCompositeEnabled(bool debugCompositeEnabled);
 
     static GraphicsManager* graphics();
 
@@ -88,26 +88,26 @@ public:
 
     static EventDispatcher* eventDispatcher();
 
-    static const uint64_t& currentFrameCount();
+    static uint64_t currentFrameCount();
 
-    static const double& accumulatedTime();
+    static double accumulatedTime();
 
-    static const double& runTime();
+    static double runTime();
 
-    static const bool& debugCompositeEnabled();
+    static bool debugCompositeEnabled();
 
     static Engine* instance();
 
 private:
     bool init(SDL_Window* windowHandle);
 
-    void preRender(const double& dt);
+    void preRender(double dt);
 
-    void render(const double& dt);
+    void render(double dt);
 
-    void preTick(const double& dt);
+    void preTick(double dt);
 
-    void tick(const double& dt);
+    void tick(double dt);
 
     void cleanup();
 

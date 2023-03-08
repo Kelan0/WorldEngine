@@ -45,16 +45,16 @@ ImmediateRenderer::ColouredVertex::ColouredVertex(const glm::vec3& position, con
         colour(glm::clamp(glm::u8vec4(colour * 255.0F), (uint8_t)0, (uint8_t)255)) {
 }
 
-ImmediateRenderer::ColouredVertex::ColouredVertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty, const uint8_t& r, const uint8_t& g, const uint8_t& b, const uint8_t& a):
+ImmediateRenderer::ColouredVertex::ColouredVertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty, uint8_t r, uint8_t g, uint8_t b, uint8_t a):
         ColouredVertex(glm::vec3(px, py, pz), glm::vec3(nx, ny, nz), glm::vec2(tx, ty), glm::u8vec4(r, g, b, a)) {
 }
 
-ImmediateRenderer::ColouredVertex::ColouredVertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty, const float& r, const float& g, const float& b, const float& a):
+ImmediateRenderer::ColouredVertex::ColouredVertex(float px, float py, float pz, float nx, float ny, float nz, float tx, float ty, float r, float g, float b, float a):
         ColouredVertex(glm::vec3(px, py, pz), glm::vec3(nx, ny, nz), glm::vec2(tx, ty), glm::vec4(r, g, b, a)) {
 }
 
 
-bool ImmediateRenderer::ColouredVertex::equalsEpsilon(const ColouredVertex& vertex, const float& epsilon) const {
+bool ImmediateRenderer::ColouredVertex::equalsEpsilon(const ColouredVertex& vertex, float epsilon) const {
     if (glm::abs(position.x - vertex.position.x) >= epsilon) return false;
     if (glm::abs(position.y - vertex.position.y) >= epsilon) return false;
     if (glm::abs(position.z - vertex.position.z) >= epsilon) return false;
@@ -129,7 +129,7 @@ bool ImmediateRenderer::init() {
     return true;
 }
 
-void ImmediateRenderer::render(const double& dt, const vk::CommandBuffer& commandBuffer) {
+void ImmediateRenderer::render(double dt, const vk::CommandBuffer& commandBuffer) {
     PROFILE_SCOPE("ImmediateRenderer::render");
     PROFILE_BEGIN_GPU_CMD("ImmediateRenderer::render", commandBuffer)
 
@@ -201,7 +201,7 @@ void ImmediateRenderer::render(const double& dt, const vk::CommandBuffer& comman
     texture(glm::vec2(0.0F, 0.0F));
 }
 
-void ImmediateRenderer::begin(const MeshPrimitiveType& primitiveType) {
+void ImmediateRenderer::begin(MeshPrimitiveType primitiveType) {
     PROFILE_SCOPE("ImmediateRenderer::begin");
 
     if (m_currentCommand != nullptr) {
@@ -254,7 +254,7 @@ void ImmediateRenderer::vertex(const glm::vec3& position) {
     addIndex(index);
 }
 
-void ImmediateRenderer::vertex(const float& x, const float& y, const float& z) {
+void ImmediateRenderer::vertex(float x, float y, float z) {
     this->vertex(glm::vec3(x, y, z));
 }
 
@@ -262,7 +262,7 @@ void ImmediateRenderer::normal(const glm::vec3& normal) {
     m_normal = normal;
 }
 
-void ImmediateRenderer::normal(const float& x, const float& y, const float& z) {
+void ImmediateRenderer::normal(float x, float y, float z) {
     m_normal.x = x;
     m_normal.y = y;
     m_normal.z = z;
@@ -272,7 +272,7 @@ void ImmediateRenderer::texture(const glm::vec2& texture) {
     m_texture = texture;
 }
 
-void ImmediateRenderer::texture(const float& x, const float& y) {
+void ImmediateRenderer::texture(float x, float y) {
     m_texture.x = x;
     m_texture.y = y;
 }
@@ -310,21 +310,21 @@ void ImmediateRenderer::colour(const glm::vec3& colour) {
     this->colour(colour.r, colour.g, colour.b);
 }
 
-void ImmediateRenderer::colour(const float& r, const float& g, const float& b, const float& a) {
+void ImmediateRenderer::colour(float r, float g, float b, float a) {
     m_colour.r = (uint8_t)(glm::clamp(r, 0.0F, 1.0F) * 255.0F);
     m_colour.g = (uint8_t)(glm::clamp(g, 0.0F, 1.0F) * 255.0F);
     m_colour.b = (uint8_t)(glm::clamp(b, 0.0F, 1.0F) * 255.0F);
     m_colour.a = (uint8_t)(glm::clamp(a, 0.0F, 1.0F) * 255.0F);
 }
 
-void ImmediateRenderer::colour(const float& r, const float& g, const float& b) {
+void ImmediateRenderer::colour(float r, float g, float b) {
     m_colour.r = (uint8_t)(glm::clamp(r, 0.0F, 1.0F) * 255.0F);
     m_colour.g = (uint8_t)(glm::clamp(g, 0.0F, 1.0F) * 255.0F);
     m_colour.b = (uint8_t)(glm::clamp(b, 0.0F, 1.0F) * 255.0F);
     m_colour.a = (uint8_t)(255);
 }
 
-void ImmediateRenderer::pushMatrix(const MatrixMode& matrixMode) {
+void ImmediateRenderer::pushMatrix(MatrixMode matrixMode) {
     PROFILE_SCOPE("ImmediateRenderer::pushMatrix");
     auto& stack = matrixStack(matrixMode);
 
@@ -346,7 +346,7 @@ void ImmediateRenderer::pushMatrix() {
     pushMatrix(m_matrixMode);
 }
 
-void ImmediateRenderer::popMatrix(const MatrixMode& matrixMode) {
+void ImmediateRenderer::popMatrix(MatrixMode matrixMode) {
     PROFILE_SCOPE("ImmediateRenderer::popMatrix");
     auto& stack = matrixStack(matrixMode);
 
@@ -371,16 +371,16 @@ void ImmediateRenderer::translate(const glm::vec3& translation) {
     glm::mat4& currMat = currentMatrix();
     currMat = glm::translate(currMat, translation);
 }
-void ImmediateRenderer::translate(const float& x, const float& y, const float& z) {
+void ImmediateRenderer::translate(float x, float y, float z) {
     this->translate(glm::vec3(x, y, z));
 }
 
-void ImmediateRenderer::rotate(const glm::vec3& axis, const float& angle) {
+void ImmediateRenderer::rotate(const glm::vec3& axis, float angle) {
     validateCompleteCommand();
     glm::mat4& currMat = currentMatrix();
     currMat = glm::rotate(currMat, angle, axis);
 }
-void ImmediateRenderer::rotate(const float& x, const float& y, const float& z, const float& angle) {
+void ImmediateRenderer::rotate(float x, float y, float z, float angle) {
     this->rotate(glm::vec3(x, y, z), angle);
 }
 
@@ -390,11 +390,11 @@ void ImmediateRenderer::scale(const glm::vec3& scale) {
     currMat = glm::scale(currMat, scale);
 }
 
-void ImmediateRenderer::scale(const float& x, const float& y, const float& z) {
+void ImmediateRenderer::scale(float x, float y, float z) {
     this->scale(glm::vec3(x, y, z));
 }
 
-void ImmediateRenderer::scale(const float& scale) {
+void ImmediateRenderer::scale(float scale) {
     this->scale(glm::vec3(scale, scale, scale));
 }
 
@@ -413,14 +413,14 @@ void ImmediateRenderer::multMatrix(const glm::mat4& matrix) {
     currMat = currMat * matrix;
 }
 
-void ImmediateRenderer::matrixMode(const MatrixMode& matrixMode) {
+void ImmediateRenderer::matrixMode(MatrixMode matrixMode) {
 #if _DEBUG || IMMEDIATE_MODE_VALIDATION
     validateCompleteCommand();
 #endif
     m_matrixMode = matrixMode;
 }
 
-void ImmediateRenderer::setDepthTestEnabled(const bool& enabled) {
+void ImmediateRenderer::setDepthTestEnabled(bool enabled) {
     validateCompleteCommand();
     m_renderState.depthTestEnabled = enabled;
 }
@@ -430,23 +430,23 @@ void ImmediateRenderer::setCullMode(const vk::CullModeFlags& cullMode) {
     m_renderState.cullMode = cullMode;
 }
 
-void ImmediateRenderer::setBlendEnabled(const bool& enabled) {
+void ImmediateRenderer::setBlendEnabled(bool enabled) {
     m_renderState.blendEnabled = enabled;
 }
 
-void ImmediateRenderer::setColourBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op) {
+void ImmediateRenderer::setColourBlendMode(vk::BlendFactor src, vk::BlendFactor dst, vk::BlendOp op) {
     m_renderState.colourBlendMode.src = src;
     m_renderState.colourBlendMode.dst = dst;
     m_renderState.colourBlendMode.op = op;
 }
 
-void ImmediateRenderer::setAlphaBlendMode(const vk::BlendFactor& src, const vk::BlendFactor& dst, const vk::BlendOp& op) {
+void ImmediateRenderer::setAlphaBlendMode(vk::BlendFactor src, vk::BlendFactor dst, vk::BlendOp op) {
     m_renderState.alphaBlendMode.src = src;
     m_renderState.alphaBlendMode.dst = dst;
     m_renderState.alphaBlendMode.op = op;
 }
 
-void ImmediateRenderer::setLineWidth(const float& lineWidth) {
+void ImmediateRenderer::setLineWidth(float lineWidth) {
     m_renderState.lineWidth = lineWidth;
 }
 
@@ -473,7 +473,7 @@ void ImmediateRenderer::addVertex(const ColouredVertex& vertex) {
     ++m_vertexCount;
 }
 
-void ImmediateRenderer::addIndex(const uint32_t& index) {
+void ImmediateRenderer::addIndex(uint32_t index) {
     PROFILE_SCOPE("ImmediateRenderer::addIndex");
 
     if (m_firstChangedIndex == (uint32_t)(-1))
@@ -489,11 +489,11 @@ void ImmediateRenderer::addIndex(const uint32_t& index) {
     ++m_indexCount;
 }
 
-glm::mat4& ImmediateRenderer::currentMatrix(const MatrixMode& matrixMode) {
+glm::mat4& ImmediateRenderer::currentMatrix(MatrixMode matrixMode) {
     return matrixStack(matrixMode).top();
 }
 
-std::stack<glm::mat4>& ImmediateRenderer::matrixStack(const MatrixMode& matrixMode) {
+std::stack<glm::mat4>& ImmediateRenderer::matrixStack(MatrixMode matrixMode) {
     switch (matrixMode) {
         case MatrixMode_ModelView: return m_modelMatrixStack;
         case MatrixMode_Projection: return m_projectionMatrixStack;
