@@ -28,12 +28,16 @@ if ("${SDL2_DIR}" STREQUAL "")
     message(FATAL_ERROR "Please define the variable SDL2_DIR to point to the location of the folder containing FindSDL2.cmake or equivalent")
 elseif(NOT EXISTS "${SDL2_DIR}")
     message(FATAL_ERROR "SDL2_DIR path does not exist: ${SDL2_DIR}")
+else()
+    message(STATUS "Found SDL2 at: ${SDL2_DIR}")
 endif()
 
 if ("${glm_DIR}" STREQUAL "")
     message(FATAL_ERROR "Please define the variable glm_DIR to point to the location of the folder containing Findglm.cmake or equivalent")
 elseif(NOT EXISTS "${glm_DIR}")
     message(FATAL_ERROR "glm_DIR path does not exist: ${glm_DIR}")
+else()
+    message(STATUS "Found GLM at: ${glm_DIR}")
 endif()
 
 if ("${VTUNE_DIR}" STREQUAL "")
@@ -45,6 +49,10 @@ else()
 endif()
 
 find_package(Vulkan REQUIRED FATAL_ERROR)
+if (NOT ${Vulkan_FOUND})
+    message(FATAL_ERROR "Vulkan not found")
+endif()
+message(STATUS "Found Vulkan version ${Vulkan_VERSION} at " ${Vulkan_INCLUDE_DIRS})
 if ("${Vulkan_VERSION}" VERSION_GREATER_EQUAL "1.3")
     add_compile_definitions(USE_VULKAN_HASH_HPP=1)
 else()
@@ -61,6 +69,10 @@ elseif(NOT ${SDL2_FOUND})
 endif()
 
 find_package(glm REQUIRED FATAL_ERROR)
+if (NOT ${glm_FOUND})
+    message(FATAL_ERROR "GLM not found")
+endif()
+message(STATUS "Found GLM version ${GLM_VERSION} at ${GLM_INCLUDE_DIRS}")
 
 #IF(CMAKE_COMPILER_IS_GNUCC)
 #    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -O1")
@@ -108,8 +120,8 @@ endif()
 include_directories(
         ${PROJECT_SOURCE_DIR}/src
         ${SDL2_INCLUDE_DIRS}
-        ${Vulkan_INCLUDE_DIRS}
         ${GLM_INCLUDE_DIRS}
+        ${Vulkan_INCLUDE_DIRS}
         ${ENTT_INCLUDE_DIRS}
         #        ${IMGUI_INCLUDE_DIR}
         ${STB_IMAGE_INCLUDE_DIRS}
