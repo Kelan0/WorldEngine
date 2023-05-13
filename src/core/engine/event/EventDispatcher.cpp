@@ -137,7 +137,7 @@ void EventDispatcher::update() {
         }
     }
 
-    int64_t eraseCount = 0;
+    int32_t eraseCount = 0;
 
     for (auto it0 = m_timeouts.begin(); it0 != m_timeouts.end(); ++it0, ++eraseCount) {
         TimeoutEvent* timeout = *it0;

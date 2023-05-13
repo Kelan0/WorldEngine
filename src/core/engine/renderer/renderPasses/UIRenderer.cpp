@@ -75,12 +75,12 @@ bool UIRenderer::init(SDL_Window* windowHandle) {
     initInfo.QueueFamily = Engine::graphics()->getGraphicsQueueFamilyIndex();
     initInfo.Queue = **Engine::graphics()->getQueue(QUEUE_GRAPHICS_MAIN);
     initInfo.PipelineCache = VK_NULL_HANDLE;
-    initInfo.DescriptorPool = Engine::graphics()->descriptorPool()->getDescriptorPool();
+    initInfo.DescriptorPool = static_cast<VkDescriptorPool>(Engine::graphics()->descriptorPool()->getDescriptorPool());
     initInfo.Allocator = nullptr;
     initInfo.MinImageCount = glm::max((uint32_t)2, (uint32_t)CONCURRENT_FRAMES);
     initInfo.ImageCount = glm::max((uint32_t)2, (uint32_t)CONCURRENT_FRAMES);
     initInfo.CheckVkResultFn = checkVulkanResult;
-    ImGui_ImplVulkan_Init(&initInfo, m_uiRenderPass->getRenderPass());
+    ImGui_ImplVulkan_Init(&initInfo, static_cast<VkRenderPass>(m_uiRenderPass->getRenderPass()));
 
     m_createdFontsTexture = false;
 

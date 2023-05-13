@@ -151,7 +151,7 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
     //memoryConfig.size = (size_t)(6.0 * 1024 * 1024 * 1024); // Allocate 8 GiB
     ////memoryConfig.memoryPropertyFlags = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
     //memoryConfig.memoryTypeBits = 0;
-    //for (int i = 0; i < m_device.memoryProperties.memoryTypeCount; ++i)
+    //for (uint32_t i = 0; i < m_device.memoryProperties.memoryTypeCount; ++i)
     //	memoryConfig.memoryTypeBits |= (1 << i); // Enable all memory types
     //
     //m_gpuMemory = GPUMemory::create(memoryConfig);
@@ -374,11 +374,11 @@ bool GraphicsManager::comparePhysicalDevices(const vkr::PhysicalDevice& physical
     uint64_t vram1 = 0;
     uint64_t vram2 = 0;
 
-    for (size_t i = 0; i < mem1.memoryHeapCount; ++i)
+    for (int i = 0; i < (int)mem1.memoryHeapCount; ++i)
         if ((mem1.memoryHeaps[i].flags & vk::MemoryHeapFlagBits::eDeviceLocal))
             vram1 += mem1.memoryHeaps[i].size;
 
-    for (size_t i = 0; i < mem2.memoryHeapCount; ++i)
+    for (int i = 0; i < (int)mem2.memoryHeapCount; ++i)
         if ((mem2.memoryHeaps[i].flags & vk::MemoryHeapFlagBits::eDeviceLocal))
             vram2 += mem2.memoryHeaps[i].size;
 
@@ -431,7 +431,7 @@ bool GraphicsManager::selectQueueFamilies(const vkr::PhysicalDevice& physicalDev
     bool requiresProtected = (requiredQueueFlags & QueueType_ProtectedBit) != 0;
     bool requiresPresent = (requiredQueueFlags & QueueType_PresentBit) != 0;;
 
-    for (int i = 0; i < queueFamilyProperties.size(); ++i) {
+    for (uint32_t i = 0; i < (uint32_t)queueFamilyProperties.size(); ++i) {
         bool supportsGraphics = (bool)(queueFamilyProperties[i].queueFlags & vk::QueueFlagBits::eGraphics);
         bool supportsCompute = (bool)(queueFamilyProperties[i].queueFlags & vk::QueueFlagBits::eCompute);
         bool supportsTransfer = (bool)(queueFamilyProperties[i].queueFlags & vk::QueueFlagBits::eTransfer);
@@ -456,23 +456,23 @@ bool GraphicsManager::selectQueueFamilies(const vkr::PhysicalDevice& physicalDev
     std::vector<std::string> missingQueueTypes;
 
     if (requiresGraphics && !queueFamilyIndices.queueFamilies.graphicsQueueFamilyIndex.has_value())
-        missingQueueTypes.push_back("GRAPHICS");
+        missingQueueTypes.emplace_back("GRAPHICS");
     if (requiresCompute && !queueFamilyIndices.queueFamilies.computeQueueFamilyIndex.has_value())
-        missingQueueTypes.push_back("COMPUTE");
+        missingQueueTypes.emplace_back("COMPUTE");
     if (requiresTransfer && !queueFamilyIndices.queueFamilies.transferQueueFamilyIndex.has_value())
-        missingQueueTypes.push_back("TRANSFER");
+        missingQueueTypes.emplace_back("TRANSFER");
     if (requiresSparseBinding && !queueFamilyIndices.queueFamilies.sparseBindingQueueFamilyIndex.has_value())
-        missingQueueTypes.push_back("SPARSE_BINDING");
+        missingQueueTypes.emplace_back("SPARSE_BINDING");
     if (requiresProtected && !queueFamilyIndices.queueFamilies.protectedQueueFamilyIndex.has_value())
-        missingQueueTypes.push_back("PROTECTED");
+        missingQueueTypes.emplace_back("PROTECTED");
     if (requiresPresent && !queueFamilyIndices.queueFamilies.presentQueueFamilyIndex.has_value())
-        missingQueueTypes.push_back("PRESENT");
+        missingQueueTypes.emplace_back("PRESENT");
 
-    if (missingQueueTypes.size() > 0) {
+    if (!missingQueueTypes.empty()) {
         vk::PhysicalDeviceProperties deviceProperties = physicalDevice.getProperties();
 
-        std::string requiredQueueTypes = "";
-        for (int i = 0; i < missingQueueTypes.size(); ++i) {
+        std::string requiredQueueTypes;
+        for (size_t i = 0; i < missingQueueTypes.size(); ++i) {
             requiredQueueTypes += missingQueueTypes[i];
             if (i < missingQueueTypes.size() - 1)
                 requiredQueueTypes += ", ";
@@ -668,8 +668,8 @@ bool GraphicsManager::initSurfaceDetails() {
     std::vector<vk::Format> depthFormats = {vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint, vk::Format::eD32Sfloat};
     m_surface.depthFormat = ImageUtil::selectSupportedFormat(getPhysicalDevice(), depthFormats, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
     if (m_surface.depthFormat == vk::Format::eUndefined) {
-        std::string formatsStr = "";
-        for (int i = 0; i < depthFormats.size(); ++i)
+        std::string formatsStr;
+        for (size_t i = 0; i < depthFormats.size(); ++i)
             formatsStr += (i > 0 ? ", " : "") + vk::to_string(depthFormats[0]);
         printf("Requested depth formats [%s] but none were supported\n", formatsStr.c_str());
         return false;
@@ -685,7 +685,7 @@ bool GraphicsManager::recreateSwapchain() {
     m_device.device->waitIdle();
 
     m_swapchain.commandBuffers.clear();
-    for (int i = 0; i < CONCURRENT_FRAMES; ++i)
+    for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i)
         if (m_commandPool->hasCommandBuffer("swapchain_cmd" + std::to_string(i)))
             m_commandPool->freeCommandBuffer("swapchain_cmd" + std::to_string(i));
 
@@ -745,7 +745,7 @@ bool GraphicsManager::recreateSwapchain() {
     }
 
     m_swapchain.commandBuffers.resize(CONCURRENT_FRAMES);
-    for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
+    for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         std::shared_ptr<vkr::CommandBuffer> commandBuffer = m_commandPool->allocateCommandBuffer("swapchain_cmd" + std::to_string(i), {vk::CommandBufferLevel::ePrimary});
         m_swapchain.commandBuffers[i] = std::move(commandBuffer);
     }
@@ -758,7 +758,7 @@ bool GraphicsManager::recreateSwapchain() {
     //const vk::Device& device = **m_device.device;
     //device.createSemaphore(semaphoreCreateInfo);
 
-    for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
+    for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         m_swapchain.imageAvailableSemaphores[i].reset();
         m_swapchain.renderFinishedSemaphores[i].reset();
         m_swapchain.inFlightFences[i].reset();
@@ -780,7 +780,7 @@ bool GraphicsManager::createSwapchainImages() {
     m_swapchain.images = m_swapchain.swapchain->getImages();
     m_swapchain.imageViews.resize(m_swapchain.images.size());
 
-    for (int i = 0; i < m_swapchain.images.size(); ++i) {
+    for (size_t i = 0; i < m_swapchain.images.size(); ++i) {
         ImageViewConfiguration imageViewConfig{};
         imageViewConfig.device = m_device.device;
         imageViewConfig.image = m_swapchain.images[i];
@@ -789,7 +789,7 @@ bool GraphicsManager::createSwapchainImages() {
     }
 
     m_swapchain.imagesInFlight.clear();
-    m_swapchain.imagesInFlight.resize(m_swapchain.images.size(), VK_NULL_HANDLE);
+    m_swapchain.imagesInFlight.resize(m_swapchain.images.size(), nullptr);
 
     return true;
 }
@@ -802,7 +802,7 @@ bool GraphicsManager::createSwapchainFramebuffers() {
     framebufferConfig.setRenderPass(m_renderPass.get());
     framebufferConfig.setSize(m_swapchain.imageExtent);
 
-    for (int i = 0; i < m_swapchain.imageViews.size(); ++i) {
+    for (size_t i = 0; i < m_swapchain.imageViews.size(); ++i) {
         framebufferConfig.attachments = {
                 m_swapchain.imageViews[i]->getImageView(),
         };
@@ -891,7 +891,7 @@ bool GraphicsManager::beginFrame() {
     acquireInfo.setSwapchain(swapchain);
     acquireInfo.setTimeout(UINT64_MAX);
     acquireInfo.setSemaphore(imageAvailableSemaphore);
-    acquireInfo.setFence(VK_NULL_HANDLE);
+    acquireInfo.setFence(nullptr);
     vk::ResultValue<uint32_t> acquireNextImageResult = device.acquireNextImage2KHR(acquireInfo);
     if (acquireNextImageResult.result == vk::Result::eErrorOutOfDateKHR || acquireNextImageResult.result == vk::Result::eSuboptimalKHR) {
         m_recreateSwapchain = true;
@@ -1248,6 +1248,7 @@ void GraphicsManager::setObjectName(const vk::Device& device, uint64_t objectHan
         objectNameInfo.objectType = objectType;
         objectNameInfo.pObjectName = objectName;
         device.setDebugUtilsObjectNameEXT(objectNameInfo);
+        vk::DispatchLoaderStatic::vkCmdSetCullModeEXT()
     }
 }
 

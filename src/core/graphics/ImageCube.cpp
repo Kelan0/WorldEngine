@@ -203,7 +203,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         return nullptr;
     }
 
-    vk::Image image = VK_NULL_HANDLE;
+    vk::Image image = nullptr;
     result = device.createImage(&imageCreateInfo, nullptr, &image);
     if (result != vk::Result::eSuccess) {
         printf("Failed to create image: %s\n", vk::to_string(result).c_str());
@@ -460,7 +460,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, ImagePixe
     vk::SubmitInfo queueSubmitInfo;
     queueSubmitInfo.setCommandBufferCount(1);
     queueSubmitInfo.setPCommandBuffers(&commandBuffer);
-    vk::Result result = computeQueue.submit(1, &queueSubmitInfo, VK_NULL_HANDLE);
+    vk::Result result = computeQueue.submit(1, &queueSubmitInfo, nullptr);
     assert(result == vk::Result::eSuccess);
     computeQueue.waitIdle();
 

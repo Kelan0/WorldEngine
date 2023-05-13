@@ -41,7 +41,7 @@ SharedResource<DescriptorSetLayout> DescriptorSetLayout::get(const WeakResource<
 
     auto it = s_descriptorSetLayoutCache.find(key);
     if (it == s_descriptorSetLayoutCache.end() || it->second.expired()) {
-        vk::DescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+        vk::DescriptorSetLayout descriptorSetLayout = nullptr;
         const vk::Device& dvc = **device.lock(name);
         vk::Result result = dvc.createDescriptorSetLayout(&descriptorSetLayoutCreateInfo, nullptr, &descriptorSetLayout);
         if (result != vk::Result::eSuccess) {
@@ -246,7 +246,7 @@ DescriptorSet::DescriptorSet(DescriptorSet&& move) noexcept :
         GraphicsResource(std::move(move)),
         m_pool(std::exchange(move.m_pool, nullptr)),
         m_layout(std::exchange(move.m_layout, nullptr)),
-        m_descriptorSet(std::exchange(move.m_descriptorSet, VK_NULL_HANDLE)) {
+        m_descriptorSet(std::exchange(move.m_descriptorSet, nullptr)) {
 }
 
 DescriptorSet::~DescriptorSet() {
@@ -270,7 +270,7 @@ DescriptorSet* DescriptorSet::create(const WeakResource<DescriptorSetLayout>& de
 
     const SharedResource<vkr::Device>& device = descriptorPoolPtr->getDevice();
 
-    vk::DescriptorSet descriptorSet = VK_NULL_HANDLE;
+    vk::DescriptorSet descriptorSet = nullptr;
     bool allocated = descriptorPoolPtr->allocate(descriptorSetLayoutPtr->getDescriptorSetLayout(), descriptorSet);
 
     Engine::graphics()->setObjectName(**device, (uint64_t)(VkDescriptorSet)descriptorSet, vk::ObjectType::eDescriptorSet, name);

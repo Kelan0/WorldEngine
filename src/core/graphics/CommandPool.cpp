@@ -37,7 +37,7 @@ CommandPool* CommandPool::create(const CommandPoolConfiguration& commandPoolConf
 //    std::unique_ptr<vkr::CommandPool> commandPool = std::make_unique<vkr::CommandPool>(*device, commandPoolCreateInfo);
 
     const vk::Device& device = **commandPoolConfiguration.device.lock(name);
-    vk::CommandPool commandPool = VK_NULL_HANDLE;
+    vk::CommandPool commandPool = nullptr;
     vk::Result result = device.createCommandPool(&commandPoolCreateInfo, nullptr, &commandPool);
 
     if (result != vk::Result::eSuccess) {
@@ -118,7 +118,7 @@ const vk::CommandBuffer& CommandPool::getTemporaryCommandBuffer(const std::strin
 
     updateTemporaryCommandBuffers();
 
-    vk::Fence fence = VK_NULL_HANDLE;
+    vk::Fence fence = nullptr;
 
     if (m_unusedFences.empty()) {
         vk::FenceCreateInfo fenceCreateInfo{};
@@ -137,7 +137,7 @@ const vk::CommandBuffer& CommandPool::getTemporaryCommandBuffer(const std::strin
     commandBufferAllocInfo.setCommandBufferCount(1);
     commandBufferAllocInfo.setLevel(commandBufferConfiguration.level);
 
-    vk::CommandBuffer commandBuffer = VK_NULL_HANDLE;
+    vk::CommandBuffer commandBuffer = nullptr;
     result = device.allocateCommandBuffers(&commandBufferAllocInfo, &commandBuffer);
     assert(result == vk::Result::eSuccess && commandBuffer);
     Engine::graphics()->setObjectName(device, (uint64_t)(VkCommandBuffer)commandBuffer, vk::ObjectType::eCommandBuffer, name.c_str());
@@ -154,7 +154,7 @@ vk::Fence CommandPool::releaseTemporaryCommandBufferFence(const vk::CommandBuffe
     updateTemporaryCommandBuffers();
     auto it = m_temporaryCmdBufferFences.find(commandBuffer);
     if (it == m_temporaryCmdBufferFences.end()) {
-        return VK_NULL_HANDLE;
+        return nullptr;
     }
     return it->second;
 }

@@ -190,7 +190,7 @@ RenderPass* RenderPass::create(const RenderPassConfiguration& renderPassConfigur
     renderPassCreateInfo.setDependencies(renderPassConfiguration.subpassDependencies);
     renderPassCreateInfo.setSubpasses(subpasses);
 
-    vk::RenderPass renderPass = VK_NULL_HANDLE;
+    vk::RenderPass renderPass = nullptr;
     vk::Result result = device.createRenderPass(&renderPassCreateInfo, nullptr, &renderPass);
     if (result != vk::Result::eSuccess) {
         printf("Failed to create RenderPass: %s\n", vk::to_string(result).c_str());

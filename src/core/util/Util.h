@@ -56,7 +56,7 @@ namespace Util {
     template<typename T>
     size_t removeVectorOverflowStart(std::vector<T>& vec, size_t maxSize) {
         if (vec.size() > maxSize) {
-            int64_t removeCount = vec.size() - maxSize;
+            size_t removeCount = vec.size() - maxSize;
             vec.erase(vec.begin(), vec.begin() + removeCount);
             return removeCount;
         }

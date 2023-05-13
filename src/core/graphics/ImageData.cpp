@@ -1180,7 +1180,7 @@ void ImageUtil::endTransferCommands(const vk::Queue& queue, bool waitComplete) {
     queueSumbitInfo.setCommandBufferCount(1);
     queueSumbitInfo.setPCommandBuffers(&transferCommandBuffer);
     const vk::Queue& graphicsTransferQueue = **Engine::graphics()->getQueue(QUEUE_GRAPHICS_TRANSFER_MAIN);
-    vk::Result result = queue.submit(1, &queueSumbitInfo, VK_NULL_HANDLE);
+    vk::Result result = queue.submit(1, &queueSumbitInfo, nullptr);
     assert(result == vk::Result::eSuccess);
     if (waitComplete)
         queue.waitIdle();

@@ -71,14 +71,17 @@ bool ImmediateRenderer::ColouredVertex::equalsEpsilon(const ColouredVertex& vert
 ImmediateRenderer::ImmediateRenderer():
         m_currentCommand(nullptr),
         m_matrixMode(MatrixMode_ModelView),
+        m_normal(0, 0, 0),
+        m_texture(0, 0),
+        m_colour(0, 0, 0, 0),
         m_vertexBuffer(nullptr),
         m_indexBuffer(nullptr),
         m_vertexCount(0),
         m_indexCount(0),
         m_firstChangedVertex(0),
         m_firstChangedIndex(0) {
-    m_modelMatrixStack.push(glm::mat4(1.0F));
-    m_projectionMatrixStack.push(glm::mat4(1.0F));
+    m_modelMatrixStack.emplace(1.0F); // implicit identity matrix
+    m_projectionMatrixStack.emplace(1.0F); // implicit identity matrix
 
     m_resources.initDefault();
 
@@ -542,7 +545,7 @@ void ImmediateRenderer::uploadBuffers() {
     }
 
     vk::DeviceSize alignedUniformBufferSize = Engine::graphics()->getAlignedUniformBufferOffset(sizeof(UniformBufferData));
-    const size_t uniformBufferCapacity = m_uniformBufferData.capacity() * alignedUniformBufferSize;
+    const vk::DeviceSize uniformBufferCapacity = m_uniformBufferData.capacity() * alignedUniformBufferSize;
     if (m_resources->uniformBuffer == nullptr || m_resources->uniformBuffer->getSize() < uniformBufferCapacity) {
         PROFILE_REGION("Recreate uniform buffer");
 

@@ -63,7 +63,7 @@ class Profiler {
 private:
     struct GPUQueryPool {
         WeakResource<vkr::Device> device;
-        vk::QueryPool pool = VK_NULL_HANDLE;
+        vk::QueryPool pool = nullptr;
         uint32_t capacity = 0;
         uint32_t size = 0;
         bool allAvailable = false;

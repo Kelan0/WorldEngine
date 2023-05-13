@@ -413,11 +413,11 @@ bool MeshUtils::loadOBJFile(const std::string& filePath, MeshUtils::OBJMeshData&
     //obj->m_vertices.swap(vertices);
     //obj->m_triangles.swap(triangles);
 
-    for (int i = 0; i < vertices.size(); ++i) {
+    for (size_t i = 0; i < vertices.size(); ++i) {
         meshData.addVertex(vertices[i]);
     }
 
-    for (int i = 0; i < triangles.size(); ++i) {
+    for (size_t i = 0; i < triangles.size(); ++i) {
         meshData.addTriangle(triangles[i].i0, triangles[i].i1, triangles[i].i2);
     }
 
@@ -450,10 +450,10 @@ bool readMeshCache(const std::filesystem::path& path, MeshUtils::OBJMeshData& me
     file.read((char*)(&indexCount), 8);
     file.read((char*)(&primType), 4);
     meshData.reset((MeshPrimitiveType)primType);
-    meshData.vertices().resize(vertexCount);
-    meshData.indices().resize(indexCount);
-    file.read((char*)(meshData.vertices().data()), vertexCount * sizeof(MeshUtils::OBJMeshData::Vertex));
-    file.read((char*)(meshData.indices().data()), indexCount * sizeof(MeshUtils::OBJMeshData::Index));
+    meshData.vertices().resize((size_t)vertexCount);
+    meshData.indices().resize((size_t)indexCount);
+    file.read((char*)(meshData.vertices().data()), (std::streamsize)vertexCount * sizeof(MeshUtils::OBJMeshData::Vertex));
+    file.read((char*)(meshData.indices().data()), (std::streamsize)indexCount * sizeof(MeshUtils::OBJMeshData::Index));
     return true;
 }
 

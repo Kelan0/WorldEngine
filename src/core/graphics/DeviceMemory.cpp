@@ -184,7 +184,7 @@ DeviceMemoryHeap* DeviceMemoryHeap::create(const DeviceMemoryConfiguration& devi
     allocInfo.setMemoryTypeIndex(memoryTypeIndex);
     allocInfo.setAllocationSize(deviceMemoryConfiguration.size);
 
-    vk::DeviceMemory deviceMemory = VK_NULL_HANDLE;
+    vk::DeviceMemory deviceMemory = nullptr;
     vk::Result result = device.allocateMemory(&allocInfo, nullptr, &deviceMemory);
 
 
@@ -644,8 +644,8 @@ void DeviceMemoryHeap::unmap(DeviceMemoryBlock* block) {
 void DeviceMemoryHeap::sanityCheckBlocks() {
     // If we need to use this method, things are going pretty bad... good luck :(
 
-    size_t freeBlockSizeSum = 0;
-    size_t allocatedBlockSizeSum = 0;
+    vk::DeviceSize freeBlockSizeSum = 0;
+    vk::DeviceSize allocatedBlockSizeSum = 0;
     for (size_t i = 0; i < m_blocks.size(); ++i) {
         if (m_blocks[i].free) {
             freeBlockSizeSum += m_blocks[i].size;

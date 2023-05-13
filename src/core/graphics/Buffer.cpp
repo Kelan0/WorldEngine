@@ -49,7 +49,7 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration, const std
     bufferCreateInfo.setUsage(usage);
     bufferCreateInfo.setSize(bufferConfiguration.size);
     bufferCreateInfo.setSharingMode(vk::SharingMode::eExclusive);
-    vk::Buffer buffer = VK_NULL_HANDLE;
+    vk::Buffer buffer = nullptr;
     result = device.createBuffer(&bufferCreateInfo, nullptr, &buffer);
 
     if (result != vk::Result::eSuccess) {
@@ -129,7 +129,7 @@ bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk:
     vk::SubmitInfo queueSumbitInfo;
     queueSumbitInfo.setCommandBufferCount(1);
     queueSumbitInfo.setPCommandBuffers(&transferCommandBuffer);
-    vk::Result result = transferQueue.submit(1, &queueSumbitInfo, VK_NULL_HANDLE);
+    vk::Result result = transferQueue.submit(1, &queueSumbitInfo, nullptr);
 #if _DEBUG
     assert(result == vk::Result::eSuccess);
 #endif
@@ -331,7 +331,8 @@ bool Buffer::mappedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSi
 
     while (srcOffset < size) {
         assert(dstOffset + elementSize < dstBuffer->getSize());
-        memcpy(dstBytes + dstOffset, srcBytes + srcOffset, cpySize);
+        assert(dstOffset <= SIZE_MAX && srcOffset <= SIZE_MAX && cpySize <= SIZE_MAX);
+        memcpy(dstBytes + (size_t)dstOffset, srcBytes + (size_t)srcOffset, (size_t)cpySize);
         srcOffset += srcIncr;
         dstOffset += dstIncr;
     }

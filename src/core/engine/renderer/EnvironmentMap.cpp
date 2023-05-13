@@ -152,7 +152,7 @@ void EnvironmentMap::update() {
         vk::SubmitInfo queueSubmitInfo;
         queueSubmitInfo.setCommandBufferCount(1);
         queueSubmitInfo.setPCommandBuffers(&commandBuffer);
-        vk::Result result = computeQueue.submit(1, &queueSubmitInfo, VK_NULL_HANDLE);
+        vk::Result result = computeQueue.submit(1, &queueSubmitInfo, nullptr);
         assert(result == vk::Result::eSuccess);
         computeQueue.waitIdle();
 

@@ -50,8 +50,8 @@ Entity::operator entt::entity() const {
     return m_entity;
 }
 
-Entity::operator uint64_t() const {
-    return (uint64_t)m_entity;
+Entity::operator entt::id_type() const {
+    return static_cast<entt::id_type>(m_entity);
 }
 
 Entity::operator bool() const {
@@ -61,7 +61,7 @@ Entity::operator bool() const {
 void Entity::operator=(std::nullptr_t) {
     //removeRef();
     m_entity = entt::null;
-    m_scene = NULL;
+    m_scene = nullptr;
 }
 
 Entity& Entity::operator=(const Entity& entity) {

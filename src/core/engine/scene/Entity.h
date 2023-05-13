@@ -63,7 +63,7 @@ public:
 
     operator entt::entity() const;
 
-    operator uint64_t() const;
+    operator entt::id_type() const;
 
     operator bool() const;
 

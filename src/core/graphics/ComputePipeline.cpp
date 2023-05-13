@@ -99,7 +99,7 @@ bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipeli
     if (pipelineConfig.computeShaderEntryPoint.empty())
         pipelineConfig.computeShaderEntryPoint = "main";
 
-    vk::ShaderModule computeShaderModule = VK_NULL_HANDLE;
+    vk::ShaderModule computeShaderModule = nullptr;
     if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_ComputeShader, device, pipelineConfig.computeShader, pipelineConfig.computeShaderEntryPoint, &computeShaderModule)) {
         printf("Unable to create ComputePipeline: Failed to load shader module\n");
         return false;
@@ -116,7 +116,7 @@ bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipeli
     pipelineLayoutCreateInfo.setSetLayouts(pipelineConfig.descriptorSetLayouts);
     pipelineLayoutCreateInfo.setPushConstantRanges(pipelineConfig.pushConstantRanges);
 
-    vk::PipelineLayout pipelineLayout = VK_NULL_HANDLE;
+    vk::PipelineLayout pipelineLayout = nullptr;
     result = device.createPipelineLayout(&pipelineLayoutCreateInfo, nullptr, &m_pipelineLayout);
     if (result != vk::Result::eSuccess) {
         printf("Unable to create ComputePipeline: Failed to create PipelineLayout: %s\n", vk::to_string(result).c_str());
@@ -129,7 +129,7 @@ bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipeli
     pipelineCreateInfo.setStage(computeShaderStageCreateInfo);
     pipelineCreateInfo.setLayout(m_pipelineLayout);
 
-    auto createComputePipelineResult = device.createComputePipeline(VK_NULL_HANDLE, pipelineCreateInfo);
+    auto createComputePipelineResult = device.createComputePipeline(nullptr, pipelineCreateInfo);
     if (createComputePipelineResult.result != vk::Result::eSuccess) {
         printf("Failed to create ComputePipeline: %s\n", vk::to_string(createComputePipelineResult.result).c_str());
         device.destroyShaderModule(computeShaderModule);
@@ -183,8 +183,8 @@ bool ComputePipeline::isValid() const {
 void ComputePipeline::cleanup() {
     (**m_device).destroyPipelineLayout(m_pipelineLayout);
     (**m_device).destroyPipeline(m_pipeline);
-    m_pipelineLayout = VK_NULL_HANDLE;
-    m_pipeline = VK_NULL_HANDLE;
+    m_pipelineLayout = nullptr;
+    m_pipeline = nullptr;
 }
 
 
@@ -202,8 +202,8 @@ void ComputePipeline::onShaderLoaded(ShaderLoadedEvent* event) {
         Engine::graphics()->flushRendering([&event, this]() {
 
             // Backup current status in case recreate fails. It will always clean up the current resources, so we must exchange them with null
-            vk::Pipeline backupPipeline = std::exchange(m_pipeline, VK_NULL_HANDLE);
-            vk::PipelineLayout backupPipelineLayout = std::exchange(m_pipelineLayout, VK_NULL_HANDLE);
+            vk::Pipeline backupPipeline = std::exchange(m_pipeline, nullptr);
+            vk::PipelineLayout backupPipelineLayout = std::exchange(m_pipelineLayout, nullptr);
             ComputePipelineConfiguration backupConfig(m_config); // Copy
 
             bool success = recreate(m_config, m_name);

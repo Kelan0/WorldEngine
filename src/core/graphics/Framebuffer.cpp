@@ -73,7 +73,7 @@ Framebuffer::Framebuffer(const WeakResource<vkr::Device>& device, const vk::Fram
 
 Framebuffer::~Framebuffer() {
     (**m_device).destroyFramebuffer(m_framebuffer);
-    m_framebuffer = VK_NULL_HANDLE;
+    m_framebuffer = nullptr;
 }
 
 Framebuffer* Framebuffer::create(const FramebufferConfiguration& framebufferConfiguration, const std::string& name) {
@@ -104,7 +104,7 @@ Framebuffer* Framebuffer::create(const FramebufferConfiguration& framebufferConf
     framebufferCreateInfo.setHeight(framebufferConfiguration.height);
     framebufferCreateInfo.setLayers(framebufferConfiguration.layers);
 
-    vk::Framebuffer framebuffer = VK_NULL_HANDLE;
+    vk::Framebuffer framebuffer = nullptr;
     vk::Result result = device.createFramebuffer(&framebufferCreateInfo, nullptr, &framebuffer);
     if (result != vk::Result::eSuccess) {
         printf("Failed to create Vulkan Framebuffer: %s\n", vk::to_string(result).c_str());

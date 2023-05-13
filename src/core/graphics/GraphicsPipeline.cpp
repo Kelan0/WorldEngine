@@ -279,7 +279,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     if (pipelineConfig.vertexShader.has_value()) {
         if (pipelineConfig.vertexShaderEntryPoint.empty())
             pipelineConfig.vertexShaderEntryPoint = "main";
-        vk::ShaderModule& vertexShaderModule = allShaderModules.emplace_back(VK_NULL_HANDLE);
+        vk::ShaderModule& vertexShaderModule = allShaderModules.emplace_back(nullptr);
         if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_VertexShader, device, pipelineConfig.vertexShader.value(), pipelineConfig.vertexShaderEntryPoint, &vertexShaderModule)) {
             cleanupShaderModules();
             return false;
@@ -295,7 +295,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     if (pipelineConfig.fragmentShader.has_value()) {
         if (pipelineConfig.fragmentShaderEntryPoint.empty())
             pipelineConfig.fragmentShaderEntryPoint = "main";
-        vk::ShaderModule& fragmentShaderModule = allShaderModules.emplace_back(VK_NULL_HANDLE);
+        vk::ShaderModule& fragmentShaderModule = allShaderModules.emplace_back(nullptr);
         if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_FragmentShader, device, pipelineConfig.fragmentShader.value(), pipelineConfig.fragmentShaderEntryPoint, &fragmentShaderModule)) {
             cleanupShaderModules();
             return false;
@@ -416,12 +416,12 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     graphicsPipelineCreateInfo.setLayout(m_pipelineLayout);
     graphicsPipelineCreateInfo.setRenderPass(m_renderPass->getRenderPass());
     graphicsPipelineCreateInfo.setSubpass(graphicsPipelineConfiguration.subpass);
-    graphicsPipelineCreateInfo.setBasePipelineHandle(VK_NULL_HANDLE);
+    graphicsPipelineCreateInfo.setBasePipelineHandle(nullptr);
     graphicsPipelineCreateInfo.setBasePipelineIndex(-1);
 
     bool doAbort = Engine::graphics()->doAbortOnVulkanError();
     Engine::graphics()->setAbortOnVulkanError(false);
-    auto createGraphicsPipelineResult = device.createGraphicsPipeline(VK_NULL_HANDLE, graphicsPipelineCreateInfo);
+    auto createGraphicsPipelineResult = device.createGraphicsPipeline(nullptr, graphicsPipelineCreateInfo);
     Engine::graphics()->setAbortOnVulkanError(doAbort);
 
     if (createGraphicsPipelineResult.result != vk::Result::eSuccess) {
@@ -605,7 +605,7 @@ void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer,
 }
 
 void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, uint32_t firstBinding, uint32_t bindingCount, Buffer* const* buffers, const vk::DeviceSize* offsets) {
-    std::vector<vk::Buffer> vkBuffers(bindingCount, VK_NULL_HANDLE);
+    std::vector<vk::Buffer> vkBuffers(bindingCount, nullptr);
     for (uint32_t i = 0; i < bindingCount; ++i)
         if (buffers[i] != nullptr) vkBuffers[i] = buffers[i]->getBuffer();
     bindVertexBuffers(commandBuffer, firstBinding, (uint32_t)vkBuffers.size(), vkBuffers.data(), offsets);
@@ -616,7 +616,7 @@ void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer,
 }
 
 void GraphicsPipeline::bindVertexBuffers(const vk::CommandBuffer& commandBuffer, uint32_t firstBinding, uint32_t bindingCount, Buffer* const* buffers, const vk::DeviceSize* offsets, const vk::DeviceSize* sizes, const vk::DeviceSize* strides) {
-    std::vector<vk::Buffer> vkBuffers(bindingCount, VK_NULL_HANDLE);
+    std::vector<vk::Buffer> vkBuffers(bindingCount, nullptr);
     for (uint32_t i = 0; i < bindingCount; ++i)
         if (buffers[i] != nullptr) vkBuffers[i] = buffers[i]->getBuffer();
     bindVertexBuffers(commandBuffer, firstBinding, (uint32_t)vkBuffers.size(), vkBuffers.data(), offsets, sizes, strides);
@@ -704,8 +704,8 @@ vk::Viewport GraphicsPipeline::getScreenViewport(const glm::vec2& size, const gl
 void GraphicsPipeline::cleanup() {
     (**m_device).destroyPipelineLayout(m_pipelineLayout);
     (**m_device).destroyPipeline(m_pipeline);
-    m_pipelineLayout = VK_NULL_HANDLE;
-    m_pipeline = VK_NULL_HANDLE;
+    m_pipelineLayout = nullptr;
+    m_pipeline = nullptr;
     m_renderPass.reset();
 }
 
@@ -737,8 +737,8 @@ void GraphicsPipeline::onShaderLoaded(ShaderLoadedEvent* event) {
     if (doRecreate) {
         Engine::graphics()->flushRendering([&event, this]() {
             // Backup current status in case recreate fails. It will always clean up the current resources, so we must exchange them with null
-            vk::Pipeline backupPipeline = std::exchange(m_pipeline, VK_NULL_HANDLE);
-            vk::PipelineLayout backupPipelineLayout = std::exchange(m_pipelineLayout, VK_NULL_HANDLE);
+            vk::Pipeline backupPipeline = std::exchange(m_pipeline, nullptr);
+            vk::PipelineLayout backupPipelineLayout = std::exchange(m_pipelineLayout, nullptr);
             SharedResource<RenderPass> backupRenderPass = std::exchange(m_renderPass, nullptr);
             GraphicsPipelineConfiguration backupConfig(m_config); // Copy
 

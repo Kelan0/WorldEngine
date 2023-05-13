@@ -111,7 +111,7 @@ void BloomTestApplication::init() {
     testMeshData.applyTransform();
     testMeshData.computeTangents();
 //
-    printf("Loaded bunny.obj :- %llu polygons\n", testMeshData.getPolygonCount());
+    printf("Loaded bunny.obj :- %zu polygons\n", testMeshData.getPolygonCount());
     MeshConfiguration bunnyMeshConfig{};
     bunnyMeshConfig.device = Engine::graphics()->getDevice();
     bunnyMeshConfig.setMeshData(&testMeshData);
@@ -230,8 +230,8 @@ void BloomTestApplication::init() {
 void BloomTestApplication::cleanup() {
 
     textures.clear();
-    for (int i = 0; i < images.size(); ++i)
-        delete images[i];
+    for (auto& image : images)
+        delete image;
 }
 
 void BloomTestApplication::render(double dt) {

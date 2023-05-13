@@ -190,7 +190,8 @@ ThreadPool::Thread* ThreadPool::getCurrentThread() {
 std::default_random_engine& ThreadPool::random() {
     struct Seed {
         static uint32_t get() {
-            size_t s = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+            size_t s = 0;
+            std::hash_combine(s, std::chrono::high_resolution_clock::now().time_since_epoch().count());
             std::hash_combine(s, std::this_thread::get_id());
 //            printf("RNG seed for thread %llu = %llu\n", std::this_thread::get_id(), s);
             return (uint32_t)s;

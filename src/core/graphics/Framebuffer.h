@@ -10,7 +10,7 @@ class RenderPass;
 
 struct FramebufferConfiguration {
     WeakResource<vkr::Device> device;
-    vk::RenderPass renderPass = VK_NULL_HANDLE;
+    vk::RenderPass renderPass = nullptr;
     std::vector<vk::ImageView> attachments;
     uint32_t width;
     uint32_t height;

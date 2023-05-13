@@ -1,7 +1,15 @@
 #include "core/Vulkan.h"
+#include <iostream>
+#include <cassert>
 
 // Why do we need to load extension methods like this????? this is so tedious :(
 
+
+#define LOAD_DEVICE_FUNCTION(functionName) \
+    ptr_##functionName = (PFN_##functionName) vkGetDeviceProcAddr(device, #functionName); \
+    if (ptr_##functionName == nullptr)     \
+        printf("Failed to load vulkan device extension function \"" #functionName "\"\n"); \
+    assert(ptr_##functionName != nullptr);
 
 #if defined(VK_EXT_extended_dynamic_state)
 PFN_vkCmdSetCullModeEXT ptr_vkCmdSetCullModeEXT;
@@ -66,60 +74,65 @@ void loadVulkanInstanceExtensions(VkInstance device) {
 
 void loadVulkanDeviceExtensions(VkDevice device) {
 #if defined(VK_EXT_extended_dynamic_state)
-    ptr_vkCmdSetCullModeEXT = (PFN_vkCmdSetCullModeEXT) vkGetDeviceProcAddr(device, "vkCmdSetCullModeEXT");
-    ptr_vkCmdSetFrontFaceEXT = (PFN_vkCmdSetFrontFaceEXT) vkGetDeviceProcAddr(device, "vkCmdSetFrontFaceEXT");
-    ptr_vkCmdSetPrimitiveTopologyEXT = (PFN_vkCmdSetPrimitiveTopologyEXT) vkGetDeviceProcAddr(device, "vkCmdSetPrimitiveTopologyEXT");
-    ptr_vkCmdSetViewportWithCountEXT = (PFN_vkCmdSetViewportWithCountEXT) vkGetDeviceProcAddr(device, "vkCmdSetViewportWithCountEXT");
-    ptr_vkCmdSetScissorWithCountEXT = (PFN_vkCmdSetScissorWithCountEXT) vkGetDeviceProcAddr(device, "vkCmdSetScissorWithCountEXT");
-    ptr_vkCmdBindVertexBuffers2EXT = (PFN_vkCmdBindVertexBuffers2EXT) vkGetDeviceProcAddr(device, "vkCmdBindVertexBuffers2EXT");
-    ptr_vkCmdSetDepthTestEnableEXT = (PFN_vkCmdSetDepthTestEnableEXT) vkGetDeviceProcAddr(device, "vkCmdSetDepthTestEnableEXT");
-    ptr_vkCmdSetDepthWriteEnableEXT = (PFN_vkCmdSetDepthWriteEnableEXT) vkGetDeviceProcAddr(device, "vkCmdSetDepthWriteEnableEXT");
-    ptr_vkCmdSetDepthCompareOpEXT = (PFN_vkCmdSetDepthCompareOpEXT) vkGetDeviceProcAddr(device, "vkCmdSetDepthCompareOpEXT");
-    ptr_vkCmdSetDepthBoundsTestEnableEXT = (PFN_vkCmdSetDepthBoundsTestEnableEXT) vkGetDeviceProcAddr(device, "vkCmdSetDepthBoundsTestEnableEXT");
-    ptr_vkCmdSetStencilTestEnableEXT = (PFN_vkCmdSetStencilTestEnableEXT) vkGetDeviceProcAddr(device, "vkCmdSetStencilTestEnableEXT");
-    ptr_vkCmdSetStencilOpEXT = (PFN_vkCmdSetStencilOpEXT) vkGetDeviceProcAddr(device, "vkCmdSetStencilOpEXT");
+    LOAD_DEVICE_FUNCTION(vkCmdSetCullModeEXT);
+    LOAD_DEVICE_FUNCTION(vkCmdSetFrontFaceEXT);
+    LOAD_DEVICE_FUNCTION(vkCmdSetPrimitiveTopologyEXT);
+    LOAD_DEVICE_FUNCTION(vkCmdSetViewportWithCountEXT);
+    LOAD_DEVICE_FUNCTION(vkCmdSetScissorWithCountEXT);
+    LOAD_DEVICE_FUNCTION(vkCmdBindVertexBuffers2EXT);
+    LOAD_DEVICE_FUNCTION(vkCmdSetDepthTestEnableEXT);
+    LOAD_DEVICE_FUNCTION(vkCmdSetDepthWriteEnableEXT);
+    LOAD_DEVICE_FUNCTION(vkCmdSetDepthCompareOpEXT);
+    LOAD_DEVICE_FUNCTION(vkCmdSetDepthBoundsTestEnableEXT);
+    LOAD_DEVICE_FUNCTION(vkCmdSetStencilTestEnableEXT);
+    LOAD_DEVICE_FUNCTION(vkCmdSetStencilOpEXT);
 #endif /* defined(VK_EXT_extended_dynamic_state) */
 
-#if defined(VK_EXT_extended_dynamic_state2)
-    ptr_vkCmdSetPatchControlPointsEXT = (PFN_vkCmdSetPatchControlPointsEXT) vkGetDeviceProcAddr(device, "vkCmdSetPatchControlPointsEXT");
-    ptr_vkCmdSetRasterizerDiscardEnableEXT = (PFN_vkCmdSetRasterizerDiscardEnableEXT) vkGetDeviceProcAddr(device, "vkCmdSetRasterizerDiscardEnableEXT");
-    ptr_vkCmdSetDepthBiasEnableEXT = (PFN_vkCmdSetDepthBiasEnableEXT) vkGetDeviceProcAddr(device, "vkCmdSetDepthBiasEnableEXT");
-    ptr_vkCmdSetLogicOpEXT = (PFN_vkCmdSetLogicOpEXT) vkGetDeviceProcAddr(device, "vkCmdSetLogicOpEXT");
-    ptr_vkCmdSetPrimitiveRestartEnableEXT = (PFN_vkCmdSetPrimitiveRestartEnableEXT) vkGetDeviceProcAddr(device, "vkCmdSetPrimitiveRestartEnableEXT");
-#endif /* defined(VK_EXT_extended_dynamic_state2) */
-
 #if defined(VK_EXT_line_rasterization)
-    ptr_vkCmdSetLineStippleEXT = (PFN_vkCmdSetLineStippleEXT) vkGetDeviceProcAddr(device, "vkCmdSetLineStippleEXT");
+    LOAD_DEVICE_FUNCTION(vkCmdSetLineStippleEXT)
 #endif /* defined(VK_EXT_line_rasterization) */
 
 #if defined(VK_EXT_sample_locations)
-    ptr_vkCmdSetSampleLocationsEXT = (PFN_vkCmdSetSampleLocationsEXT) vkGetDeviceProcAddr(device, "vkCmdSetSampleLocationsEXT");
-    ptr_vkGetPhysicalDeviceMultisamplePropertiesEXT = (PFN_vkGetPhysicalDeviceMultisamplePropertiesEXT) vkGetDeviceProcAddr(device, "vkGetPhysicalDeviceMultisamplePropertiesEXT");
+    LOAD_DEVICE_FUNCTION(vkCmdSetSampleLocationsEXT);
+    LOAD_DEVICE_FUNCTION(vkGetPhysicalDeviceMultisamplePropertiesEXT);
 #endif /* defined(VK_EXT_sample_locations) */
 
+#if defined(VK_EXT_extended_dynamic_state2)
+    LOAD_DEVICE_FUNCTION(vkCmdSetPatchControlPointsEXT);
+    LOAD_DEVICE_FUNCTION(vkCmdSetRasterizerDiscardEnableEXT);
+    LOAD_DEVICE_FUNCTION(vkCmdSetDepthBiasEnableEXT);
+    LOAD_DEVICE_FUNCTION(vkCmdSetLogicOpEXT);
+    LOAD_DEVICE_FUNCTION(vkCmdSetPrimitiveRestartEnableEXT);
+#endif /* defined(VK_EXT_extended_dynamic_state2) */
+
 #if defined(VK_EXT_vertex_input_dynamic_state)
-    ptr_vkCmdSetVertexInputEXT = (PFN_vkCmdSetVertexInputEXT) vkGetDeviceProcAddr(device, "vkCmdSetVertexInputEXT");
+    LOAD_DEVICE_FUNCTION(vkCmdSetVertexInputEXT);
 #endif /* defined(VK_EXT_vertex_input_dynamic_state) */
 
 #if defined(VK_EXT_color_write_enable)
-    ptr_vkCmdSetColorWriteEnableEXT = (PFN_vkCmdSetColorWriteEnableEXT) vkGetDeviceProcAddr(device, "vkCmdSetColorWriteEnableEXT");
+    LOAD_DEVICE_FUNCTION(vkCmdSetColorWriteEnableEXT);
 #endif /* defined(VK_EXT_color_write_enable) */
 
 #if defined(VK_EXT_debug_utils)
-    ptr_vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT) vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectNameEXT");
-    ptr_vkSetDebugUtilsObjectTagEXT = (PFN_vkSetDebugUtilsObjectTagEXT) vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectTagEXT");
-    ptr_vkQueueBeginDebugUtilsLabelEXT = (PFN_vkQueueBeginDebugUtilsLabelEXT) vkGetDeviceProcAddr(device, "vkQueueBeginDebugUtilsLabelEXT");
-    ptr_vkQueueEndDebugUtilsLabelEXT = (PFN_vkQueueEndDebugUtilsLabelEXT) vkGetDeviceProcAddr(device, "vkQueueEndDebugUtilsLabelEXT");
-    ptr_vkQueueInsertDebugUtilsLabelEXT = (PFN_vkQueueInsertDebugUtilsLabelEXT) vkGetDeviceProcAddr(device, "vkQueueInsertDebugUtilsLabelEXT");
-    ptr_vkCmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT) vkGetDeviceProcAddr(device, "vkCmdBeginDebugUtilsLabelEXT");
-    ptr_vkCmdEndDebugUtilsLabelEXT = (PFN_vkCmdEndDebugUtilsLabelEXT) vkGetDeviceProcAddr(device, "vkCmdEndDebugUtilsLabelEXT");
-    ptr_vkCmdInsertDebugUtilsLabelEXT = (PFN_vkCmdInsertDebugUtilsLabelEXT) vkGetDeviceProcAddr(device, "vkCmdInsertDebugUtilsLabelEXT");
-    ptr_vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetDeviceProcAddr(device, "vkCreateDebugUtilsMessengerEXT");
-    ptr_vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetDeviceProcAddr(device, "vkDestroyDebugUtilsMessengerEXT");
-    ptr_vkSubmitDebugUtilsMessageEXT = (PFN_vkSubmitDebugUtilsMessageEXT) vkGetDeviceProcAddr(device, "vkSubmitDebugUtilsMessageEXT");
+    LOAD_DEVICE_FUNCTION(vkSetDebugUtilsObjectNameEXT);
+    LOAD_DEVICE_FUNCTION(vkSetDebugUtilsObjectTagEXT);
+    LOAD_DEVICE_FUNCTION(vkQueueBeginDebugUtilsLabelEXT);
+    LOAD_DEVICE_FUNCTION(vkQueueEndDebugUtilsLabelEXT);
+    LOAD_DEVICE_FUNCTION(vkQueueInsertDebugUtilsLabelEXT);
+    LOAD_DEVICE_FUNCTION(vkCmdBeginDebugUtilsLabelEXT);
+    LOAD_DEVICE_FUNCTION(vkCmdEndDebugUtilsLabelEXT);
+    LOAD_DEVICE_FUNCTION(vkCmdInsertDebugUtilsLabelEXT);
+    LOAD_DEVICE_FUNCTION(vkCreateDebugUtilsMessengerEXT);
+    LOAD_DEVICE_FUNCTION(vkDestroyDebugUtilsMessengerEXT);
+    LOAD_DEVICE_FUNCTION(vkSubmitDebugUtilsMessageEXT);
 #endif /* defined(VK_EXT_debug_utils) */
 }
 
+
+
+
+#if 1
+#if defined(VK_EXT_extended_dynamic_state)
 void vkCmdSetCullModeEXT(VkCommandBuffer commandBuffer, VkCullModeFlags cullMode) { ptr_vkCmdSetCullModeEXT(commandBuffer, cullMode); }
 void vkCmdSetFrontFaceEXT(VkCommandBuffer commandBuffer, VkFrontFace frontFace) { ptr_vkCmdSetFrontFaceEXT(commandBuffer, frontFace); }
 void vkCmdSetPrimitiveTopologyEXT(VkCommandBuffer commandBuffer, VkPrimitiveTopology primitiveTopology) { ptr_vkCmdSetPrimitiveTopologyEXT(commandBuffer, primitiveTopology); }
@@ -132,22 +145,34 @@ void vkCmdSetDepthCompareOpEXT(VkCommandBuffer commandBuffer, VkCompareOp depthC
 void vkCmdSetDepthBoundsTestEnableEXT(VkCommandBuffer commandBuffer, VkBool32 depthBoundsTestEnable) { ptr_vkCmdSetDepthBoundsTestEnableEXT(commandBuffer, depthBoundsTestEnable); }
 void vkCmdSetStencilTestEnableEXT(VkCommandBuffer commandBuffer, VkBool32 stencilTestEnable) { ptr_vkCmdSetStencilTestEnableEXT(commandBuffer, stencilTestEnable); }
 void vkCmdSetStencilOpEXT(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, VkStencilOp failOp, VkStencilOp passOp, VkStencilOp depthFailOp, VkCompareOp compareOp) { ptr_vkCmdSetStencilOpEXT(commandBuffer, faceMask, failOp, passOp, depthFailOp, compareOp); }
+#endif /* defined(VK_EXT_extended_dynamic_state) */
 
+#if defined(VK_EXT_line_rasterization)
 void vkCmdSetLineStippleEXT(VkCommandBuffer commandBuffer, uint32_t lineStippleFactor, uint16_t lineStipplePattern) { ptr_vkCmdSetLineStippleEXT(commandBuffer, lineStippleFactor, lineStipplePattern); }
+#endif /* defined(VK_EXT_line_rasterization) */
 
+#if defined(VK_EXT_sample_locations)
 void vkCmdSetSampleLocationsEXT(VkCommandBuffer commandBuffer, const VkSampleLocationsInfoEXT* pSampleLocationsInfo) { ptr_vkCmdSetSampleLocationsEXT(commandBuffer, pSampleLocationsInfo); }
 void vkGetPhysicalDeviceMultisamplePropertiesEXT(VkPhysicalDevice physicalDevice, VkSampleCountFlagBits samples, VkMultisamplePropertiesEXT* pMultisampleProperties) { ptr_vkGetPhysicalDeviceMultisamplePropertiesEXT(physicalDevice, samples, pMultisampleProperties); }
+#endif /* defined(VK_EXT_sample_locations) */
 
-void vkCmdSetVertexInputEXT(VkCommandBuffer commandBuffer, uint32_t vertexBindingDescriptionCount, const VkVertexInputBindingDescription2EXT* pVertexBindingDescriptions, uint32_t vertexAttributeDescriptionCount, const VkVertexInputAttributeDescription2EXT* pVertexAttributeDescriptions) { ptr_vkCmdSetVertexInputEXT(commandBuffer, vertexBindingDescriptionCount, pVertexBindingDescriptions, vertexAttributeDescriptionCount, pVertexAttributeDescriptions); }
-
+#if defined(VK_EXT_extended_dynamic_state2)
 void vkCmdSetPatchControlPointsEXT(VkCommandBuffer commandBuffer, uint32_t patchControlPoints) { ptr_vkCmdSetPatchControlPointsEXT(commandBuffer, patchControlPoints); }
 void vkCmdSetRasterizerDiscardEnableEXT(VkCommandBuffer commandBuffer, VkBool32 rasterizerDiscardEnable) { ptr_vkCmdSetRasterizerDiscardEnableEXT(commandBuffer, rasterizerDiscardEnable); }
 void vkCmdSetDepthBiasEnableEXT(VkCommandBuffer commandBuffer, VkBool32 depthBiasEnable) { ptr_vkCmdSetDepthBiasEnableEXT(commandBuffer, depthBiasEnable); }
 void vkCmdSetLogicOpEXT(VkCommandBuffer commandBuffer, VkLogicOp logicOp) { ptr_vkCmdSetLogicOpEXT(commandBuffer, logicOp); }
 void vkCmdSetPrimitiveRestartEnableEXT(VkCommandBuffer commandBuffer, VkBool32 primitiveRestartEnable) { ptr_vkCmdSetPrimitiveRestartEnableEXT(commandBuffer, primitiveRestartEnable); }
+#endif /* defined(VK_EXT_extended_dynamic_state2) */
 
+#if defined(VK_EXT_vertex_input_dynamic_state)
+void vkCmdSetVertexInputEXT(VkCommandBuffer commandBuffer, uint32_t vertexBindingDescriptionCount, const VkVertexInputBindingDescription2EXT* pVertexBindingDescriptions, uint32_t vertexAttributeDescriptionCount, const VkVertexInputAttributeDescription2EXT* pVertexAttributeDescriptions) { ptr_vkCmdSetVertexInputEXT(commandBuffer, vertexBindingDescriptionCount, pVertexBindingDescriptions, vertexAttributeDescriptionCount, pVertexAttributeDescriptions); }
+#endif /* defined(VK_EXT_vertex_input_dynamic_state) */
+
+#if defined(VK_EXT_color_write_enable)
 void vkCmdSetColorWriteEnableEXT(VkCommandBuffer commandBuffer, uint32_t attachmentCount, const VkBool32* pColorWriteEnables) { ptr_vkCmdSetColorWriteEnableEXT(commandBuffer, attachmentCount, pColorWriteEnables); }
+#endif /* defined(VK_EXT_color_write_enable) */
 
+#if defined(VK_EXT_debug_utils)
 VkResult vkSetDebugUtilsObjectNameEXT(VkDevice device, const VkDebugUtilsObjectNameInfoEXT* pNameInfo) { return ptr_vkSetDebugUtilsObjectNameEXT(device, pNameInfo); }
 VkResult vkSetDebugUtilsObjectTagEXT(VkDevice device, const VkDebugUtilsObjectTagInfoEXT* pTagInfo) { return ptr_vkSetDebugUtilsObjectTagEXT(device, pTagInfo); }
 void vkQueueBeginDebugUtilsLabelEXT(VkQueue queue, const VkDebugUtilsLabelEXT* pLabelInfo) { ptr_vkQueueBeginDebugUtilsLabelEXT(queue, pLabelInfo); }
@@ -159,3 +184,5 @@ void vkCmdInsertDebugUtilsLabelEXT(VkCommandBuffer commandBuffer, const VkDebugU
 VkResult vkCreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pMessenger) { return ptr_vkCreateDebugUtilsMessengerEXT(instance, pCreateInfo, pAllocator, pMessenger); }
 void vkDestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT messenger, const VkAllocationCallbacks* pAllocator) { ptr_vkDestroyDebugUtilsMessengerEXT(instance, messenger, pAllocator); }
 void vkSubmitDebugUtilsMessageEXT(VkInstance instance, VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData) { ptr_vkSubmitDebugUtilsMessageEXT(instance, messageSeverity, messageTypes, pCallbackData); }
+#endif /* defined(VK_EXT_debug_utils) */
+#endif

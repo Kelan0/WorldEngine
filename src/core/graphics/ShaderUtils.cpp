@@ -118,7 +118,7 @@ void ShaderLoadingUpdater::checkModifiedShaders() {
             continue; // Nothing depends on this file. // TODO: remove it
         }
 
-        printf("Reloading shader dependency %s with %llu dependent shaders\n", dependencyInfo.filePath.c_str(), dependencyInfo.dependentShaderKeys.size());
+        printf("Reloading shader dependency %s with %zu dependent shaders\n", dependencyInfo.filePath.c_str(), dependencyInfo.dependentShaderKeys.size());
 
         for (auto it0 = dependencyInfo.dependentShaderKeys.begin(); it0 != dependencyInfo.dependentShaderKeys.end();) {
             const std::string& shaderKey = *it0;
@@ -340,7 +340,7 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
         newShaderInfo.filePath = filePath;
         newShaderInfo.entryPoint = entryPoint;
         newShaderInfo.fileLoadedTime = std::chrono::file_clock::now();
-        newShaderInfo.bytecode.resize(file.tellg());
+        newShaderInfo.bytecode.resize((size_t)file.tellg());
         newShaderInfo.isValidShader = isValidShader;
         newShaderInfo.dependencyFilePaths.clear();
 

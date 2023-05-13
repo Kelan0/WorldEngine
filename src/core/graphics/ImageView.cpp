@@ -62,7 +62,7 @@ ImageView* ImageView::create(const ImageViewConfiguration& imageViewConfiguratio
     imageViewCreateInfo.subresourceRange.setBaseArrayLayer(imageViewConfiguration.baseArrayLayer);
     imageViewCreateInfo.subresourceRange.setLayerCount(imageViewConfiguration.arrayLayerCount);
 
-    vk::ImageView imageView = VK_NULL_HANDLE;
+    vk::ImageView imageView = nullptr;
 
     vk::Result result;
     result = device.createImageView(&imageViewCreateInfo, nullptr, &imageView);

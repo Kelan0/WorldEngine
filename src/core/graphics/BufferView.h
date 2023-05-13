@@ -9,7 +9,7 @@ class Buffer;
 
 struct BufferViewConfiguration {
     WeakResource<vkr::Device> device;
-    vk::Buffer buffer = VK_NULL_HANDLE;
+    vk::Buffer buffer = nullptr;
     vk::Format format = vk::Format::eUndefined;
     vk::DeviceSize offset = 0;
     vk::DeviceSize range = 0;

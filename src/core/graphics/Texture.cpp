@@ -35,7 +35,7 @@ Sampler* Sampler::create(const SamplerConfiguration& samplerConfiguration, const
     samplerCreateInfo.setBorderColor(samplerConfiguration.borderColour);
     samplerCreateInfo.setUnnormalizedCoordinates(samplerConfiguration.unnormalizedCoordinates);
 
-    vk::Sampler sampler = VK_NULL_HANDLE;
+    vk::Sampler sampler = nullptr;
 
     vk::Result result;
     result = device.createSampler(&samplerCreateInfo, nullptr, &sampler);

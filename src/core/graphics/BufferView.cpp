@@ -40,7 +40,7 @@ BufferView* BufferView::create(const BufferViewConfiguration& bufferViewConfigur
 
     const vk::Device& device = **bufferViewConfiguration.device.lock(name);
 
-    vk::BufferView bufferView = VK_NULL_HANDLE;
+    vk::BufferView bufferView = nullptr;
     vk::Result result = device.createBufferView(&bufferViewCreateInfo, nullptr, &bufferView);
     if (result != vk::Result::eSuccess) {
         printf("Failed to create BufferView: %s\n", vk::to_string(result).c_str());

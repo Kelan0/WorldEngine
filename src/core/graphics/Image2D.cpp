@@ -115,7 +115,7 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration, const
         return nullptr;
     }
 
-    vk::Image image = VK_NULL_HANDLE;
+    vk::Image image = nullptr;
     result = device.createImage(&imageCreateInfo, nullptr, &image);
     if (result != vk::Result::eSuccess) {
         printf("Failed to create Image2D \"%s\": %s\n", name.c_str(), vk::to_string(result).c_str());

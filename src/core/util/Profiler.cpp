@@ -480,7 +480,7 @@ void Profiler::getFrameProfile(std::unordered_map<uint64_t, std::vector<CPUProfi
             continue;
 
         std::vector<CPUProfile>& outProfiles = outThreadProfiles[threadId];
-        int64_t index = (int64_t)outProfiles.size();
+        int32_t index = (int32_t)outProfiles.size();
 
         std::scoped_lock<std::mutex> lock2(ctx.mtx);
         outProfiles.resize(index + ctx.prevFrameProfiles.size());
@@ -574,7 +574,7 @@ bool Profiler::getNextQueryPool(GPUQueryPool** queryPool) {
     if (selectedQueryPool == nullptr) {
         const SharedResource<vkr::Device>& device = Engine::graphics()->getDevice();
 
-        vk::QueryPool queryPoolHandle = VK_NULL_HANDLE;
+        vk::QueryPool queryPoolHandle = nullptr;
         if (!createGpuTimestampQueryPool(**device, ctx.minQueryPoolSize, &queryPoolHandle)) {
             return false;
         }
@@ -620,7 +620,7 @@ void Profiler::destroyQueryPool(GPUQueryPool* queryPool) {
 
 void Profiler::resetQueryPools(GPUQueryPool** queryPools, size_t count) {
     GPUContext& ctx = gpuContext();
-    vk::CommandBuffer commandBuffer = VK_NULL_HANDLE;
+    vk::CommandBuffer commandBuffer = nullptr;
 
     uint32_t numReset = 0;
 
