@@ -26,6 +26,7 @@ SceneRenderer::SceneRenderer():
 }
 
 SceneRenderer::~SceneRenderer() {
+    printf("Destroying SceneRenderer\n");
     for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
         delete m_resources[i]->objectIndicesBuffer;
         delete m_resources[i]->worldTransformBuffer;
@@ -315,6 +316,7 @@ void SceneRenderer::applyFrustumCulling(const Frustum* frustum) {
     PROFILE_REGION("Update visible indices")
 
     if (frustum == nullptr) {
+        // No frustum, we draw everything
         for (uint32_t i = 0; i < m_numRenderEntities; ++i) {
             m_objectIndicesBuffer.emplace_back(i);
         }
@@ -342,7 +344,7 @@ void SceneRenderer::applyFrustumCulling(const Frustum* frustum) {
     PROFILE_REGION("Upload visible indices")
 
     if (!m_objectIndicesBuffer.empty()) {
-        uint32_t* mappedObjectIndicesBuffer = static_cast<uint32_t*>(mapObjectIndicesBuffer(CEIL_TO_MULTIPLE(m_objectIndicesBuffer.size(), 4)));
+        uint32_t* mappedObjectIndicesBuffer = static_cast<uint32_t*>(mapObjectIndicesBuffer(m_numRenderEntities));
         memcpy(&mappedObjectIndicesBuffer[0], &m_objectIndicesBuffer[0], m_objectIndicesBuffer.size() * sizeof(uint32_t));
     }
 }
@@ -466,6 +468,8 @@ void SceneRenderer::streamEntityRenderData() {
 
 void* SceneRenderer::mapObjectIndicesBuffer(size_t maxObjects) {
     PROFILE_SCOPE("SceneRenderer::mapObjectIndicesBuffer")
+
+    maxObjects = CEIL_TO_MULTIPLE(maxObjects, 4);
 
     vk::DeviceSize newBufferSize = sizeof(uint32_t) * maxObjects;
 

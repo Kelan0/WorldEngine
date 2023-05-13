@@ -40,6 +40,10 @@ public:
 
     double getOffset() const;
 
+    double& operator[](glm::length_t index);
+
+    double const& operator[](glm::length_t index) const;
+
     double calculateSignedDistance(const glm::dvec3& point) const;
 
     double calculateMinSignedDistance(const BoundingVolume& boundingVolume) const;
@@ -53,15 +57,8 @@ public:
     static glm::dvec3 triplePlaneIntersection(const Plane& a, const Plane& b, const Plane& c);
 
 public:
-    union {
-        struct {
-            glm::dvec3 normal;
-            double offset;
-        };
-        struct {
-            double a, b, c, d;
-        };
-    };
+    glm::dvec3 normal;
+    double offset;
 };
 
 

@@ -69,6 +69,28 @@ double Plane::getOffset() const {
     return offset;
 }
 
+double& Plane::operator[](glm::length_t index) {
+    assert(index >= 0 && index < 4);
+    switch(index) {
+        default:
+        case 0: return normal.x;
+        case 1: return normal.y;
+        case 2: return normal.z;
+        case 3: return offset;
+    }
+}
+
+double const& Plane::operator[](glm::length_t index) const {
+    assert(index >= 0 && index < 4);
+    switch(index) {
+        default:
+        case 0: return normal.x;
+        case 1: return normal.y;
+        case 2: return normal.z;
+        case 3: return offset;
+    }
+}
+
 double Plane::calculateSignedDistance(const glm::dvec3& point) const {
     return glm::dot(normal, point) + offset;
 }

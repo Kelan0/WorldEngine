@@ -20,35 +20,35 @@ Frustum::Frustum(const Transform& transform, const Camera& camera) {
 
 Frustum &Frustum::set(const glm::dmat4& viewProjection) {
 
-    m_planes[Plane_Left].a = viewProjection[0][3] + viewProjection[0][0];
-    m_planes[Plane_Left].b = viewProjection[1][3] + viewProjection[1][0];
-    m_planes[Plane_Left].c = viewProjection[2][3] + viewProjection[2][0];
-    m_planes[Plane_Left].d = viewProjection[3][3] + viewProjection[3][0];
+    m_planes[Plane_Left][0] = viewProjection[0][3] + viewProjection[0][0];
+    m_planes[Plane_Left][1] = viewProjection[1][3] + viewProjection[1][0];
+    m_planes[Plane_Left][2] = viewProjection[2][3] + viewProjection[2][0];
+    m_planes[Plane_Left][3] = viewProjection[3][3] + viewProjection[3][0];
 
-    m_planes[Plane_Right].a = viewProjection[0][3] - viewProjection[0][0];
-    m_planes[Plane_Right].b = viewProjection[1][3] - viewProjection[1][0];
-    m_planes[Plane_Right].c = viewProjection[2][3] - viewProjection[2][0];
-    m_planes[Plane_Right].d = viewProjection[3][3] - viewProjection[3][0];
+    m_planes[Plane_Right][0] = viewProjection[0][3] - viewProjection[0][0];
+    m_planes[Plane_Right][1] = viewProjection[1][3] - viewProjection[1][0];
+    m_planes[Plane_Right][2] = viewProjection[2][3] - viewProjection[2][0];
+    m_planes[Plane_Right][3] = viewProjection[3][3] - viewProjection[3][0];
 
-    m_planes[Plane_Bottom].a = viewProjection[0][3] + viewProjection[0][1];
-    m_planes[Plane_Bottom].b = viewProjection[1][3] + viewProjection[1][1];
-    m_planes[Plane_Bottom].c = viewProjection[2][3] + viewProjection[2][1];
-    m_planes[Plane_Bottom].d = viewProjection[3][3] + viewProjection[3][1];
+    m_planes[Plane_Bottom][0] = viewProjection[0][3] + viewProjection[0][1];
+    m_planes[Plane_Bottom][1] = viewProjection[1][3] + viewProjection[1][1];
+    m_planes[Plane_Bottom][2] = viewProjection[2][3] + viewProjection[2][1];
+    m_planes[Plane_Bottom][3] = viewProjection[3][3] + viewProjection[3][1];
 
-    m_planes[Plane_Top].a = viewProjection[0][3] - viewProjection[0][1];
-    m_planes[Plane_Top].b = viewProjection[1][3] - viewProjection[1][1];
-    m_planes[Plane_Top].c = viewProjection[2][3] - viewProjection[2][1];
-    m_planes[Plane_Top].d = viewProjection[3][3] - viewProjection[3][1];
+    m_planes[Plane_Top][0] = viewProjection[0][3] - viewProjection[0][1];
+    m_planes[Plane_Top][1] = viewProjection[1][3] - viewProjection[1][1];
+    m_planes[Plane_Top][2] = viewProjection[2][3] - viewProjection[2][1];
+    m_planes[Plane_Top][3] = viewProjection[3][3] - viewProjection[3][1];
 
-    m_planes[Plane_Near].a = viewProjection[0][3] + viewProjection[0][2];
-    m_planes[Plane_Near].b = viewProjection[1][3] + viewProjection[1][2];
-    m_planes[Plane_Near].c = viewProjection[2][3] + viewProjection[2][2];
-    m_planes[Plane_Near].d = viewProjection[3][3] + viewProjection[3][2];
+    m_planes[Plane_Near][0] = viewProjection[0][3] + viewProjection[0][2];
+    m_planes[Plane_Near][1] = viewProjection[1][3] + viewProjection[1][2];
+    m_planes[Plane_Near][2] = viewProjection[2][3] + viewProjection[2][2];
+    m_planes[Plane_Near][3] = viewProjection[3][3] + viewProjection[3][2];
 
-    m_planes[Plane_Far].a = viewProjection[0][3] - viewProjection[0][2];
-    m_planes[Plane_Far].b = viewProjection[1][3] - viewProjection[1][2];
-    m_planes[Plane_Far].c = viewProjection[2][3] - viewProjection[2][2];
-    m_planes[Plane_Far].d = viewProjection[3][3] - viewProjection[3][2];
+    m_planes[Plane_Far][0] = viewProjection[0][3] - viewProjection[0][2];
+    m_planes[Plane_Far][1] = viewProjection[1][3] - viewProjection[1][2];
+    m_planes[Plane_Far][2] = viewProjection[2][3] - viewProjection[2][2];
+    m_planes[Plane_Far][3] = viewProjection[3][3] - viewProjection[3][2];
 
     for (size_t i = 0; i < NumPlanes; ++i)
         m_planes[i].normalize();
