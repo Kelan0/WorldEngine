@@ -8,8 +8,8 @@
 #define LOAD_DEVICE_FUNCTION(functionName) \
     ptr_##functionName = (PFN_##functionName) vkGetDeviceProcAddr(device, #functionName); \
     if (ptr_##functionName == nullptr)     \
-        printf("Failed to load vulkan device extension function \"" #functionName "\"\n"); \
-    assert(ptr_##functionName != nullptr);
+        printf("Failed to load vulkan device extension function \"" #functionName "\"\n"); // \
+//    assert(ptr_##functionName != nullptr);
 
 #if defined(VK_EXT_extended_dynamic_state)
 PFN_vkCmdSetCullModeEXT ptr_vkCmdSetCullModeEXT;

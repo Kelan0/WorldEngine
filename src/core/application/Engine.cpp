@@ -276,6 +276,23 @@ bool Engine::init(SDL_Window* windowHandle) {
 void Engine::preRender(double dt) {
     PROFILE_SCOPE("Engine::preRender");
 
+    m_uiRenderer->preRender(dt);
+    m_physicsSystem->preRender(dt);
+    m_sceneRenderer->preRender(dt);
+    m_lightRenderer->preRender(dt);
+    m_deferredRenderer->preRender(dt);
+    m_reprojectionRenderer->preRender(dt);
+}
+
+void Engine::render(double dt) {
+    PROFILE_SCOPE("Engine::render");
+
+//    PROFILE_BEGIN_GPU_TIMESTAMP("Engine::render");
+
+    // Update camera - This ideally should happen within preRender, however the application may change
+    // the camera in its own render() method, which won't be updated until the next frame. Updating
+    // the camera here fixes that.
+    // TODO: we need an input() method for the application to override.
     const Entity& cameraEntity = Engine::scene()->getMainCameraEntity();
 
     m_renderCamera->setProjection(cameraEntity.getComponent<Camera>());
@@ -288,20 +305,6 @@ void Engine::preRender(double dt) {
         m_viewFrustum->set(*m_renderCamera);
     }
 
-    m_uiRenderer->preRender(dt);
-    m_physicsSystem->preRender(dt);
-
-}
-
-void Engine::render(double dt) {
-    PROFILE_SCOPE("Engine::render");
-
-//    PROFILE_BEGIN_GPU_TIMESTAMP("Engine::render");
-
-    m_physicsSystem->preRender(dt);
-    m_sceneRenderer->preRender(dt);
-    m_lightRenderer->preRender(dt);
-
     auto& commandBuffer = graphics()->getCurrentCommandBuffer();
     PROFILE_BEGIN_GPU_CMD("Engine::render", commandBuffer)
 
@@ -310,14 +313,11 @@ void Engine::render(double dt) {
 
     m_lightRenderer->render(dt, commandBuffer, m_renderCamera);
 
-    m_deferredRenderer->preRender(dt);
-    m_reprojectionRenderer->preRender(dt);
-
     m_deferredRenderer->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredRenderer->beginGeometrySubpass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredRenderer->renderGeometryPass(dt, commandBuffer, m_renderCamera, m_viewFrustum);
     m_deferredRenderer->beginLightingSubpass(commandBuffer, vk::SubpassContents::eInline);
-    m_deferredRenderer->render(dt, commandBuffer);
+    m_deferredRenderer->renderLightingPass(dt, commandBuffer, m_renderCamera, m_viewFrustum);
     commandBuffer.endRenderPass();
 
     if (m_debugCompositeEnabled) {

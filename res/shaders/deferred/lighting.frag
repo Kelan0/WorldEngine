@@ -321,15 +321,19 @@ void main() {
          finalColour = ambient + Lo;
     }
 
-    // finalColour = vec3(calculateShadow(surface, lights[0]));
+//     vec2 testPos = vec2(fs_texture.x, 1.0 - fs_texture.y);
+//     vec2 testOffset = vec2(0.05);
+//     vec2 testSize = vec2(0.45);
+//     if (testPos.x >= testOffset.x && testPos.x < testOffset.x + testSize.x && testPos.y >= testOffset.y && testPos.y < testOffset.y + testSize.y) {
+//         testPos = vec2(linstep(testOffset.x, testOffset.x + testSize.x, testPos.x), linstep(testOffset.y, testOffset.y + testSize.y, testPos.y));
+////         finalColour = vec3(fract(testPos.xy), 0.0);
+//         finalColour = vec3(linstep(0.43, 0.56, texture(shadowDepthTextures[0], testPos).r));
+////         finalColour = vec3(texture(shadowDepthTextures[0], testPos).r);
+//
+////         vec3 shadowMapCoord = calculateShadowMapCoord(surface, 0);
+////         finalColour = vec3(shadowMapCoord);
+//     }
 
-    // vec2 testPos = vec2(fs_texture.x, 1.0 - fs_texture.y);
-    // vec2 testOffset = vec2(0.05);
-    // vec2 testSize = vec2(0.25);
-    // if (testPos.x >= testOffset.x && testPos.x < testSize.x && testPos.y >= testOffset.y && testPos.y < testSize.y) {
-    //     testPos = vec2(linstep(testOffset.x, testOffset.x + testSize.x, testPos.x), linstep(testOffset.y, testOffset.y + testSize.y, testPos.y));
-    //     finalColour = vec3(linstep(0.43, 0.56, texture(shadowDepthTextures[0], testPos).r));
-    // }
 
     // finalColour = vec3(surface.emission / 32.0);
 

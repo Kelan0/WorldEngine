@@ -314,8 +314,9 @@ void SceneRenderer::applyFrustumCulling(const Frustum* frustum) {
     m_objectIndicesBuffer.clear();
 
     PROFILE_REGION("Update visible indices")
+    constexpr bool frustumCullingEnabled = false;
 
-    if (frustum == nullptr) {
+    if (!frustumCullingEnabled || frustum == nullptr) {
         // No frustum, we draw everything
         for (uint32_t i = 0; i < m_numRenderEntities; ++i) {
             m_objectIndicesBuffer.emplace_back(i);
@@ -334,7 +335,8 @@ void SceneRenderer::applyFrustumCulling(const Frustum* frustum) {
 //                    m_objectIndicesBuffer.emplace_back(objectIndex);
 //                }
 //            } else {
-                if (frustum->contains(transform.getTranslation())) {
+                BoundingSphere boundingSphere(transform.getTranslation(), 1.0);
+                if (frustum->intersects(boundingSphere)) {
                     m_objectIndicesBuffer.emplace_back(objectIndex);
                 }
 //            }

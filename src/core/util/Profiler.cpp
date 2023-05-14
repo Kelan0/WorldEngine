@@ -66,6 +66,7 @@ double Performance::milliseconds(const moment_t& startTime) {
 
 
 Profiler::ThreadContext::ThreadContext() {
+    printf("Profiler::ThreadContext() - 0x%08llX\n", ThreadUtils::getCurrentThreadHashedId());
 #if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
     uint64_t currentId = ThreadUtils::getCurrentThreadHashedId();
 
@@ -76,6 +77,7 @@ Profiler::ThreadContext::ThreadContext() {
 }
 
 Profiler::ThreadContext::~ThreadContext() {
+    printf("Profiler::~ThreadContext() - 0x%08llX\n", ThreadUtils::getCurrentThreadHashedId());
 #if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
     uint64_t currentId = ThreadUtils::getCurrentThreadHashedId();
 

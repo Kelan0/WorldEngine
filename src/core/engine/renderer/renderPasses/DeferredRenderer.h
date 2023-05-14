@@ -76,7 +76,7 @@ public:
 
     void renderGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum);
 
-    void render(double dt, const vk::CommandBuffer& commandBuffer);
+    void renderLightingPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum);
 
     void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
 
@@ -141,7 +141,6 @@ private:
     std::shared_ptr<Sampler> m_attachmentSampler;
     std::shared_ptr<Sampler> m_depthSampler;
     std::unordered_map<ImageView*, int32_t> m_frameIndices;
-    RenderCamera m_renderCamera;
     FrameImages m_previousFrame;
 };
 

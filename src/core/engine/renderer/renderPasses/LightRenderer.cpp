@@ -284,7 +284,7 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, co
             double cascadeStartDistance = 0.0;
             for (size_t i = 0; i < cascadedShadowMap->getNumCascades(); ++i) {
                 double cascadeEndDistance = cascadedShadowMap->getCascadeSplitDistance(i);
-                RenderCamera& shadowRenderCamera = visibleShadowRenderCameras.emplace_back(RenderCamera{});
+                RenderCamera& shadowRenderCamera = visibleShadowRenderCameras.emplace_back();
                 const double nearPlane = -64.0F;
                 const double farPlane = +64.0F;
                 calculateDirectionalShadowCascadeRenderCamera(renderCamera, transform, cascadeStartDistance, cascadeEndDistance, nearPlane, farPlane, &shadowRenderCamera);

@@ -35,7 +35,6 @@ EnvironmentMap* environmentMap = nullptr;
 
 
 DeferredRenderer::DeferredRenderer():
-    m_renderCamera(RenderCamera{}),
     m_previousFrame(FrameImages{}) {
 }
 
@@ -146,8 +145,8 @@ bool DeferredRenderer::init() {
     assert(imageCube != nullptr);
 
     environmentMap = new EnvironmentMap();
-//    environmentMap->setEnvironmentImage(imageCube);
-    environmentMap->setEmptyEnvironmentImage();
+    environmentMap->setEnvironmentImage(imageCube);
+//    environmentMap->setEmptyEnvironmentImage();
     environmentMap->update();
 
     Engine::eventDispatcher()->connect(&DeferredRenderer::recreateSwapchain, this);
@@ -209,28 +208,24 @@ void DeferredRenderer::renderGeometryPass(double dt, const vk::CommandBuffer& co
     PROFILE_END_GPU_CMD(commandBuffer);
 }
 
-void DeferredRenderer::render(double dt, const vk::CommandBuffer& commandBuffer) {
+void DeferredRenderer::renderLightingPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum) {
     PROFILE_SCOPE("DeferredRenderer::render")
-    const Entity& cameraEntity = Engine::scene()->getMainCameraEntity();
-    m_renderCamera.setProjection(cameraEntity.getComponent<Camera>());
-    m_renderCamera.setTransform(cameraEntity.getComponent<Transform>());
-    m_renderCamera.update();
 
-    glm::mat4x4 projectedRays = m_renderCamera.getInverseProjectionMatrix() * glm::mat4(
+    glm::mat4x4 projectedRays = renderCamera->getInverseProjectionMatrix() * glm::mat4(
             -1, +1, 0, 1,
             +1, +1, 0, 1,
             +1, -1, 0, 1,
             -1, -1, 0, 1);
     glm::mat4 viewCameraRays = projectedRays / projectedRays[3][3];
-    glm::mat4 worldCameraRays = glm::mat4(glm::mat3(m_renderCamera.getInverseViewMatrix())) * viewCameraRays; // we ignore the translation component of the view matrix
+    glm::mat4 worldCameraRays = glm::mat4(glm::mat3(renderCamera->getInverseViewMatrix())) * viewCameraRays; // we ignore the translation component of the view matrix
 
     LightingPassUniformData uniformData{};
-    uniformData.viewMatrix = m_renderCamera.getViewMatrix();
-    uniformData.projectionMatrix = m_renderCamera.getProjectionMatrix();
-    uniformData.viewProjectionMatrix = m_renderCamera.getViewProjectionMatrix();
-    uniformData.invViewMatrix = m_renderCamera.getInverseViewMatrix();
-    uniformData.invProjectionMatrix = m_renderCamera.getInverseProjectionMatrix();
-    uniformData.invViewProjectionMatrix = m_renderCamera.getInverseViewProjectionMatrix();
+    uniformData.viewMatrix = renderCamera->getViewMatrix();
+    uniformData.projectionMatrix = renderCamera->getProjectionMatrix();
+    uniformData.viewProjectionMatrix = renderCamera->getViewProjectionMatrix();
+    uniformData.invViewMatrix = renderCamera->getInverseViewMatrix();
+    uniformData.invProjectionMatrix = renderCamera->getInverseProjectionMatrix();
+    uniformData.invViewProjectionMatrix = renderCamera->getInverseViewProjectionMatrix();
     uniformData.resolution = glm::uvec2(Engine::graphics()->getResolution());
     uniformData.cameraRays = worldCameraRays;
     uniformData.showDebugShadowCascades = false;

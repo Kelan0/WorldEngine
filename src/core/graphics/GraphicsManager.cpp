@@ -1248,7 +1248,6 @@ void GraphicsManager::setObjectName(const vk::Device& device, uint64_t objectHan
         objectNameInfo.objectType = objectType;
         objectNameInfo.pObjectName = objectName;
         device.setDebugUtilsObjectNameEXT(objectNameInfo);
-        vk::DispatchLoaderStatic::vkCmdSetCullModeEXT()
     }
 }
 
