@@ -190,7 +190,7 @@ void ImmediateRenderer::render(double dt, const vk::CommandBuffer& commandBuffer
     }
 
     commandBuffer.endRenderPass();
-    PROFILE_END_GPU_CMD(commandBuffer)
+    PROFILE_END_GPU_CMD("ImmediateRenderer::render", commandBuffer)
 
     m_renderCommands.clear();
     m_uniformBufferData.clear();

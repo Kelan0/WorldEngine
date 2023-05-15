@@ -241,7 +241,6 @@ void LightRenderer::preRender(double dt) {
 
 void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera) {
     PROFILE_SCOPE("LightRenderer::render");
-    PROFILE_BEGIN_GPU_CMD("LightRenderer::render", commandBuffer);
 
     const auto& lightEntities = Engine::scene()->registry()->group<LightComponent>(entt::get<Transform>);
 
@@ -328,6 +327,7 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, co
     m_lightingRenderPassResources->shadowMapBuffer->upload(0, sizeof(GPUShadowMap) * m_shadowMapBufferData.size(), m_shadowMapBufferData.data());
 
     PROFILE_REGION("Render shadows");
+    PROFILE_BEGIN_GPU_CMD("LightRenderer::render", commandBuffer);
 
     std::vector<const ImageView*> shadowMapImages;
     shadowMapImages.reserve(visibleShadowRenderCameras.size());
@@ -366,7 +366,7 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, co
 
                 shadowMapImages.emplace_back(cascadedShadowMap->getCascadeShadowVarianceImageView(j));
 
-                PROFILE_END_GPU_CMD(commandBuffer);
+                PROFILE_END_GPU_CMD("LightRenderer::render/ShadowMapCascadeRenderPass", commandBuffer);
             }
         }
 
@@ -376,7 +376,7 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, co
 //        commandBuffer.endRenderPass();
 //        shadowMapImages.emplace_back(shadowMap->getShadowVarianceImageView());
 
-        PROFILE_END_GPU_CMD(commandBuffer);
+        PROFILE_END_GPU_CMD("LightRenderer::render/ShadowMapRenderPass", commandBuffer);
     }
 
     vsmBlurActiveShadowMaps(commandBuffer);
@@ -385,7 +385,7 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, co
             .writeImage(LIGHTING_RENDER_PASS_SHADOW_DEPTH_TEXTURES_BINDING, m_vsmShadowMapSampler.get(), shadowMapImages.data(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, (uint32_t)shadowMapImages.size())
             .write();
 
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("LightRenderer::render", commandBuffer);
 }
 
 const SharedResource<RenderPass>& LightRenderer::getRenderPass() const {
@@ -721,7 +721,6 @@ void LightRenderer::prepareVsmBlurDescriptorSets() {
 
 void LightRenderer::prepareVsmBlurIntermediateImage(const vk::CommandBuffer& commandBuffer, uint32_t maxWidth, uint32_t maxHeight) {
 //    PROFILE_SCOPE("LightRenderer::prepareVsmBlurIntermediateImage");
-//    PROFILE_BEGIN_GPU_CMD("LightRenderer::prepareVsmBlurIntermediateImage", commandBuffer);
 //
 //    vk::ImageSubresourceRange subresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
 //
@@ -746,6 +745,8 @@ void LightRenderer::prepareVsmBlurIntermediateImage(const vk::CommandBuffer& com
 //        imageViewConfig.setImage(m_vsmBlurIntermediateImage);
 //        m_vsmBlurIntermediateImageView = ImageView::create(imageViewConfig, "LightRenderer-VsmBlurIntermediateImageView");
 //
+//    PROFILE_BEGIN_GPU_CMD("LightRenderer::prepareVsmBlurIntermediateImage", commandBuffer);
+//
 //        ImageUtil::transitionLayout(commandBuffer, m_vsmBlurIntermediateImage->getImage(), subresourceRange,
 //                                    ImageTransition::FromAny(),
 //                                    ImageTransition::ShaderWriteOnly(vk::PipelineStageFlagBits::eComputeShader));
@@ -755,7 +756,7 @@ void LightRenderer::prepareVsmBlurIntermediateImage(const vk::CommandBuffer& com
 //                                    ImageTransition::ShaderWriteOnly(vk::PipelineStageFlagBits::eComputeShader));
 //    }
 //
-//    PROFILE_END_GPU_CMD(commandBuffer);
+//    PROFILE_END_GPU_CMD("LightRenderer::prepareVsmBlurIntermediateImage", commandBuffer);
 }
 
 void LightRenderer::vsmBlurShadowImage(const vk::CommandBuffer& commandBuffer, glm::uvec2 resolution, const vk::Image& varianceShadowImage, const vk::Image& intermediateImage, const vk::DescriptorSet& descriptorSetBlurX, const vk::DescriptorSet& descriptorSetBlurY) {
@@ -789,7 +790,7 @@ void LightRenderer::vsmBlurShadowImage(const vk::CommandBuffer& commandBuffer, g
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineLayout, 0, 1, &descriptorSetBlurX, 0, nullptr);
     commandBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, sizeof(GaussianBlurPushConstants), &pushConstantData);
     m_vsmBlurComputePipeline->dispatch(commandBuffer, workgroupCountX, workgroupCountY, 1);
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("LightRenderer::vsmBlurShadowImage/ComputeBlur_X", commandBuffer);
 
     ImageUtil::transitionLayout(commandBuffer, varianceShadowImage, subresourceRange,
                                 ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eComputeShader),
@@ -803,13 +804,13 @@ void LightRenderer::vsmBlurShadowImage(const vk::CommandBuffer& commandBuffer, g
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineLayout, 0, 1, &descriptorSetBlurY, 0, nullptr);
     commandBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, sizeof(GaussianBlurPushConstants), &pushConstantData);
     m_vsmBlurComputePipeline->dispatch(commandBuffer, workgroupCountX, workgroupCountY, 1);
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("LightRenderer::vsmBlurShadowImage/ComputeBlur_Y", commandBuffer);
 
     ImageUtil::transitionLayout(commandBuffer, varianceShadowImage, subresourceRange,
                                 ImageTransition::ShaderWriteOnly(vk::PipelineStageFlagBits::eComputeShader),
                                 ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eFragmentShader));
 
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("LightRenderer::vsmBlurShadowImage", commandBuffer);
 }
 
 void LightRenderer::vsmBlurActiveShadowMaps(const vk::CommandBuffer& commandBuffer) {
@@ -883,7 +884,7 @@ void LightRenderer::vsmBlurActiveShadowMaps(const vk::CommandBuffer& commandBuff
 //        commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineLayout, 0, 1, &m_vsmBlurResources->descriptorSetsBlurX[i]->getDescriptorSet(), 0, nullptr);
 //        commandBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, sizeof(GaussianBlurPushConstants), &pushConstantData);
 //        m_vsmBlurComputePipeline->dispatch(commandBuffer, workgroupCountX, workgroupCountY, 1);
-//        PROFILE_END_GPU_CMD(commandBuffer);
+//        PROFILE_END_GPU_CMD("LightRenderer::vsmBlurActiveShadowMaps/ComputeBlur_X", commandBuffer);
 //
 //        ImageUtil::transitionLayout(commandBuffer, shadowMapImageView->getImage(), subresourceRange,
 //                                    ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eComputeShader),
@@ -899,14 +900,14 @@ void LightRenderer::vsmBlurActiveShadowMaps(const vk::CommandBuffer& commandBuff
 //        commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineLayout, 0, 1, &m_vsmBlurResources->descriptorSetsBlurY[i]->getDescriptorSet(), 0, nullptr);
 //        commandBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, sizeof(GaussianBlurPushConstants), &pushConstantData);
 //        m_vsmBlurComputePipeline->dispatch(commandBuffer, workgroupCountX, workgroupCountY, 1);
-//        PROFILE_END_GPU_CMD(commandBuffer);
+//        PROFILE_END_GPU_CMD("LightRenderer::vsmBlurActiveShadowMaps/ComputeBlur_Y", commandBuffer);
 //
 //        ImageUtil::transitionLayout(commandBuffer, shadowMapImageView->getImage(), subresourceRange,
 //                                    ImageTransition::ShaderWriteOnly(vk::PipelineStageFlagBits::eComputeShader),
 //                                    ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eFragmentShader));
 //    }
 
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("LightRenderer::vsmBlurActiveShadowMaps", commandBuffer);
 }
 
 void LightRenderer::calculateDirectionalShadowCascadeRenderCamera(const RenderCamera* viewerRenderCamera, const Transform& lightTransform, double cascadeStartDist, double cascadeEndDist, double shadowNearPlane, double shadowFarPlane, RenderCamera* outShadowRenderCamera) {

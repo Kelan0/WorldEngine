@@ -139,7 +139,7 @@ bool DeferredRenderer::init() {
     imageCubeConfig.usage = vk::ImageUsageFlagBits::eSampled;
     imageCubeConfig.generateMipmap = true;
     imageCubeConfig.mipLevels = UINT32_MAX;
-    imageCubeConfig.imageSource.setEquirectangularSource("environment_maps/wide_street_02_8k.hdr");
+    imageCubeConfig.imageSource.setEquirectangularSource("environment_maps/rustig_koppie_puresky_8k.hdr");
     std::shared_ptr<ImageCube> imageCube = std::shared_ptr<ImageCube>(ImageCube::create(imageCubeConfig, "DeferredRenderer-DefaultSkyboxCubeImage"));
 
     assert(imageCube != nullptr);
@@ -205,7 +205,7 @@ void DeferredRenderer::renderGeometryPass(double dt, const vk::CommandBuffer& co
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_geometryGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
 
     Engine::sceneRenderer()->render(dt, commandBuffer, frustum);
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("DeferredRenderer::renderGeometryPass", commandBuffer);
 }
 
 void DeferredRenderer::renderLightingPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum) {
@@ -263,7 +263,7 @@ void DeferredRenderer::renderLightingPass(double dt, const vk::CommandBuffer& co
 
     commandBuffer.draw(3, 1, 0, 0);
 
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("DeferredRenderer::render", commandBuffer);
 
     m_resources->frame.rendered = true;
 }

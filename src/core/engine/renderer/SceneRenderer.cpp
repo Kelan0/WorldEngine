@@ -114,7 +114,7 @@ void SceneRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, co
     applyFrustumCulling(frustum);
     recordRenderCommands(dt, commandBuffer);
 
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("SceneRenderer::render", commandBuffer);
 }
 
 void SceneRenderer::setScene(Scene* scene) {
@@ -303,9 +303,6 @@ void SceneRenderer::recordRenderCommands(double dt, const vk::CommandBuffer& com
         command.mesh->draw(commandBuffer, command.instanceCount, command.firstInstance);
 
     PROFILE_END_REGION()
-
-    PROFILE_BEGIN_GPU_CMD("SceneRenderer::recordRenderCommands", commandBuffer);
-    PROFILE_END_GPU_CMD(commandBuffer);
 }
 
 void SceneRenderer::applyFrustumCulling(const Frustum* frustum) {

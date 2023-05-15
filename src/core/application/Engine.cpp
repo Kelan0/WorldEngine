@@ -337,7 +337,7 @@ void Engine::render(double dt) {
 
     m_uiRenderer->render(dt, commandBuffer);
 //    PROFILE_END_GPU_TIMESTAMP("Engine::render");
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("Engine::render", commandBuffer);
 
     ++m_currentFrameCount;
     m_accumulatedTime += dt;

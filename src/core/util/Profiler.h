@@ -18,6 +18,14 @@
 #define PROFILING_ENABLED 1
 #define INTERNAL_PROFILING_ENABLED 1
 
+#ifndef PROFILE_GPU_STACK_LIMIT
+#define PROFILE_GPU_STACK_LIMIT 128
+#endif
+
+#ifndef PROFILE_CPU_STACK_LIMIT
+#define PROFILE_CPU_STACK_LIMIT 512
+#endif
+
 struct ShutdownGraphicsEvent;
 
 struct __profile_handle {
@@ -72,9 +80,14 @@ private:
     };
 
     struct GPUQuery {
-        uint32_t queryIndex = 0;
+        uint32_t queryIndex = UINT32_MAX;
         GPUQueryPool* queryPool = nullptr;
         double time = 0.0;
+#if _DEBUG
+      bool queryWritten = false;
+      bool queryReceived = false;
+      bool failedToGetQueryPool = false;
+#endif
     };
 
     struct GPUQueryFrameData {
@@ -125,6 +138,8 @@ public:
         std::vector<GPUQueryPool*> destroyedQueryPools;
         size_t currentQueryPoolIndex = SIZE_MAX;
         uint32_t minQueryPoolSize = 25;
+        int32_t profileStackDepth = 0;
+//        std::unordered_map<std::string, bool> a;
 
         GPUContext();
 
@@ -157,7 +172,7 @@ public:
 
     static void beginGPU(const profile_id& id, const vk::CommandBuffer& commandBuffer);
 
-    static void endGPU(const vk::CommandBuffer& commandBuffer);
+    static void endGPU(const std::string& profileName, const vk::CommandBuffer& commandBuffer);
 
     static void getFrameProfile(std::unordered_map<uint64_t, std::vector<CPUProfile>>& outThreadProfiles);
 
@@ -233,8 +248,8 @@ private:
     Profiler::beginGPU(PFID_NAME(__pf_gpu_cmd_id_), commandBuffer); \
 }
 
-#define PROFILE_END_GPU_CMD(commandBuffer) {\
-    Profiler::endGPU(commandBuffer); \
+#define PROFILE_END_GPU_CMD(name, commandBuffer) {\
+    Profiler::endGPU(name, commandBuffer); \
 }
 
 #define PROFILE_CATEGORY(name)

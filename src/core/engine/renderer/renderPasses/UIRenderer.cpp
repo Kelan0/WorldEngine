@@ -140,7 +140,7 @@ void UIRenderer::render(double dt, const vk::CommandBuffer& commandBuffer) {
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
     commandBuffer.endRenderPass();
 
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("UIRenderer::render", commandBuffer);
 }
 
 

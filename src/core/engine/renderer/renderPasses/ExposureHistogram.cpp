@@ -196,7 +196,7 @@ void ExposureHistogram::update(double dt, const vk::CommandBuffer& commandBuffer
         readback(commandBuffer);
     }
 
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("ExposureHistogram::update", commandBuffer);
 }
 
 uint32_t ExposureHistogram::getBinCount() const {
@@ -297,7 +297,7 @@ void ExposureHistogram::readback(const vk::CommandBuffer& commandBuffer) {
 
     Buffer::copy(m_resources->histogramBuffer, m_readbackBuffer, headerSize + dataSize);
 
-    PROFILE_END_GPU_CMD(commandBuffer)
+    PROFILE_END_GPU_CMD("ExposureHistogram::readback", commandBuffer)
 
     uint8_t* mappedDataPtr = m_readbackBuffer->map<uint8_t>();
 

@@ -15,7 +15,7 @@ class PerformanceGraphUI : public UI {
     struct ProfileData {
         uint32_t layerIndex = UINT32_MAX;
         uint32_t pathIndex = UINT32_MAX;
-        float elapsedMillis;
+        float elapsedMillis = 0.0F;
         size_t nextSiblingIndex = 0;
         uint16_t parentOffset = 0;
 //        bool hasChildren = false;

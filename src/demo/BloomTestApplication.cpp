@@ -215,10 +215,10 @@ void BloomTestApplication::init() {
     glowMaterialConfig.setEmission(glm::vec3(0.8F, 32.0F, 41.0F));
     lightEntity5.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig, "Demo-LightEntity5-GlowMaterial")));
 
-    Entity lightEntity6 = EntityHierarchy::create(Engine::scene(), "lightEntity6");
-    lightEntity6.addComponent<Transform>().setRotation(glm::vec3(-1.0F, -1.3F, -1.0F), glm::vec3(0.0F, 1.0F, 0.0F), false);
-    glm::vec3 sunIntensity = glm::vec3(90.0F);
-    lightEntity6.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(sunIntensity).setAngularSize(glm::radians(0.52F)).setShadowCaster(true).setShadowCascadeDistances({3.0F, 6.0F, 12.0F, 24.0F});
+//    Entity lightEntity6 = EntityHierarchy::create(Engine::scene(), "lightEntity6");
+//    lightEntity6.addComponent<Transform>().setRotation(glm::vec3(-1.333F, -0.90F, -1.0F), glm::vec3(0.0F, 1.0F, 0.0F), false);
+//    glm::vec3 sunIntensity = glm::vec3(90.0F);
+//    lightEntity6.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(sunIntensity).setAngularSize(glm::radians(0.52F)).setShadowCaster(true).setShadowCascadeDistances({3.0F, 6.0F, 12.0F, 24.0F});
 
 //        Entity lightEntity7 = EntityHierarchy::create(Engine::scene(), "lightEntity7");
 //        lightEntity7.addComponent<Transform>().setRotation(glm::vec3(-1.4F, -1.0F, 0.2F), glm::vec3(0.0F, 1.0F, 0.0F), false);

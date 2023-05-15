@@ -204,7 +204,7 @@ void PostProcessRenderer::renderBloomBlur(double dt, const vk::CommandBuffer& co
         std::array<vk::ClearRect, 1> clearRects = {vk::ClearRect({{0, 0}, {framebuffer->getWidth(), framebuffer->getHeight()}}, 0, 1)};
         commandBuffer.clearAttachments(clearAttachments, clearRects);
         commandBuffer.endRenderPass();
-        PROFILE_END_GPU_CMD(commandBuffer)
+        PROFILE_END_GPU_CMD("PostProcessRenderer::renderBloomBlur/Clear", commandBuffer)
     }
 
     PROFILE_BEGIN_GPU_CMD("PostProcessRenderer::renderBloomBlur/DownSample", commandBuffer)
@@ -232,7 +232,7 @@ void PostProcessRenderer::renderBloomBlur(double dt, const vk::CommandBuffer& co
         commandBuffer.draw(3, 1, 0, 0);
         commandBuffer.endRenderPass();
     }
-    PROFILE_END_GPU_CMD(commandBuffer)
+    PROFILE_END_GPU_CMD("PostProcessRenderer::renderBloomBlur/DownSample", commandBuffer)
 
     PROFILE_BEGIN_GPU_CMD("PostProcessRenderer::renderBloomBlur/UpSample", commandBuffer)
     // Progressively up-sample
@@ -258,9 +258,9 @@ void PostProcessRenderer::renderBloomBlur(double dt, const vk::CommandBuffer& co
         commandBuffer.draw(3, 1, 0, 0);
         commandBuffer.endRenderPass();
     }
-    PROFILE_END_GPU_CMD(commandBuffer)
+    PROFILE_END_GPU_CMD("PostProcessRenderer::renderBloomBlur/UpSample", commandBuffer)
 
-    PROFILE_END_GPU_CMD(commandBuffer)
+    PROFILE_END_GPU_CMD("PostProcessRenderer::renderBloomBlur", commandBuffer)
 }
 
 void PostProcessRenderer::render(double dt, const vk::CommandBuffer& commandBuffer) {
@@ -321,7 +321,7 @@ void PostProcessRenderer::render(double dt, const vk::CommandBuffer& commandBuff
     commandBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eFragment, 0, sizeof(PostProcessPushConstantData), &pushConstantData);
     commandBuffer.draw(3, 1, 0, 0);
 
-    PROFILE_END_GPU_CMD(commandBuffer)
+    PROFILE_END_GPU_CMD("PostProcessRenderer::render", commandBuffer)
 
     m_resources->updateInputImage = false;
 }

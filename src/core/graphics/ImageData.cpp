@@ -946,7 +946,7 @@ bool ImageUtil::transitionLayout(const vk::CommandBuffer& commandBuffer, const v
 
     commandBuffer.pipelineBarrier(srcStageMask, dstStageMask, {}, 0, nullptr, 0, nullptr, 1, &barrier);
 
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("ImageUtil::transitionLayout", commandBuffer);
     return true;
 }
 
@@ -1037,7 +1037,7 @@ bool ImageUtil::transferBuffer(const vk::CommandBuffer& commandBuffer, const vk:
     commandBuffer.copyBufferToImage(srcBuffer, dstImage, vk::ImageLayout::eTransferDstOptimal, 1, &imageCopy);
     ImageUtil::transitionLayout(commandBuffer, dstImage, subresourceRange, ImageTransition::TransferDst(), dstState);
 
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("ImageUtil::transferBuffer", commandBuffer);
     return true;
 }
 
@@ -1052,7 +1052,6 @@ bool ImageUtil::generateMipmap(const vk::Image& image, vk::Format format, vk::Fi
 }
 
 bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk::Image& image, vk::Format format, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t baseLayer, uint32_t layerCount, ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth, uint32_t mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
-    PROFILE_BEGIN_GPU_CMD("ImageUtil::generateMipmap", commandBuffer);
     vk::ImageTiling tiling = vk::ImageTiling::eOptimal;
     vk::FormatFeatureFlags testFormatFeatureFlags{};
     if (filter == vk::Filter::eLinear) testFormatFeatureFlags |= vk::FormatFeatureFlagBits::eSampledImageFilterLinear;
@@ -1091,6 +1090,7 @@ bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk:
     blit.dstSubresource.baseArrayLayer = baseLayer;
     blit.dstSubresource.layerCount = layerCount;
 
+    PROFILE_BEGIN_GPU_CMD("ImageUtil::generateMipmap", commandBuffer);
 
     ImageTransitionState prevLevelState = srcState;
 
@@ -1123,7 +1123,7 @@ bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk:
     subresourceRange.setBaseMipLevel(mipLevelCount - 1);
     ImageUtil::transitionLayout(commandBuffer, image, subresourceRange, prevLevelState, dstState);
 
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("ImageUtil::generateMipmap", commandBuffer);
     return true;
 }
 
@@ -1173,7 +1173,7 @@ const vk::CommandBuffer& ImageUtil::beginTransferCommands() {
 void ImageUtil::endTransferCommands(const vk::Queue& queue, bool waitComplete) {
     const vk::CommandBuffer& transferCommandBuffer = ImageUtil::getTransferCommandBuffer();
 
-    PROFILE_END_GPU_CMD(transferCommandBuffer);
+    PROFILE_END_GPU_CMD("ImageUtil::beginTransferCommands", transferCommandBuffer);
     transferCommandBuffer.end();
 
     vk::SubmitInfo queueSumbitInfo;

@@ -454,7 +454,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, ImagePixe
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, equirectangularComputePipeline->getPipelineLayout(), 0, descriptorSets, nullptr);
     equirectangularComputePipeline->dispatch(commandBuffer, (uint32_t)glm::ceil(cubeImageWidth / 16), (uint32_t)glm::ceil(cubeImageHeight / 16), 6);
 
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("ImageCube::uploadEquirectangular/ComputeCubeMap", commandBuffer);
     commandBuffer.end();
 
     vk::SubmitInfo queueSubmitInfo;

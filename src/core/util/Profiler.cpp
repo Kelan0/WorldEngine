@@ -214,6 +214,8 @@ void Profiler::beginGraphicsFrame() {
 #if PROFILING_ENABLED
 #if INTERNAL_PROFILING_ENABLED
     GPUContext& ctx = gpuContext();
+    assert(ctx.profileStackDepth == 0 && "Profile stack incomplete");
+
     ctx.currentIndex = SIZE_MAX;
 //    ctx.frameProfiles.clear(); // TODO: Remove oldest frame profiles that have a query response.
     ctx.allFrameStartIndexOffsets.emplace_back(ctx.allFrameProfiles.size());
@@ -229,6 +231,8 @@ void Profiler::endGraphicsFrame() {
 
 //    std::vector<uint32_t> ids;
 //    std::set<uint32_t> uniqueIds;
+
+    assert(ctx.profileStackDepth == 0 && "Profile stack incomplete");
 
     for (const auto& queryPool : ctx.destroyedQueryPools) {
 //        ids.emplace_back(queryPool->id);
@@ -304,23 +308,42 @@ void Profiler::endGraphicsFrame() {
         for (size_t j = frameStartIndexOffset; j < frameEndIndexOffset; ++j) {
             GPUProfile& profile = ctx.allFrameProfiles[j];
 
+//            if (profile.startQuery.queryPool == nullptr || profile.endQuery.queryPool == nullptr) {
+//                // One or both queries were not set, and so cannot be available this frame.
+//                allQueriesAvailable = false;
+//            }
+
             if (profile.startQuery.queryPool != nullptr) {
                 if (profile.startQuery.queryPool->allAvailable) {
+                    assert(profile.startQuery.queryIndex < UINT32_MAX);
                     assert(profile.startQuery.queryPool->queryResults[profile.startQuery.queryIndex * 2 + 1] != 0);
 //                    uniqueIds.insert(profile.startQuery.queryPool->id);
                     profile.startQuery.time = (double)profile.startQuery.queryPool->queryResults[profile.startQuery.queryIndex * 2] * timestampPeriodMsec;
                     profile.startQuery.queryPool = nullptr;
+#if _DEBUG
+                    profile.startQuery.queryReceived = true;
+#endif
                 }
             }
             if (profile.endQuery.queryPool != nullptr) {
                 if (profile.endQuery.queryPool->allAvailable) {
+                    assert(profile.endQuery.queryIndex < UINT32_MAX);
                     assert(profile.endQuery.queryPool->queryResults[profile.endQuery.queryIndex * 2 + 1] != 0);
 //                    uniqueIds.insert(profile.endQuery.queryPool->id);
                     profile.endQuery.time = (double)profile.endQuery.queryPool->queryResults[profile.endQuery.queryIndex * 2] * timestampPeriodMsec;
                     profile.endQuery.queryPool = nullptr;
+#if _DEBUG
+                    profile.endQuery.queryReceived = true;
+#endif
                 }
             }
+
+            if (profile.endQuery.time < profile.startQuery.time) {
+                profile.endQuery.time = profile.startQuery.time;
+            }
+
             if (profile.startQuery.queryPool != nullptr || profile.endQuery.queryPool != nullptr) {
+                // After reading the value of both queries, the pool is reset back to null. If this didn't happen for both, then the queries are not all available.
                 allQueriesAvailable = false;
             }
         }
@@ -426,6 +449,9 @@ void Profiler::beginGPU(const profile_id& id, const vk::CommandBuffer& commandBu
     if (!ctx.frameStarted)
         return;
 
+    assert(ctx.profileStackDepth < PROFILE_GPU_STACK_LIMIT && "GPU profile stack overflow");
+    ++ctx.profileStackDepth;
+
     size_t startIndex = ctx.allFrameStartIndexOffsets.back();
 
     size_t parentIndex = ctx.currentIndex;
@@ -449,13 +475,16 @@ void Profiler::beginGPU(const profile_id& id, const vk::CommandBuffer& commandBu
 #endif
 }
 
-void Profiler::endGPU(const vk::CommandBuffer& commandBuffer) {
+void Profiler::endGPU(const std::string& profileName, const vk::CommandBuffer& commandBuffer) {
     Engine::graphics()->endCmdDebugLabel(commandBuffer);
 #if PROFILING_ENABLED
 #if INTERNAL_PROFILING_ENABLED
     GPUContext& ctx = gpuContext();
     if (!ctx.frameStarted)
         return;
+
+    assert(ctx.profileStackDepth >= 0 && "GPU Profile stack underflow");
+    --ctx.profileStackDepth;
 
     size_t startIndex = ctx.allFrameStartIndexOffsets.back();
 
@@ -535,12 +564,19 @@ bool Profiler::writeTimestamp(const vk::CommandBuffer& commandBuffer, const vk::
 
     outQuery->queryPool = nullptr;
     if (!getNextQueryPool(&outQuery->queryPool)) {
+#if _DEBUG
+        outQuery->failedToGetQueryPool = true;
+#endif
         return false;
     }
 
     outQuery->queryIndex = outQuery->queryPool->size;
     commandBuffer.writeTimestamp(pipelineStage, outQuery->queryPool->pool, outQuery->queryIndex);
     ++outQuery->queryPool->size;
+
+#if _DEBUG
+    outQuery->queryWritten = true;
+#endif
     return true;
 }
 

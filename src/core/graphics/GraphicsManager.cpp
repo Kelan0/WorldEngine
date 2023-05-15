@@ -935,7 +935,7 @@ void GraphicsManager::endFrame() {
     const vk::CommandBuffer& commandBuffer = getCurrentCommandBuffer();
 
     PROFILE_REGION("End command buffer")
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("Frame", commandBuffer);
 
     commandBuffer.end();
 
@@ -1031,7 +1031,7 @@ void GraphicsManager::presentImageDirect(const vk::CommandBuffer& commandBuffer,
 
     commandBuffer.copyImage(image, imageLayout, currentImage, vk::ImageLayout::eTransferDstOptimal, 1, &region);
     ImageUtil::transitionLayout(commandBuffer, currentImage, subresourceRange, ImageTransition::TransferDst(), ImageTransition::PresentSrc());
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("GraphicsManager::presentImageDirect", commandBuffer);
 }
 
 const vk::Instance& GraphicsManager::getInstance() const {

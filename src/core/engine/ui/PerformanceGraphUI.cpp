@@ -118,6 +118,7 @@ void PerformanceGraphUI::update(double dt) {
         for (size_t i = 0; i < threadProfiles.size(); ++i) {
             const ThreadProfile& profile = threadProfiles[i];
             currentFrame->profileData[i].elapsedMillis = (float)Performance::milliseconds(profile.startTime, profile.endTime);
+            assert(currentFrame->profileData[i].elapsedMillis >= 0.0);
         }
 
         initializeProfileTreeLayers(currentFrame, threadProfiles.data(), threadProfiles.size(), sizeof(ThreadProfile), layerPath);
@@ -156,6 +157,7 @@ void PerformanceGraphUI::update(double dt) {
         for (size_t i = 0; i < m_currentGpuProfiles.size(); ++i) {
             const GPUProfile& profile = m_currentGpuProfiles[i];
             currentFrame->profileData[i].elapsedMillis = (float)(profile.endQuery.time - profile.startQuery.time);
+            assert(currentFrame->profileData[i].elapsedMillis >= 0.0);
         }
 
         initializeProfileTreeLayers(currentFrame, m_currentGpuProfiles.data(), m_currentGpuProfiles.size(), sizeof(GPUProfile), layerPath);

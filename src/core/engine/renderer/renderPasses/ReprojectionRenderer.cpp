@@ -143,7 +143,7 @@ void ReprojectionRenderer::render(double dt, const vk::CommandBuffer& commandBuf
 
     commandBuffer.draw(3, 1, 0, 0);
 
-    PROFILE_END_GPU_CMD(commandBuffer)
+    PROFILE_END_GPU_CMD("ReprojectionRenderer::render", commandBuffer)
 
     m_resources->frame.rendered = true;
 

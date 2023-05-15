@@ -155,13 +155,13 @@ void ComputePipeline::bind(const vk::CommandBuffer& commandBuffer) const {
 void ComputePipeline::dispatch(const vk::CommandBuffer& commandBuffer, uint32_t workgroupCountX, uint32_t workgroupCountY, uint32_t workgroupCountZ) const {
     PROFILE_BEGIN_GPU_CMD("ComputePipeline::dispatch", commandBuffer);
     commandBuffer.dispatch(workgroupCountX, workgroupCountY, workgroupCountZ);
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("ComputePipeline::dispatch", commandBuffer);
 }
 
 void ComputePipeline::dispatchBase(const vk::CommandBuffer& commandBuffer, uint32_t workgroupOffsetX, uint32_t workgroupOffsetY, uint32_t workgroupOffsetZ, uint32_t workgroupCountX, uint32_t workgroupCountY, uint32_t workgroupCountZ) const {
     PROFILE_BEGIN_GPU_CMD("ComputePipeline::dispatchBase", commandBuffer);
     commandBuffer.dispatchBase(workgroupOffsetX, workgroupOffsetY, workgroupOffsetZ, workgroupCountX, workgroupCountY, workgroupCountZ);
-    PROFILE_END_GPU_CMD(commandBuffer);
+    PROFILE_END_GPU_CMD("ComputePipeline::dispatchBase", commandBuffer);
 }
 
 const vk::Pipeline& ComputePipeline::getPipeline() const {
