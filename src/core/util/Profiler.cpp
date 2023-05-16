@@ -232,7 +232,20 @@ void Profiler::endGraphicsFrame() {
 //    std::vector<uint32_t> ids;
 //    std::set<uint32_t> uniqueIds;
 
+#if _DEBUG
+    bool debugAllProfilesClosedCheck = true;
+    for (const auto& entry : ctx.debugOpenProfiles) {
+        const int32_t& openCount = entry.second;
+        if (openCount != 0) {
+            printf("Open graphics profile \"%s\" was not closed\n", entry.first.c_str());
+            debugAllProfilesClosedCheck = false;
+        }
+    }
+    assert(debugAllProfilesClosedCheck && "Not all open graphics profiles were closed (not every beginGPU() has a matching endGPU() call");
+#endif
+
     assert(ctx.profileStackDepth == 0 && "Profile stack incomplete");
+
 
     for (const auto& queryPool : ctx.destroyedQueryPools) {
 //        ids.emplace_back(queryPool->id);
@@ -443,11 +456,16 @@ void Profiler::endGraphicsFrame() {
 
 void Profiler::beginGPU(const profile_id& id, const vk::CommandBuffer& commandBuffer) {
     Engine::graphics()->beginCmdDebugLabel(commandBuffer, id->name);
+
 #if PROFILING_ENABLED
 #if INTERNAL_PROFILING_ENABLED
     GPUContext& ctx = gpuContext();
     if (!ctx.frameStarted)
         return;
+
+#if _DEBUG
+    ++ctx.debugOpenProfiles[id->name];
+#endif
 
     assert(ctx.profileStackDepth < PROFILE_GPU_STACK_LIMIT && "GPU profile stack overflow");
     ++ctx.profileStackDepth;
@@ -482,6 +500,10 @@ void Profiler::endGPU(const std::string& profileName, const vk::CommandBuffer& c
     GPUContext& ctx = gpuContext();
     if (!ctx.frameStarted)
         return;
+
+#if _DEBUG
+    --ctx.debugOpenProfiles[profileName];
+#endif
 
     assert(ctx.profileStackDepth >= 0 && "GPU Profile stack underflow");
     --ctx.profileStackDepth;

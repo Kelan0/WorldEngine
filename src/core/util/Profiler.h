@@ -139,7 +139,9 @@ public:
         size_t currentQueryPoolIndex = SIZE_MAX;
         uint32_t minQueryPoolSize = 25;
         int32_t profileStackDepth = 0;
-//        std::unordered_map<std::string, bool> a;
+#if _DEBUG
+        std::unordered_map<std::string, int32_t> debugOpenProfiles;
+#endif
 
         GPUContext();
 
