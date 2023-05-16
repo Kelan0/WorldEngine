@@ -1,4 +1,5 @@
 #include "core/util/Util.h"
+#include "Logger.h"
 #include <cstdio>
 #include <xmmintrin.h>
 
@@ -117,7 +118,7 @@ int Util::executeCommand(const std::string& command, std::string& outCommandOutp
     auto returnCode = _pclose(pipe);
     return (int)returnCode;
 #else
-    printf("Unable to execute commands on unsupported platform\n");
+    LOG_FATAL("Unable to execute commands on unsupported platform");
     assert(false);
 #endif
 }

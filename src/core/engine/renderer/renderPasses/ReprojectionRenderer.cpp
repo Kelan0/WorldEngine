@@ -11,6 +11,7 @@
 #include "core/graphics/Buffer.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/util/Util.h"
+#include "core/util/Logger.h"
 
 #define UNIFORM_BUFFER_BINDING 0
 #define FRAME_TEXTURE_BINDING 1
@@ -89,7 +90,7 @@ bool ReprojectionRenderer::init() {
     m_frameSampler = Sampler::get(samplerConfig, "Reprojection-FrameSampler");
 
     if (!createRenderPass()) {
-        printf("Failed to create ReprojectionRenderer RenderPass\n");
+        LOG_ERROR("Failed to create ReprojectionRenderer RenderPass");
         return false;
     }
 

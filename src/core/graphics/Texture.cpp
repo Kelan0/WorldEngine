@@ -1,5 +1,6 @@
 #include "core/graphics/Texture.h"
 #include "core/graphics/GraphicsManager.h"
+#include "core/util/Logger.h"
 
 std::unordered_map<Sampler::Key, std::weak_ptr<Sampler>, Sampler::KeyHasher> Sampler::s_cachedSamplers;
 
@@ -40,7 +41,7 @@ Sampler* Sampler::create(const SamplerConfiguration& samplerConfiguration, const
     vk::Result result;
     result = device.createSampler(&samplerCreateInfo, nullptr, &sampler);
     if (result != vk::Result::eSuccess) {
-        printf("Failed to create sampler: %s\n", vk::to_string(result).c_str());
+        LOG_ERROR("Failed to create sampler: %s", vk::to_string(result).c_str());
         return nullptr;
     }
     Engine::graphics()->setObjectName(device, (uint64_t)(VkSampler)sampler, vk::ObjectType::eSampler, name);

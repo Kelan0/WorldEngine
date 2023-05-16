@@ -111,7 +111,7 @@ void BloomTestApplication::init() {
     testMeshData.applyTransform();
     testMeshData.computeTangents();
 //
-    printf("Loaded bunny.obj :- %zu polygons\n", testMeshData.getPolygonCount());
+    LOG_INFO("Loaded bunny.obj :- %zu polygons", testMeshData.getPolygonCount());
     MeshConfiguration bunnyMeshConfig{};
     bunnyMeshConfig.device = Engine::graphics()->getDevice();
     bunnyMeshConfig.setMeshData(&testMeshData);

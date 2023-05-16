@@ -3,6 +3,7 @@
 #define WORLDENGINE_MESHDATA_H
 
 #include "core/core.h"
+#include "core/util/Logger.h"
 
 
 enum MeshPrimitiveType {
@@ -299,7 +300,7 @@ template<typename Vertex_t>
 typename MeshData<Vertex_t>::Vertex& MeshData<Vertex_t>::Triangle::getVertex(std::vector<Vertex>& vertices, Index index) const {
 #if _DEBUG
     if (index < 0 || index >= 3) {
-            printf("Get triangle vertex: internal triangle index %llu is out of range [0..3]\n", (uint64_t)index);
+        LOG_FATAL("Get triangle vertex: internal triangle index %llu is out of range [0..3]", (uint64_t)index);
 		assert(false);
 	}
 #endif
@@ -308,7 +309,7 @@ typename MeshData<Vertex_t>::Vertex& MeshData<Vertex_t>::Triangle::getVertex(std
 
 #if _DEBUG
     if (vertexIndex < 0 || vertexIndex >= vertices.size()) {
-		printf("Triangle vertex index %llu is out of range [0..%llu]\n", (uint64_t)vertexIndex, (uint64_t)vertices.size());
+        LOG_FATAL("Triangle vertex index %llu is out of range [0..%llu]", (uint64_t)vertexIndex, (uint64_t)vertices.size());
 		assert(false);
 	}
 #endif
@@ -325,7 +326,7 @@ template<typename Vertex_t>
 const typename MeshData<Vertex_t>::Vertex& MeshData<Vertex_t>::Triangle::getVertex(const std::vector<MeshData::Vertex>& vertices, MeshData::Index index) const {
 #if _DEBUG
     if (index < 0 || index >= 3) {
-		printf("Get triangle vertex: internal triangle index %llu is out of range [0..3]\n", (uint64_t)index);
+        LOG_FATAL("Get triangle vertex: internal triangle index %llu is out of range [0..3]", (uint64_t)index);
 		assert(false);
 	}
 #endif
@@ -334,7 +335,7 @@ const typename MeshData<Vertex_t>::Vertex& MeshData<Vertex_t>::Triangle::getVert
 
 #if _DEBUG
     if (vertexIndex < 0 || vertexIndex >= vertices.size()) {
-		printf("Triangle vertex index %llu is out of range [0..%llu]\n", (uint64_t)vertexIndex, (uint64_t)vertices.size());
+        LOG_FATAL("Triangle vertex index %llu is out of range [0..%llu]", (uint64_t)vertexIndex, (uint64_t)vertices.size());
 		assert(false);
 	}
 #endif
@@ -395,7 +396,7 @@ template<typename Vertex_t>
 void MeshData<Vertex_t>::popTransform() {
 #if _DEBUG
     if (m_transformStack.empty()) {
-		printf("MeshData::popTransform(): Stack underflow\n");
+        LOG_FATAL("MeshData::popTransform(): Stack underflow");
 		assert(false);
 		return;
 	}
@@ -473,7 +474,7 @@ template<typename Vertex_t>
 void MeshData<Vertex_t>::popState() {
 #if _DEBUG
     if (m_stateStack.empty()) {
-		printf("MeshData::popState(): Stack underflow\n");
+        LOG_FATAL("MeshData::popState(): Stack underflow");
 		assert(false);
 		return;
 	}
@@ -878,12 +879,12 @@ void MeshData<Vertex_t>::computeTangents(std::vector<Vertex_t>& vertices, const 
     using index_t = MeshData<Vertex_t>::Index;
 
     if (primitiveType != MeshPrimitiveType::PrimitiveType_Triangle) {
-        printf("Unable to compute mesh tangents. Mesh primitive type must be triangles\n");
+        LOG_ERROR("Unable to compute mesh tangents. Mesh primitive type must be triangles");
         return;
     }
 
     if (indices.size() % 3 != 0) {
-        printf("Unable to compute mesh tangents. Triangle mesh indices must have a size of a multiple of 3\n");
+        LOG_ERROR("Unable to compute mesh tangents. Triangle mesh indices must have a size of a multiple of 3");
         return;
     }
 

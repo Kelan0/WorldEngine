@@ -2,6 +2,7 @@
 #include "core/thread/ThreadPool.h"
 #include "core/thread/ThreadUtils.h"
 #include "core/util/Profiler.h"
+#include "core/util/Logger.h"
 
 
 std::unordered_map<std::thread::id, std::atomic_size_t> ThreadPool::s_maxTaskSizes;
@@ -123,7 +124,7 @@ BaseTask* ThreadPool::nextTask(Thread* currentThread) {
 void ThreadPool::executor() {
     PROFILE_SCOPE("ThreadPool::executor");
 
-    printf("Starting thread pool executor for thread 0x%016llx\n", ThreadUtils::getCurrentThreadHashedId());
+    LOG_INFO("Starting thread pool executor for thread 0x%016llx", ThreadUtils::getCurrentThreadHashedId());
 
     // Wait for all threads to be allocated.
     while (true) {
@@ -145,7 +146,7 @@ void ThreadPool::executor() {
     }
 
     if (thread == nullptr) {
-        printf("Failed to initialize ThreadPool worker thread\n");
+        LOG_FATAL("Failed to initialize ThreadPool worker thread");
         assert(false);
         return;
     }

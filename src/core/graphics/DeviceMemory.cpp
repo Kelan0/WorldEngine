@@ -4,6 +4,7 @@
 #include "core/graphics/Image2D.h"
 #include "core/application/Engine.h"
 #include "core/util/Util.h"
+#include "core/util/Logger.h"
 
 
 #define has_no_overlap(b0, b1) (b0.offset < b1.offset ? (b0.offset + b0.size <= b1.offset) : (b1.offset + b1.size <= b0.offset))
@@ -176,7 +177,7 @@ DeviceMemoryHeap* DeviceMemoryHeap::create(const DeviceMemoryConfiguration& devi
     uint32_t memoryTypeIndex;
 
     if (!DeviceMemoryManager::selectMemoryType(deviceMemoryConfiguration.memoryTypeFlags, deviceMemoryConfiguration.memoryProperties, memoryTypeIndex)) {
-        printf("Failed to allocate device memory: Memory type 0x%08X was not found with memory properties 0x%08X\n", deviceMemoryConfiguration.memoryTypeFlags, (uint32_t)deviceMemoryConfiguration.memoryProperties);
+        LOG_ERROR("Failed to allocate device memory: Memory type 0x%08X was not found with memory properties 0x%08X", deviceMemoryConfiguration.memoryTypeFlags, (uint32_t)deviceMemoryConfiguration.memoryProperties);
         return nullptr;
     }
 
@@ -193,7 +194,7 @@ DeviceMemoryHeap* DeviceMemoryHeap::create(const DeviceMemoryConfiguration& devi
     //}
 
     if (result != vk::Result::eSuccess) {
-        printf("Failed to allocate device memory: %s\n", vk::to_string(result).c_str());
+        LOG_ERROR("Failed to allocate device memory: %s", vk::to_string(result).c_str());
         return nullptr;
     }
 
@@ -234,7 +235,7 @@ DeviceMemoryBlock* DeviceMemoryHeap::allocateBlock(vk::DeviceSize size, vk::Devi
 
     size_t parentIndex = findBlockIndex(size, alignment);
     if (parentIndex >= m_blocks.size()) {
-        printf("Failed to allocate device memory block of %llu bytes\n", size);
+        LOG_ERROR("Failed to allocate device memory block of %llu bytes", size);
         return nullptr;
     }
 
@@ -302,7 +303,7 @@ bool DeviceMemoryHeap::freeBlock(DeviceMemoryBlock* block) {
         return block.offset < offset;
     });
     if (it0 == end || it0->offset != block->getOffset() || it0->size != block->getSize()) {
-        printf("Failed to free DeviceMemoryBlock [%llu, %llu] - No matching allocation range was found\n", block->getOffset(), block->getSize());
+        LOG_FATAL("Failed to free DeviceMemoryBlock [%llu, %llu] - No matching allocation range was found", block->getOffset(), block->getSize());
         assert(false);
         return false;
     }

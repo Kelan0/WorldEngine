@@ -4,6 +4,7 @@
 #include "core/application/Engine.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/Framebuffer.h"
+#include "core/util/Logger.h"
 
 
 void SubpassConfiguration::addColourAttachment(const vk::AttachmentReference& attachmentReference) {
@@ -193,7 +194,7 @@ RenderPass* RenderPass::create(const RenderPassConfiguration& renderPassConfigur
     vk::RenderPass renderPass = nullptr;
     vk::Result result = device.createRenderPass(&renderPassCreateInfo, nullptr, &renderPass);
     if (result != vk::Result::eSuccess) {
-        printf("Failed to create RenderPass: %s\n", vk::to_string(result).c_str());
+        LOG_ERROR("Failed to create RenderPass: %s", vk::to_string(result).c_str());
         return nullptr;
     }
 

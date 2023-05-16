@@ -7,13 +7,13 @@
 
 #define VALIDATE_MAX_INDEX(i) \
 if (i > std::numeric_limits<Index>::max()) { \
-	printf("Index %llu is larger than the maximum supported index %llu\n", (uint64_t)i, (uint64_t)std::numeric_limits<Index>::max()); \
+	LOG_FATAL("Index %llu is larger than the maximum supported index %llu", (uint64_t)i, (uint64_t)std::numeric_limits<Index>::max()); \
 	assert(false); \
 }
 
 #define VALIDATE_VERTEX_INDEX(i) \
 if (i < 0 || i >= m_vertices.size()) { \
-	printf("Vertex index " #i " = %llu is out of range\n", (uint64_t)i); \
+	LOG_FATAL("Vertex index " #i " = %llu is out of range", (uint64_t)i); \
 	assert(false); \
 }
 
@@ -205,13 +205,13 @@ void compileOBJObject(
 bool MeshUtils::loadOBJFile(const std::string& filePath, MeshUtils::OBJMeshData& meshData) {
     // TODO: this could be optimised a lot.
 
-    printf("Loading OBJ file \"%s\"\n", filePath.c_str());
+    LOG_INFO("Loading OBJ file \"%s\"", filePath.c_str());
 
     std::string absFilePath = Application::instance()->getAbsoluteResourceFilePath(filePath);
     std::ifstream stream(absFilePath.c_str(), std::ifstream::in);
 
     if (!stream.is_open()) {
-        printf("Failed to open OBJ file\n");
+        LOG_ERROR("Failed to open OBJ file");
         return false;
     }
 
@@ -271,7 +271,7 @@ bool MeshUtils::loadOBJFile(const std::string& filePath, MeshUtils::OBJMeshData&
                 size_t faceSize = faceComps.size() - 1;
 
                 if (faceSize < 3) {
-                    printf("Warning: Loading OBJ file \"%s\", skipping invalid face on line %d\n", filePath.c_str(), lineNumber);
+                    LOG_WARN("Loading OBJ file \"%s\", skipping invalid face on line %d", filePath.c_str(), lineNumber);
                     continue;
                 }
 
@@ -397,7 +397,7 @@ bool MeshUtils::loadOBJFile(const std::string& filePath, MeshUtils::OBJMeshData&
             //	}
             //}
         } catch (const std::exception& e) {
-            printf("Error while parsing OBJ line \"%s\" - %s\n", line.c_str(), e.what());
+            LOG_ERROR("Error while parsing OBJ line \"%s\" - %s", line.c_str(), e.what());
             return false;
         }
     }
@@ -434,7 +434,7 @@ bool readMeshCache(const std::filesystem::path& path, MeshUtils::OBJMeshData& me
 
     std::ifstream file(path, std::ios::binary);
     if (!file.is_open()) {
-        printf("Failed to open cached mesh file \"%s\"\n", path.string().c_str());
+        LOG_ERROR("Failed to open cached mesh file \"%s\"", path.string().c_str());
         return false;
     }
 
@@ -460,11 +460,11 @@ bool readMeshCache(const std::filesystem::path& path, MeshUtils::OBJMeshData& me
 bool writeMeshCache(const std::filesystem::path& path, MeshUtils::OBJMeshData& meshData) {
     std::ofstream file(path, std::ios::binary);
     if (!file.is_open()) {
-        printf("Failed to create mesh cache file \"%s\"\n", path.string().c_str());
+        LOG_ERROR("Failed to create mesh cache file \"%s\"", path.string().c_str());
         return false;
     }
 
-    printf("Writing mesh cache file \"%s\"\n", path.string().c_str());
+    LOG_INFO("Writing mesh cache file \"%s\"", path.string().c_str());
 
     uint64_t vertexCount = meshData.vertices().size();
     uint64_t indexCount = meshData.indices().size();

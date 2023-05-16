@@ -1,4 +1,5 @@
 #include "core/Vulkan.h"
+#include "core/util/Logger.h"
 #include <iostream>
 #include <cassert>
 
@@ -8,7 +9,7 @@
 #define LOAD_DEVICE_FUNCTION(functionName) \
     ptr_##functionName = (PFN_##functionName) vkGetDeviceProcAddr(device, #functionName); \
     if (ptr_##functionName == nullptr)     \
-        printf("Failed to load vulkan device extension function \"" #functionName "\"\n"); // \
+        LOG_ERROR("Failed to load vulkan device extension function \"" #functionName "\""); // \
 //    assert(ptr_##functionName != nullptr);
 
 #if defined(VK_EXT_extended_dynamic_state)

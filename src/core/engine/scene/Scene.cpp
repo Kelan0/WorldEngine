@@ -107,7 +107,7 @@ bool Scene::setMainCameraEntity(const Entity& entity) {
     }
 
     if (!entity.hasComponent<Camera>() || !entity.hasComponent<Transform>()) {
-        printf("Scene::setMainCameraEntity - Entity \"%s\" must have a Camera and Transform component in order to be used as the main scene camera\n", entity.getName().c_str());
+        LOG_ERROR("Scene::setMainCameraEntity - Entity \"%s\" must have a Camera and Transform component in order to be used as the main scene camera", entity.getName().c_str());
         return false;
     }
     m_mainCameraEntity = entity;

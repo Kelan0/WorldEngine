@@ -12,6 +12,7 @@
 #include "core/thread/ThreadUtils.h"
 #include "core/util/PlatformUtils.h"
 #include "core/util/Profiler.h"
+#include "core/util/Logger.h"
 #include "core/util/Util.h"
 #include <chrono>
 #include <filesystem>
@@ -20,6 +21,7 @@ Application* Application::s_instance = nullptr;
 
 
 Application::Application():
+        m_logger(new Logger()),
         m_framerateLimit(0.0), // Unlimited
         m_tickrate(60.0),
         m_partialFrames(0.0),
@@ -33,14 +35,16 @@ Application::Application():
 Application::~Application() {
     delete m_inputHandler;
 
-    printf("Destroying window\n");
+    LOG_INFO("Destroying window");
     SDL_DestroyWindow(m_windowHandle);
 
-    printf("Quitting SDL\n");
+    LOG_INFO("Quitting SDL");
     SDL_Quit();
 
+    LOG_INFO("Uninitialized application");
+
     s_instance = nullptr;
-    printf("Uninitialized application\n");
+    delete m_logger;
 }
 
 bool Application::parseArgs(int argc, char* argv[]) {
@@ -105,7 +109,7 @@ bool Application::getArgValue(int argc, char* argv[], int& index, const std::vec
 
         if (i0 != i1) {
             if (i0 == std::string::npos || i1 == std::string::npos || i0 > i1) {
-                printf("Mismatched argument value quotation marks\n");
+                LOG_INFO("Mismatched argument value quotation marks");
                 return false;
             }
 
@@ -121,22 +125,22 @@ bool Application::initInternal() {
     PROFILE_SCOPE("Application::initInternal")
 
     m_mainThreadId = std::this_thread::get_id();
-    printf("Initializing application on main thread 0x%016llx\n", ThreadUtils::getThreadHashedId(m_mainThreadId));
+    LOG_INFO("Initializing application on main thread 0x%016llx", ThreadUtils::getThreadHashedId(m_mainThreadId));
 
     PROFILE_REGION("Init SDL")
 
-    printf("Initializing SDL\n");
+    LOG_INFO("Initializing SDL");
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-        printf("Failed to initialize SDL: %s\n", SDL_GetError());
+        LOG_ERROR("Failed to initialize SDL: %s", SDL_GetError());
         return false;
     }
 
 
-    printf("Creating window\n");
+    LOG_INFO("Creating window");
     uint32_t flags = SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE;
     m_windowHandle = SDL_CreateWindow("Window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480, flags);
     if (m_windowHandle == nullptr) {
-        printf("Failed to create SDL window: %s\n", SDL_GetError());
+        LOG_ERROR("Failed to create SDL window: %s", SDL_GetError());
         return false;
     }
 
@@ -145,7 +149,7 @@ bool Application::initInternal() {
     m_inputHandler = new InputHandler(m_windowHandle);
 
     if (!Engine::instance()->init(m_windowHandle)) {
-        printf("Failed to initialize engine, unable to continue\n");
+        LOG_ERROR("Failed to initialize engine, unable to continue");
         return false;
     }
 
@@ -246,12 +250,13 @@ void Application::processEventsInternal() {
     }
 
     if (Engine::graphics()->didResolutionChange()) {
-        printf("Resolution changed\n");
+        LOG_DEBUG("Resolution changed");
     }
 }
 
 void Application::destroy() {
     assert(s_instance != nullptr);
+    s_instance->stop();
     Engine::destroy();
     delete Application::s_instance;
     Application::s_instance = nullptr;
@@ -367,10 +372,10 @@ void Application::start() {
 //                dtAvgCpu += cpuFrameTimes[i];
 //            dtAvgCpu /= cpuFrameTimes.size();
 //
-//            printf("%.2f FPS (AVG %.3f msec, AVG-CPU %.3f msec,    MAX %.3f msec 1%%LO %.3f msec, 10%%LO %.3f msec, 50%%LO %.3f msec)\n",
+//            LOG_DEBUG("%.2f FPS (AVG %.3f msec, AVG-CPU %.3f msec,    MAX %.3f msec 1%%LO %.3f msec, 10%%LO %.3f msec, 50%%LO %.3f msec)",
 //                   fps, dtAvg, dtAvgCpu, dtMax, dtLow1, dtLow10, dtLow50);
 //
-//            printf("%f polygons/sec - Average frame rendered %f polygons, %f vertices, %f indices - %f draw calls, %f instances, %.2f msec for draw calls\n",
+//            LOG_DEBUG("%f polygons/sec - Average frame rendered %f polygons, %f vertices, %f indices - %f draw calls, %f instances, %.2f msec for draw calls",
 //                   (double)tempDebugInfo.renderedPolygons / secondsElapsed,
 //                   (double)tempDebugInfo.renderedPolygons / (double)frameTimes.size(),
 //                   (double)tempDebugInfo.renderedVertices / (double)frameTimes.size(),
@@ -437,7 +442,7 @@ void Application::runUpdateThread() {
             if (m_partialTicks >= m_tickrate * 5) {
                 uint64_t realElapsedSimTimeMsec = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
                 double missedSimTimeMsec = realElapsedSimTimeMsec - (simulationTime * 1000.0);
-                printf("WARNING: Simulation thread can't keep up. Skipping %llu ticks (Simulation is running %.2f msec behind)\n", (uint64_t)m_partialTicks, missedSimTimeMsec);
+                LOG_WARN("Simulation thread can't keep up. Skipping %llu ticks (Simulation is running %.2f msec behind)", (uint64_t)m_partialTicks, missedSimTimeMsec);
                 m_partialTicks = 0.0;
             }
         }
@@ -450,6 +455,10 @@ Application* Application::instance() {
 
 void Application::stop() {
     m_running = false;
+}
+
+Logger* Application::logger() {
+    return m_logger;
 }
 
 InputHandler* Application::input() {
@@ -481,7 +490,7 @@ double Application::getTickrate() const {
 
 void Application::setTickrate(double tickrate) {
     if (m_running) {
-        printf("Cannot change tickrate while running\n");
+        LOG_ERROR("Cannot change tickrate while running");
         assert(false);
         return;
     }

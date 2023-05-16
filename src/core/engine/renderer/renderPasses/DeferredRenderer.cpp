@@ -19,6 +19,7 @@
 #include "core/graphics/Buffer.h"
 #include "core/util/Profiler.h"
 #include "core/util/Util.h"
+#include "core/util/Logger.h"
 
 #define UNIFORM_BUFFER_BINDING 0
 #define ALBEDO_TEXTURE_BINDING 1
@@ -113,7 +114,7 @@ bool DeferredRenderer::init() {
     }
 
     if (!createRenderPass()) {
-        printf("Failed to create DeferredLighting RenderPass\n");
+        LOG_ERROR("Failed to create DeferredLighting RenderPass");
         return false;
     }
 

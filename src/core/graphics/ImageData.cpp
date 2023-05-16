@@ -81,12 +81,12 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
     } else if (channelSize == 4) {
         data = reinterpret_cast<uint8_t*>(stbi_loadf(absFilePath.c_str(), &width, &height, &channels, desiredChannelCount));
     } else {
-        printf("Unable to load image \"%s\": Invalid image data format\n", absFilePath.c_str());
+        LOG_ERROR("Unable to load image \"%s\": Invalid image data format", absFilePath.c_str());
         return nullptr;
     }
 
     if (data == nullptr) {
-        printf("Failed to load image \"%s\" - Reason: %s\n", absFilePath.c_str(), stbi_failure_reason());
+        LOG_ERROR("Failed to load image \"%s\" - Reason: %s", absFilePath.c_str(), stbi_failure_reason());
         return nullptr;
     }
 
@@ -102,7 +102,7 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
             ImagePixelLayout::Invalid;
 
     if (layout == ImagePixelLayout::Invalid) {
-        printf("Failed to load image \"%s\": Invalid pixel layout for %d channels\n", absFilePath.c_str(), channels);
+        LOG_ERROR("Failed to load image \"%s\": Invalid pixel layout for %d channels", absFilePath.c_str(), channels);
         stbi_image_free(data);
         return nullptr;
     }
@@ -114,12 +114,12 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
             ImagePixelFormat::Invalid;
 
     if (format == ImagePixelFormat::Invalid) {
-        printf("Failed to load image \"%s\": Invalid pixel format for %d bytes per channel\n", absFilePath.c_str(), channelSize);
+        LOG_ERROR("Failed to load image \"%s\": Invalid pixel format for %d bytes per channel", absFilePath.c_str(), channelSize);
         stbi_image_free(data);
         return nullptr;
     }
 
-    printf("Loaded image \"%s\"\n", absFilePath.c_str());
+    LOG_INFO("Loaded image \"%s\"", absFilePath.c_str());
 
     ImageData* image = new ImageData(data, width, height, layout, format, AllocationType_Stbi);
 
@@ -129,7 +129,7 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
 }
 
 void ImageData::unload(const std::string& filePath) {
-    printf("Unloading image \"%s\"\n", filePath.c_str());
+    LOG_INFO("Unloading image \"%s\"", filePath.c_str());
     auto it = s_imageCache.find(filePath);
     if (it != s_imageCache.end()) {
         delete it->second;
@@ -145,12 +145,12 @@ ImageData* ImageData::mutate(uint8_t* data, ImageRegion::size_type width, ImageR
     uint8_t* mutatedPixels;
 
     if (srcLayout == ImagePixelLayout::Invalid || dstLayout == ImagePixelLayout::Invalid) {
-        printf("Unable to mutate image pixels: Invalid pixel layout\n");
+        LOG_ERROR("Unable to mutate image pixels: Invalid pixel layout");
         return nullptr;
     }
 
     if (srcFormat == ImagePixelFormat::Invalid || dstFormat == ImagePixelFormat::Invalid) {
-        printf("Unable to mutate image pixels: Invalid pixel format\n");
+        LOG_ERROR("Unable to mutate image pixels: Invalid pixel format");
         return nullptr;
     }
 
@@ -768,12 +768,12 @@ ImageData* ImageData::Flip::apply(uint8_t* data, ImageRegion::size_type width, I
         return ImageTransform::apply(data, width, height, layout, format);
 
     if (layout == ImagePixelLayout::Invalid) {
-        printf("Unable to transform image pixels: Invalid pixel layout\n");
+        LOG_ERROR("Unable to transform image pixels: Invalid pixel layout");
         return nullptr;
     }
 
     if (format == ImagePixelFormat::Invalid) {
-        printf("Unable to transform image pixels: Invalid pixel format\n");
+        LOG_ERROR("Unable to transform image pixels: Invalid pixel format");
         return nullptr;
     }
 
@@ -881,9 +881,9 @@ bool ImageUtil::getImageFormatProperties(vk::Format format, vk::ImageType type, 
 
     if (result != vk::Result::eSuccess) {
         if (result == vk::Result::eErrorFormatNotSupported) {
-            printf("Image format %s is not supported for usage=%s, tiling=%s, flags=%s\n", vk::to_string(format).c_str(), vk::to_string(usage).c_str(), vk::to_string(tiling).c_str(), vk::to_string(flags).c_str());
+            LOG_ERROR("Image format %s is not supported for usage=%s, tiling=%s, flags=%s", vk::to_string(format).c_str(), vk::to_string(usage).c_str(), vk::to_string(tiling).c_str(), vk::to_string(flags).c_str());
         } else {
-            printf("Failed to get image format properties (%s) for format=%s, usage=%s, tiling=%s, flags=%s\n", vk::to_string(result).c_str() , vk::to_string(format).c_str(), vk::to_string(usage).c_str(), vk::to_string(tiling).c_str(), vk::to_string(flags).c_str());
+            LOG_ERROR("Failed to get image format properties (%s) for format=%s, usage=%s, tiling=%s, flags=%s", vk::to_string(result).c_str() , vk::to_string(format).c_str(), vk::to_string(usage).c_str(), vk::to_string(tiling).c_str(), vk::to_string(flags).c_str());
         }
         return false;
     }
@@ -895,27 +895,27 @@ bool ImageUtil::getImageFormatProperties(vk::Format format, vk::ImageType type, 
 bool ImageUtil::validateImageCreateInfo(const vk::ImageCreateInfo& imageCreateInfo) {
     vk::ImageFormatProperties imageFormatProperties;
     if (!getImageFormatProperties(imageCreateInfo.format, imageCreateInfo.imageType, imageCreateInfo.tiling, imageCreateInfo.usage, imageCreateInfo.flags, &imageFormatProperties)) {
-        printf("Image validation failed: Unable to get image format properties for the supplied image configuration\n");
+        LOG_ERROR("Image validation failed: Unable to get image format properties for the supplied image configuration");
         return false;
     }
 
     if (imageCreateInfo.extent.width > imageFormatProperties.maxExtent.width ||
         imageCreateInfo.extent.height > imageFormatProperties.maxExtent.height ||
         imageCreateInfo.extent.depth > imageFormatProperties.maxExtent.depth) {
-        printf("Image validation failed: requested image extent [%d x %d x %d] is greater than the maximum supported extent [%d x %d x %d] for the supplied configuration\n",
+        LOG_ERROR("Image validation failed: requested image extent [%d x %d x %d] is greater than the maximum supported extent [%d x %d x %d] for the supplied configuration",
                imageCreateInfo.extent.width, imageCreateInfo.extent.height, imageCreateInfo.extent.depth,
                imageFormatProperties.maxExtent.width, imageFormatProperties.maxExtent.height, imageFormatProperties.maxExtent.depth);
         return false;
     }
 
     if (imageCreateInfo.mipLevels > imageFormatProperties.maxMipLevels) {
-        printf("Image validation failed: %d requested mip levels is greater than the maximum %d mip levels supported for the supplied configuration\n",
+        LOG_ERROR("Image validation failed: %d requested mip levels is greater than the maximum %d mip levels supported for the supplied configuration",
                imageCreateInfo.mipLevels, imageFormatProperties.maxMipLevels);
         return false;
     }
 
     if (imageCreateInfo.arrayLayers > imageFormatProperties.maxArrayLayers) {
-        printf("Image validation failed: %d requested array layers is greater than the maximum %d array layers supported for the supplied configuration\n",
+        LOG_ERROR("Image validation failed: %d requested array layers is greater than the maximum %d array layers supported for the supplied configuration",
                imageCreateInfo.arrayLayers, imageFormatProperties.maxArrayLayers);
         return false;
     }
@@ -980,13 +980,13 @@ bool ImageUtil::upload(const vk::CommandBuffer& commandBuffer, const vk::Image& 
         || imageRegion.height >= ImageRegion::WHOLE_SIZE
         || imageRegion.depth >= ImageRegion::WHOLE_SIZE
         || imageRegion.layerCount >= ImageRegion::WHOLE_SIZE) {
-        printf("Unable to upload Image: Image region is out of bounds\n");
+        LOG_ERROR("Unable to upload Image: Image region is out of bounds");
         return false;
     }
 
     Buffer* srcBuffer = getImageStagingBuffer(imageRegion, bytesPerPixel);
     if (srcBuffer == nullptr) {
-        printf("Unable to upload Image: Failed to get staging buffer\n");
+        LOG_ERROR("Unable to upload Image: Failed to get staging buffer");
         return false;
     }
 
@@ -1059,7 +1059,7 @@ bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk:
     if (filter == vk::Filter::eCubicIMG) testFormatFeatureFlags |= vk::FormatFeatureFlagBits::eSampledImageFilterCubicIMG;
 
     if (testFormatFeatureFlags && !ImageUtil::checkAllImageFormatFeatures(format, tiling, testFormatFeatureFlags)) {
-        printf("Unable to generate mipmap: Image format %s does not support filter type %s\n", vk::to_string(format).c_str(), vk::to_string(filter).c_str());
+        LOG_ERROR("Unable to generate mipmap: Image format %s does not support filter type %s", vk::to_string(format).c_str(), vk::to_string(filter).c_str());
         return false;
     }
 
@@ -1217,14 +1217,14 @@ Buffer* ImageUtil::getImageStagingBuffer(const ImageRegion& imageRegion, uint32_
 }
 
 void _ImageUtil_onCleanupGraphics(ShutdownGraphicsEvent* event) {
-    printf("Destroying image staging buffer\n");
+    LOG_INFO("Destroying image staging buffer");
     delete g_imageStagingBuffer;
 }
 
 Buffer* ImageUtil::getImageStagingBuffer(ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth, uint32_t bytesPerPixel) {
     constexpr uint32_t maxImageDimension = 32768;
     if (width > maxImageDimension || height > maxImageDimension || depth > maxImageDimension || bytesPerPixel > 64) {
-        printf("Unable to get image data staging buffer: Requested dimensions too large\n");
+        LOG_ERROR("Unable to get image data staging buffer: Requested dimensions too large");
     }
 
     constexpr vk::DeviceSize maxSizeBytes = UINT32_MAX; // 4 GiB
@@ -1232,7 +1232,7 @@ Buffer* ImageUtil::getImageStagingBuffer(ImageRegion::size_type width, ImageRegi
     vk::DeviceSize requiredSize = ImageUtil::getImageSizeBytes(width, height, depth, bytesPerPixel);
     if (requiredSize > 1llu << 32) {
         char c1[6] = "", c2[6] = "";
-        printf("Unable to get image data staging buffer: Requested dimensions exceed maximum allocatable size for staging buffer (Requested %.3f %s, maximum %.3f %s)\n",
+        LOG_ERROR("Unable to get image data staging buffer: Requested dimensions exceed maximum allocatable size for staging buffer (Requested %.3f %s, maximum %.3f %s)",
                Util::getMemorySizeMagnitude(requiredSize, c1), c1, Util::getMemorySizeMagnitude(maxSizeBytes, c2), c2);
     }
 
@@ -1244,7 +1244,7 @@ Buffer* ImageUtil::getImageStagingBuffer(ImageRegion::size_type width, ImageRegi
         delete g_imageStagingBuffer;
 
         char c1[6] = "";
-        printf("Resizing ImageData staging buffer to %.3f %s\n", Util::getMemorySizeMagnitude(requiredSize, c1), c1);
+        LOG_INFO("Resizing ImageData staging buffer to %.3f %s", Util::getMemorySizeMagnitude(requiredSize, c1), c1);
 
         BufferConfiguration bufferConfig{};
         bufferConfig.device = Engine::graphics()->getDevice();
@@ -1253,7 +1253,7 @@ Buffer* ImageUtil::getImageStagingBuffer(ImageRegion::size_type width, ImageRegi
         bufferConfig.usage = vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;
         g_imageStagingBuffer = Buffer::create(bufferConfig, "ImageUtil-ImageStagingBuffer");
         if (g_imageStagingBuffer == nullptr) {
-            printf("Failed to create image data staging buffer\n");
+            LOG_ERROR("Failed to create image data staging buffer");
             return nullptr;
         }
     }
@@ -1308,11 +1308,11 @@ ImageTransition::ShaderAccess::ShaderAccess(vk::PipelineStageFlags shaderPipelin
             vk::PipelineStageFlagBits::eTaskShaderNV |
             vk::PipelineStageFlagBits::eMeshShaderNV;
     if ((shaderPipelineStages & (~validShaderStages))) {
-        printf("Provided pipeline stages for ShaderAccess image transition must only contain shader stages\n");
+        LOG_FATAL("Provided pipeline stages for ShaderAccess image transition must only contain shader stages");
         assert(false);
     }
     if (!read && !write) {
-        printf("Provided access flags for ShaderAccess image transition must be readable, writable or both\n");
+        LOG_FATAL("Provided access flags for ShaderAccess image transition must be readable, writable or both");
         assert(false);
     }
 #endif

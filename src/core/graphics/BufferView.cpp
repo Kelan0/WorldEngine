@@ -1,5 +1,6 @@
 #include "core/graphics/BufferView.h"
 #include "core/graphics/Buffer.h"
+#include "core/util/Logger.h"
 
 
 void BufferViewConfiguration::setBuffer(const vk::Buffer& buffer) {
@@ -43,7 +44,7 @@ BufferView* BufferView::create(const BufferViewConfiguration& bufferViewConfigur
     vk::BufferView bufferView = nullptr;
     vk::Result result = device.createBufferView(&bufferViewCreateInfo, nullptr, &bufferView);
     if (result != vk::Result::eSuccess) {
-        printf("Failed to create BufferView: %s\n", vk::to_string(result).c_str());
+        LOG_ERROR("Failed to create BufferView: %s", vk::to_string(result).c_str());
         return nullptr;
     }
 

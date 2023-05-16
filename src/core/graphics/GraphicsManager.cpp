@@ -42,7 +42,7 @@ GraphicsManager::GraphicsManager():
 }
 
 GraphicsManager::~GraphicsManager() {
-    printf("Uninitializing graphics engine\n");
+    LOG_INFO("Uninitializing graphics engine");
 
     //DescriptorSetLayout::clearCache();
     //Buffer::resetStagingBuffer();
@@ -54,14 +54,14 @@ GraphicsManager::~GraphicsManager() {
     m_swapchain.imageViews.clear();
 
     if (m_renderPass.use_count() > 1)
-        printf("Destroyed GraphicsManager but RenderPass has %llu external references\n", (uint64_t)m_renderPass.use_count() - 1);
+        LOG_WARN("Destroyed GraphicsManager but RenderPass has %llu external references", (uint64_t)m_renderPass.use_count() - 1);
     m_renderPass.reset();
 
     if (m_descriptorPool.use_count() > 1)
-        printf("Destroyed GraphicsManager but DescriptorPool has %llu external references\n", (uint64_t)m_descriptorPool.use_count() - 1);
+        LOG_WARN("Destroyed GraphicsManager but DescriptorPool has %llu external references", (uint64_t)m_descriptorPool.use_count() - 1);
 
     if (m_commandPool.use_count() > 1)
-        printf("Destroyed GraphicsManager but CommandPool has %llu external references\n", (uint64_t)m_commandPool.use_count() - 1);
+        LOG_WARN("Destroyed GraphicsManager but CommandPool has %llu external references", (uint64_t)m_commandPool.use_count() - 1);
 
     delete m_memory;
     m_descriptorPool.reset();
@@ -71,14 +71,14 @@ GraphicsManager::~GraphicsManager() {
     if (m_device.device.use_count() > 1) {
         std::vector<std::string> ownerNames;
         m_device.device.getAllReferenceOwnerNames(ownerNames);
-        printf("Destroyed GraphicsManager but the logical device still has %llu external references: [%s]\n", (uint64_t)m_device.device.use_count() - 1, Util::vector_to_string(ownerNames).c_str());
+        LOG_WARN("Destroyed GraphicsManager but the logical device still has %llu external references: [%s]", (uint64_t)m_device.device.use_count() - 1, Util::vector_to_string(ownerNames).c_str());
     }
 }
 
 bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName) {
     PROFILE_SCOPE("GraphicsManager::init")
 
-    printf("Initializing graphics engine\n");
+    LOG_INFO("Initializing graphics engine");
 
     if (!createVulkanInstance(windowHandle, applicationName)) {
         return false;
@@ -185,7 +185,7 @@ bool GraphicsManager::createVulkanInstance(SDL_Window* windowHandle, const char*
     {
         VkResult result = volkInitialize();
         if (result != VK_SUCCESS) {
-            printf("Failed to initialize VOLK: %s\n", vk::to_string((vk::Result)result).c_str());
+            LOG_ERROR("Failed to initialize VOLK: %s", vk::to_string((vk::Result)result).c_str());
             return false;
         }
     }
@@ -205,7 +205,7 @@ bool GraphicsManager::createVulkanInstance(SDL_Window* windowHandle, const char*
 #endif
 
     if (enableValidationLayers) {
-        printf("Enabling Vulkan validation layers\n");
+        LOG_INFO("Enabling Vulkan validation layers");
     }
 
     uint32_t instanceExtensionCount;
@@ -233,7 +233,7 @@ bool GraphicsManager::createVulkanInstance(SDL_Window* windowHandle, const char*
     instanceInfo.setPEnabledLayerNames(layerNames);
     instanceInfo.setPEnabledExtensionNames(instanceExtensions);
 
-    printf("Creating vulkan instance\n");
+    LOG_INFO("Creating vulkan instance");
     m_instance = std::make_unique<vkr::Instance>(m_context, instanceInfo);
 
 #ifdef USE_VOLK
@@ -272,7 +272,7 @@ bool GraphicsManager::selectValidationLayers(std::vector<const char*>& layerName
         }
 
         if (!layerFound) {
-            printf("Required validation layer \"%s\" was not found\n", layerName);
+            LOG_ERROR("Required validation layer \"%s\" was not found", layerName);
             return false;
         }
 
@@ -283,12 +283,18 @@ bool GraphicsManager::selectValidationLayers(std::vector<const char*>& layerName
 }
 
 bool GraphicsManager::createDebugUtilsMessenger() {
-    printf("Creating debug messenger\n");
+    LOG_INFO("Creating debug messenger");
 
     struct Validator {
         static VKAPI_ATTR VkBool32 VKAPI_CALL validate(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
             if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-                printf("%s\n", pCallbackData->pMessage);
+                if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+                    LOG_ERROR("[VULKAN API] %s", pCallbackData->pMessage);
+                } else if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+                    LOG_WARN("[VULKAN API] %s", pCallbackData->pMessage);
+                } else {
+                    LOG_INFO("[VULKAN API] %s", pCallbackData->pMessage);
+                }
             }
 
             if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
@@ -322,11 +328,11 @@ bool GraphicsManager::createDebugUtilsMessenger() {
 
 bool GraphicsManager::createSurface(SDL_Window* windowHandle) {
     PROFILE_SCOPE("GraphicsManager::createSurface")
-    printf("Creating Vulkan SDL surface\n");
+    LOG_INFO("Creating Vulkan SDL surface");
 
     VkSurfaceKHR surface;
     if (!SDL_Vulkan_CreateSurface(windowHandle, (VkInstance)**m_instance, &surface)) {
-        printf("Failed to create Vulkan surface for SDL window: %s\n", SDL_GetError());
+        LOG_ERROR("Failed to create Vulkan surface for SDL window: %s", SDL_GetError());
         return false;
     }
 
@@ -416,7 +422,7 @@ bool GraphicsManager::isPhysicalDeviceSuitable(const vkr::PhysicalDevice& physic
         deviceProperties.deviceType != vk::PhysicalDeviceType::eIntegratedGpu &&
         deviceProperties.deviceType != vk::PhysicalDeviceType::eVirtualGpu) {
 
-        printf("Device \"%s\" is not a supported type\n", deviceProperties.deviceName.data());
+        LOG_INFO("Device \"%s\" is not a supported type", deviceProperties.deviceName.data());
         return false;
     }
 
@@ -478,7 +484,7 @@ bool GraphicsManager::selectQueueFamilies(const vkr::PhysicalDevice& physicalDev
                 requiredQueueTypes += ", ";
         }
 
-        printf("Device \"%s\" does not support the required queue types: [%s]\n", deviceProperties.deviceName.data(), requiredQueueTypes.c_str());
+        LOG_ERROR("Device \"%s\" does not support the required queue types: [%s]", deviceProperties.deviceName.data(), requiredQueueTypes.c_str());
         return false;
     }
 
@@ -518,14 +524,14 @@ bool GraphicsManager::selectPhysicalDevice() {
     }
 
     if (m_device.physicalDevice == nullptr) {
-        printf("No physical devices were suitable for rendering\n");
+        LOG_ERROR("No physical devices were suitable for rendering");
         return false;
     }
 
     m_device.memoryProperties = m_device.physicalDevice->getMemoryProperties();
     m_device.physicalDeviceProperties = m_device.physicalDevice->getProperties();
 
-    printf("Graphics engine selected physical device \"%s\"\n", m_device.physicalDevice->getProperties().deviceName.data());
+    LOG_INFO("Graphics engine selected physical device \"%s\"", m_device.physicalDevice->getProperties().deviceName.data());
 
     return true;
 }
@@ -533,7 +539,7 @@ bool GraphicsManager::selectPhysicalDevice() {
 bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enabledLayers, std::vector<const char*> const& enabledExtensions, vk::PhysicalDeviceFeatures* enabledFeatures, void* pNext, std::unordered_map<std::string, uint32_t> queueLayout) {
     PROFILE_SCOPE("GraphicsManager::createLogicalDevice")
 
-    printf("Creating logical device\n");
+    LOG_INFO("Creating logical device");
 
     std::set<uint32_t> uniqueQueueFamilyIndices;
     for (auto& index : m_queues.indices) {
@@ -574,7 +580,7 @@ bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enable
         }
 
         if (queueIds.empty()) {
-            printf("Could not initialize the desired queue layout for queue family %d\n", queueFamilyIndex);
+            LOG_ERROR("Could not initialize the desired queue layout for queue family %d", queueFamilyIndex);
             continue;
         }
 
@@ -587,7 +593,7 @@ bool GraphicsManager::createLogicalDevice(std::vector<const char*> const& enable
 
     if (!queueLayout.empty()) {
         // Some required queues are left over...
-        printf("Could not initialize logical device with all required queues\n");
+        LOG_ERROR("Could not initialize logical device with all required queues");
         return false;
     }
 
@@ -625,7 +631,7 @@ bool GraphicsManager::initSurfaceDetails() {
     std::vector<vk::SurfaceFormatKHR> formats = m_device.physicalDevice->getSurfaceFormatsKHR(**m_surface.surface);
 
     if (formats.empty()) {
-        printf("Device \"%s\" supports no surface formats\n", m_device.physicalDevice->getProperties().deviceName.data());
+        LOG_ERROR("Device \"%s\" supports no surface formats", m_device.physicalDevice->getProperties().deviceName.data());
         return false;
     }
 
@@ -645,15 +651,15 @@ bool GraphicsManager::initSurfaceDetails() {
     if (selectedFormat != formats.end()) {
         m_surface.surfaceFormat = *selectedFormat;
     } else {
-        printf("Preferred surface format and colour space was not found. Defaulting to first available option\n");
+        LOG_WARN("Preferred surface format and colour space was not found. Defaulting to first available option");
         m_surface.surfaceFormat = formats[0];
     }
-    printf("Using output render colour format %s with colour space %s\n", vk::to_string(m_surface.surfaceFormat.format).c_str(), vk::to_string(m_surface.surfaceFormat.colorSpace).c_str());
+    LOG_INFO("Using output render colour format %s with colour space %s", vk::to_string(m_surface.surfaceFormat.format).c_str(), vk::to_string(m_surface.surfaceFormat.colorSpace).c_str());
 
     std::vector<vk::PresentModeKHR> presentModes = m_device.physicalDevice->getSurfacePresentModesKHR(**m_surface.surface);
 
     if (presentModes.empty()) {
-        printf("Device \"%s\" supports no present modes\n", m_device.physicalDevice->getProperties().deviceName.data());
+        LOG_ERROR("Device \"%s\" supports no present modes", m_device.physicalDevice->getProperties().deviceName.data());
         return false;
     }
 
@@ -662,7 +668,7 @@ bool GraphicsManager::initSurfaceDetails() {
         m_surface.presentMode = *it;
     } else {
         m_surface.presentMode = presentModes.at(0);
-        printf("Preferred surface present mode %s was not found. Defaulting to %s\n", vk::to_string(m_preferredPresentMode).c_str(), vk::to_string(m_surface.presentMode).c_str());
+        LOG_WARN("Preferred surface present mode %s was not found. Defaulting to %s", vk::to_string(m_preferredPresentMode).c_str(), vk::to_string(m_surface.presentMode).c_str());
     }
 
     std::vector<vk::Format> depthFormats = {vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint, vk::Format::eD32Sfloat};
@@ -671,7 +677,7 @@ bool GraphicsManager::initSurfaceDetails() {
         std::string formatsStr;
         for (size_t i = 0; i < depthFormats.size(); ++i)
             formatsStr += (i > 0 ? ", " : "") + vk::to_string(depthFormats[0]);
-        printf("Requested depth formats [%s] but none were supported\n", formatsStr.c_str());
+        LOG_ERROR("Requested depth formats [%s] but none were supported\n", formatsStr.c_str());
         return false;
     }
 
@@ -858,7 +864,7 @@ bool GraphicsManager::beginFrame() {
         bool recreated = recreateSwapchain();
 #if _DEBUG
         if (!recreated) {
-            printf("Failed to recreate swapchain\n");
+            LOG_FATAL("Failed to recreate swapchain");
             assert(false);
         }
 #endif

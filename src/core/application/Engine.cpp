@@ -15,6 +15,7 @@
 #include "core/engine/event/EventDispatcher.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/util/Profiler.h"
+#include "core/util/Logger.h"
 #include <SDL2/SDL.h>
 
 
@@ -22,23 +23,24 @@ Engine* Engine::s_instance = new Engine();
 
 Engine::Engine():
     m_graphics(new GraphicsManager()),
-    m_eventDispatcher(new EventDispatcher()),
     m_scene(new Scene()),
     m_physicsSystem(new PhysicsSystem()),
     m_uiRenderer(new UIRenderer()),
     m_sceneRenderer(new SceneRenderer()),
     m_lightRenderer(new LightRenderer()),
     m_immediateRenderer(new ImmediateRenderer()),
-    m_reprojectionRenderer(new ReprojectionRenderer()),
     m_deferredRenderer(new DeferredRenderer()),
+    m_reprojectionRenderer(new ReprojectionRenderer()),
     m_postProcessingRenderer(new PostProcessRenderer()),
-    m_renderCamera(new RenderCamera()),
-    m_viewFrustum(nullptr),
+    m_eventDispatcher(new EventDispatcher()),
     m_currentFrameCount(0),
+    m_startTime(std::chrono::high_resolution_clock::now()),
+    m_accumulatedTime(0.0),
+    m_runTime(0.0),
     m_debugCompositeEnabled(true),
     m_viewFrustumPaused(false),
-    m_accumulatedTime(0.0),
-    m_runTime(0.0) {
+    m_renderCamera(new RenderCamera()),
+    m_viewFrustum(nullptr) {
 }
 
 Engine::~Engine() {
@@ -222,7 +224,7 @@ bool Engine::init(SDL_Window* windowHandle) {
     PROFILE_REGION("Init GraphicsManager")
 
     if (!m_graphics->init(windowHandle, "WorldEngine")) {
-        printf("Failed to initialize graphics engine\n");
+        LOG_ERROR("Failed to initialize graphics engine");
         return false;
     }
 

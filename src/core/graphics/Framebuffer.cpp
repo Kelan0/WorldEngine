@@ -4,6 +4,7 @@
 #include "core/graphics/Image2D.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/application/Engine.h"
+#include "core/util/Logger.h"
 
 
 void FramebufferConfiguration::setRenderPass(const vk::RenderPass& p_renderPass) {
@@ -80,19 +81,19 @@ Framebuffer* Framebuffer::create(const FramebufferConfiguration& framebufferConf
     const vk::Device& device = **framebufferConfiguration.device.lock(name);
 
     if (!framebufferConfiguration.renderPass) {
-        printf("Unable to create Framebuffer: RenderPass is NULL\n");
+        LOG_ERROR("Unable to create Framebuffer: RenderPass is NULL");
         return nullptr;
     }
     if (framebufferConfiguration.attachments.empty()) {
-        printf("Unable to create Framebuffer: No attachments\n");
+        LOG_ERROR("Unable to create Framebuffer: No attachments");
         return nullptr;
     }
     if (framebufferConfiguration.width == 0 || framebufferConfiguration.height == 0) {
-        printf("Unable to create framebuffer: Zero size dimensions\n");
+        LOG_ERROR("Unable to create framebuffer: Zero size dimensions");
         return nullptr;
     }
     if (framebufferConfiguration.layers == 0) {
-        printf("Unable to create framebuffer: Must have ate least 1 layer\n");
+        LOG_ERROR("Unable to create framebuffer: Must have ate least 1 layer");
         return nullptr;
     }
 
@@ -107,7 +108,7 @@ Framebuffer* Framebuffer::create(const FramebufferConfiguration& framebufferConf
     vk::Framebuffer framebuffer = nullptr;
     vk::Result result = device.createFramebuffer(&framebufferCreateInfo, nullptr, &framebuffer);
     if (result != vk::Result::eSuccess) {
-        printf("Failed to create Vulkan Framebuffer: %s\n", vk::to_string(result).c_str());
+        LOG_ERROR("Failed to create Vulkan Framebuffer: %s", vk::to_string(result).c_str());
         return nullptr;
     }
 

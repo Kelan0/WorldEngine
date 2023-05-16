@@ -4,9 +4,9 @@
 
 #include "core/core.h"
 #include "Engine.h"
+#include "core/util/Logger.h"
 
 #include <SDL2/SDL.h>
-
 
 class InputHandler;
 
@@ -34,6 +34,8 @@ public:
     static Application* instance();
 
     void stop();
+
+    Logger* logger();
 
     InputHandler* input();
 
@@ -89,6 +91,7 @@ private:
 private:
     static Application* s_instance;
 
+    Logger* m_logger;
     SDL_Window* m_windowHandle;
     InputHandler* m_inputHandler;
     std::string m_executionDirectory;

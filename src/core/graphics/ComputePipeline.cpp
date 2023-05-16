@@ -9,6 +9,7 @@
 #include "core/engine/event/EventDispatcher.h"
 #include "core/util/Profiler.h"
 #include "core/util/Util.h"
+#include "core/util/Logger.h"
 
 
 std::unordered_map<size_t, ComputePipeline*> ComputePipeline::s_cachedComputePipelines;
@@ -101,7 +102,7 @@ bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipeli
 
     vk::ShaderModule computeShaderModule = nullptr;
     if (!ShaderUtils::loadShaderModule(ShaderUtils::ShaderStage_ComputeShader, device, pipelineConfig.computeShader, pipelineConfig.computeShaderEntryPoint, &computeShaderModule)) {
-        printf("Unable to create ComputePipeline: Failed to load shader module\n");
+        LOG_ERROR("Unable to create ComputePipeline: Failed to load shader module");
         return false;
     }
 
@@ -119,7 +120,7 @@ bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipeli
     vk::PipelineLayout pipelineLayout = nullptr;
     result = device.createPipelineLayout(&pipelineLayoutCreateInfo, nullptr, &m_pipelineLayout);
     if (result != vk::Result::eSuccess) {
-        printf("Unable to create ComputePipeline: Failed to create PipelineLayout: %s\n", vk::to_string(result).c_str());
+        LOG_ERROR("Unable to create ComputePipeline: Failed to create PipelineLayout: %s", vk::to_string(result).c_str());
         device.destroyShaderModule(computeShaderModule);
         cleanup();
         return false;
@@ -131,7 +132,7 @@ bool ComputePipeline::recreate(const ComputePipelineConfiguration& computePipeli
 
     auto createComputePipelineResult = device.createComputePipeline(nullptr, pipelineCreateInfo);
     if (createComputePipelineResult.result != vk::Result::eSuccess) {
-        printf("Failed to create ComputePipeline: %s\n", vk::to_string(createComputePipelineResult.result).c_str());
+        LOG_ERROR("Failed to create ComputePipeline: %s", vk::to_string(createComputePipelineResult.result).c_str());
         device.destroyShaderModule(computeShaderModule);
         cleanup();
         return false;
@@ -194,7 +195,7 @@ void ComputePipeline::onShaderLoaded(ShaderLoadedEvent* event) {
     bool doRecreate = false;
 
     if (m_config.computeShader == event->filePath && m_config.computeShaderEntryPoint == event->entryPoint) {
-        printf("Compute shader %s for ComputePipeline %s\n", event->reloaded ? "reloaded" : "loaded", m_name.c_str());
+        LOG_INFO("Compute shader %s for ComputePipeline %s", event->reloaded ? "reloaded" : "loaded", m_name.c_str());
         doRecreate = event->reloaded;
     }
 
@@ -208,7 +209,7 @@ void ComputePipeline::onShaderLoaded(ShaderLoadedEvent* event) {
 
             bool success = recreate(m_config, m_name);
             if (!success) {
-                printf("Shader %s@%s was reloaded, but reconstructing ComputePipeline \"%s\" failed. The pipeline will remain unchanged\n", event->filePath.c_str(), event->entryPoint.c_str(), m_name.c_str());
+                LOG_WARN("Shader %s@%s was reloaded, but reconstructing ComputePipeline \"%s\" failed. The pipeline will remain unchanged", event->filePath.c_str(), event->entryPoint.c_str(), m_name.c_str());
                 m_pipeline = backupPipeline;
                 m_pipelineLayout = backupPipelineLayout;
                 m_config = backupConfig;

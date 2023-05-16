@@ -11,6 +11,7 @@
 #include "core/engine/event/EventDispatcher.h"
 #include "core/engine/event/GraphicsEvents.h"
 #include "core/util/Util.h"
+#include "core/util/Logger.h"
 
 
 ComputePipeline* ImageCube::s_computeEquirectangularPipeline = nullptr;
@@ -112,7 +113,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         suppliedEquirectangularData = loaded;
 
         if (!loaded && imageCubeConfiguration.imageSource.equirectangularImage.hasSource()) {
-            printf("Unable to create CubeImage: Failed to load equirectangular image from supplied file paths\n");
+            LOG_ERROR("Unable to create CubeImage: Failed to load equirectangular image from supplied file paths");
             for (const auto& imageData : allocatedImageData) delete imageData;
             return nullptr;
         }
@@ -132,7 +133,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
             if ((suppliedFaceData && !loadedFaces[i]) ||  // Either all faces must be loaded or unloaded. Cannot have some and not others.
                 (!loadedFaces[i] && imageCubeConfiguration.imageSource.faceImages[i].hasSource())) { // Check sources supplied were successfully loaded.
 
-                printf("Unable to create CubeImage: Failed to load all faces from supplied file paths\n");
+                LOG_ERROR("Unable to create CubeImage: Failed to load all faces from supplied file paths");
                 for (const auto& imageData : allocatedImageData) delete imageData;
                 return nullptr;
             }
@@ -144,13 +145,13 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
 
             for (size_t i = 0; i < 6; ++i) {
                 if (cubeFacesImageData[i]->getWidth() != cubeFacesImageData[i]->getHeight()) {
-                    printf("Unable to load CubeImage: Supplied image data is not square. Width must equal height for all faces\n");
+                    LOG_ERROR("Unable to load CubeImage: Supplied image data is not square. Width must equal height for all faces");
                     for (const auto& imageData : allocatedImageData) delete imageData;
                     return nullptr;
                 }
 
                 if (cubeFacesImageData[i]->getWidth() != size) {
-                    printf("Unable to load CubeImage: Supplied image data has mismatched sizes. All faces must have the same size\n");
+                    LOG_ERROR("Unable to load CubeImage: Supplied image data has mismatched sizes. All faces must have the same size");
                     for (const auto& imageData : allocatedImageData) delete imageData;
                     return nullptr;
                 }
@@ -206,7 +207,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
     vk::Image image = nullptr;
     result = device.createImage(&imageCreateInfo, nullptr, &image);
     if (result != vk::Result::eSuccess) {
-        printf("Failed to create image: %s\n", vk::to_string(result).c_str());
+        LOG_ERROR("Failed to create image: %s", vk::to_string(result).c_str());
         for (const auto& imageData : allocatedImageData) delete imageData;
         return nullptr;
     }
@@ -217,7 +218,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
     DeviceMemoryBlock* memory = vmalloc(memoryRequirements, imageCubeConfiguration.memoryProperties, name);
     if (memory == nullptr) {
         device.destroyImage(image);
-        printf("Image memory allocation failed\n");
+        LOG_ERROR("Image memory allocation failed");
         for (const auto& imageData : allocatedImageData) delete imageData;
         return nullptr;
     }
@@ -232,10 +233,10 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         region.width = equirectangularImageData->getWidth();
         region.height = equirectangularImageData->getHeight();
 
-        printf("Uploading ImageCube equirectangular data [%d x %d] with face size [%d x %d]\n", (int32_t)region.width, (int32_t)region.height, (int32_t)size, (int32_t)size);
+        LOG_INFO("Uploading ImageCube equirectangular data [%d x %d] with face size [%d x %d]", (int32_t)region.width, (int32_t)region.height, (int32_t)size, (int32_t)size);
 
         if (!returnImage->uploadEquirectangular(equirectangularImageData->getData(), equirectangularImageData->getPixelLayout(), equirectangularImageData->getPixelFormat(), vk::ImageAspectFlagBits::eColor, region, dstState)) {
-            printf("Failed to upload buffer data\n");
+            LOG_ERROR("Failed to upload buffer data");
             delete returnImage;
             returnImage = nullptr;
         }
@@ -243,7 +244,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         if (generateMipmap) {
             auto t0 = Performance::now();
             returnImage->generateMipmap(vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor, mipLevels, dstState);
-            printf("Took %.2f msec to generate %u mipmap levels for ImageCube\n", Performance::milliseconds(t0), mipLevels);
+            LOG_DEBUG("Took %.2f msec to generate %u mipmap levels for ImageCube", Performance::milliseconds(t0), mipLevels);
         }
 
     } else if (suppliedFaceData) {
@@ -252,11 +253,11 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         region.width = size;
         region.height = size;
 
-        printf("Uploading ImageCube face data with face size [%d x %d]\n", (int32_t)size, (int32_t)size);
+        LOG_INFO("Uploading ImageCube face data with face size [%d x %d]", (int32_t)size, (int32_t)size);
 
         for (size_t i = 0; i < 6; ++i) {
             if (!returnImage->uploadFace((ImageCubeFace)i, cubeFacesImageData[i]->getData(), cubeFacesImageData[i]->getPixelLayout(), cubeFacesImageData[i]->getPixelFormat(), vk::ImageAspectFlagBits::eColor, region, dstState)) {
-                printf("Failed to upload buffer data\n");
+                LOG_ERROR("Failed to upload buffer data");
                 delete returnImage;
                 returnImage = nullptr;
             }
@@ -265,10 +266,10 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         if (generateMipmap) {
             auto t0 = Performance::now();
             returnImage->generateMipmap(vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor, mipLevels, dstState);
-            printf("Took %.2f msec to generate %u mipmap levels for ImageCube\n", Performance::milliseconds(t0), mipLevels);
+            LOG_DEBUG("Took %.2f msec to generate %u mipmap levels for ImageCube", Performance::milliseconds(t0), mipLevels);
         }
     } else if (generateMipmap) {
-        printf("GenerateMipmap requested for ImageCube \"%s\", but no source data was uploaded to generate from\n", name.c_str());
+        LOG_WARN("GenerateMipmap requested for ImageCube \"%s\", but no source data was uploaded to generate from", name.c_str());
     }
 
     for (const auto& imageData : allocatedImageData) delete imageData;
@@ -280,19 +281,19 @@ bool ImageCube::uploadFace(ImageCube* dstImage, ImageCubeFace face, void* data, 
     assert(data != nullptr);
 
     if (pixelLayout == ImagePixelLayout::Invalid) {
-        printf("Unable to upload image data: Invalid image pixel layout\n");
+        LOG_ERROR("Unable to upload image data: Invalid image pixel layout");
         return false;
     }
 
     if (pixelFormat == ImagePixelFormat::Invalid) {
-        printf("Unable to upload image data: Invalid image pixel format\n");
+        LOG_ERROR("Unable to upload image data: Invalid image pixel format");
         return false;
     }
 
     ImagePixelLayout dstPixelLayout;
     ImagePixelFormat dstPixelFormat;
     if (!ImageData::getPixelLayoutAndFormat(dstImage->getFormat(), dstPixelLayout, dstPixelFormat)) {
-        printf("Unable to upload image data: There is no corresponding pixel layout or format for the destination images format %s\n", vk::to_string(dstImage->getFormat()).c_str());
+        LOG_ERROR("Unable to upload image data: There is no corresponding pixel layout or format for the destination images format %s", vk::to_string(dstImage->getFormat()).c_str());
         return false;
     }
 
@@ -311,7 +312,7 @@ bool ImageCube::uploadFace(ImageCube* dstImage, ImageCubeFace face, void* data, 
     uint32_t bytesPerPixel = ImageData::getChannelSize(dstPixelFormat) * ImageData::getChannels(dstPixelLayout);
 
     if (bytesPerPixel == 0) {
-        printf("Unable to upload image data: Invalid image pixel format\n");
+        LOG_ERROR("Unable to upload image data: Invalid image pixel format");
         delete tempImageData;
         return false;
     }
@@ -326,19 +327,19 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, ImagePixe
     assert(data != nullptr);
 
     if (pixelLayout == ImagePixelLayout::Invalid) {
-        printf("Unable to upload image data: Invalid image pixel layout\n");
+        LOG_ERROR("Unable to upload image data: Invalid image pixel layout");
         return false;
     }
 
     if (pixelFormat == ImagePixelFormat::Invalid) {
-        printf("Unable to upload image data: Invalid image pixel format\n");
+        LOG_ERROR("Unable to upload image data: Invalid image pixel format");
         return false;
     }
 
     ImagePixelLayout dstPixelLayout;
     ImagePixelFormat dstPixelFormat;
     if (!ImageData::getPixelLayoutAndFormat(dstImage->getFormat(), dstPixelLayout, dstPixelFormat)) {
-        printf("Unable to upload image data: There is no corresponding pixel layout or format for the destination images format %s\n", vk::to_string(dstImage->getFormat()).c_str());
+        LOG_ERROR("Unable to upload image data: There is no corresponding pixel layout or format for the destination images format %s", vk::to_string(dstImage->getFormat()).c_str());
         return false;
     }
 
@@ -363,7 +364,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, ImagePixe
     uint32_t bytesPerPixel = ImageData::getChannelSize(dstPixelFormat) * ImageData::getChannels(dstPixelLayout);
 
     if (bytesPerPixel == 0) {
-        printf("Unable to upload image data: Invalid image pixel format\n");
+        LOG_ERROR("Unable to upload image data: Invalid image pixel format");
         delete tempImageData;
         return false;
     }
@@ -395,7 +396,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, ImagePixe
     Buffer* tempBuffer = Buffer::create(tempBufferConfig, "ImageCube-EquirectangularComputeUniformBuffer");
 
     if (tempBuffer == nullptr) {
-        printf("Unable to upload equirectangular CubeMap image data: Failed to create staging buffer\n");
+        LOG_ERROR("Unable to upload equirectangular CubeMap image data: Failed to create staging buffer");
         delete tempImageData;
         return false;
     }
@@ -405,7 +406,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, ImagePixe
     delete tempImageData;
 
     if (tempBuffer == nullptr) {
-        printf("Failed to create image data staging buffer\n");
+        LOG_ERROR("Failed to create image data staging buffer");
         return false;
     }
 
@@ -417,7 +418,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, ImagePixe
     imageBufferViewConfig.setOffsetRange(cubemapBufferOffsetBytes, cubemapImageSizeBytes);
     BufferView* cubemapImageBufferView = BufferView::create(imageBufferViewConfig, "ImageCube-CubemapImageBufferView");
     if (cubemapImageBufferView == nullptr) {
-        printf("Unable to upload cube map image data: Failed to create texel staging buffer\n");
+        LOG_ERROR("Unable to upload cube map image data: Failed to create texel staging buffer");
         delete tempBuffer;
         return false;
     }
@@ -425,7 +426,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, ImagePixe
     imageBufferViewConfig.setOffsetRange(equirectangularBufferOffsetBytes, equirectangularImageSizeBytes);
     BufferView* equirectangularImageBufferView = BufferView::create(imageBufferViewConfig, "ImageCube-EquirectangularImageBufferView");
     if (equirectangularImageBufferView == nullptr) {
-        printf("Unable to upload cube map image data: Failed to create texel staging buffer\n");
+        LOG_ERROR("Unable to upload cube map image data: Failed to create texel staging buffer");
         delete cubemapImageBufferView;
         delete tempBuffer;
         return false;
@@ -497,7 +498,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, ImagePixe
     ImageUtil::endTransferCommands(**Engine::graphics()->getQueue(QUEUE_TRANSFER_MAIN), true);
 
     if (!success)
-        printf("Failed to transfer buffer data to destination CubeMap image\n");
+        LOG_ERROR("Failed to transfer buffer data to destination CubeMap image");
 
     delete equirectangularImageBufferView;
     delete cubemapImageBufferView;
@@ -571,13 +572,13 @@ bool ImageCube::loadImageData(const ImageSource& imageSource, vk::Format format,
     ImagePixelLayout pixelLayout;
     ImagePixelFormat pixelFormat;
     if (!ImageData::getPixelLayoutAndFormat(format, pixelLayout, pixelFormat)) {
-        printf("Unable to create image: supplied image format %s has no corresponding loadable pixel format or layout\n", vk::to_string(format).c_str());
+        LOG_ERROR("Unable to create image: supplied image format %s has no corresponding loadable pixel format or layout", vk::to_string(format).c_str());
         return false;
     }
 
     ImageData* imageData = ImageData::load(imageSource.filePath, pixelLayout, pixelFormat);
     if (imageData == nullptr) {
-        printf("Failed to load image data from file \"%s\"\n", imageSource.filePath.c_str());
+        LOG_ERROR("Failed to load image data from file \"%s\"", imageSource.filePath.c_str());
         return false;
     }
 
@@ -592,7 +593,7 @@ bool ImageCube::validateFaceImageRegion(const ImageCube* image, ImageCubeFace fa
     }
 
     if (imageRegion.x >= image->getWidth() || imageRegion.y >= image->getHeight()) {
-        printf("Image region out of range\n");
+        LOG_ERROR("Image region out of range");
         return false;
     }
 
@@ -605,7 +606,7 @@ bool ImageCube::validateFaceImageRegion(const ImageCube* image, ImageCubeFace fa
     imageRegion.layerCount = 1;
 
     if (imageRegion.x + imageRegion.width > image->getWidth() || imageRegion.y + imageRegion.height > image->getHeight()) {
-        printf("Image region out of range\n");
+        LOG_ERROR("Image region out of range");
         return false;
     }
 
@@ -618,7 +619,7 @@ bool ImageCube::validateEquirectangularImageRegion(const ImageCube* image, Image
     }
 
     if (imageRegion.width == ImageRegion::WHOLE_SIZE || imageRegion.height == ImageRegion::WHOLE_SIZE || imageRegion.width == 0 || imageRegion.height == 0) {
-        printf("Equirectangular image region must have width and height supplied\n");
+        LOG_ERROR("Equirectangular image region must have width and height supplied");
         return false;
     }
 
@@ -668,7 +669,7 @@ DescriptorSet* ImageCube::getEquirectangularComputeDescriptorSet() {
 }
 
 void ImageCube::onCleanupGraphics(ShutdownGraphicsEvent* event) {
-    printf("Destroying ImageCube equirectangular compute resources\n");
+    LOG_INFO("Destroying ImageCube equirectangular compute resources");
     delete s_computeEquirectangularDescriptorSet;
     delete s_computeEquirectangularPipeline;
 }

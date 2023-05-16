@@ -15,6 +15,7 @@
 #include "core/util/Profiler.h"
 #include "extern/imgui/imgui.h"
 #include "extern/imgui/implot.h"
+#include "core/util/Logger.h"
 
 #define HISTOGRAM_INPUT_TEXTURE_BINDING 0
 #define HISTOGRAM_OUTPUT_BUFFER_BINDING 1
@@ -285,7 +286,7 @@ void ExposureHistogram::readback(const vk::CommandBuffer& commandBuffer) {
     if (m_readbackBuffer == nullptr || m_readbackBuffer->getSize() < headerSize + dataSize) {
         delete m_readbackBuffer;
 
-        printf("Creating ExposureHistogram read-back buffer for %u bins\n", m_binCount);
+        LOG_INFO("Creating ExposureHistogram read-back buffer for %u bins", m_binCount);
 
         BufferConfiguration bufferConfig{};
         bufferConfig.device = Engine::graphics()->getDevice();

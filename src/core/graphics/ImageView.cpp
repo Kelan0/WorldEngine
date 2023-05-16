@@ -3,6 +3,7 @@
 #include "core/graphics/Image2D.h"
 #include "core/graphics/ImageCube.h"
 #include "core/graphics/GraphicsManager.h"
+#include "core/util/Logger.h"
 
 
 void ImageViewConfiguration::setImage(const vk::Image& p_image, const vk::ImageViewType& p_imageViewType) {
@@ -43,7 +44,7 @@ ImageView* ImageView::create(const ImageViewConfiguration& imageViewConfiguratio
     const vk::Device& device = **imageViewConfiguration.device.lock(name);
 
     if (!imageViewConfiguration.image) {
-        printf("Unable to create %s ImageView: Image is NULL\n", vk::to_string(imageViewConfiguration.imageViewType).c_str());
+        LOG_ERROR("Unable to create %s ImageView: Image is NULL", vk::to_string(imageViewConfiguration.imageViewType).c_str());
         return nullptr;
     }
 
@@ -68,7 +69,7 @@ ImageView* ImageView::create(const ImageViewConfiguration& imageViewConfiguratio
     result = device.createImageView(&imageViewCreateInfo, nullptr, &imageView);
 
     if (result != vk::Result::eSuccess) {
-        printf("Failed to create %s ImageView: %s\n", vk::to_string(imageViewConfiguration.imageViewType).c_str(), vk::to_string(result).c_str());
+        LOG_ERROR("Failed to create %s ImageView: %s", vk::to_string(imageViewConfiguration.imageViewType).c_str(), vk::to_string(result).c_str());
         return nullptr;
     }
 

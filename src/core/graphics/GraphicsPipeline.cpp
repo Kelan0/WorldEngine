@@ -230,7 +230,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
         viewport.maxDepth = 1.0F;
     }
 
-    printf("Recreating graphics pipeline \"%s\" [%g x %g]\n", name.c_str(), viewport.width, viewport.height);
+    LOG_INFO("Recreating graphics pipeline \"%s\" [%g x %g]", name.c_str(), viewport.width, viewport.height);
 
     vk::FrontFace frontFace = pipelineConfig.frontFace;
 
@@ -246,7 +246,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
 
 
     if (!pipelineConfig.vertexShader.has_value()) {
-        printf("Vertex shader is required by a graphics pipeline, but was not supplied\n");
+        LOG_ERROR("Vertex shader is required by a graphics pipeline, but was not supplied");
         return false;
     }
 
@@ -256,7 +256,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
 //    }
 
     if (pipelineConfig.renderPass.expired() || pipelineConfig.renderPass.get() == nullptr) {
-        printf("Unable to create graphics pipeline with NULL RenderPass\n");
+        LOG_ERROR("Unable to create graphics pipeline with NULL RenderPass");
         return false;
     }
 
@@ -396,7 +396,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
 
     result = device.createPipelineLayout(&pipelineLayoutCreateInfo, nullptr, &m_pipelineLayout);
     if (result != vk::Result::eSuccess) {
-        printf("Unable to create GraphicsPipeline: Failed to create PipelineLayout: %s\n", vk::to_string(result).c_str());
+        LOG_ERROR("Unable to create GraphicsPipeline: Failed to create PipelineLayout: %s", vk::to_string(result).c_str());
         cleanupShaderModules();
         cleanup();
         return false;
@@ -425,7 +425,7 @@ bool GraphicsPipeline::recreate(const GraphicsPipelineConfiguration& graphicsPip
     Engine::graphics()->setAbortOnVulkanError(doAbort);
 
     if (createGraphicsPipelineResult.result != vk::Result::eSuccess) {
-        printf("Failed to create GraphicsPipeline: %s\n", vk::to_string(createGraphicsPipelineResult.result).c_str());
+        LOG_ERROR("Failed to create GraphicsPipeline: %s", vk::to_string(createGraphicsPipelineResult.result).c_str());
         cleanupShaderModules();
         cleanup();
         return false;
@@ -712,7 +712,7 @@ void GraphicsPipeline::cleanup() {
 void GraphicsPipeline::validateDynamicState(vk::DynamicState dynamicState) {
 #if _DEBUG || 1
     if (!isStateDynamic(dynamicState)) {
-        printf("Cannot set immutable pipeline state %s for pipeline \"%s\"\n", vk::to_string(dynamicState).c_str(), m_name.c_str());
+        LOG_FATAL("Cannot set immutable pipeline state %s for pipeline \"%s\"", vk::to_string(dynamicState).c_str(), m_name.c_str());
         assert(false);
         return;
     }
@@ -725,12 +725,12 @@ void GraphicsPipeline::onShaderLoaded(ShaderLoadedEvent* event) {
     bool doRecreate = false;
 
     if (m_config.vertexShader.has_value() && m_config.vertexShader.value() == event->filePath && m_config.vertexShaderEntryPoint == event->entryPoint) {
-        printf("Vertex shader %s for GraphicsPipeline %s\n", event->reloaded ? "reloaded" : "loaded", m_name.c_str());
+        LOG_INFO("Vertex shader %s for GraphicsPipeline %s", event->reloaded ? "reloaded" : "loaded", m_name.c_str());
         doRecreate = event->reloaded;
     }
 
     if (m_config.fragmentShader.has_value() && m_config.fragmentShader.value() == event->filePath && m_config.fragmentShaderEntryPoint == event->entryPoint) {
-        printf("Fragment shader %s for GraphicsPipeline %s\n", event->reloaded ? "reloaded" : "loaded", m_name.c_str());
+        LOG_INFO("Fragment shader %s for GraphicsPipeline %s", event->reloaded ? "reloaded" : "loaded", m_name.c_str());
         doRecreate = event->reloaded;
     }
 
@@ -744,7 +744,7 @@ void GraphicsPipeline::onShaderLoaded(ShaderLoadedEvent* event) {
 
             bool success = recreate(m_config, m_name);
             if (!success) {
-                printf("Shader %s@%s was reloaded, but reconstructing GraphicsPipeline \"%s\" failed. The pipeline will remain unchanged\n", event->filePath.c_str(), event->entryPoint.c_str(), m_name.c_str());
+                LOG_WARN("Shader %s@%s was reloaded, but reconstructing GraphicsPipeline \"%s\" failed. The pipeline will remain unchanged", event->filePath.c_str(), event->entryPoint.c_str(), m_name.c_str());
                 m_pipeline = backupPipeline;
                 m_pipelineLayout = backupPipelineLayout;
                 m_renderPass = std::move(backupRenderPass);

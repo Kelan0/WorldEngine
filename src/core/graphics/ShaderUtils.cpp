@@ -118,7 +118,7 @@ void ShaderLoadingUpdater::checkModifiedShaders() {
             continue; // Nothing depends on this file. // TODO: remove it
         }
 
-        printf("Reloading shader dependency %s with %zu dependent shaders\n", dependencyInfo.filePath.c_str(), dependencyInfo.dependentShaderKeys.size());
+        LOG_INFO("Reloading shader dependency %s with %zu dependent shaders", dependencyInfo.filePath.c_str(), dependencyInfo.dependentShaderKeys.size());
 
         for (auto it0 = dependencyInfo.dependentShaderKeys.begin(); it0 != dependencyInfo.dependentShaderKeys.end();) {
             const std::string& shaderKey = *it0;
@@ -142,11 +142,11 @@ void ShaderLoadingUpdater::checkModifiedShaders() {
             continue; // Shader was previously loaded after it was previously modified
         }
 
-        printf("Reloading shader %s@%s\n", shaderInfo.filePath.c_str(), shaderInfo.entryPoint.c_str());
+        LOG_INFO("Reloading shader %s@%s", shaderInfo.filePath.c_str(), shaderInfo.entryPoint.c_str());
         shaderInfo.shouldReload = true;
 
         if (!ShaderUtils::loadShaderStage(shaderInfo.stage, shaderInfo.filePath, shaderInfo.entryPoint, nullptr)) {
-            printf("Failed to reload shader %s@%s\n", shaderInfo.filePath.c_str(), shaderInfo.entryPoint.c_str());
+            LOG_ERROR("Failed to reload shader %s@%s", shaderInfo.filePath.c_str(), shaderInfo.entryPoint.c_str());
             continue;
         }
     }
@@ -162,7 +162,7 @@ std::string ShaderLoadingUpdater::getShaderKey(const std::string& filePath, cons
 bool getShaderDependencies(const std::string shaderFilePath, const std::string& dependencyFilePath, std::vector<std::string>& outDependencyFiles) {
     std::ifstream fs(dependencyFilePath.c_str(), std::ifstream::in);
     if (!fs.is_open()) {
-        printf("Failed to open shader dependencies file \"%s\"\n", dependencyFilePath.c_str());
+        LOG_ERROR("Failed to open shader dependencies file \"%s\"", dependencyFilePath.c_str());
         return false;
     }
 
@@ -203,7 +203,7 @@ bool generateShaderDependencies(const std::string& command, const std::string& s
     if (error != EXIT_SUCCESS) {
         Util::trim(commandResponse);
         commandResponse += "\n";
-        printf("Failed to retrieve dependencies for shader \"%s\"\n%s", commandResponse.c_str(), shaderFilePath.c_str());
+        LOG_ERROR("Failed to retrieve dependencies for shader \"%s\"%s", commandResponse.c_str(), shaderFilePath.c_str());
         return false;
     }
 
@@ -223,12 +223,12 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
     std::string absFilePath = Application::instance()->getResourceDirectory() + filePath;
 
     if (entryPoint.empty()) {
-        printf("Cannot compile shader \"%s\": Entry point is not specified\n", filePath.c_str());
+        LOG_ERROR("Cannot compile shader \"%s\": Entry point is not specified", filePath.c_str());
         return false;
     }
 
     if (entryPoint.find(' ') != std::string::npos) {
-        printf("Cannot compile shader \"%s\" with specified entry point \"%s\": The entry point must not contain spaces\n", filePath.c_str(), entryPoint.c_str());
+        LOG_ERROR("Cannot compile shader \"%s\" with specified entry point \"%s\": The entry point must not contain spaces", filePath.c_str(), entryPoint.c_str());
         return false;
     }
 
@@ -267,7 +267,7 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
 
                 if (!std::filesystem::exists(absFilePath)) {
                     // Source file does not exist
-                    printf("Shader source file \"%s\" was not found\n", filePath.c_str());
+                    LOG_ERROR("Shader source file \"%s\" was not found", filePath.c_str());
                     return false;
                 }
 
@@ -287,11 +287,11 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
         }
 
         if (shouldCompile) {
-            printf("Compiling shader: %s@%s\n", filePath.c_str(), entryPoint.c_str());
+            LOG_INFO("Compiling shader: %s@%s", filePath.c_str(), entryPoint.c_str());
 
             const std::string& glslcdir = Application::instance()->getShaderCompilerDirectory();
             if (!glslcdir.empty() && !std::filesystem::exists(glslcdir + "glslc.exe")) {
-                printf("Unable to compile shader: GLSL compiler (glslc.exe) was not found in the directory \"%s\". Make sure the location of the GLSL compiler is specified correctly using the --spvcdir program argument\n",
+                LOG_ERROR("Unable to compile shader: GLSL compiler (glslc.exe) was not found in the directory \"%s\". Make sure the location of the GLSL compiler is specified correctly using the --spvcdir program argument",
                        Application::instance()->getShaderCompilerDirectory().c_str());
                 isValidShader = false;
             } else {
@@ -319,7 +319,7 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
                 isValidShader = error == EXIT_SUCCESS;
                 if (!isValidShader) {
                     Util::trim(commandResponse);
-                    printf("SPIR-V compile command failed\n%s\n", commandResponse.c_str());
+                    LOG_ERROR("SPIR-V compile command failed\n%s", commandResponse.c_str());
                 } else {
                     generateShaderDependencies(command, filePath, dependencyFilePath);
                 }
@@ -331,7 +331,7 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
         std::ifstream file(outputFilePath, std::ios::ate | std::ios::binary);
 
         if (!file.is_open()) {
-            printf("Shader file \"%s\" was not found\n", outputFilePath.c_str());
+            LOG_ERROR("Shader file \"%s\" was not found", outputFilePath.c_str());
             return false;
         }
 
@@ -345,7 +345,7 @@ bool ShaderUtils::loadShaderStage(const ShaderStage& shaderStage, std::string fi
         newShaderInfo.dependencyFilePaths.clear();
 
         if (!getShaderDependencies(absFilePath, dependencyFilePath, newShaderInfo.dependencyFilePaths)) {
-            printf("Failed to get dependencies for shader \"%s\" - Modifications to any dependencies will not be reloaded\n", absFilePath.c_str());
+            LOG_WARN("Failed to get dependencies for shader \"%s\" - Modifications to any dependencies will not be reloaded", absFilePath.c_str());
         }
 
         file.seekg(0);
@@ -371,7 +371,7 @@ bool ShaderUtils::loadShaderModule(const ShaderStage& shaderStage, const vk::Dev
 
     std::vector<char> bytecode;
     if (!ShaderUtils::loadShaderStage(shaderStage, filePath, entryPoint, &bytecode)) {
-        printf("Failed to load shader stage bytecode from file \"%s\" with entry point \"%s\"\n", filePath.c_str(), entryPoint.c_str());
+        LOG_ERROR("Failed to load shader stage bytecode from file \"%s\" with entry point \"%s\"", filePath.c_str(), entryPoint.c_str());
         return false;
     }
 
@@ -380,7 +380,7 @@ bool ShaderUtils::loadShaderModule(const ShaderStage& shaderStage, const vk::Dev
     shaderModuleCreateInfo.setPCode(reinterpret_cast<const uint32_t*>(bytecode.data()));
     vk::Result result = device.createShaderModule(&shaderModuleCreateInfo, nullptr, outShaderModule);
     if (result != vk::Result::eSuccess) {
-        printf("Failed to load shader module (file %s, entryPoint %s): %s\n", filePath.c_str(), entryPoint.c_str(), vk::to_string(result).c_str());
+        LOG_ERROR("Failed to load shader module (file %s, entryPoint %s): %s", filePath.c_str(), entryPoint.c_str(), vk::to_string(result).c_str());
         return false;
     }
     Engine::graphics()->setObjectName(device, (uint64_t)(VkShaderModule)(*outShaderModule), vk::ObjectType::eShaderModule, filePath.c_str());

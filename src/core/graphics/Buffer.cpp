@@ -5,6 +5,7 @@
 #include "core/engine/event/EventDispatcher.h"
 #include "core/engine/event/GraphicsEvents.h"
 #include "core/util/Util.h"
+#include "core/util/Logger.h"
 
 FrameResource<Buffer> Buffer::s_stagingBuffer = nullptr;
 vk::DeviceSize Buffer::s_maxStagingBufferSize = 128 * 1024 * 1024; // 128 MiB
@@ -31,7 +32,7 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration, const std
 
 #if _DEBUG
     if (bufferConfiguration.size <= 0) {
-        printf("Cannot create zero-size buffer\n");
+        LOG_FATAL("Cannot create zero-size buffer");
         assert(false);
         return nullptr;
     }
@@ -53,7 +54,7 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration, const std
     result = device.createBuffer(&bufferCreateInfo, nullptr, &buffer);
 
     if (result != vk::Result::eSuccess) {
-        printf("Failed to create buffer: %s\n", vk::to_string(result).c_str());
+        LOG_ERROR("Failed to create buffer: %s", vk::to_string(result).c_str());
         return nullptr;
     }
 
@@ -64,7 +65,7 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration, const std
 
     if (memory == nullptr) {
         device.destroyBuffer(buffer);
-        printf("Failed to allocate device memory for buffer\n");
+        LOG_ERROR("Failed to allocate device memory for buffer");
         return nullptr;
     }
 
@@ -76,7 +77,7 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration, const std
 
     if (bufferConfiguration.data != nullptr) {
         if (!returnBuffer->upload(0, bufferConfiguration.size, bufferConfiguration.data)) {
-            printf("Failed to upload buffer data\n");
+            LOG_ERROR("Failed to upload buffer data");
             delete returnBuffer;
             return nullptr;
         }
@@ -88,26 +89,26 @@ Buffer* Buffer::create(const BufferConfiguration& bufferConfiguration, const std
 bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk::DeviceSize srcOffset, vk::DeviceSize dstOffset) {
 #if _DEBUG
     if (srcBuffer == nullptr || dstBuffer == nullptr) {
-        printf("Unable to copy NULL buffers\n");
+        LOG_ERROR("Unable to copy NULL buffers");
         return false;
     }
     if (srcBuffer->m_device != dstBuffer->m_device) {
-        printf("Unable to copy data between buffers on different devices\n");
+        LOG_ERROR("Unable to copy data between buffers on different devices");
         return false;
     }
     if (srcOffset + size > srcBuffer->m_size) {
-        printf("Copy range in source buffer is out of range\n");
+        LOG_ERROR("Copy range in source buffer is out of range");
         return false;
     }
     if (dstOffset + size > srcBuffer->m_size) {
-        printf("Copy range in destination buffer is out of range\n");
+        LOG_ERROR("Copy range in destination buffer is out of range");
         return false;
     }
 #endif
 
     if (size == 0) {
 #if _DEBUG
-        printf("Buffer::copy was called with size=0, Nothing changed\n");
+        LOG_WARN("Buffer::copy was called with size=0, Nothing changed");
 #endif
         return true;
     }
@@ -141,37 +142,37 @@ bool Buffer::copy(Buffer* srcBuffer, Buffer* dstBuffer, vk::DeviceSize size, vk:
 bool Buffer::upload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data, vk::DeviceSize srcStride, vk::DeviceSize dstStride, vk::DeviceSize elementSize) {
 #if _DEBUG
     if (dstBuffer == nullptr) {
-        printf("Cannot upload to NULL buffer\n");
+        LOG_FATAL("Cannot upload to NULL buffer");
         assert(false);
         return false;
     }
 
     if (data == nullptr && size > 0) {
-        printf("Cannot upload NULL data to buffer\n");
+        LOG_FATAL("Cannot upload NULL data to buffer");
         assert(false);
         return false;
     }
     if (offset > dstBuffer->getSize()) {
-        printf("Unable to upload data to buffer out of allocated range\n");
+        LOG_FATAL("Unable to upload data to buffer out of allocated range");
         assert(false);
         return false;
     }
     if (srcStride != 0 || dstStride != 0) {
         if (elementSize == 0) {
-            printf("Unable to upload data to buffer: If srcStride or dstStride is non-zero, elementSize must be non-zero\n");
+            LOG_FATAL("Unable to upload data to buffer: If srcStride or dstStride is non-zero, elementSize must be non-zero");
             assert(false);
             return false;
         }
         if (srcStride != 0) {
             if (srcStride < elementSize) {
-                printf("Unable to upload data to buffer: srcStride (%llu bytes) must not be less than elementSize (%llu bytes)\n", srcStride, elementSize);
+                LOG_FATAL("Unable to upload data to buffer: srcStride (%llu bytes) must not be less than elementSize (%llu bytes)", srcStride, elementSize);
                 assert(false);
                 return false;
             }
         }
         if (dstStride != 0) {
             if (dstStride < elementSize) {
-                printf("Unable to upload data to buffer: dstStride (%llu bytes) must not be less than elementSize (%llu bytes)\n", dstStride, elementSize);
+                LOG_FATAL("Unable to upload data to buffer: dstStride (%llu bytes) must not be less than elementSize (%llu bytes)", dstStride, elementSize);
                 assert(false);
                 return false;
             }
@@ -189,7 +190,7 @@ bool Buffer::upload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize siz
             bufferSize = FLOOR_TO_MULTIPLE(bufferSize, elementSize);
 #if _DEBUG
             if (bufferSize == 0) {
-                printf("Unable to upload data to buffer: elementSize (%llu bytes) is larger than the remaining buffer size (%llu bytes after offset %llu)\n", elementSize, dstBuffer->getSize() - offset, offset);
+                LOG_FATAL("Unable to upload data to buffer: elementSize (%llu bytes) is larger than the remaining buffer size (%llu bytes after offset %llu)", elementSize, dstBuffer->getSize() - offset, offset);
                 assert(false);
                 return false;
             }
@@ -199,7 +200,7 @@ bool Buffer::upload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize siz
 
 #if _DEBUG
     if (offset + bufferSize > dstBuffer->getSize()) {
-        printf("Unable to upload data to buffer out of allocated range\n");
+        LOG_FATAL("Unable to upload data to buffer out of allocated range");
         assert(false);
         return false;
     }
@@ -289,12 +290,12 @@ bool Buffer::stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSi
 
     for (vk::DeviceSize i = 0; i < stages; ++i, stageOffset += stageSize) {
         if (!Buffer::mappedUpload(s_stagingBuffer.get(), 0, stageSize, stageData + stageOffset, srcStride, dstStride, elementSize)) {
-            printf("Failed to upload data to staging buffer\n");
+            LOG_ERROR("Failed to upload data to staging buffer");
             return false;
         }
 
         if (!Buffer::copy(s_stagingBuffer.get(), dstBuffer, stageSize, 0, offset + stageOffset)) {
-            printf("Failed to copy data from staging buffer\n");
+            LOG_ERROR("Failed to copy data from staging buffer");
             return false;
         }
     }
@@ -308,7 +309,7 @@ bool Buffer::mappedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSi
     }
     const vk::Device& device = **dstBuffer->getDevice();
     if (dstBuffer->m_memory->map() == nullptr) {
-        printf("Failed to map device memory for buffer\n");
+        LOG_ERROR("Failed to map device memory for buffer");
         return false;
     }
 
@@ -358,7 +359,7 @@ void Buffer::resizeStagingBuffer(const WeakResource<vkr::Device>& device, vk::De
     }
 
     char c1[6] = "";
-    printf("Resizing Buffer staging buffer to %.3f %s\n", Util::getMemorySizeMagnitude(stagingBufferSize, c1), c1);
+    LOG_INFO("Resizing Buffer staging buffer to %.3f %s", Util::getMemorySizeMagnitude(stagingBufferSize, c1), c1);
 
     BufferConfiguration stagingBufferConfig{};
     stagingBufferConfig.device = device;

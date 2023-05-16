@@ -25,7 +25,7 @@ Mesh* Mesh::create(const MeshConfiguration& meshConfiguration, const std::string
 
     if (meshConfiguration.vertexCount > 0) {
         if (!mesh->uploadVertices(meshConfiguration.vertices, meshConfiguration.vertexSize, meshConfiguration.vertexCount)) {
-            printf("Unable to create mesh \"%s\": failed to upload vertices\n", name.c_str());
+            LOG_ERROR("Unable to create mesh \"%s\": failed to upload vertices", name.c_str());
             delete mesh;
             return nullptr;
         }
@@ -33,7 +33,7 @@ Mesh* Mesh::create(const MeshConfiguration& meshConfiguration, const std::string
 
     if (meshConfiguration.indexCount > 0) {
         if (!mesh->uploadIndices(meshConfiguration.indices, meshConfiguration.indexSize, meshConfiguration.indexCount)) {
-            printf("Unable to create mesh \"%s\": failed to upload indices\n", name.c_str());
+            LOG_ERROR("Unable to create mesh \"%s\": failed to upload indices", name.c_str());
             delete mesh;
             return nullptr;
         }
@@ -65,7 +65,7 @@ bool Mesh::uploadVertices(const void* vertices, vk::DeviceSize vertexSize, size_
     m_vertexSize = vertexSize;
 
     if (m_vertexBuffer == nullptr) {
-        printf("Failed to upload vertex buffer data for mesh \"%s\"\n", m_name.c_str());
+        LOG_ERROR("Failed to upload vertex buffer data for mesh \"%s\"", m_name.c_str());
         return false;
     }
 
@@ -95,7 +95,7 @@ bool Mesh::uploadIndices(const void* indices, vk::DeviceSize indexSize, size_t i
     m_indexBuffer = Buffer::create(indexBufferConfig, m_name + "-MeshIndexBuffer");
 
     if (m_indexBuffer == nullptr) {
-        printf("Failed to upload index buffer data for mesh \"%s\"\n", m_name.c_str());
+        LOG_ERROR("Failed to upload index buffer data for mesh \"%s\"", m_name.c_str());
         return false;
     }
 

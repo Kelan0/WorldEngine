@@ -3,6 +3,7 @@
 #define WORLDENGINE_ENTITY_H
 
 #include "core/core.h"
+#include "core/util/Logger.h"
 
 #include <entt/entt.hpp>
 
@@ -103,7 +104,7 @@ template<typename T, typename ...Args>
 inline T& Entity::addComponent(Args && ...args) const {
 #if _DEBUG
     if (hasComponent<T>()) {
-		printf("Entity::addComponent() : Component type \"%s\" has already been added to this m_entity\n", typeid(T).name());
+		LOG_FATAL("Entity::addComponent() : Component type \"%s\" has already been added to this m_entity", typeid(T).name());
 		assert(false);
 	}
 #endif
@@ -127,7 +128,7 @@ template<typename T>
 inline T& Entity::getComponent() const {
 #if _DEBUG
     if (!hasComponent<T>()) {
-		printf("Entity::getComponent() : Component type \"%s\" is not attached to this m_entity\n", typeid(T).name());
+        LOG_FATAL("Entity::getComponent() : Component type \"%s\" is not attached to this m_entity", typeid(T).name());
 		assert(false);
 	}
 #endif

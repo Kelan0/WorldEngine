@@ -100,7 +100,7 @@ void RenderStressTestApplication::render(double dt) {
 
     if (input()->keyPressed(SDL_SCANCODE_F)) {
         Engine::instance()->setViewFrustumPaused(!Engine::instance()->isViewFrustumPaused());
-        printf("View frustum paused: %s\n", Engine::instance()->isViewFrustumPaused() ? "TRUE" : "FALSE");
+        LOG_INFO("View frustum paused: %s", Engine::instance()->isViewFrustumPaused() ? "TRUE" : "FALSE");
     }
 
     if (Engine::instance()->isViewFrustumPaused()) {

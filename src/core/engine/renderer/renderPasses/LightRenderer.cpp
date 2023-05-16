@@ -17,6 +17,7 @@
 #include "core/engine/renderer/LightComponent.h"
 #include "core/util/Profiler.h"
 #include "core/util/Util.h"
+#include "core/util/Logger.h"
 
 #define GAUSSIAN_BLUE_DIRECTION_X 0
 #define GAUSSIAN_BLUE_DIRECTION_Y 1
@@ -103,13 +104,13 @@ bool LightRenderer::init() {
 
         m_shadowRenderPassResources[i]->descriptorSet = DescriptorSet::create(m_shadowRenderPassDescriptorSetLayout, Engine::graphics()->descriptorPool(), "LightRenderer-ShadowRenderPassDescriptorSet");
         if (m_shadowRenderPassResources[i]->descriptorSet == nullptr) {
-            printf("LightRenderer::init - Failed to create camera info descriptor set\n");
+            LOG_ERROR("LightRenderer::init - Failed to create camera info descriptor set");
             return false;
         }
 
         m_lightingRenderPassResources[i]->descriptorSet = DescriptorSet::create(m_lightingRenderPassDescriptorSetLayout, Engine::graphics()->descriptorPool(), "LightRenderer-LightingRenderPassDescriptorSet");
         if (m_lightingRenderPassResources[i]->descriptorSet == nullptr) {
-            printf("LightRenderer::init - Failed to create camera info descriptor set\n");
+            LOG_ERROR("LightRenderer::init - Failed to create camera info descriptor set");
             return false;
         }
 
@@ -162,7 +163,7 @@ bool LightRenderer::init() {
 
     m_shadowRenderPass = SharedResource<RenderPass>(RenderPass::create(renderPassConfig, "LightRenderer-ShadowRenderPass"));
     if (!m_shadowRenderPass) {
-        printf("LightRenderer::init - Failed to create render pass\n");
+        LOG_ERROR("LightRenderer::init - Failed to create render pass");
         return false;
     }
 
@@ -186,7 +187,7 @@ bool LightRenderer::init() {
 
     m_shadowGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(pipelineConfig, "LightRenderer-ShadowGraphicsPipeline"));
     if (!m_shadowGraphicsPipeline) {
-        printf("LightRenderer::init - Failed to create graphics pipeline\n");
+        LOG_ERROR("LightRenderer::init - Failed to create graphics pipeline");
         return false;
     }
 
@@ -261,7 +262,7 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, co
         ShadowMap* shadowMap = lightComponent.getShadowMap();
         if (shadowMap == nullptr) {
 #if _DEBUG
-            printf("Error: shadow-casting light has null shadow map\n");
+            LOG_DEBUG("Error: shadow-casting light has null shadow map");
 #endif
             continue;
         }
@@ -525,14 +526,14 @@ ShadowMap* LightRenderer::getShadowMap(uint32_t width, uint32_t height, ShadowMa
         inactiveShadowMaps.erase(it);
         assert(shadowMap->getShadowType() == shadowType);
     } else {
-        printf("Allocating new shadow map: [%llu x %llu]\n", (uint64_t)width, (uint64_t)height);
+        LOG_INFO("Allocating new shadow map: [%llu x %llu]", (uint64_t)width, (uint64_t)height);
 
         switch (shadowType) {
             case ShadowMap::ShadowType_CascadedShadowMap:
                 shadowMap = new CascadedShadowMap(renderType);
                 break;
             default:
-                printf("LightRenderer::getShadowMap: Invalid ShadowType\n");
+                LOG_FATAL("LightRenderer::getShadowMap: Invalid ShadowType");
                 assert(false);
                 break;
         }

@@ -1,4 +1,5 @@
 #include "core/graphics/CommandPool.h"
+#include "core/util/Logger.h"
 
 CommandPool::CommandPool(const WeakResource<vkr::Device>& device, const vk::CommandPool& commandPool, const std::string& name):
         GraphicsResource(ResourceType_CommandPool, device, name),
@@ -8,7 +9,7 @@ CommandPool::CommandPool(const WeakResource<vkr::Device>& device, const vk::Comm
 CommandPool::~CommandPool() {
     for (auto& commandBuffer : m_commandBuffers) {
         if (commandBuffer.second.use_count() > 1) {
-            printf("Command buffer \"%s\" has %llu external references when command pool was destroyed\n", commandBuffer.first.c_str(), (uint64_t)(commandBuffer.second.use_count() - 1));
+            LOG_WARN("Command buffer \"%s\" has %llu external references when command pool was destroyed", commandBuffer.first.c_str(), (uint64_t)(commandBuffer.second.use_count() - 1));
         }
     }
 
@@ -41,7 +42,7 @@ CommandPool* CommandPool::create(const CommandPoolConfiguration& commandPoolConf
     vk::Result result = device.createCommandPool(&commandPoolCreateInfo, nullptr, &commandPool);
 
     if (result != vk::Result::eSuccess) {
-        printf("Failed to create command pool: %s\n", vk::to_string(result).c_str());
+        LOG_ERROR("Failed to create command pool: %s", vk::to_string(result).c_str());
         return nullptr;
     }
 
@@ -58,7 +59,7 @@ const vk::CommandPool& CommandPool::getCommandPool() const {
 std::shared_ptr<vkr::CommandBuffer> CommandPool::allocateCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration) {
 #if _DEBUG
     if (m_commandBuffers.find(name) != m_commandBuffers.end()) {
-        printf("Unable to create command buffer \"%s\", it already exists\n", name.c_str());
+        LOG_FATAL("Unable to create command buffer \"%s\", it already exists", name.c_str());
         assert(false);
         return nullptr;
     }
@@ -98,12 +99,12 @@ void CommandPool::freeCommandBuffer(const std::string& name) {
 #if _DEBUG
     auto it = m_commandBuffers.find(name);
     if (it == m_commandBuffers.end()) {
-        printf("Tried to free command buffer \"%s\" but it was already freed\n", name.c_str());
+        LOG_ERROR("Tried to free command buffer \"%s\" but it was already freed", name.c_str());
         return;
     }
 
     if (it->second.use_count() > 1) {
-        printf("Unable to free command buffer \"%s\" because it still has %llu references\n", name.c_str(), (uint64_t)(it->second.use_count() - 1));
+        LOG_FATAL("Unable to free command buffer \"%s\" because it still has %llu references", name.c_str(), (uint64_t)(it->second.use_count() - 1));
         assert(false);
         return;
     }

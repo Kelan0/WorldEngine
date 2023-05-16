@@ -7,6 +7,7 @@
 #include "core/graphics/ImageView.h"
 #include "core/application/Engine.h"
 #include "core/graphics/GraphicsManager.h"
+#include "core/util/Logger.h"
 
 DescriptorSetLayout::Cache DescriptorSetLayout::s_descriptorSetLayoutCache;
 
@@ -32,7 +33,7 @@ SharedResource<DescriptorSetLayout> DescriptorSetLayout::get(const WeakResource<
     for (uint32_t i = 0; i < key.bindingCount; ++i) {
         int binding = (int)key.pBindings[i].binding;
         if (binding == lastBinding) {
-            printf("Descriptor set layout has duplicated bindings\n");
+            LOG_FATAL("Descriptor set layout has duplicated bindings");
             assert(false);
             return nullptr;
         }
@@ -45,7 +46,7 @@ SharedResource<DescriptorSetLayout> DescriptorSetLayout::get(const WeakResource<
         const vk::Device& dvc = **device.lock(name);
         vk::Result result = dvc.createDescriptorSetLayout(&descriptorSetLayoutCreateInfo, nullptr, &descriptorSetLayout);
         if (result != vk::Result::eSuccess) {
-            printf("Failed to create descriptor set layout: %s\n", vk::to_string(result).c_str());
+            LOG_ERROR("Failed to create descriptor set layout: %s", vk::to_string(result).c_str());
             return nullptr;
         }
         Engine::graphics()->setObjectName(dvc, (uint64_t)(VkDescriptorSetLayout)descriptorSetLayout, vk::ObjectType::eDescriptorSetLayout, name);
@@ -71,7 +72,7 @@ void DescriptorSetLayout::clearCache() {
     }
 
     if (count > 0) {
-        printf("Clearing descriptor set layout cache. %d descriptor set layouts have external references and will not be freed\n", count);
+        LOG_WARN("Clearing descriptor set layout cache. %d descriptor set layouts have external references and will not be freed", count);
     }
 #endif
 
@@ -647,7 +648,7 @@ DescriptorSetLayoutBuilder::~DescriptorSetLayoutBuilder() = default;
 DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBuffer(uint32_t binding, vk::ShaderStageFlags shaderStages, bool dynamic) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
-        printf("Unable to add DescriptorSetLayout UniformBlock binding %d - The binding is already added\n", binding);
+        LOG_FATAL("Unable to add DescriptorSetLayout UniformBlock binding %d - The binding is already added", binding);
         assert(false);
     }
 #endif
@@ -664,7 +665,7 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addUniformBuffer(uint32_
 DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageBuffer(uint32_t binding, vk::ShaderStageFlags shaderStages, bool dynamic) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
-        printf("Unable to add DescriptorSetLayout StorageBlock binding %d - The binding is already added\n", binding);
+        LOG_FATAL("Unable to add DescriptorSetLayout StorageBlock binding %d - The binding is already added", binding);
         assert(false);
     }
 #endif
@@ -682,7 +683,7 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageBuffer(uint32_
 DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageTexelBuffer(uint32_t binding, vk::ShaderStageFlags shaderStages) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
-        printf("Unable to add DescriptorSetLayout StorageTexelBuffer binding %d - The binding is already added\n", binding);
+        LOG_FATAL("Unable to add DescriptorSetLayout StorageTexelBuffer binding %d - The binding is already added", binding);
         assert(false);
     }
 #endif
@@ -699,11 +700,11 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageTexelBuffer(ui
 DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampler(uint32_t binding, vk::ShaderStageFlags shaderStages, uint32_t arraySize) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
-        printf("Unable to add DescriptorSetLayout Sampler binding %d - The binding is already added\n", binding);
+        LOG_FATAL("Unable to add DescriptorSetLayout Sampler binding %d - The binding is already added", binding);
         assert(false);
     }
     if (arraySize == 0) {
-        printf("Unable to add DescriptorSetLayout Sampler binding %d - Array size must not be zero\n", binding);
+        LOG_FATAL("Unable to add DescriptorSetLayout Sampler binding %d - Array size must not be zero", binding);
         assert(false);
     }
 #endif
@@ -720,11 +721,11 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampler(uint32_t bind
 DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampledImage(uint32_t binding, vk::ShaderStageFlags shaderStages, uint32_t arraySize) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
-        printf("Unable to add DescriptorSetLayout SampledImage binding %d - The binding is already added\n", binding);
+        LOG_FATAL("Unable to add DescriptorSetLayout SampledImage binding %d - The binding is already added", binding);
         assert(false);
     }
     if (arraySize == 0) {
-        printf("Unable to add DescriptorSetLayout SampledImage binding %d - Array size must not be zero\n", binding);
+        LOG_FATAL("Unable to add DescriptorSetLayout SampledImage binding %d - Array size must not be zero", binding);
         assert(false);
     }
 #endif
@@ -741,11 +742,11 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addSampledImage(uint32_t
 DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addCombinedImageSampler(uint32_t binding, vk::ShaderStageFlags shaderStages, uint32_t arraySize) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
-        printf("Unable to add DescriptorSetLayout CombinedImageSampler binding %d - The binding is already added\n", binding);
+        LOG_FATAL("Unable to add DescriptorSetLayout CombinedImageSampler binding %d - The binding is already added", binding);
         assert(false);
     }
     if (arraySize == 0) {
-        printf("Unable to add DescriptorSetLayout CombinedImageSampler binding %d - Array size must not be zero\n", binding);
+        LOG_FATAL("Unable to add DescriptorSetLayout CombinedImageSampler binding %d - Array size must not be zero", binding);
         assert(false);
     }
 #endif
@@ -762,7 +763,7 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addCombinedImageSampler(
 DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addInputAttachment(uint32_t binding, vk::ShaderStageFlags shaderStages, uint32_t arraySize) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
-        printf("Unable to add DescriptorSetLayout InputAttachment binding %d - The binding is already added\n", binding);
+        LOG_FATAL("Unable to add DescriptorSetLayout InputAttachment binding %d - The binding is already added", binding);
         assert(false);
     }
 #endif
@@ -779,11 +780,11 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addInputAttachment(uint3
 DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::addStorageImage(uint32_t binding, vk::ShaderStageFlags shaderStages, uint32_t arraySize) {
 #if _DEBUG
     if (m_bindings.count(binding) != 0) {
-        printf("Unable to add DescriptorSetLayout StorageImage binding %d - The binding is already added\n", binding);
+        LOG_FATAL("Unable to add DescriptorSetLayout StorageImage binding %d - The binding is already added", binding);
         assert(false);
     }
     if (arraySize == 0) {
-        printf("Unable to add DescriptorSetLayout StorageImage binding %d - Array size must not be zero\n", binding);
+        LOG_FATAL("Unable to add DescriptorSetLayout StorageImage binding %d - Array size must not be zero", binding);
         assert(false);
     }
 #endif

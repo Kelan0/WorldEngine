@@ -7,6 +7,7 @@
 #include "core/graphics/Mesh.h"
 #include "core/engine/renderer/Material.h"
 #include "core/engine/scene/bound/Frustum.h"
+#include "core/util/Logger.h"
 
 
 template<typename T>
@@ -26,7 +27,7 @@ SceneRenderer::SceneRenderer():
 }
 
 SceneRenderer::~SceneRenderer() {
-    printf("Destroying SceneRenderer\n");
+    LOG_INFO("Destroying SceneRenderer");
     for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
         delete m_resources[i]->objectIndicesBuffer;
         delete m_resources[i]->worldTransformBuffer;
@@ -391,7 +392,7 @@ void SceneRenderer::sortRenderEntities() {
         m_objectDataBuffer.swap(sortedObjectBuffer);
     }
 
-//    printf("Sort render entities: %u / %u\n", numTrue, numFalse);
+//    LOG_INFO("Sort render entities: %u / %u", numTrue, numFalse);
 }
 
 void SceneRenderer::updateEntityWorldTransforms() {
@@ -436,7 +437,7 @@ void SceneRenderer::updateEntityMaterials() {
         uint32_t arrayCount = (m_resources->updateTextureDescriptorEndIndex - m_resources->updateTextureDescriptorStartIndex) + 1;
         arrayCount = glm::min(arrayCount, descriptorCount);
 
-//        printf("Writing texture descriptors [%u to %u - %u textures]\n", m_resources->updateTextureDescriptorStartIndex, m_resources->updateTextureDescriptorEndIndex, arrayCount);
+//        LOG_INFO("Writing texture descriptors [%u to %u - %u textures]", m_resources->updateTextureDescriptorStartIndex, m_resources->updateTextureDescriptorEndIndex, arrayCount);
 
         if (arrayCount > 0) {
             DescriptorSetWriter(m_resources->materialDescriptorSet)

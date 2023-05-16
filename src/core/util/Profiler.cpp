@@ -66,7 +66,6 @@ double Performance::milliseconds(const moment_t& startTime) {
 
 
 Profiler::ThreadContext::ThreadContext() {
-    printf("Profiler::ThreadContext() - 0x%08llX\n", ThreadUtils::getCurrentThreadHashedId());
 #if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
     uint64_t currentId = ThreadUtils::getCurrentThreadHashedId();
 
@@ -77,7 +76,6 @@ Profiler::ThreadContext::ThreadContext() {
 }
 
 Profiler::ThreadContext::~ThreadContext() {
-    printf("Profiler::~ThreadContext() - 0x%08llX\n", ThreadUtils::getCurrentThreadHashedId());
 #if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
     uint64_t currentId = ThreadUtils::getCurrentThreadHashedId();
 
@@ -91,7 +89,7 @@ Profiler::ThreadContext::~ThreadContext() {
 
 Profiler::GPUContext::GPUContext() {
 #if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
-    printf("Creating profiler GPUContext on thread (0x%016llx)\n", ThreadUtils::getCurrentThreadHashedId());
+    LOG_INFO("Creating profiler GPUContext on thread (0x%016llx)", ThreadUtils::getCurrentThreadHashedId());
     Engine::eventDispatcher()->connect(&Profiler::onCleanupGraphics);
 #endif
 }
@@ -237,7 +235,7 @@ void Profiler::endGraphicsFrame() {
     for (const auto& entry : ctx.debugOpenProfiles) {
         const int32_t& openCount = entry.second;
         if (openCount != 0) {
-            printf("Open graphics profile \"%s\" was not closed\n", entry.first.c_str());
+            LOG_ERROR("Open graphics profile \"%s\" was not closed", entry.first.c_str());
             debugAllProfilesClosedCheck = false;
         }
     }
@@ -256,7 +254,7 @@ void Profiler::endGraphicsFrame() {
 //    if (!ids.empty())
 //        printf("[%s] %llu query pools destroyed\n", stringListIds(ids).c_str(), ids.size());
     if (ctx.allFrameStartIndexOffsets.size() > 10) {
-        printf("?\n");
+        LOG_DEBUG("???? Profiler::endGraphicsFrame() ctx.allFrameStartIndexOffsets.size() > 10 ???? - FIX ME");
     }
 
     const vk::Device& device = **Engine::graphics()->getDevice();

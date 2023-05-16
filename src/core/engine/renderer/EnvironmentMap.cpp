@@ -65,7 +65,7 @@ void EnvironmentMap::update() {
     if (m_needsRecompute) {
         m_needsRecompute = false;
 
-        printf("Updating environment map\n");
+        LOG_DEBUG("Updating environment map");
         auto t0 = Performance::now();
 
         if (!m_environmentImage)
@@ -87,7 +87,7 @@ void EnvironmentMap::update() {
                 imageConfig.generateMipmap = false;
                 m_diffuseIrradianceImage = std::shared_ptr<ImageCube>(ImageCube::create(imageConfig, "EnvironmentMap-DiffuseIrradianceCubeImage"));
                 if (m_diffuseIrradianceImage == nullptr) {
-                    printf("Failed to create diffuse irradiance ImageCube for environment map\n");
+                    LOG_FATAL("Failed to create diffuse irradiance ImageCube for environment map");
                     assert(false);
                     return;
                 }
@@ -100,7 +100,7 @@ void EnvironmentMap::update() {
                 imageConfig.generateMipmap = false;
                 m_specularReflectionImage = std::shared_ptr<ImageCube>(ImageCube::create(imageConfig, "EnvironmentMap-SpecularReflectionCubeImage"));
                 if (m_specularReflectionImage == nullptr) {
-                    printf("Failed to create specular reflection ImageCube for environment map\n");
+                    LOG_FATAL("Failed to create specular reflection ImageCube for environment map");
                     assert(false);
                     return;
                 }
@@ -156,7 +156,7 @@ void EnvironmentMap::update() {
         assert(result == vk::Result::eSuccess);
         computeQueue.waitIdle();
 
-        printf("======== Updating environment map took %.2f msec\n", Performance::milliseconds(t0));
+        LOG_DEBUG("======== Updating environment map took %.2f msec", Performance::milliseconds(t0));
     }
 }
 
@@ -218,7 +218,7 @@ std::shared_ptr<Texture> EnvironmentMap::getBRDFIntegrationMap(const vk::Command
 void EnvironmentMap::calculateDiffuseIrradiance(const vk::CommandBuffer& commandBuffer) const {
     PROFILE_SCOPE("EnvironmentMap::calculateDiffuseIrradiance");
 
-    printf("Recomputing diffuse-irradiance environment map\n");
+    LOG_DEBUG("Recomputing diffuse-irradiance environment map");
 
     ComputePipeline* computePipeline = getDiffuseIrradianceComputePipeline();
     DescriptorSet* descriptorSet = getDiffuseIrradianceComputeDescriptorSet();
@@ -253,7 +253,7 @@ void EnvironmentMap::calculateDiffuseIrradiance(const vk::CommandBuffer& command
 void EnvironmentMap::calculateSpecularReflection(const vk::CommandBuffer& commandBuffer) const {
     PROFILE_SCOPE("EnvironmentMap::calculateSpecularReflection");
 
-    printf("Recomputing specular reflection prefiltered environment map\n");
+    LOG_DEBUG("Recomputing specular reflection prefiltered environment map");
 
     ComputePipeline* computePipeline = getPrefilteredEnvironmentComputePipeline();
     DescriptorSet* descriptorSet = getPrefilteredEnvironmentComputeDescriptorSet();

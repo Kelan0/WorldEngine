@@ -12,9 +12,7 @@
 #include "core/graphics/Mesh.h"
 #include "core/util/Profiler.h"
 #include "core/util/Util.h"
-
-
-
+#include "core/util/Logger.h"
 
 
 ImmediateRenderer::ColouredVertex::ColouredVertex():
@@ -126,7 +124,7 @@ bool ImmediateRenderer::init() {
     Engine::eventDispatcher()->connect(&ImmediateRenderer::recreateSwapchain, this);
 
     if (!createRenderPass()) {
-        printf("Failed to create ImmediateRenderer RenderPass\n");
+        LOG_ERROR("Failed to create ImmediateRenderer RenderPass");
         return false;
     }
     return true;
@@ -208,7 +206,7 @@ void ImmediateRenderer::begin(MeshPrimitiveType primitiveType) {
     PROFILE_SCOPE("ImmediateRenderer::begin");
 
     if (m_currentCommand != nullptr) {
-        printf("Cannot begin debug render group. Current group is not ended\n");
+        LOG_ERROR("Cannot begin debug render group. Current group is not ended");
         assert(false);
         return;
     }
@@ -226,12 +224,12 @@ void ImmediateRenderer::begin(MeshPrimitiveType primitiveType) {
     uniformBufferData.resolution = Engine::graphics()->getResolution();
     uniformBufferData.depthTestEnabled = m_renderState.depthTestEnabled;
 
-//    printf("Begin modelViewMatrix:\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n",
+//    LOG_DEBUG("Begin modelViewMatrix:\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]",
 //           m_currentCommand->modelViewMatrix[0][0], m_currentCommand->modelViewMatrix[1][0], m_currentCommand->modelViewMatrix[2][0], m_currentCommand->modelViewMatrix[3][0],
 //           m_currentCommand->modelViewMatrix[0][1], m_currentCommand->modelViewMatrix[1][1], m_currentCommand->modelViewMatrix[2][1], m_currentCommand->modelViewMatrix[3][1],
 //           m_currentCommand->modelViewMatrix[0][2], m_currentCommand->modelViewMatrix[1][2], m_currentCommand->modelViewMatrix[2][2], m_currentCommand->modelViewMatrix[3][2],
 //           m_currentCommand->modelViewMatrix[0][3], m_currentCommand->modelViewMatrix[1][3], m_currentCommand->modelViewMatrix[2][3], m_currentCommand->modelViewMatrix[3][3]);
-//    printf("Begin projectionMatrix:\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n",
+//    LOG_DEBUG("Begin projectionMatrix:\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]",
 //           m_currentCommand->projectionMatrix[0][0], m_currentCommand->projectionMatrix[1][0], m_currentCommand->projectionMatrix[2][0], m_currentCommand->projectionMatrix[3][0],
 //           m_currentCommand->projectionMatrix[0][1], m_currentCommand->projectionMatrix[1][1], m_currentCommand->projectionMatrix[2][1], m_currentCommand->projectionMatrix[3][1],
 //           m_currentCommand->projectionMatrix[0][2], m_currentCommand->projectionMatrix[1][2], m_currentCommand->projectionMatrix[2][2], m_currentCommand->projectionMatrix[3][2],
@@ -333,7 +331,7 @@ void ImmediateRenderer::pushMatrix(MatrixMode matrixMode) {
 
 #if _DEBUG || IMMEDIATE_MODE_VALIDATION
     if (stack.size() > 256) {
-        printf("ImmediateRenderer::pushMatrix - stack overflow\n");
+        LOG_FATAL("ImmediateRenderer::pushMatrix - stack overflow");
         assert(false);
         return;
     }
@@ -355,7 +353,7 @@ void ImmediateRenderer::popMatrix(MatrixMode matrixMode) {
 
 #if _DEBUG || IMMEDIATE_MODE_VALIDATION
     if (stack.size() == 1) {
-        printf("ImmediateRenderer::popMatrix - stack underflow\n");
+        LOG_FATAL("ImmediateRenderer::popMatrix - stack underflow");
         assert(false);
         return;
     }
@@ -782,7 +780,7 @@ void ImmediateRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
 void ImmediateRenderer::validateCompleteCommand() const {
 #if _DEBUG || IMMEDIATE_MODE_VALIDATION
     if (m_currentCommand != nullptr) {
-        printf("ImmediateRenderer error: Incomplete command\n");
+        LOG_FATAL("ImmediateRenderer error: Incomplete command");
         assert(false);
     }
 #endif

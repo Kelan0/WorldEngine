@@ -189,11 +189,11 @@ EntityHierarchy& EntityHierarchy::getNode(const Entity& entity) {
     PROFILE_SCOPE("EntityHierarchy::getNode")
 #if _DEBUG
     if (entity == nullptr) {
-        printf("Cannot create EntityHierarchy of NULL entity\n");
+        LOG_FATAL("Cannot create EntityHierarchy of NULL entity");
         assert(false);
     }
     if (!entity.hasComponent<EntityHierarchy>()) {
-        printf("Cannot create EntityHierarchy of non-hierarchy entity\n");
+        LOG_FATAL("Cannot create EntityHierarchy of non-hierarchy entity");
         assert(false);
     }
 #endif

@@ -14,6 +14,7 @@
 #include "core/graphics/RenderPass.h"
 #include "core/graphics/Texture.h"
 #include "core/util/Profiler.h"
+#include "core/util/Logger.h"
 
 #define POSTPROCESS_UNIFORM_BUFFER_BINDING 0
 #define POSTPROCESS_FRAME_COLOUR_TEXTURE_BINDING 1
@@ -63,7 +64,7 @@ PostProcessRenderer::~PostProcessRenderer() {
 
 bool PostProcessRenderer::init() {
     if (!m_exposureHistogram->init()) {
-        printf("Failed to initialize PostProcessRenderer ExposureHistogram\n");
+        LOG_ERROR("Failed to initialize PostProcessRenderer ExposureHistogram");
         return false;
     }
 
@@ -136,7 +137,7 @@ bool PostProcessRenderer::init() {
     }
 
     if (!createBloomBlurRenderPass()) {
-        printf("Failed to create PostProcessRenderer BloomBlurRenderPass\n");
+        LOG_ERROR("Failed to create PostProcessRenderer BloomBlurRenderPass");
         return false;
     }
 
@@ -171,7 +172,7 @@ void PostProcessRenderer::renderBloomBlur(double dt, const vk::CommandBuffer& co
     PROFILE_BEGIN_GPU_CMD("PostProcessRenderer::renderBloomBlur", commandBuffer)
 
     if (m_resources->bloomBlurIterations != m_bloomBlurIterations) {
-        printf("Updating bloom blur iterations from %u to %u\n", m_resources->bloomBlurIterations, m_bloomBlurIterations);
+        LOG_INFO("Updating bloom blur iterations from %u to %u", m_resources->bloomBlurIterations, m_bloomBlurIterations);
         bool success = createBloomBlurFramebuffer(m_resources.get());
         assert(success);
     }

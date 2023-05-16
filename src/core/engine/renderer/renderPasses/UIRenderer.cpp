@@ -9,6 +9,7 @@
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/CommandPool.h"
 #include "core/engine/ui/PerformanceGraphUI.h"
+#include "core/util/Logger.h"
 
 #include <SDL2/SDL.h>
 #include "extern/imgui/imgui_impl_sdl.h"
@@ -35,7 +36,7 @@ bool UIRenderer::init(SDL_Window* windowHandle) {
     ImGui::StyleColorsDark();
 
     if (!ImGui_ImplSDL2_InitForVulkan(windowHandle)) {
-        printf("Failed to initialize ImGui SDL implementation for Vulkan\n");
+        LOG_ERROR("Failed to initialize ImGui SDL implementation for Vulkan");
         return false;
     }
 
@@ -99,7 +100,7 @@ void UIRenderer::preRender(double dt) {
 
     if (!m_createdFontsTexture) {
         m_createdFontsTexture = true;
-        printf("Creating ImGui GPU font texture\n");
+        LOG_INFO("Creating ImGui GPU font texture");
 
         const vk::CommandBuffer& uiCommandBuffer = Engine::graphics()->beginOneTimeCommandBuffer();
 
