@@ -16,7 +16,8 @@ struct ShutdownGraphicsEvent;
 
 class EnvironmentMap {
 public:
-    explicit EnvironmentMap(uint32_t irradianceMapSize = 32, uint32_t specularMapSize = 256);
+    explicit EnvironmentMap(const std::shared_ptr<ImageCube>& environmentImage, uint32_t irradianceMapSize = 32, uint32_t specularMapSize = 256, uint32_t specularMapMipLevels = 5);
+    explicit EnvironmentMap(uint32_t irradianceMapSize = 32, uint32_t specularMapSize = 256, uint32_t specularMapMipLevels = 5);
 
     ~EnvironmentMap();
 
@@ -39,6 +40,8 @@ public:
     const std::shared_ptr<Texture>& getSpecularReflectionMapTexture() const;
 
     static std::shared_ptr<Texture> getBRDFIntegrationMap(const vk::CommandBuffer& commandBuffer = nullptr);
+
+    static std::shared_ptr<EnvironmentMap> getEmptyEnvironmentMap();
 
 private:
     void calculateDiffuseIrradiance(const vk::CommandBuffer& commandBuffer) const;
@@ -87,6 +90,8 @@ private:
 
     static std::shared_ptr<Image2D> s_BRDFIntegrationMapImage;
     static std::shared_ptr<Texture> s_BRDFIntegrationMap;
+
+    static std::shared_ptr<EnvironmentMap> s_emptyEnvironmentMap;
 };
 
 

@@ -15,6 +15,7 @@ class Framebuffer;
 class DescriptorSetLayout;
 class DescriptorSet;
 class Buffer;
+class EnvironmentMap;
 struct RecreateSwapchainEvent;
 
 enum DeferredAttachmentType {
@@ -118,6 +119,10 @@ public:
 
     const std::shared_ptr<Sampler>& getDepthSampler() const;
 
+    const std::shared_ptr<EnvironmentMap>& getEnvironmentMap() const;
+
+    void setEnvironmentMap(const std::shared_ptr<EnvironmentMap>& environmentMap);
+
 private:
     void recreateSwapchain(RecreateSwapchainEvent* event);
 
@@ -142,6 +147,7 @@ private:
     std::shared_ptr<Sampler> m_depthSampler;
     std::unordered_map<ImageView*, int32_t> m_frameIndices;
     FrameImages m_previousFrame;
+    std::shared_ptr<EnvironmentMap> m_environmentMap;
 };
 
 

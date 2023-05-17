@@ -262,8 +262,13 @@ void Engine::render(double dt) {
     auto& commandBuffer = graphics()->getCurrentCommandBuffer();
     PROFILE_BEGIN_GPU_CMD("Engine::render", commandBuffer)
 
-    // Initializes the BRDF integration map on the first frame
-    EnvironmentMap::getBRDFIntegrationMap(graphics()->getCurrentCommandBuffer());
+    if (m_currentFrameCount == 0) {
+        // Initializes the BRDF integration map on the first frame
+        EnvironmentMap::getBRDFIntegrationMap(graphics()->getCurrentCommandBuffer());
+
+        // Initialize empty environment map on the first frame
+        EnvironmentMap::getEmptyEnvironmentMap();
+    }
 
     m_lightRenderer->render(dt, commandBuffer, m_renderCamera);
 

@@ -30,8 +30,6 @@
 #define DIFFUSE_IRRADIANCE_CUBEMAP_BINDING 8
 #define BRDF_INTEGRATION_MAP_BINDING 9
 
-EnvironmentMap* environmentMap = nullptr;
-
 
 DeferredRenderer::DeferredRenderer():
     m_previousFrame(FrameImages{}) {
@@ -52,8 +50,6 @@ DeferredRenderer::~DeferredRenderer() {
 
 //    delete m_attachmentSampler;
 //    delete m_depthSampler;
-
-    delete environmentMap;
 
     Engine::eventDispatcher()->disconnect(&DeferredRenderer::recreateSwapchain, this);
 }
@@ -116,13 +112,6 @@ bool DeferredRenderer::init() {
         return false;
     }
 
-    ImageData* defaultEnvironmentCubeMap = new ImageData(1, 1, ImagePixelLayout::RGBA, ImagePixelFormat::Float32);
-    for (uint32_t y = 0; y < defaultEnvironmentCubeMap->getHeight(); ++y) {
-        for (uint32_t x = 0; x < defaultEnvironmentCubeMap->getWidth(); ++x) {
-            defaultEnvironmentCubeMap->setPixelf(x, y, 0.4F, 0.53F, 0.74F, 1.0F);
-        }
-    }
-
     SamplerConfiguration samplerConfig{};
     samplerConfig.device = Engine::graphics()->getDevice();
     samplerConfig.minFilter = vk::Filter::eNearest;
@@ -131,22 +120,6 @@ bool DeferredRenderer::init() {
     samplerConfig.wrapV = vk::SamplerAddressMode::eMirroredRepeat;
     m_attachmentSampler = Sampler::get(samplerConfig, "DeferredRenderer-GBufferAttachmentSampler");
     m_depthSampler = m_attachmentSampler; // Nearest filtering.
-
-    ImageCubeConfiguration imageCubeConfig{};
-    imageCubeConfig.device = Engine::graphics()->getDevice();
-    imageCubeConfig.format = vk::Format::eR32G32B32A32Sfloat;
-    imageCubeConfig.usage = vk::ImageUsageFlagBits::eSampled;
-    imageCubeConfig.generateMipmap = true;
-    imageCubeConfig.mipLevels = UINT32_MAX;
-    imageCubeConfig.imageSource.setEquirectangularSource("environment_maps/rustig_koppie_puresky_8k.hdr");
-    std::shared_ptr<ImageCube> imageCube = std::shared_ptr<ImageCube>(ImageCube::create(imageCubeConfig, "DeferredRenderer-DefaultSkyboxCubeImage"));
-
-    assert(imageCube != nullptr);
-
-    environmentMap = new EnvironmentMap();
-    environmentMap->setEnvironmentImage(imageCube);
-//    environmentMap->setEmptyEnvironmentImage();
-    environmentMap->update();
 
     Engine::eventDispatcher()->connect(&DeferredRenderer::recreateSwapchain, this);
     return true;
@@ -235,6 +208,11 @@ void DeferredRenderer::renderLightingPass(double dt, const vk::CommandBuffer& co
 
     if (m_resources->updateDescriptorSet) {
         m_resources->updateDescriptorSet = false;
+
+        std::shared_ptr<EnvironmentMap> environmentMap = m_environmentMap != nullptr ? m_environmentMap : EnvironmentMap::getEmptyEnvironmentMap();
+        assert(environmentMap != nullptr);
+        assert(environmentMap->getEnvironmentMapTexture() != nullptr && environmentMap->getDiffuseIrradianceMapTexture() != nullptr && environmentMap->getSpecularReflectionMapTexture() != nullptr);
+
         descriptorSetWriter.writeImage(ALBEDO_TEXTURE_BINDING, m_attachmentSampler.get(), getAlbedoImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
         descriptorSetWriter.writeImage(NORMAL_TEXTURE_BINDING, m_attachmentSampler.get(), getNormalImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
         descriptorSetWriter.writeImage(EMISSION_TEXTURE_BINDING, m_attachmentSampler.get(), getEmissionImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
@@ -362,6 +340,14 @@ vk::Format DeferredRenderer::getOutputColourFormat() const {
 
 const std::shared_ptr<Sampler>& DeferredRenderer::getDepthSampler() const {
     return m_depthSampler;
+}
+
+const std::shared_ptr<EnvironmentMap>& DeferredRenderer::getEnvironmentMap() const {
+    return m_environmentMap;
+}
+
+void DeferredRenderer::setEnvironmentMap(const std::shared_ptr<EnvironmentMap>& environmentMap) {
+    m_environmentMap = environmentMap;
 }
 
 void DeferredRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {

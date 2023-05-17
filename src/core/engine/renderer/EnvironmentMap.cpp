@@ -30,8 +30,6 @@ struct PrefilteredEnvironmentComputePushConstants {
     uint32_t numMipLevels;
 };
 
-std::shared_ptr<Image2D> EnvironmentMap::s_BRDFIntegrationMapImage = nullptr;
-std::shared_ptr<Texture> EnvironmentMap::s_BRDFIntegrationMap = nullptr;
 ComputePipeline* EnvironmentMap::s_diffuseIrradianceConvolutionComputePipeline = nullptr;
 DescriptorSet* EnvironmentMap::s_diffuseIrradianceConvolutionDescriptorSet = nullptr;
 ComputePipeline* EnvironmentMap::s_prefilteredEnvironmentComputePipeline = nullptr;
@@ -39,14 +37,22 @@ DescriptorSet* EnvironmentMap::s_prefilteredEnvironmentDescriptorSet = nullptr;
 ComputePipeline* EnvironmentMap::s_BRDFIntegrationMapComputePipeline = nullptr;
 DescriptorSet* EnvironmentMap::s_BRDFIntegrationMapDescriptorSet = nullptr;
 Buffer* EnvironmentMap::s_uniformBuffer = nullptr;
+std::shared_ptr<Image2D> EnvironmentMap::s_BRDFIntegrationMapImage = nullptr;
+std::shared_ptr<Texture> EnvironmentMap::s_BRDFIntegrationMap = nullptr;
+std::shared_ptr<EnvironmentMap> EnvironmentMap::s_emptyEnvironmentMap = nullptr;
 
 
+EnvironmentMap::EnvironmentMap(const std::shared_ptr<ImageCube>& environmentImage, uint32_t irradianceMapSize, uint32_t specularMapSize, uint32_t specularMapMipLevels):
+        m_irradianceMapSize(irradianceMapSize),
+        m_specularMapSize(specularMapSize),
+        m_specularMapMipLevels(glm::max(uint32_t(1), specularMapMipLevels)),
+        m_needsRecompute(false) {
 
-EnvironmentMap::EnvironmentMap(uint32_t irradianceMapSize, uint32_t specularMapSize):
-    m_irradianceMapSize(irradianceMapSize),
-    m_specularMapSize(specularMapSize),
-    m_specularMapMipLevels(5),
-    m_needsRecompute(false) {
+    setEnvironmentImage(environmentImage);
+}
+
+EnvironmentMap::EnvironmentMap(uint32_t irradianceMapSize, uint32_t specularMapSize, uint32_t specularMapMipLevels):
+        EnvironmentMap(nullptr, irradianceMapSize, specularMapSize, specularMapMipLevels) {
 }
 
 EnvironmentMap::~EnvironmentMap() {
@@ -180,9 +186,19 @@ void EnvironmentMap::setEmptyEnvironmentImage() {
 }
 
 void EnvironmentMap::setEnvironmentImage(const std::shared_ptr<ImageCube>& environmentImage) {
-    m_environmentImage = environmentImage;
-    m_environmentMapTexture = createTexture(environmentImage, 0, UINT32_MAX);
-    m_needsRecompute = true;
+    m_specularReflectionMapTextureMipLevels.clear();
+    m_specularReflectionMapTexture.reset();
+    m_diffuseIrradianceMapTexture.reset();
+    m_environmentMapTexture.reset();
+    m_specularReflectionImage.reset();
+    m_diffuseIrradianceImage.reset();
+    m_environmentImage.reset();
+
+    if (environmentImage != nullptr) {
+        m_environmentImage = environmentImage;
+        m_environmentMapTexture = createTexture(environmentImage, 0, UINT32_MAX);
+        m_needsRecompute = true;
+    }
 }
 
 const std::shared_ptr<ImageCube>& EnvironmentMap::getEnvironmentImage() const {
@@ -213,6 +229,15 @@ std::shared_ptr<Texture> EnvironmentMap::getBRDFIntegrationMap(const vk::Command
     if (s_BRDFIntegrationMap == nullptr && (bool)commandBuffer)
         calculateBRDFIntegrationMap(commandBuffer);
     return s_BRDFIntegrationMap;
+}
+
+std::shared_ptr<EnvironmentMap> EnvironmentMap::getEmptyEnvironmentMap() {
+    if (s_emptyEnvironmentMap == nullptr) {
+        s_emptyEnvironmentMap = std::make_shared<EnvironmentMap>(4, 4, 1);
+        s_emptyEnvironmentMap->setEmptyEnvironmentImage();
+        s_emptyEnvironmentMap->update();
+    }
+    return s_emptyEnvironmentMap;
 }
 
 void EnvironmentMap::calculateDiffuseIrradiance(const vk::CommandBuffer& commandBuffer) const {
@@ -495,6 +520,7 @@ std::shared_ptr<Texture> EnvironmentMap::createTexture(const std::shared_ptr<Ima
 }
 
 void EnvironmentMap::onCleanupGraphics(ShutdownGraphicsEvent* event) {
+    s_emptyEnvironmentMap.reset();
     delete s_uniformBuffer;
     delete s_BRDFIntegrationMapDescriptorSet;
     delete s_BRDFIntegrationMapComputePipeline;

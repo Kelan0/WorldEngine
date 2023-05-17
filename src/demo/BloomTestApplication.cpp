@@ -32,6 +32,7 @@
 #include "core/engine/renderer/renderPasses/ReprojectionRenderer.h"
 #include "core/engine/renderer/renderPasses/PostProcessRenderer.h"
 #include "core/engine/renderer/renderPasses/ExposureHistogram.h"
+#include "core/engine/renderer/EnvironmentMap.h"
 #include "extern/imgui/imgui.h"
 #include "core/engine/physics/RigidBody.h"
 
@@ -215,16 +216,30 @@ void BloomTestApplication::init() {
     glowMaterialConfig.setEmission(glm::vec3(0.8F, 32.0F, 41.0F));
     lightEntity5.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(std::shared_ptr<Material>(Material::create(glowMaterialConfig, "Demo-LightEntity5-GlowMaterial")));
 
-//    Entity lightEntity6 = EntityHierarchy::create(Engine::scene(), "lightEntity6");
-//    lightEntity6.addComponent<Transform>().setRotation(glm::vec3(-1.333F, -0.90F, -1.0F), glm::vec3(0.0F, 1.0F, 0.0F), false);
-//    glm::vec3 sunIntensity = glm::vec3(90.0F);
-//    lightEntity6.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(sunIntensity).setAngularSize(glm::radians(0.52F)).setShadowCaster(true).setShadowCascadeDistances({3.0F, 6.0F, 12.0F, 24.0F});
+    Entity lightEntity6 = EntityHierarchy::create(Engine::scene(), "lightEntity6");
+    lightEntity6.addComponent<Transform>().setRotation(glm::vec3(-1.333F, -0.90F, -1.0F), glm::vec3(0.0F, 1.0F, 0.0F), false);
+    glm::vec3 sunIntensity = glm::vec3(100.0F);
+    lightEntity6.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(sunIntensity).setAngularSize(glm::radians(0.52F)).setShadowCaster(true).setShadowCascadeDistances({3.0F, 6.0F, 12.0F, 24.0F});
 
-//        Entity lightEntity7 = EntityHierarchy::create(Engine::scene(), "lightEntity7");
-//        lightEntity7.addComponent<Transform>().setRotation(glm::vec3(-1.4F, -1.0F, 0.2F), glm::vec3(0.0F, 1.0F, 0.0F), false);
-//        lightEntity7.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(70.0, 60.0, 10.0).setShadowCaster(true).setShadowCascadeDistances({3.0F, 6.0F, 12.0F, 24.0F});
+    Entity lightEntity7 = EntityHierarchy::create(Engine::scene(), "lightEntity7");
+    lightEntity7.addComponent<Transform>().setRotation(glm::vec3(-1.4F, -1.0F, 0.2F), glm::vec3(0.0F, 1.0F, 0.0F), false);
+    lightEntity7.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(70.0, 30.0, 10.0).setAngularSize(glm::radians(0.21F)).setShadowCaster(true).setShadowCascadeDistances({3.0F, 6.0F, 12.0F, 24.0F});
 
     Engine::scene()->getMainCameraEntity().getComponent<Transform>().setTranslation(0.0F, 1.0F, 1.0F);
+
+    ImageCubeConfiguration imageCubeConfig{};
+    imageCubeConfig.device = Engine::graphics()->getDevice();
+    imageCubeConfig.format = vk::Format::eR32G32B32A32Sfloat;
+    imageCubeConfig.usage = vk::ImageUsageFlagBits::eSampled;
+    imageCubeConfig.generateMipmap = true;
+    imageCubeConfig.mipLevels = UINT32_MAX;
+    imageCubeConfig.imageSource.setEquirectangularSource("environment_maps/wide_street_02_8k_nosun.hdr");
+    std::shared_ptr<ImageCube> skyboxImageCube = std::shared_ptr<ImageCube>(ImageCube::create(imageCubeConfig, "SkyboxCubeImage"));
+
+    std::shared_ptr<EnvironmentMap> skyboxEnvironmentMap = std::make_shared<EnvironmentMap>(skyboxImageCube);
+    skyboxEnvironmentMap->update();
+
+    Engine::instance()->getDeferredRenderer()->setEnvironmentMap(skyboxEnvironmentMap);
 }
 
 void BloomTestApplication::cleanup() {
