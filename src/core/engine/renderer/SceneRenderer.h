@@ -9,12 +9,14 @@
 #include "core/engine/renderer/RenderComponent.h"
 #include "core/engine/scene/bound/Frustum.h"
 
-class aaaBuffer;
+class Buffer;
 class DescriptorSet;
 class DescriptorSetLayout;
 class Texture;
 class Material;
 class Image2D;
+
+class TerrainRenderer;
 
 class SceneRenderer {
 public:
@@ -43,6 +45,8 @@ public:
     uint32_t registerTexture(Texture* texture);
 
     uint32_t registerMaterial(Material* material);
+
+    TerrainRenderer* getTerrainRenderer() const;
 
 private:
     void initMissingTextureMaterial();
@@ -176,6 +180,8 @@ private:
     double m_previousPartialTicks;
 
     uint32_t m_numAddedRenderEntities;
+
+    TerrainRenderer* m_terrainRenderer;
 };
 
 

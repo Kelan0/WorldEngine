@@ -1,6 +1,7 @@
 
 #include "demo/BloomTestApplication.h"
 #include "demo/RenderStressTestApplication.h"
+#include "demo/TerrainTestApplication.h"
 #include <iostream>
 
 int main(int argc, char* argv[]) {
@@ -9,4 +10,5 @@ int main(int argc, char* argv[]) {
 
 //    return Application::create<RenderStressTestApplication>(argc, argv);
     return Application::create<BloomTestApplication>(argc, argv);
+//    return Application::create<TerrainTestApplication>(argc, argv);
 }

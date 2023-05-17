@@ -1,4 +1,5 @@
 #include "core/engine/renderer/SceneRenderer.h"
+#include "core/engine/renderer/TerrainRenderer.h"
 #include "core/graphics/ImageData.h"
 #include "core/graphics/Image2D.h"
 #include "core/graphics/ImageView.h"
@@ -21,6 +22,7 @@ struct AlwaysUpdateFlag { uint8_t _v; };
 
 SceneRenderer::SceneRenderer():
     m_scene(nullptr),
+    m_terrainRenderer(new TerrainRenderer()),
     m_numRenderEntities(0),
     m_previousPartialTicks(1.0),
     m_numAddedRenderEntities(0) {
@@ -28,6 +30,9 @@ SceneRenderer::SceneRenderer():
 
 SceneRenderer::~SceneRenderer() {
     LOG_INFO("Destroying SceneRenderer");
+
+    delete m_terrainRenderer;
+
     for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
         delete m_resources[i]->objectIndicesBuffer;
         delete m_resources[i]->worldTransformBuffer;
@@ -38,7 +43,7 @@ SceneRenderer::~SceneRenderer() {
 }
 
 bool SceneRenderer::init() {
-
+    LOG_INFO("Initializing SceneRenderer");
 
     const SharedResource<DescriptorPool>& descriptorPool = Engine::graphics()->descriptorPool();
 
@@ -90,6 +95,10 @@ bool SceneRenderer::init() {
     m_scene->getEventDispatcher()->connect<ComponentRemovedEvent<RenderComponent>>(&SceneRenderer::onRenderComponentRemoved, this);
 
     m_previousPartialTicks = 1.0; // First frame considers one tick to have passed (m_previousPartialTicks > current partialTicks)
+
+    if (!m_terrainRenderer->init()) {
+        return false;
+    }
     return true;
 }
 
@@ -106,11 +115,15 @@ void SceneRenderer::preRender(double dt) {
 
     m_previousPartialTicks = Engine::instance()->getPartialTicks();
     m_numAddedRenderEntities = 0;
+
+    m_terrainRenderer->preRender(dt);
 }
 
 void SceneRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, const Frustum* frustum) {
     PROFILE_SCOPE("SceneRenderer::render")
     PROFILE_BEGIN_GPU_CMD("SceneRenderer::render", commandBuffer);
+
+    m_terrainRenderer->render(dt, commandBuffer, frustum);
 
     applyFrustumCulling(frustum);
     recordRenderCommands(dt, commandBuffer);
@@ -198,6 +211,10 @@ uint32_t SceneRenderer::registerMaterial(Material* material) {
         materialIndex = it->second;
     }
     return materialIndex;
+}
+
+TerrainRenderer* SceneRenderer::getTerrainRenderer() const {
+    return m_terrainRenderer;
 }
 
 void SceneRenderer::initMissingTextureMaterial() {
