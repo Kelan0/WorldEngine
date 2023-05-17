@@ -4,6 +4,7 @@
 LightComponent::LightComponent():
     m_type(LightType_Invalid),
     m_intensity(0.0F, 0.0F, 0.0F),
+    m_angularSize(glm::radians(0.52F)), // Angular size of sun
     m_shadowResolution(512, 512),
     m_flags_shadowCaster(false),
     m_flags_csmMapBasedSelection(true),

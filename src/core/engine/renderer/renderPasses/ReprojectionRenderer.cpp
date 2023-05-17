@@ -110,16 +110,16 @@ void ReprojectionRenderer::render(double dt, const vk::CommandBuffer& commandBuf
     m_uniformData.resolution = glm::vec2(Engine::graphics()->getResolution());
     if (isTaaEnabled() && hasPreviousFrame() && !m_haltonSequence.empty()) {
         m_uniformData.taaPreviousJitterOffset = m_uniformData.taaCurrentJitterOffset;
-        m_uniformData.taaCurrentJitterOffset = m_haltonSequence[Engine::currentFrameCount() % m_haltonSequence.size()] * Engine::graphics()->getNormalizedPixelSize() * 0.5F;
+        m_uniformData.taaCurrentJitterOffset = m_haltonSequence[Engine::instance()->getCurrentFrameCount() % m_haltonSequence.size()] * Engine::graphics()->getNormalizedPixelSize() * 0.5F;
     } else {
         m_uniformData.taaPreviousJitterOffset = m_uniformData.taaCurrentJitterOffset = glm::vec2(0.0F, 0.0F);
     }
 
-    ImageView* frameImageView = Engine::deferredRenderer()->getOutputFrameImageView();
-    ImageView* velocityImageView = Engine::deferredRenderer()->getVelocityImageView();
-    ImageView* depthImageView = Engine::deferredRenderer()->getDepthImageView();
+    ImageView* frameImageView = Engine::instance()->getDeferredRenderer()->getOutputFrameImageView();
+    ImageView* velocityImageView = Engine::instance()->getDeferredRenderer()->getVelocityImageView();
+    ImageView* depthImageView = Engine::instance()->getDeferredRenderer()->getDepthImageView();
     ImageView* prevFrameImageView = getPreviousFrameImageView();
-    ImageView* prevVelocityImageView = Engine::deferredRenderer()->getPreviousVelocityImageView();
+    ImageView* prevVelocityImageView = Engine::instance()->getDeferredRenderer()->getPreviousVelocityImageView();
 
     DescriptorSetWriter descriptorSetWriter(m_resources->reprojectionDescriptorSet);
     descriptorSetWriter.writeImage(FRAME_TEXTURE_BINDING, m_frameSampler.get(), frameImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
@@ -159,7 +159,7 @@ ImageView* ReprojectionRenderer::getOutputFrameImageView() const {
 }
 
 ImageView* ReprojectionRenderer::getPreviousFrameImageView() const {
-    return hasPreviousFrame() ? m_previousFrame.imageView : Engine::deferredRenderer()->getAlbedoImageView();
+    return hasPreviousFrame() ? m_previousFrame.imageView : Engine::instance()->getDeferredRenderer()->getAlbedoImageView();
 }
 
 bool ReprojectionRenderer::hasPreviousFrame() const {
@@ -275,7 +275,7 @@ bool ReprojectionRenderer::createFramebuffer(FrameImages* frame) {
     imageViewConfig.device = Engine::graphics()->getDevice();
 
     // Input lighting RGB image
-    imageConfig.format = Engine::deferredRenderer()->getOutputColourFormat();
+    imageConfig.format = Engine::instance()->getDeferredRenderer()->getOutputColourFormat();
     imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;
     frame->image = Image2D::create(imageConfig, "ReprojectionRenderer-FrameImage");
     imageViewConfig.format = imageConfig.format;
@@ -306,7 +306,7 @@ bool ReprojectionRenderer::createReprojectionGraphicsPipeline() {
     pipelineConfig.vertexShader = "shaders/screen/fullscreen_quad.vert";
     pipelineConfig.fragmentShader = "shaders/postprocess/reprojection.frag";
     pipelineConfig.addDescriptorSetLayout(m_reprojectionDescriptorSetLayout.get());
-//    pipelineConfig.addDescriptorSetLayout(Engine::lightRenderer()->getLightingRenderPassDescriptorSetLayout().get());
+//    pipelineConfig.addDescriptorSetLayout(Engine::instance()->getLightRenderer()->getLightingRenderPassDescriptorSetLayout().get());
     return m_reprojectionGraphicsPipeline->recreate(pipelineConfig, "ReprojectionRenderer-ReprojectionGraphicsPipeline");
 }
 
@@ -315,7 +315,7 @@ bool ReprojectionRenderer::createRenderPass() {
 
     std::array<vk::AttachmentDescription, 1> attachments;
 
-    attachments[0].setFormat(Engine::deferredRenderer()->getOutputColourFormat());
+    attachments[0].setFormat(Engine::instance()->getDeferredRenderer()->getOutputColourFormat());
     attachments[0].setSamples(samples);
     attachments[0].setLoadOp(vk::AttachmentLoadOp::eClear); // could be eDontCare ?
     attachments[0].setStoreOp(vk::AttachmentStoreOp::eStore);

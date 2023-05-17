@@ -240,31 +240,31 @@ void BloomTestApplication::render(double dt) {
 
 //        ImGui::ShowDemoWindow();
 
-    bool taaEnabled = Engine::reprojectionRenderer()->isTaaEnabled();
-    float taaHistoryFadeFactor = Engine::reprojectionRenderer()->getTaaHistoryFactor();
-    uint32_t colourClippingMode = Engine::reprojectionRenderer()->getTaaColourClippingMode();
-    bool useCatmullRomFilter = Engine::reprojectionRenderer()->getTaaUseCatmullRomFilter();
-    bool useMitchellFilter = Engine::reprojectionRenderer()->getTaaUseMitchellFilter();
-    glm::vec2 mitchellCoeffs = Engine::reprojectionRenderer()->getTaaMitchellFilterCoefficients();
+    bool taaEnabled = Engine::instance()->getReprojectionRenderer()->isTaaEnabled();
+    float taaHistoryFadeFactor = Engine::instance()->getReprojectionRenderer()->getTaaHistoryFactor();
+    uint32_t colourClippingMode = Engine::instance()->getReprojectionRenderer()->getTaaColourClippingMode();
+    bool useCatmullRomFilter = Engine::instance()->getReprojectionRenderer()->getTaaUseCatmullRomFilter();
+    bool useMitchellFilter = Engine::instance()->getReprojectionRenderer()->getTaaUseMitchellFilter();
+    glm::vec2 mitchellCoeffs = Engine::instance()->getReprojectionRenderer()->getTaaMitchellFilterCoefficients();
     const char* taaColourClippingModeNames[3] = { "Clamp", "Fast Clipping", "Accurate Clipping" };
 
-    bool bloomEnabled = Engine::postProcessingRenderer()->isBloomEnabled();
-    float bloomBlurFilterRadius = Engine::postProcessingRenderer()->getBloomBlurFilterRadius();
-    float bloomIntensity = Engine::postProcessingRenderer()->getBloomIntensity();
-    float bloomThreshold = Engine::postProcessingRenderer()->getBloomThreshold();
-    float bloomSoftThreshold = Engine::postProcessingRenderer()->getBloomSoftThreshold();
-    float bloomBaxBrightness = Engine::postProcessingRenderer()->getBloomMaxBrightness();
-    int bloomBlurIterations = (int)Engine::postProcessingRenderer()->getBloomBlurIterations() - 1;
-    int bloomBlurMaxIterations = (int)Engine::postProcessingRenderer()->getMaxBloomBlurIterations() - 1;
+    bool bloomEnabled = Engine::instance()->getPostProcessingRenderer()->isBloomEnabled();
+    float bloomBlurFilterRadius = Engine::instance()->getPostProcessingRenderer()->getBloomBlurFilterRadius();
+    float bloomIntensity = Engine::instance()->getPostProcessingRenderer()->getBloomIntensity();
+    float bloomThreshold = Engine::instance()->getPostProcessingRenderer()->getBloomThreshold();
+    float bloomSoftThreshold = Engine::instance()->getPostProcessingRenderer()->getBloomSoftThreshold();
+    float bloomBaxBrightness = Engine::instance()->getPostProcessingRenderer()->getBloomMaxBrightness();
+    int bloomBlurIterations = (int)Engine::instance()->getPostProcessingRenderer()->getBloomBlurIterations() - 1;
+    int bloomBlurMaxIterations = (int)Engine::instance()->getPostProcessingRenderer()->getMaxBloomBlurIterations() - 1;
 
-    uint32_t histogramDownsampleFactor = Engine::postProcessingRenderer()->exposureHistogram()->getDownsampleFactor();
-    float histogramMinLogLum = Engine::postProcessingRenderer()->exposureHistogram()->getMinLogLuminance();
-    float histogramLogLumRange = Engine::postProcessingRenderer()->exposureHistogram()->getLogLuminanceRange();
-    float histogramLowPercent = Engine::postProcessingRenderer()->exposureHistogram()->getLowPercent() * 100.0F;
-    float histogramHighPercent = Engine::postProcessingRenderer()->exposureHistogram()->getHighPercent() * 100.0F;
-    float exposureSpeedUp = Engine::postProcessingRenderer()->exposureHistogram()->getExposureSpeedUp();
-    float exposureSpeedDown = Engine::postProcessingRenderer()->exposureHistogram()->getExposureSpeedDown();
-    float exposureCompensation = Engine::postProcessingRenderer()->exposureHistogram()->getExposureCompensation();
+    uint32_t histogramDownsampleFactor = Engine::instance()->getPostProcessingRenderer()->exposureHistogram()->getDownsampleFactor();
+    float histogramMinLogLum = Engine::instance()->getPostProcessingRenderer()->exposureHistogram()->getMinLogLuminance();
+    float histogramLogLumRange = Engine::instance()->getPostProcessingRenderer()->exposureHistogram()->getLogLuminanceRange();
+    float histogramLowPercent = Engine::instance()->getPostProcessingRenderer()->exposureHistogram()->getLowPercent() * 100.0F;
+    float histogramHighPercent = Engine::instance()->getPostProcessingRenderer()->exposureHistogram()->getHighPercent() * 100.0F;
+    float exposureSpeedUp = Engine::instance()->getPostProcessingRenderer()->exposureHistogram()->getExposureSpeedUp();
+    float exposureSpeedDown = Engine::instance()->getPostProcessingRenderer()->exposureHistogram()->getExposureSpeedDown();
+    float exposureCompensation = Engine::instance()->getPostProcessingRenderer()->exposureHistogram()->getExposureCompensation();
 
     ImGui::Begin("Test");
     if (ImGui::CollapsingHeader("Temporal AA")) {
@@ -319,36 +319,36 @@ void BloomTestApplication::render(double dt) {
 
     Application::instance()->setFramerateLimit(framerateLimit);
 
-    Engine::reprojectionRenderer()->setTaaEnabled(taaEnabled);
-    Engine::reprojectionRenderer()->setTaaHistoryFactor(taaHistoryFadeFactor);
-    Engine::reprojectionRenderer()->setTaaUseCatmullRomFilter(useCatmullRomFilter);
-    Engine::reprojectionRenderer()->setTaaColourClippingMode((ReprojectionRenderer::ColourClippingMode)colourClippingMode);
-    Engine::reprojectionRenderer()->setTaaUseMitchellFilter(useMitchellFilter);
-    Engine::reprojectionRenderer()->setTaaMitchellFilterCoefficients(mitchellCoeffs[0], mitchellCoeffs[1]);
+    Engine::instance()->getReprojectionRenderer()->setTaaEnabled(taaEnabled);
+    Engine::instance()->getReprojectionRenderer()->setTaaHistoryFactor(taaHistoryFadeFactor);
+    Engine::instance()->getReprojectionRenderer()->setTaaUseCatmullRomFilter(useCatmullRomFilter);
+    Engine::instance()->getReprojectionRenderer()->setTaaColourClippingMode((ReprojectionRenderer::ColourClippingMode)colourClippingMode);
+    Engine::instance()->getReprojectionRenderer()->setTaaUseMitchellFilter(useMitchellFilter);
+    Engine::instance()->getReprojectionRenderer()->setTaaMitchellFilterCoefficients(mitchellCoeffs[0], mitchellCoeffs[1]);
 
-    Engine::postProcessingRenderer()->setBloomEnabled(bloomEnabled);
-    Engine::postProcessingRenderer()->setBloomBlurFilterRadius(bloomBlurFilterRadius);
-    Engine::postProcessingRenderer()->setBloomIntensity(bloomIntensity);
-    Engine::postProcessingRenderer()->setBloomThreshold(bloomThreshold);
-    Engine::postProcessingRenderer()->setBloomSoftThreshold(bloomSoftThreshold);
-    Engine::postProcessingRenderer()->setBloomMaxBrightness(bloomBaxBrightness);
-    Engine::postProcessingRenderer()->setBloomBlurIterations(bloomBlurIterations + 1);
+    Engine::instance()->getPostProcessingRenderer()->setBloomEnabled(bloomEnabled);
+    Engine::instance()->getPostProcessingRenderer()->setBloomBlurFilterRadius(bloomBlurFilterRadius);
+    Engine::instance()->getPostProcessingRenderer()->setBloomIntensity(bloomIntensity);
+    Engine::instance()->getPostProcessingRenderer()->setBloomThreshold(bloomThreshold);
+    Engine::instance()->getPostProcessingRenderer()->setBloomSoftThreshold(bloomSoftThreshold);
+    Engine::instance()->getPostProcessingRenderer()->setBloomMaxBrightness(bloomBaxBrightness);
+    Engine::instance()->getPostProcessingRenderer()->setBloomBlurIterations(bloomBlurIterations + 1);
 
-    Engine::postProcessingRenderer()->exposureHistogram()->setDownsampleFactor(histogramDownsampleFactor);
-    Engine::postProcessingRenderer()->exposureHistogram()->setMinLogLuminance(histogramMinLogLum);
-    Engine::postProcessingRenderer()->exposureHistogram()->setLogLuminanceRange(histogramLogLumRange);
-    Engine::postProcessingRenderer()->exposureHistogram()->setLowPercent(histogramLowPercent * 0.01F);
-    Engine::postProcessingRenderer()->exposureHistogram()->setHighPercent(histogramHighPercent * 0.01F);
-    Engine::postProcessingRenderer()->exposureHistogram()->setExposureSpeedUp(exposureSpeedUp);
-    Engine::postProcessingRenderer()->exposureHistogram()->setExposureSpeedDown(exposureSpeedDown);
-    Engine::postProcessingRenderer()->exposureHistogram()->setExposureCompensation(exposureCompensation);
+    Engine::instance()->getPostProcessingRenderer()->exposureHistogram()->setDownsampleFactor(histogramDownsampleFactor);
+    Engine::instance()->getPostProcessingRenderer()->exposureHistogram()->setMinLogLuminance(histogramMinLogLum);
+    Engine::instance()->getPostProcessingRenderer()->exposureHistogram()->setLogLuminanceRange(histogramLogLumRange);
+    Engine::instance()->getPostProcessingRenderer()->exposureHistogram()->setLowPercent(histogramLowPercent * 0.01F);
+    Engine::instance()->getPostProcessingRenderer()->exposureHistogram()->setHighPercent(histogramHighPercent * 0.01F);
+    Engine::instance()->getPostProcessingRenderer()->exposureHistogram()->setExposureSpeedUp(exposureSpeedUp);
+    Engine::instance()->getPostProcessingRenderer()->exposureHistogram()->setExposureSpeedDown(exposureSpeedDown);
+    Engine::instance()->getPostProcessingRenderer()->exposureHistogram()->setExposureCompensation(exposureCompensation);
 
     if (histogramNormalized) {
         test = glm::max(0.0F, test - (float)dt);
     } else {
         test = glm::min(1.0F, test + (float)dt);
     }
-    Engine::postProcessingRenderer()->setTest(test);
+    Engine::instance()->getPostProcessingRenderer()->setTest(test);
 
     Entity mainCamera = Engine::scene()->getMainCameraEntity();
     Transform& cameraTransform = mainCamera.getComponent<Transform>();
@@ -359,15 +359,15 @@ void BloomTestApplication::render(double dt) {
         cameraTransform.setRotation(cubeEntity.getComponent<Transform>().getTranslation() - cameraTransform.getTranslation(),glm::vec3(0, 1, 0), false);
     }
 
-    Engine::immediateRenderer()->matrixMode(MatrixMode_Projection);
-    Engine::immediateRenderer()->pushMatrix();
-    Engine::immediateRenderer()->loadMatrix(cameraProjection.getProjectionMatrix());
-    Engine::immediateRenderer()->matrixMode(MatrixMode_ModelView);
-    Engine::immediateRenderer()->pushMatrix();
-    Engine::immediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
+    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_Projection);
+    Engine::instance()->getImmediateRenderer()->pushMatrix();
+    Engine::instance()->getImmediateRenderer()->loadMatrix(cameraProjection.getProjectionMatrix());
+    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_ModelView);
+    Engine::instance()->getImmediateRenderer()->pushMatrix();
+    Engine::instance()->getImmediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
 
-    Engine::immediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
-    Engine::immediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
+    Engine::instance()->getImmediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
+    Engine::instance()->getImmediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
 
     if (input()->keyPressed(SDL_SCANCODE_F)) {
         if (!pauseFrustum) {
@@ -379,20 +379,20 @@ void BloomTestApplication::render(double dt) {
     }
 
     if (pauseFrustum) {
-        Engine::immediateRenderer()->setBlendEnabled(true);
-        Engine::immediateRenderer()->setDepthTestEnabled(true);
-        Engine::immediateRenderer()->colour(1.0F, 0.0F, 0.0F, 0.25F);
+        Engine::instance()->getImmediateRenderer()->setBlendEnabled(true);
+        Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(true);
+        Engine::instance()->getImmediateRenderer()->colour(1.0F, 0.0F, 0.0F, 0.25F);
         frustum->drawFill();
 
-        Engine::immediateRenderer()->setLineWidth(1.0F);
-        Engine::immediateRenderer()->setBlendEnabled(false);
-        Engine::immediateRenderer()->setDepthTestEnabled(false);
-        Engine::immediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
+        Engine::instance()->getImmediateRenderer()->setLineWidth(1.0F);
+        Engine::instance()->getImmediateRenderer()->setBlendEnabled(false);
+        Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(false);
+        Engine::instance()->getImmediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
         frustum->drawLines();
     }
 
-    Engine::immediateRenderer()->popMatrix(MatrixMode_ModelView);
-    Engine::immediateRenderer()->popMatrix(MatrixMode_Projection);
+    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_ModelView);
+    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_Projection);
 }
 
 void BloomTestApplication::tick(double dt) {

@@ -2,7 +2,6 @@
 #include "core/engine/renderer/renderPasses/LightRenderer.h"
 #include "core/engine/renderer/renderPasses/ReprojectionRenderer.h"
 #include "core/engine/renderer/SceneRenderer.h"
-#include "core/engine/renderer/ShadowMap.h"
 #include "core/engine/renderer/EnvironmentMap.h"
 #include "core/engine/geometry/MeshData.h"
 #include "core/engine/event/EventDispatcher.h"
@@ -18,7 +17,6 @@
 #include "core/graphics/Texture.h"
 #include "core/graphics/Buffer.h"
 #include "core/util/Profiler.h"
-#include "core/util/Util.h"
 #include "core/util/Logger.h"
 
 #define UNIFORM_BUFFER_BINDING 0
@@ -176,9 +174,9 @@ void DeferredRenderer::renderGeometryPass(double dt, const vk::CommandBuffer& co
     uniformData.camera.projectionMatrix = renderCamera->getProjectionMatrix();
     uniformData.camera.viewProjectionMatrix = renderCamera->getViewProjectionMatrix();
 
-    if (Engine::reprojectionRenderer()->isTaaEnabled()) {
-        uniformData.taaPreviousJitterOffset = Engine::reprojectionRenderer()->getTaaPreviousJitterOffset();
-        uniformData.taaCurrentJitterOffset = Engine::reprojectionRenderer()->getTaaCurrentJitterOffset();
+    if (Engine::instance()->getReprojectionRenderer()->isTaaEnabled()) {
+        uniformData.taaPreviousJitterOffset = Engine::instance()->getReprojectionRenderer()->getTaaPreviousJitterOffset();
+        uniformData.taaCurrentJitterOffset = Engine::instance()->getReprojectionRenderer()->getTaaCurrentJitterOffset();
         glm::mat4 previousJitterOffsetMatrix = glm::translate(glm::mat4(1.0F),glm::vec3(uniformData.taaPreviousJitterOffset, 0.0F));
         glm::mat4 currentJitterOffsetMatrix = glm::translate(glm::mat4(1.0F),glm::vec3(uniformData.taaCurrentJitterOffset, 0.0F));
         uniformData.prevCamera.projectionMatrix = previousJitterOffsetMatrix * uniformData.prevCamera.projectionMatrix;
@@ -196,8 +194,8 @@ void DeferredRenderer::renderGeometryPass(double dt, const vk::CommandBuffer& co
 
     std::array<vk::DescriptorSet, 3> descriptorSets = {
             m_resources->globalDescriptorSet->getDescriptorSet(),
-            Engine::sceneRenderer()->getObjectDescriptorSet()->getDescriptorSet(),
-            Engine::sceneRenderer()->getMaterialDescriptorSet()->getDescriptorSet(),
+            Engine::instance()->getSceneRenderer()->getObjectDescriptorSet()->getDescriptorSet(),
+            Engine::instance()->getSceneRenderer()->getMaterialDescriptorSet()->getDescriptorSet(),
     };
 
     std::array<uint32_t, 0> dynamicOffsets = {}; // zero-size array okay?
@@ -205,7 +203,7 @@ void DeferredRenderer::renderGeometryPass(double dt, const vk::CommandBuffer& co
     m_geometryGraphicsPipeline->bind(commandBuffer);
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_geometryGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
 
-    Engine::sceneRenderer()->render(dt, commandBuffer, frustum);
+    Engine::instance()->getSceneRenderer()->render(dt, commandBuffer, frustum);
     PROFILE_END_GPU_CMD("DeferredRenderer::renderGeometryPass", commandBuffer);
 }
 
@@ -255,7 +253,7 @@ void DeferredRenderer::renderLightingPass(double dt, const vk::CommandBuffer& co
 
     std::array<vk::DescriptorSet, 2> descriptorSets = {
             m_resources->lightingPassDescriptorSet->getDescriptorSet(),
-            Engine::lightRenderer()->getLightingRenderPassDescriptorSet()->getDescriptorSet(),
+            Engine::instance()->getLightRenderer()->getLightingRenderPassDescriptorSet()->getDescriptorSet(),
     };
 
     m_resources->lightingPassUniformBuffer->upload(0, sizeof(LightingPassUniformData), &uniformData);
@@ -494,8 +492,8 @@ bool DeferredRenderer::createGeometryGraphicsPipeline() {
     pipelineConfig.setAttachmentBlendState(0, AttachmentBlendState(false, 0b1111));
     pipelineConfig.setAttachmentBlendState(1, AttachmentBlendState(false, 0b1111));
     pipelineConfig.addDescriptorSetLayout(m_globalDescriptorSetLayout->getDescriptorSetLayout());
-    pipelineConfig.addDescriptorSetLayout(Engine::sceneRenderer()->getObjectDescriptorSetLayout()->getDescriptorSetLayout());
-    pipelineConfig.addDescriptorSetLayout(Engine::sceneRenderer()->getMaterialDescriptorSetLayout()->getDescriptorSetLayout());
+    pipelineConfig.addDescriptorSetLayout(Engine::instance()->getSceneRenderer()->getObjectDescriptorSetLayout()->getDescriptorSetLayout());
+    pipelineConfig.addDescriptorSetLayout(Engine::instance()->getSceneRenderer()->getMaterialDescriptorSetLayout()->getDescriptorSetLayout());
     //pipelineConfig.polygonMode = vk::PolygonMode::eLine;
     return m_geometryGraphicsPipeline->recreate(pipelineConfig, "DeferredRenderer-GeometryGraphicsPipeline");
 }
@@ -510,7 +508,7 @@ bool DeferredRenderer::createLightingGraphicsPipeline() {
     pipelineConfig.vertexShader = "shaders/screen/fullscreen_quad.vert";
     pipelineConfig.fragmentShader = "shaders/deferred/lighting.frag";
     pipelineConfig.addDescriptorSetLayout(m_lightingDescriptorSetLayout.get());
-    pipelineConfig.addDescriptorSetLayout(Engine::lightRenderer()->getLightingRenderPassDescriptorSetLayout().get());
+    pipelineConfig.addDescriptorSetLayout(Engine::instance()->getLightRenderer()->getLightingRenderPassDescriptorSetLayout().get());
     return m_lightingGraphicsPipeline->recreate(pipelineConfig, "DeferredRenderer-LightingGraphicsPipeline");
 }
 

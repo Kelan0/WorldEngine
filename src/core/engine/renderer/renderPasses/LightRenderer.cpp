@@ -176,7 +176,7 @@ bool LightRenderer::init() {
     pipelineConfig.vertexInputBindings = MeshUtils::getVertexBindingDescriptions<Vertex>();
     pipelineConfig.vertexInputAttributes = MeshUtils::getVertexAttributeDescriptions<Vertex>();
     pipelineConfig.addDescriptorSetLayout(m_shadowRenderPassDescriptorSetLayout->getDescriptorSetLayout());
-    pipelineConfig.addDescriptorSetLayout(Engine::sceneRenderer()->getObjectDescriptorSetLayout()->getDescriptorSetLayout());
+    pipelineConfig.addDescriptorSetLayout(Engine::instance()->getSceneRenderer()->getObjectDescriptorSetLayout()->getDescriptorSetLayout());
     pipelineConfig.setDynamicState(vk::DynamicState::eViewport, true);
     pipelineConfig.setDynamicState(vk::DynamicState::eScissor, true);
     pipelineConfig.setAttachmentBlendState(0, AttachmentBlendState(false, 0b1111));
@@ -344,7 +344,7 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, co
 
         std::array<vk::DescriptorSet, 2> descriptorSets = {
                 m_shadowRenderPassResources->descriptorSet->getDescriptorSet(),
-                Engine::sceneRenderer()->getObjectDescriptorSet()->getDescriptorSet(),
+                Engine::instance()->getSceneRenderer()->getObjectDescriptorSet()->getDescriptorSet(),
         };
 
         m_shadowGraphicsPipeline->bind(commandBuffer);
@@ -362,7 +362,7 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, co
                 commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_shadowGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
 
                 m_shadowRenderPass->begin(commandBuffer, cascadedShadowMap->getCascadeFramebuffer(j), vk::SubpassContents::eInline);
-                Engine::sceneRenderer()->render(dt, commandBuffer, &frustum);
+                Engine::instance()->getSceneRenderer()->render(dt, commandBuffer, &frustum);
                 commandBuffer.endRenderPass();
 
                 shadowMapImages.emplace_back(cascadedShadowMap->getCascadeShadowVarianceImageView(j));
@@ -373,7 +373,7 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, co
 
 //        RenderCamera& shadowRenderCamera = visibleShadowRenderCameras[shadowMap->m_index];
 //        shadowMap->beginRenderPass(commandBuffer, m_shadowRenderPass.get());
-//        Engine::sceneRenderer()->render(dt, commandBuffer, &shadowRenderCamera);
+//        Engine::instance()->getSceneRenderer()->render(dt, commandBuffer, &shadowRenderCamera);
 //        commandBuffer.endRenderPass();
 //        shadowMapImages.emplace_back(shadowMap->getShadowVarianceImageView());
 

@@ -1,7 +1,7 @@
 #include "core/engine/scene/Camera.h"
 
 Camera::Camera():
-        Camera(glm::half_pi<double>(), 1.0, 0.1, 100.0) {
+        Camera(glm::radians(90.0), 1.0, 0.1, 100.0) {
 }
 
 Camera::Camera(double fov, double aspect, double near, double far) {

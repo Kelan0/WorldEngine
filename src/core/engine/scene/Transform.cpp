@@ -521,7 +521,7 @@ Transform::operator glm::dmat4() const {
 
 void Transform::change() {
     m_lastChangedTimestamp = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-//    Engine::sceneRenderer()->notifyTransformChanged(m_entityIndex);
+//    Engine::instance()->getSceneRenderer()->notifyTransformChanged(m_entityIndex);
 }
 
 //void Transform::reindex(Transform& transform, const EntityChangeTracker::entity_index& newEntityIndex) {

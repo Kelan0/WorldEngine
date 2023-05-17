@@ -113,12 +113,12 @@ void CascadedShadowMap::updateCascade(Cascade& cascade) {
     if (m_renderType == RenderType_VarianceShadowMap) {
 
         if (cascade.vsmBlurDescriptorSetX == nullptr) {
-            cascade.vsmBlurDescriptorSetX = DescriptorSet::create(Engine::lightRenderer()->getVsmBlurComputeDescriptorSetLayout(), Engine::graphics()->descriptorPool(),"CascadedShadowMap-VsmBlurXComputeDescriptorSet");
+            cascade.vsmBlurDescriptorSetX = DescriptorSet::create(Engine::instance()->getLightRenderer()->getVsmBlurComputeDescriptorSetLayout(), Engine::graphics()->descriptorPool(),"CascadedShadowMap-VsmBlurXComputeDescriptorSet");
             cascade.vsmUpdateDescriptorSet++;
         }
 
         if (cascade.vsmBlurDescriptorSetY == nullptr) {
-            cascade.vsmBlurDescriptorSetY = DescriptorSet::create(Engine::lightRenderer()->getVsmBlurComputeDescriptorSetLayout(), Engine::graphics()->descriptorPool(),"CascadedShadowMap-VsmBlurYComputeDescriptorSet");
+            cascade.vsmBlurDescriptorSetY = DescriptorSet::create(Engine::instance()->getLightRenderer()->getVsmBlurComputeDescriptorSetLayout(), Engine::graphics()->descriptorPool(),"CascadedShadowMap-VsmBlurYComputeDescriptorSet");
             cascade.vsmUpdateDescriptorSet++;
         }
 
@@ -184,13 +184,13 @@ void CascadedShadowMap::updateCascade(Cascade& cascade) {
             cascade.vsmUpdateDescriptorSet--;
 
             DescriptorSetWriter(cascade.vsmBlurDescriptorSetX.get())
-                    .writeImage(0, Engine::lightRenderer()->getVsmShadowMapSampler().get(), cascade.shadowVarianceImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
-                    .writeImage(1, Engine::lightRenderer()->getVsmShadowMapSampler().get(), cascade.vsmBlurIntermediateImageView, vk::ImageLayout::eGeneral, 0, 1)
+                    .writeImage(0, Engine::instance()->getLightRenderer()->getVsmShadowMapSampler().get(), cascade.shadowVarianceImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+                    .writeImage(1, Engine::instance()->getLightRenderer()->getVsmShadowMapSampler().get(), cascade.vsmBlurIntermediateImageView, vk::ImageLayout::eGeneral, 0, 1)
                     .write();
 
             DescriptorSetWriter(cascade.vsmBlurDescriptorSetY.get())
-                    .writeImage(0, Engine::lightRenderer()->getVsmShadowMapSampler().get(), cascade.vsmBlurIntermediateImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
-                    .writeImage(1, Engine::lightRenderer()->getVsmShadowMapSampler().get(), cascade.shadowVarianceImageView, vk::ImageLayout::eGeneral, 0, 1)
+                    .writeImage(0, Engine::instance()->getLightRenderer()->getVsmShadowMapSampler().get(), cascade.vsmBlurIntermediateImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+                    .writeImage(1, Engine::instance()->getLightRenderer()->getVsmShadowMapSampler().get(), cascade.shadowVarianceImageView, vk::ImageLayout::eGeneral, 0, 1)
                     .write();
         }
 
@@ -200,7 +200,7 @@ void CascadedShadowMap::updateCascade(Cascade& cascade) {
             FramebufferConfiguration framebufferConfig{};
             framebufferConfig.device = Engine::graphics()->getDevice();
             framebufferConfig.setSize(m_resolution);
-            framebufferConfig.setRenderPass(Engine::lightRenderer()->getRenderPass().get());
+            framebufferConfig.setRenderPass(Engine::instance()->getLightRenderer()->getRenderPass().get());
             framebufferConfig.addAttachment(cascade.shadowVarianceImageView);
             framebufferConfig.addAttachment(cascade.shadowDepthImageView);
 

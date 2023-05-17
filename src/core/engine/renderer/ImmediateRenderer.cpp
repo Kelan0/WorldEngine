@@ -137,7 +137,7 @@ void ImmediateRenderer::render(double dt, const vk::CommandBuffer& commandBuffer
     if (m_resources->updateDescriptors && m_resources->descriptorSet != nullptr) {
         m_resources->updateDescriptors = false;
         DescriptorSetWriter(m_resources->descriptorSet)
-            .writeImage(1, Engine::deferredRenderer()->getDepthSampler().get(), Engine::deferredRenderer()->getDepthImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+            .writeImage(1, Engine::instance()->getDeferredRenderer()->getDepthSampler().get(), Engine::instance()->getDeferredRenderer()->getDepthImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
             .write();
     }
 

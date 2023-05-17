@@ -162,56 +162,8 @@ Scene* Engine::scene() {
     return instance()->getScene();
 }
 
-PhysicsSystem* Engine::physicsSystem() {
-    return instance()->getPhysicsSystem();
-}
-
-UIRenderer *Engine::uiRenderer() {
-    return instance()->getUIRenderer();
-}
-
-SceneRenderer* Engine::sceneRenderer() {
-    return instance()->getSceneRenderer();
-}
-
-LightRenderer* Engine::lightRenderer() {
-    return instance()->getLightRenderer();
-}
-
-ImmediateRenderer* Engine::immediateRenderer() {
-    return instance()->getImmediateRenderer();
-}
-
-ReprojectionRenderer* Engine::reprojectionRenderer() {
-    return instance()->getReprojectionRenderer();
-}
-
-DeferredRenderer* Engine::deferredRenderer() {
-    return instance()->getDeferredRenderer();
-}
-
-PostProcessRenderer* Engine::postProcessingRenderer() {
-    return instance()->getPostProcessingRenderer();
-}
-
 EventDispatcher* Engine::eventDispatcher() {
     return instance()->getEventDispatcher();
-}
-
-uint64_t Engine::currentFrameCount() {
-    return instance()->getCurrentFrameCount();
-}
-
-double Engine::accumulatedTime() {
-    return instance()->getAccumulatedTime();
-}
-
-double Engine::runTime() {
-    return instance()->getRunTime();
-}
-
-bool Engine::debugCompositeEnabled() {
-    return instance()->isDebugCompositeEnabled();
 }
 
 Engine* Engine::instance() {

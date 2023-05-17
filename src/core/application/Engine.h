@@ -79,31 +79,7 @@ public:
 
     static Scene* scene();
 
-    static PhysicsSystem* physicsSystem();
-
-    static UIRenderer* uiRenderer();
-
-    static SceneRenderer* sceneRenderer();
-
-    static LightRenderer* lightRenderer();
-
-    static ImmediateRenderer* immediateRenderer();
-
-    static ReprojectionRenderer* reprojectionRenderer();
-
-    static DeferredRenderer* deferredRenderer();
-
-    static PostProcessRenderer* postProcessingRenderer();
-
     static EventDispatcher* eventDispatcher();
-
-    static uint64_t currentFrameCount();
-
-    static double accumulatedTime();
-
-    static double runTime();
-
-    static bool debugCompositeEnabled();
 
     static Engine* instance();
 

@@ -105,30 +105,30 @@ void RenderStressTestApplication::render(double dt) {
 
     if (Engine::instance()->isViewFrustumPaused()) {
 
-        Engine::immediateRenderer()->matrixMode(MatrixMode_Projection);
-        Engine::immediateRenderer()->pushMatrix();
-        Engine::immediateRenderer()->loadMatrix(Engine::instance()->getRenderCamera()->getProjectionMatrix());
-        Engine::immediateRenderer()->matrixMode(MatrixMode_ModelView);
-        Engine::immediateRenderer()->pushMatrix();
-        Engine::immediateRenderer()->loadMatrix(Engine::instance()->getRenderCamera()->getViewMatrix());
-//        Engine::immediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
+        Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_Projection);
+        Engine::instance()->getImmediateRenderer()->pushMatrix();
+        Engine::instance()->getImmediateRenderer()->loadMatrix(Engine::instance()->getRenderCamera()->getProjectionMatrix());
+        Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_ModelView);
+        Engine::instance()->getImmediateRenderer()->pushMatrix();
+        Engine::instance()->getImmediateRenderer()->loadMatrix(Engine::instance()->getRenderCamera()->getViewMatrix());
+//        Engine::instance()->getImmediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
 
-        Engine::immediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
-        Engine::immediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
+        Engine::instance()->getImmediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
+        Engine::instance()->getImmediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
 
-        Engine::immediateRenderer()->setBlendEnabled(true);
-        Engine::immediateRenderer()->setDepthTestEnabled(true);
-        Engine::immediateRenderer()->colour(1.0F, 0.0F, 0.0F, 0.25F);
+        Engine::instance()->getImmediateRenderer()->setBlendEnabled(true);
+        Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(true);
+        Engine::instance()->getImmediateRenderer()->colour(1.0F, 0.0F, 0.0F, 0.25F);
         Engine::instance()->getViewFrustum()->drawFill();
 
-        Engine::immediateRenderer()->setLineWidth(1.0F);
-        Engine::immediateRenderer()->setBlendEnabled(false);
-        Engine::immediateRenderer()->setDepthTestEnabled(false);
-        Engine::immediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
+        Engine::instance()->getImmediateRenderer()->setLineWidth(1.0F);
+        Engine::instance()->getImmediateRenderer()->setBlendEnabled(false);
+        Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(false);
+        Engine::instance()->getImmediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
         Engine::instance()->getViewFrustum()->drawLines();
 
-        Engine::immediateRenderer()->popMatrix(MatrixMode_ModelView);
-        Engine::immediateRenderer()->popMatrix(MatrixMode_Projection);
+        Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_ModelView);
+        Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_Projection);
     }
 }
 

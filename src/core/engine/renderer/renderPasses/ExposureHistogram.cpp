@@ -116,7 +116,7 @@ void ExposureHistogram::update(double dt, const vk::CommandBuffer& commandBuffer
 
     if (m_resources->frameTextureChanged) {
         m_resources->frameTextureChanged = false;
-        ImageView* lightingFrameImageView = Engine::deferredRenderer()->getOutputFrameImageView();
+        ImageView* lightingFrameImageView = Engine::instance()->getDeferredRenderer()->getOutputFrameImageView();
 
         DescriptorSetWriter(m_resources->descriptorSet)
                 .writeImage(HISTOGRAM_INPUT_TEXTURE_BINDING, m_inputFrameSampler.get(), lightingFrameImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)

@@ -177,7 +177,7 @@ void PostProcessRenderer::renderBloomBlur(double dt, const vk::CommandBuffer& co
         assert(success);
     }
 
-    ImageView* lightingOutputImageView = Engine::deferredRenderer()->getOutputFrameImageView();
+    ImageView* lightingOutputImageView = Engine::instance()->getDeferredRenderer()->getOutputFrameImageView();
     if (m_resources->updateInputImage) {
         DescriptorSetWriter(m_resources->bloomBlurInputDescriptorSet)
                 .writeImage(BLOOM_BLUR_SRC_TEXTURE_BINDING, m_frameSampler.get(), lightingOutputImageView, vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
@@ -270,17 +270,17 @@ void PostProcessRenderer::render(double dt, const vk::CommandBuffer& commandBuff
 
     PostProcessPushConstantData pushConstantData{};
     pushConstantData.deltaTime = (float)dt;
-    pushConstantData.time = (float)Engine::accumulatedTime();
+    pushConstantData.time = (float)Engine::instance()->getAccumulatedTime();
     pushConstantData.test = m_test;
 
-    if (m_postProcessUniformData.debugCompositeEnabled != Engine::debugCompositeEnabled()) {
-        m_postProcessUniformData.debugCompositeEnabled = Engine::debugCompositeEnabled();
+    if (m_postProcessUniformData.debugCompositeEnabled != Engine::instance()->isDebugCompositeEnabled()) {
+        m_postProcessUniformData.debugCompositeEnabled = Engine::instance()->isDebugCompositeEnabled();
         setPostProcessUniformDataChanged(true);
     }
 
     if (m_resources->updateInputImage) {
-        ImageView* frameImageView = Engine::reprojectionRenderer()->getOutputFrameImageView();
-        ImageView* debugCompositeImageView = Engine::immediateRenderer()->getOutputFrameImageView();
+        ImageView* frameImageView = Engine::instance()->getReprojectionRenderer()->getOutputFrameImageView();
+        ImageView* debugCompositeImageView = Engine::instance()->getImmediateRenderer()->getOutputFrameImageView();
         if (debugCompositeImageView == nullptr)
             debugCompositeImageView = frameImageView;
 
@@ -465,7 +465,7 @@ bool PostProcessRenderer::createBloomBlurFramebuffer(RenderResources* resources)
     imageConfig.setSize(Engine::graphics()->getResolution());
 
 
-    imageConfig.format = Engine::deferredRenderer()->getOutputColourFormat();
+    imageConfig.format = Engine::instance()->getDeferredRenderer()->getOutputColourFormat();
     imageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;
     resources->bloomBlurImage = Image2D::create(imageConfig, "PostProcessRenderer-BloomBlurImage");
 
@@ -581,7 +581,7 @@ bool PostProcessRenderer::createBloomBlurRenderPass() {
 
     std::array<vk::AttachmentDescription, 1> attachments;
 
-    attachments[0].setFormat(Engine::deferredRenderer()->getOutputColourFormat());
+    attachments[0].setFormat(Engine::instance()->getDeferredRenderer()->getOutputColourFormat());
     attachments[0].setSamples(samples);
 //    attachments[0].setLoadOp(vk::AttachmentLoadOp::eClear); // Clear the current mip level on every down-sample pass.
     attachments[0].setLoadOp(vk::AttachmentLoadOp::eLoad); // On the upsample pass this MUST be eLoad in order for additive blending to work... This cost hours of time to solve this bug >:(

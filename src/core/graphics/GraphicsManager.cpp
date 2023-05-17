@@ -677,7 +677,7 @@ bool GraphicsManager::initSurfaceDetails() {
         std::string formatsStr;
         for (size_t i = 0; i < depthFormats.size(); ++i)
             formatsStr += (i > 0 ? ", " : "") + vk::to_string(depthFormats[0]);
-        LOG_ERROR("Requested depth formats [%s] but none were supported\n", formatsStr.c_str());
+        LOG_ERROR("Requested depth formats [%s] but none were supported", formatsStr.c_str());
         return false;
     }
 
