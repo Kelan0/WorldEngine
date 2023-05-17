@@ -70,6 +70,10 @@ public:
 
     glm::dvec2 getMouseDragScreenDistance(uint32_t button);
 
+    glm::ivec2 getMouseScrollAmount() const;
+
+    glm::vec2 getMousePreciseScrollAmount() const;
+
 private:
     SDL_Window* m_windowHandle;
 
@@ -88,6 +92,8 @@ private:
     glm::ivec2 m_prevMousePixelMotion;
     bool m_mouseGrabbed;
     bool m_didWarpMouse;
+    glm::ivec2 m_scrollAmount;
+    glm::vec2 m_preciseScrollAmount;
 };
 
 #endif //WORLDENGINE_INPUTHANDLER_H

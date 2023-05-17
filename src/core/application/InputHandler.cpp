@@ -50,6 +50,9 @@ void InputHandler::update() {
         this->setMouseScreenCoord(glm::dvec2(0.5, 0.5));
     }
 
+    m_scrollAmount = glm::ivec2(0, 0);
+    m_preciseScrollAmount = glm::vec2(0.0F, 0.0F);
+
     m_didWarpMouse = false;
 }
 
@@ -81,6 +84,13 @@ void InputHandler::processEvent(const SDL_Event* event) {
             m_currMousePixelMotion = glm::ivec2(event->motion.xrel, event->motion.yrel);
             for (int i = 0; i < MOUSE_SIZE; i++)
                 m_mouseDragged[i] = m_mouseDown[i];
+            break;
+        case SDL_MOUSEWHEEL:
+            int scale = event->wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1 : 1;
+            m_scrollAmount.x = event->wheel.x * scale;
+            m_scrollAmount.y = event->wheel.y * scale;
+            m_preciseScrollAmount.x = event->wheel.preciseX * (float)scale;
+            m_preciseScrollAmount.y = event->wheel.preciseY * (float)scale;
             break;
     }
 }
@@ -219,4 +229,12 @@ glm::dvec2 InputHandler::getMouseDragScreenOrigin(uint32_t button) {
 glm::dvec2 InputHandler::getMouseDragScreenDistance(uint32_t button) {
     assert(button < MOUSE_SIZE);
     return glm::dvec2(m_mouseDragPixelOrigin[button] - m_currMousePixelCoord) / glm::dvec2(Application::instance()->getWindowSize());
+}
+
+glm::ivec2 InputHandler::getMouseScrollAmount() const {
+    return m_scrollAmount;
+}
+
+glm::vec2 InputHandler::getMousePreciseScrollAmount() const {
+    return m_preciseScrollAmount;
 }
