@@ -421,8 +421,9 @@ void BloomTestApplication::handleUserInput(double dt) {
             cameraPitch = cameraTransform.getPitch();
             cameraYaw = cameraTransform.getYaw();
         } else {
-            cameraPitch += dMouse.y * 0.001F;
-            cameraYaw -= dMouse.x * 0.001F;
+            const float mouseSensitivity = 0.001F / currentZoomFactor;
+            cameraPitch += dMouse.y * mouseSensitivity;
+            cameraYaw -= dMouse.x * mouseSensitivity;
             if (cameraYaw > +M_PI) cameraYaw -= M_PI * 2.0;
             if (cameraYaw < -M_PI) cameraYaw += M_PI * 2.0;
             if (cameraPitch > +M_PI * 0.5) cameraPitch = +M_PI * 0.5;
@@ -444,10 +445,35 @@ void BloomTestApplication::handleUserInput(double dt) {
             movementDir = cameraTransform.getRotationMatrix() * glm::normalize(movementDir);
             cameraTransform.translate(movementDir * (double)playerMovementSpeed * dt);
         }
+
+        if (input()->keyDown(SDL_SCANCODE_LCTRL)) {
+            int zoomIncr = input()->getMouseScrollAmount().y > 0 ? 1 : input()->getMouseScrollAmount().y < 0 ? -1 : 0;
+            if (zoomIncr != 0)
+                targetZoomFactor *= glm::pow(1.5F, (float)zoomIncr);
+        } else {
+            targetZoomFactor = 1.0F;
+        }
+    } else {
+        targetZoomFactor = 1.0F;
     }
+
+    if (targetZoomFactor < 0.66F)
+        targetZoomFactor = 0.66F;
+
+    if (targetZoomFactor > 1500.0F)
+        targetZoomFactor = 1500.0F;
+
+    currentZoomFactor = glm::lerp(currentZoomFactor, targetZoomFactor, 0.2F);
+
+    Camera& camera = Engine::scene()->getMainCameraEntity().getComponent<Camera>();
+    double fov = glm::radians(90.0);
+    camera.setFov(fov / currentZoomFactor);
+
+//    LOG_DEBUG("targetZoomFactor = %.2f, currentZoomFactor = %.2f, fov = %.2f deg", targetZoomFactor, currentZoomFactor, glm::degrees(camera.getFov()));
+
 }
 
-std::shared_ptr<Texture> BloomTestApplication::loadTexture(const std::string& filePath, vk::Format format, std::weak_ptr<Sampler> sampler) {
+std::shared_ptr<Texture> BloomTestApplication::loadTexture(const std::string& filePath, vk::Format format, const std::weak_ptr<Sampler>& sampler) {
     std::string imageName = std::string("TestImage:") + filePath;
     Image2DConfiguration imageConfig{};
     imageConfig.device = Engine::graphics()->getDevice();

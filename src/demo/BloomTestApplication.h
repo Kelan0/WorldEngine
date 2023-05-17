@@ -27,7 +27,7 @@ public:
 private:
     void handleUserInput(double dt);
 
-    std::shared_ptr<Texture> loadTexture(const std::string& filePath, vk::Format format, std::weak_ptr<Sampler> sampler);
+    std::shared_ptr<Texture> loadTexture(const std::string& filePath, vk::Format format, const std::weak_ptr<Sampler>& sampler);
 
 private:
     std::vector<Image2D*> images;
@@ -36,6 +36,8 @@ private:
     double cameraPitch = 0.0F;
     double cameraYaw = 0.0F;
     float playerMovementSpeed = 1.0F;
+    float targetZoomFactor = 1.0F;
+    float currentZoomFactor = 1.0F;
     bool cameraMouseInputLocked = false;
     Frustum* frustum;
     bool pauseFrustum = false;
