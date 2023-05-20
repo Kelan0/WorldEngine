@@ -46,7 +46,7 @@ void InputHandler::update() {
     m_prevMousePixelMotion = m_currMousePixelMotion;
     m_currMousePixelMotion = glm::ivec2(0, 0);
 
-    if (m_mouseGrabbed) {
+    if (m_mouseGrabbed && Application::instance()->isWindowFocused()) {
         this->setMouseScreenCoord(glm::dvec2(0.5, 0.5));
     }
 

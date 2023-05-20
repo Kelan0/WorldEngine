@@ -28,6 +28,7 @@ Application::Application():
         m_partialTicks(0.0),
         m_windowHandle(nullptr),
         m_inputHandler(nullptr),
+        m_focused(false),
         m_running(false),
         m_rendering(false),
         m_shutdown(false) {
@@ -220,6 +221,18 @@ void Application::processEventsInternal() {
                     case SDL_WINDOWEVENT_HIDDEN: {
                         m_rendering = false;
                         ScreenHiddenEvent event{};
+                        Engine::eventDispatcher()->trigger(&event);
+                        break;
+                    }
+                    case SDL_WINDOWEVENT_FOCUS_LOST: {
+                        m_focused = false;
+                        WindowFocusLostEvent event{};
+                        Engine::eventDispatcher()->trigger(&event);
+                        break;
+                    }
+                    case SDL_WINDOWEVENT_FOCUS_GAINED: {
+                        m_focused = true;
+                        WindowFocusGainedEvent event{};
                         Engine::eventDispatcher()->trigger(&event);
                         break;
                     }
@@ -564,3 +577,10 @@ uint64_t Application::getHashedMainThreadId() const {
     return ThreadUtils::getThreadHashedId(m_mainThreadId);
 }
 
+bool Application::isWindowFocused() const {
+    return m_focused;
+}
+
+bool Application::isRendering() const {
+    return m_rendering;
+}

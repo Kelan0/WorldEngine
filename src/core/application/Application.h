@@ -67,6 +67,11 @@ public:
 
     const std::thread::id& getMainThreadId() const;
     uint64_t getHashedMainThreadId() const;
+
+    bool isWindowFocused() const;
+
+    bool isRendering() const;
+
 private:
     void start();
 
@@ -111,6 +116,7 @@ private:
     std::thread::id m_mainThreadId;
     std::thread::id m_updateThreadId;
 
+    bool m_focused;
     bool m_rendering;
     bool m_running;
     bool m_shutdown;
