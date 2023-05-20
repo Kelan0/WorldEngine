@@ -8,7 +8,7 @@ PhysicsSystem::PhysicsSystem():
 }
 
 PhysicsSystem::~PhysicsSystem() {
-
+    LOG_INFO("Destroying PhysicsSystem");
 }
 
 bool PhysicsSystem::init() {

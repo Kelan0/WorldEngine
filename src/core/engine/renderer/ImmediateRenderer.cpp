@@ -89,6 +89,7 @@ ImmediateRenderer::ImmediateRenderer():
 }
 
 ImmediateRenderer::~ImmediateRenderer() {
+    LOG_INFO("Destroying ImmediateRenderer");
     delete m_vertexBuffer;
     delete m_indexBuffer;
     for (auto it = m_graphicsPipelines.begin(); it != m_graphicsPipelines.end(); ++it)

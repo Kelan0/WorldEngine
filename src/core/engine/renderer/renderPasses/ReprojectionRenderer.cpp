@@ -33,6 +33,8 @@ ReprojectionRenderer::ReprojectionRenderer():
 }
 
 ReprojectionRenderer::~ReprojectionRenderer() {
+    LOG_INFO("Destroying ReprojectionRenderer");
+
     if (CONCURRENT_FRAMES == 1) {
         delete m_previousFrame.framebuffer;
         delete m_previousFrame.imageView;

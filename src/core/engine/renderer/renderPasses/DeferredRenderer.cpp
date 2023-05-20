@@ -36,6 +36,7 @@ DeferredRenderer::DeferredRenderer():
 }
 
 DeferredRenderer::~DeferredRenderer() {
+    LOG_INFO("Destroying DeferredRenderer");
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         delete m_resources[i]->globalDescriptorSet;
         delete m_resources[i]->lightingPassDescriptorSet;

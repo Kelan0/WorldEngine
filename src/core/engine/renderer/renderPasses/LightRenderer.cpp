@@ -45,6 +45,7 @@ LightRenderer::LightRenderer():
 }
 
 LightRenderer::~LightRenderer() {
+    LOG_INFO("Destroying LightRenderer");
     delete m_vsmBlurIntermediateImageView;
     delete m_vsmBlurIntermediateImage;
 

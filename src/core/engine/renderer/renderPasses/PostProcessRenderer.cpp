@@ -42,6 +42,7 @@ PostProcessRenderer::PostProcessRenderer():
 }
 
 PostProcessRenderer::~PostProcessRenderer() {
+    LOG_INFO("Destroying PostProcessRenderer");
     Engine::eventDispatcher()->disconnect(&PostProcessRenderer::recreateSwapchain, this);
 
     for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i) {

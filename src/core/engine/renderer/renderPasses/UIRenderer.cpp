@@ -23,6 +23,9 @@ UIRenderer::UIRenderer():
 }
 
 UIRenderer::~UIRenderer() {
+    LOG_INFO("Destroying UIRenderer");
+
+    LOG_INFO("Shutting down ImGui");
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL2_Shutdown();
 
