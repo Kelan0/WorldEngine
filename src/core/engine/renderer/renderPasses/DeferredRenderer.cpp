@@ -139,6 +139,8 @@ void DeferredRenderer::renderGeometryPass(double dt, const vk::CommandBuffer& co
     PROFILE_SCOPE("DeferredRenderer::renderGeometryPass");
     PROFILE_BEGIN_GPU_CMD("DeferredRenderer::renderGeometryPass", commandBuffer);
 
+    auto geometryGraphicsPipeline = getGeometryGraphicsPipeline();
+
     GeometryPassUniformData uniformData{};
 
     uniformData.prevCamera.viewMatrix = renderCamera->getPrevViewMatrix();
@@ -174,8 +176,8 @@ void DeferredRenderer::renderGeometryPass(double dt, const vk::CommandBuffer& co
 
     std::array<uint32_t, 0> dynamicOffsets = {}; // zero-size array okay?
 
-    m_geometryGraphicsPipeline->bind(commandBuffer);
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_geometryGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
+    geometryGraphicsPipeline->bind(commandBuffer);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, geometryGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
 
     Engine::instance()->getSceneRenderer()->render(dt, commandBuffer, frustum);
     PROFILE_END_GPU_CMD("DeferredRenderer::renderGeometryPass", commandBuffer);
@@ -369,6 +371,8 @@ void DeferredRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
         m_previousFrame.rendered = false;
     }
 
+    m_geometryWireframeGraphicsPipeline = nullptr;
+
     success = createGeometryGraphicsPipeline();
     assert(success);
     success = createLightingGraphicsPipeline();
@@ -481,7 +485,6 @@ bool DeferredRenderer::createGeometryGraphicsPipeline() {
     pipelineConfig.addDescriptorSetLayout(m_globalDescriptorSetLayout->getDescriptorSetLayout());
     pipelineConfig.addDescriptorSetLayout(Engine::instance()->getSceneRenderer()->getObjectDescriptorSetLayout()->getDescriptorSetLayout());
     pipelineConfig.addDescriptorSetLayout(Engine::instance()->getSceneRenderer()->getMaterialDescriptorSetLayout()->getDescriptorSetLayout());
-    //pipelineConfig.polygonMode = vk::PolygonMode::eLine;
     return m_geometryGraphicsPipeline->recreate(pipelineConfig, "DeferredRenderer-GeometryGraphicsPipeline");
 }
 
@@ -497,6 +500,21 @@ bool DeferredRenderer::createLightingGraphicsPipeline() {
     pipelineConfig.addDescriptorSetLayout(m_lightingDescriptorSetLayout.get());
     pipelineConfig.addDescriptorSetLayout(Engine::instance()->getLightRenderer()->getLightingRenderPassDescriptorSetLayout().get());
     return m_lightingGraphicsPipeline->recreate(pipelineConfig, "DeferredRenderer-LightingGraphicsPipeline");
+}
+
+std::shared_ptr<GraphicsPipeline> DeferredRenderer::getGeometryGraphicsPipeline() {
+    if (Engine::instance()->isRenderWireframeEnabled()) {
+
+        if (m_geometryWireframeGraphicsPipeline == nullptr) {
+            GraphicsPipelineConfiguration pipelineConfig = m_geometryGraphicsPipeline->getConfig();
+            pipelineConfig.polygonMode = vk::PolygonMode::eLine;
+            m_geometryWireframeGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(pipelineConfig, "DeferredRenderer-GeometryWireframeGraphicsPipeline"));
+        }
+
+        return m_geometryWireframeGraphicsPipeline;
+    } else {
+        return m_geometryGraphicsPipeline;
+    }
 }
 
 bool DeferredRenderer::createRenderPass() {

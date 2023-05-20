@@ -69,6 +69,10 @@ public:
 
     void setViewFrustumPaused(bool viewFrustumPaused);
 
+    bool isRenderWireframeEnabled() const;
+
+    void setRenderWireframeEnabled(bool renderWireframeEnabled);
+
     void setDebugCompositeEnabled(bool debugCompositeEnabled);
 
     const RenderCamera* getRenderCamera() const;
@@ -116,8 +120,9 @@ private:
     std::chrono::high_resolution_clock::time_point m_startTime;
     double m_accumulatedTime;
     double m_runTime;
-    bool m_debugCompositeEnabled;
     bool m_viewFrustumPaused;
+    bool m_renderWireframeEnabled;
+    bool m_debugCompositeEnabled;
 
     RenderCamera* m_renderCamera;
     Frustum* m_viewFrustum;

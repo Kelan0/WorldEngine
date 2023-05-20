@@ -132,12 +132,15 @@ private:
 
     bool createLightingGraphicsPipeline();
 
+    std::shared_ptr<GraphicsPipeline> getGeometryGraphicsPipeline();
+
     bool createRenderPass();
 
     void swapFrame();
 
 private:
     SharedResource<RenderPass> m_renderPass;
+    std::shared_ptr<GraphicsPipeline> m_geometryWireframeGraphicsPipeline;
     std::shared_ptr<GraphicsPipeline> m_geometryGraphicsPipeline;
     std::shared_ptr<GraphicsPipeline> m_lightingGraphicsPipeline;
     FrameResource<RenderResources> m_resources;

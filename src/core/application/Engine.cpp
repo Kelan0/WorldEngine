@@ -37,13 +37,15 @@ Engine::Engine():
     m_startTime(std::chrono::high_resolution_clock::now()),
     m_accumulatedTime(0.0),
     m_runTime(0.0),
-    m_debugCompositeEnabled(true),
     m_viewFrustumPaused(false),
+    m_renderWireframeEnabled(false),
+    m_debugCompositeEnabled(true),
     m_renderCamera(new RenderCamera()),
     m_viewFrustum(nullptr) {
 }
 
 Engine::~Engine() {
+    LOG_INFO("Destroying Engine");
 
     delete m_scene; // Scene is destroyed before SceneRenderer since destruction of components may interact with SceneRenderer. This might need to change.
     delete m_physicsSystem;
@@ -124,6 +126,14 @@ bool Engine::isViewFrustumPaused() const {
 
 void Engine::setViewFrustumPaused(bool viewFrustumPaused) {
     m_viewFrustumPaused = viewFrustumPaused;
+}
+
+bool Engine::isRenderWireframeEnabled() const {
+    return m_renderWireframeEnabled;
+}
+
+void Engine::setRenderWireframeEnabled(bool renderWireframeEnabled) {
+    m_renderWireframeEnabled = renderWireframeEnabled;
 }
 
 double Engine::getPartialFrames() const {
@@ -320,6 +330,7 @@ void Engine::tick(double dt) {
 }
 
 void Engine::cleanup() {
+    LOG_INFO("Engine cleaning up");
     m_graphics->shutdownGraphics();
 }
 
