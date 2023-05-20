@@ -217,6 +217,10 @@ public:
 
     void setColourWriteEnabled(const vk::CommandBuffer& commandBuffer, bool enabled);
 
+    void setPolygonMode(const vk::CommandBuffer& commandBuffer, vk::PolygonMode polygonMode);
+
+    void setCullMode(const vk::CommandBuffer& commandBuffer, vk::CullModeFlagBits cullMode);
+
     static vk::Viewport getScreenViewport(const vk::Viewport& viewport);
     static vk::Viewport getScreenViewport(float width, float height, float x = 0.0F, float y = 0.0F, float minDepth = 0.0F, float maxDepth = 1.0F);
     static vk::Viewport getScreenViewport(const glm::vec2& size, const glm::vec2& offset = glm::vec2(0.0F), float minDepth = 0.0F, float maxDepth = 1.0F);

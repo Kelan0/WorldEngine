@@ -687,6 +687,16 @@ void GraphicsPipeline::setColourWriteEnabled(const vk::CommandBuffer& commandBuf
     commandBuffer.setColorWriteEnableEXT(enabled);
 }
 
+void GraphicsPipeline::setPolygonMode(const vk::CommandBuffer& commandBuffer, vk::PolygonMode polygonMode) {
+    validateDynamicState(vk::DynamicState::ePolygonModeEXT);
+    commandBuffer.setPolygonModeEXT(polygonMode);
+}
+
+void GraphicsPipeline::setCullMode(const vk::CommandBuffer& commandBuffer, vk::CullModeFlagBits cullMode) {
+    validateDynamicState(vk::DynamicState::eCullMode);
+    commandBuffer.setCullMode(cullMode);
+}
+
 vk::Viewport GraphicsPipeline::getScreenViewport(const vk::Viewport& viewport) {
     if (Application::instance()->isViewportInverted())
         return vk::Viewport(viewport.x, viewport.y + viewport.height, viewport.width, viewport.height * -1, viewport.minDepth, viewport.maxDepth);

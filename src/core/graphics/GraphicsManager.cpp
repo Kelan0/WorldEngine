@@ -36,13 +36,17 @@ GraphicsManager::GraphicsManager():
         m_resolutionChanged(false),
         m_directImagePresentEnabled(false),
         m_swapchainImageSampled(false),
+        m_flushRendering(false),
+        m_abortOnVulkanError(true),
         m_swapchainBufferMode(SwapchainBufferMode_TripleBuffer) {
     m_swapchain.currentFrameIndex = 0;
     m_swapchain.currentImageIndex = UINT32_MAX;
 }
 
 GraphicsManager::~GraphicsManager() {
-    LOG_INFO("Uninitializing graphics engine");
+    LOG_INFO("Destroying GraphicsManager");
+
+    m_device.device->waitIdle();
 
     //DescriptorSetLayout::clearCache();
     //Buffer::resetStagingBuffer();
@@ -96,6 +100,8 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
     std::vector<const char*> deviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
             VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME,
+            VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME,
+            VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME,
             VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME,
 //            VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
     };
@@ -299,7 +305,7 @@ bool GraphicsManager::createDebugUtilsMessenger() {
 
             if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
                 if (Engine::graphics()->doAbortOnVulkanError()) {
-                    throw std::runtime_error(pCallbackData->pMessage);
+                    throw std::exception(pCallbackData->pMessage);
                     return true; // Abort erroneous method call, Method will return eErrorValidationFailed and throw an exception
                 }
             }
@@ -850,6 +856,7 @@ bool GraphicsManager::createRenderPass() {
 }
 
 void GraphicsManager::shutdownGraphics() {
+    LOG_INFO("Shutting down GraphicsManager");
     ShutdownGraphicsEvent event{};
     Engine::eventDispatcher()->trigger(&event);
 }
@@ -953,6 +960,8 @@ void GraphicsManager::endFrame() {
     }
     m_swapchain.imagesInFlight[m_swapchain.currentImageIndex] = frameFence;
 
+    Profiler::endGraphicsFrame(); // Needs to go after waitForFences due to possible cleanup of in-use graphics resources in endGraphicsFrame
+
     PROFILE_REGION("Reset frame fence")
     m_device.device->resetFences({frameFence});
 
@@ -991,8 +1000,6 @@ void GraphicsManager::endFrame() {
     }
 
     m_swapchain.currentFrameIndex = (m_swapchain.currentFrameIndex + 1) % CONCURRENT_FRAMES;
-
-    Profiler::endGraphicsFrame();
 
     if (m_flushRendering) {
         m_flushRendering = false;
