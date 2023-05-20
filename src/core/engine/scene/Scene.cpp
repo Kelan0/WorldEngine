@@ -72,7 +72,8 @@ Entity Scene::createNamedEntity(const std::string& name) {
 
     if (!result.second) {
         // Not inserted (already existed)
-        return Entity(this, it->second);
+        LOG_WARN("Unable to create named entity \"%s\" for this scene because the name is already taken", name.c_str());
+        return Entity{nullptr};
     }
 
     Entity entity = createEntity();

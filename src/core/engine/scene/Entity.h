@@ -103,8 +103,12 @@ struct EntityDestroyEvent {
 template<typename T, typename ...Args>
 inline T& Entity::addComponent(Args && ...args) const {
 #if _DEBUG
+    if (!exists()) {
+        LOG_FATAL("Entity::addComponent() : Entity does not exist");
+        assert(false);
+    }
     if (hasComponent<T>()) {
-		LOG_FATAL("Entity::addComponent() : Component type \"%s\" has already been added to this m_entity", typeid(T).name());
+		LOG_FATAL("Entity::addComponent() : Component type \"%s\" has already been added to entity \"%s\"", typeid(T).name(), getName().c_str());
 		assert(false);
 	}
 #endif
@@ -113,13 +117,25 @@ inline T& Entity::addComponent(Args && ...args) const {
 }
 
 template<typename T, typename ...Args>
-inline T& Entity::setComponent(Args && ...args) const {
+inline T& Entity::setComponent(Args&& ...args) const {
+#if _DEBUG
+    if (!exists()) {
+        LOG_FATAL("Entity::setComponent() : Entity does not exist");
+        assert(false);
+    }
+#endif
     T& component = registry().emplace_or_replace<T>(m_entity, std::forward<Args>(args)...);
     return component;
 }
 
 template<typename T>
 inline bool Entity::removeComponent() const {
+#if _DEBUG
+    if (!exists()) {
+        LOG_FATAL("Entity::removeComponent() : Entity does not exist");
+        assert(false);
+    }
+#endif
     size_t removed = registry().remove<T>(m_entity);
     return removed != 0;
 }
@@ -127,6 +143,10 @@ inline bool Entity::removeComponent() const {
 template<typename T>
 inline T& Entity::getComponent() const {
 #if _DEBUG
+    if (!exists()) {
+        LOG_FATAL("Entity::getComponent() : Entity does not exist");
+        assert(false);
+    }
     if (!hasComponent<T>()) {
         LOG_FATAL("Entity::getComponent() : Component type \"%s\" is not attached to this m_entity", typeid(T).name());
 		assert(false);
@@ -137,11 +157,17 @@ inline T& Entity::getComponent() const {
 
 template<typename T>
 inline T* Entity::tryGetComponent() const {
+    if (!exists()) {
+        return nullptr;
+    }
     return registry().try_get<T>(m_entity);
 }
 
 template<typename T, typename ...Ts>
 inline std::tuple<T*, Ts*...> Entity::tryGetComponents() const {
+    if (!exists()) {
+        return std::make_tuple<T*, Ts*...>(nullptr);
+    }
     return registry().try_get<T, Ts...>(m_entity);
 }
 

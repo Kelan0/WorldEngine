@@ -35,7 +35,13 @@ void Entity::destroy() const {
 }
 
 const std::string& Entity::getName() const {
-    return getComponent<EntityNameComponent>().name;
+    EntityNameComponent* nameComponent = tryGetComponent<EntityNameComponent>();
+    if (nameComponent != nullptr) {
+        return nameComponent->name;
+    } else {
+        static std::string UNNAMED_ENTITY_STR = "Unnamed Entity";
+        return UNNAMED_ENTITY_STR;
+    }
 }
 
 Scene* Entity::getScene() const {
@@ -43,7 +49,7 @@ Scene* Entity::getScene() const {
 }
 
 bool Entity::exists() const {
-    return (m_entity != entt::null) && (registry().current(m_entity) == entt::to_version(m_entity)) && (m_scene != NULL);
+    return (m_entity != entt::null) && (registry().current(m_entity) == entt::to_version(m_entity)) && (m_scene != nullptr);
 }
 
 Entity::operator entt::entity() const {
