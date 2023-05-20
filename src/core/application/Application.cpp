@@ -29,7 +29,8 @@ Application::Application():
         m_windowHandle(nullptr),
         m_inputHandler(nullptr),
         m_running(false),
-        m_rendering(false) {
+        m_rendering(false),
+        m_shutdown(false) {
 }
 
 Application::~Application() {
@@ -161,7 +162,10 @@ bool Application::initInternal() {
 
 void Application::cleanupInternal() {
     Engine::instance()->cleanup();
+
+    LOG_INFO("Application cleaning up");
     cleanup();
+    LOG_INFO("Cleanup done");
 }
 
 void Application::renderInternal(double dt) {
@@ -256,10 +260,12 @@ void Application::processEventsInternal() {
 
 void Application::destroy() {
     assert(s_instance != nullptr);
-    s_instance->stop();
+    s_instance->shutdownNow();
     Engine::destroy();
     delete Application::s_instance;
     Application::s_instance = nullptr;
+
+    std::cout << "Goodbye :(" << std::endl;
 }
 
 void Application::start() {
@@ -284,129 +290,149 @@ void Application::start() {
 
     static profile_id profileID_CPU_Idle = Profiler::id("CPU Idle");
 
-    Profiler::beginFrame();
-    Profiler::beginCPU(profileID_CPU_Idle);
+    try {
 
-    while (m_running) {
-        auto now = std::chrono::high_resolution_clock::now();
-        uint64_t elapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastTime).count();
-        lastTime = now;
+        Profiler::beginFrame();
+        Profiler::beginCPU(profileID_CPU_Idle);
 
-        const double framerateLimit = m_framerateLimit < 1.0 ? 1000.0 : m_framerateLimit;
+        while (m_running) {
+            auto now = std::chrono::high_resolution_clock::now();
+            uint64_t elapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastTime).count();
+            lastTime = now;
 
-        bool isFrame = false;
-        double frameDurationNanos = 1e+9 / framerateLimit;
+            const double framerateLimit = m_framerateLimit < 1.0 ? 1000.0 : m_framerateLimit;
 
-        m_partialFrames += (double)elapsedNanos / frameDurationNanos;
+            bool isFrame = false;
+            double frameDurationNanos = 1e+9 / framerateLimit;
 
-        Engine::eventDispatcher()->update();
+            m_partialFrames += (double)elapsedNanos / frameDurationNanos;
 
-        if (m_partialFrames >= 1.0) {
-            Profiler::endCPU(); // profileID_CPU_Idle
-            Profiler::endFrame();
-            Profiler::beginFrame();
-            isFrame = true;
+            Engine::eventDispatcher()->update();
 
-            m_partialFrames = 0.0; // Reset partial frames
+            if (m_partialFrames >= 1.0) {
+                Profiler::endCPU(); // profileID_CPU_Idle
+                Profiler::endFrame();
+                Profiler::beginFrame();
+                isFrame = true;
 
-            auto beginFrame = now;
+                m_partialFrames = 0.0; // Reset partial frames
 
-            ThreadUtils::wakeThreads();
+                auto beginFrame = now;
 
-            processEventsInternal();
+                ThreadUtils::wakeThreads();
 
-            if (m_rendering) {
-                if (Engine::graphics()->beginFrame()) {
-                    uint64_t frameElapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastFrame).count();
-                    double dt = frameElapsedNanos / 1e+9;
+                processEventsInternal();
 
-                    auto cpuBegin = std::chrono::high_resolution_clock::now();
-                    renderInternal(dt);
-                    auto cpuEnd = std::chrono::high_resolution_clock::now();
+                if (m_rendering) {
+                    if (Engine::graphics()->beginFrame()) {
+                        uint64_t frameElapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastFrame).count();
+                        double dt = frameElapsedNanos / 1e+9;
 
-                    Engine::graphics()->endFrame();
+                        auto cpuBegin = std::chrono::high_resolution_clock::now();
+                        renderInternal(dt);
+                        auto cpuEnd = std::chrono::high_resolution_clock::now();
 
-                    tempDebugInfo += Engine::graphics()->debugInfo();
+                        Engine::graphics()->endFrame();
 
-                    lastFrame = now;
+                        tempDebugInfo += Engine::graphics()->debugInfo();
 
-                    auto endFrame = std::chrono::high_resolution_clock::now();
-                    frameTimes.emplace_back(std::chrono::duration_cast<std::chrono::nanoseconds>(endFrame - beginFrame).count() / 1000000.0);
-                    cpuFrameTimes.emplace_back(std::chrono::duration_cast<std::chrono::nanoseconds>(cpuEnd - cpuBegin).count() / 1000000.0);
+                        lastFrame = now;
+
+                        auto endFrame = std::chrono::high_resolution_clock::now();
+                        frameTimes.emplace_back(std::chrono::duration_cast<std::chrono::nanoseconds>(endFrame - beginFrame).count() / 1000000.0);
+                        cpuFrameTimes.emplace_back(std::chrono::duration_cast<std::chrono::nanoseconds>(cpuEnd - cpuBegin).count() / 1000000.0);
+                    }
                 }
             }
+
+
+//            uint64_t debugDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastDebug).count();
+//
+//            if (debugDuration >= 1000000000u) {
+//                PROFILE_SCOPE("Debug log")
+//                double secondsElapsed = debugDuration / 1000000000.0;
+//                std::sort(frameTimes.begin(), frameTimes.end(), [](const double& lhs, const double& rhs) { return lhs > rhs; });
+//                double dtAvg = 0.0;
+//                double dtLow50 = 0.0;
+//                double dtLow10 = 0.0;
+//                double dtLow1 = 0.0;
+//                double dtMax = frameTimes.empty() ? 0.0 : frameTimes[0];
+//                double fps = frameTimes.size() / secondsElapsed;
+//
+//                for (int i = 0; i < frameTimes.size(); ++i)
+//                    dtAvg += frameTimes[i];
+//                dtAvg /= glm::max(size_t(1), frameTimes.size());
+//
+//                for (int i = 0; i < INT_DIV_CEIL(frameTimes.size(), 2); ++i)
+//                    dtLow50 += frameTimes[i];
+//                dtLow50 /= glm::max(size_t(1), INT_DIV_CEIL(frameTimes.size(), 2));
+//
+//                for (int i = 0; i < INT_DIV_CEIL(frameTimes.size(), 10); ++i)
+//                    dtLow10 += frameTimes[i];
+//                dtLow10 /= glm::max(size_t(1), INT_DIV_CEIL(frameTimes.size(), 10));
+//
+//                for (int i = 0; i < INT_DIV_CEIL(frameTimes.size(), 100); ++i)
+//                    dtLow1 += frameTimes[i];
+//                dtLow1 /= glm::max(size_t(1), INT_DIV_CEIL(frameTimes.size(), 100));
+//
+//                double dtAvgCpu = 0.0;
+//                for (int i = 0; i < cpuFrameTimes.size(); ++i)
+//                    dtAvgCpu += cpuFrameTimes[i];
+//                dtAvgCpu /= cpuFrameTimes.size();
+//
+//                LOG_DEBUG("%.2f FPS (AVG %.3f msec, AVG-CPU %.3f msec,    MAX %.3f msec 1%%LO %.3f msec, 10%%LO %.3f msec, 50%%LO %.3f msec)",
+//                       fps, dtAvg, dtAvgCpu, dtMax, dtLow1, dtLow10, dtLow50);
+//
+//                LOG_DEBUG("%f polygons/sec - Average frame rendered %f polygons, %f vertices, %f indices - %f draw calls, %f instances, %.2f msec for draw calls",
+//                       (double)tempDebugInfo.renderedPolygons / secondsElapsed,
+//                       (double)tempDebugInfo.renderedPolygons / (double)frameTimes.size(),
+//                       (double)tempDebugInfo.renderedVertices / (double)frameTimes.size(),
+//                       (double)tempDebugInfo.renderedIndices / (double)frameTimes.size(),
+//                       (double)tempDebugInfo.drawCalls / (double)frameTimes.size(),
+//                       (double)tempDebugInfo.drawInstances / (double)frameTimes.size(),
+//                       ((double)tempDebugInfo.elapsedDrawNanosCPU / (double)frameTimes.size()) / (1e+6)
+//                );
+//
+//                tempDebugInfo.reset();
+//                frameTimes.clear();
+//                cpuFrameTimes.clear();
+//                lastDebug = now;
+//            }
+
+            if (isFrame) {
+                // The CPU is idle from this point onward, until the loop restarts another frame.
+                Profiler::beginCPU(profileID_CPU_Idle);
+            }
+
+//            SDL_Delay(1);
         }
+        Profiler::endFrame();
 
-
-//        uint64_t debugDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastDebug).count();
-//
-//        if (debugDuration >= 1000000000u) {
-//            PROFILE_SCOPE("Debug log")
-//            double secondsElapsed = debugDuration / 1000000000.0;
-//            std::sort(frameTimes.begin(), frameTimes.end(), [](const double& lhs, const double& rhs) { return lhs > rhs; });
-//            double dtAvg = 0.0;
-//            double dtLow50 = 0.0;
-//            double dtLow10 = 0.0;
-//            double dtLow1 = 0.0;
-//            double dtMax = frameTimes.empty() ? 0.0 : frameTimes[0];
-//            double fps = frameTimes.size() / secondsElapsed;
-//
-//            for (int i = 0; i < frameTimes.size(); ++i)
-//                dtAvg += frameTimes[i];
-//            dtAvg /= glm::max(size_t(1), frameTimes.size());
-//
-//            for (int i = 0; i < INT_DIV_CEIL(frameTimes.size(), 2); ++i)
-//                dtLow50 += frameTimes[i];
-//            dtLow50 /= glm::max(size_t(1), INT_DIV_CEIL(frameTimes.size(), 2));
-//
-//            for (int i = 0; i < INT_DIV_CEIL(frameTimes.size(), 10); ++i)
-//                dtLow10 += frameTimes[i];
-//            dtLow10 /= glm::max(size_t(1), INT_DIV_CEIL(frameTimes.size(), 10));
-//
-//            for (int i = 0; i < INT_DIV_CEIL(frameTimes.size(), 100); ++i)
-//                dtLow1 += frameTimes[i];
-//            dtLow1 /= glm::max(size_t(1), INT_DIV_CEIL(frameTimes.size(), 100));
-//
-//            double dtAvgCpu = 0.0;
-//            for (int i = 0; i < cpuFrameTimes.size(); ++i)
-//                dtAvgCpu += cpuFrameTimes[i];
-//            dtAvgCpu /= cpuFrameTimes.size();
-//
-//            LOG_DEBUG("%.2f FPS (AVG %.3f msec, AVG-CPU %.3f msec,    MAX %.3f msec 1%%LO %.3f msec, 10%%LO %.3f msec, 50%%LO %.3f msec)",
-//                   fps, dtAvg, dtAvgCpu, dtMax, dtLow1, dtLow10, dtLow50);
-//
-//            LOG_DEBUG("%f polygons/sec - Average frame rendered %f polygons, %f vertices, %f indices - %f draw calls, %f instances, %.2f msec for draw calls",
-//                   (double)tempDebugInfo.renderedPolygons / secondsElapsed,
-//                   (double)tempDebugInfo.renderedPolygons / (double)frameTimes.size(),
-//                   (double)tempDebugInfo.renderedVertices / (double)frameTimes.size(),
-//                   (double)tempDebugInfo.renderedIndices / (double)frameTimes.size(),
-//                   (double)tempDebugInfo.drawCalls / (double)frameTimes.size(),
-//                   (double)tempDebugInfo.drawInstances / (double)frameTimes.size(),
-//                   ((double)tempDebugInfo.elapsedDrawNanosCPU / (double)frameTimes.size()) / (1e+6)
-//            );
-//
-//            tempDebugInfo.reset();
-//            frameTimes.clear();
-//            cpuFrameTimes.clear();
-//            lastDebug = now;
-//        }
-
-        if (isFrame) {
-            // The CPU is idle from this point onward, until the loop restarts another frame.
-            Profiler::beginCPU(profileID_CPU_Idle);
-        }
-
-//        SDL_Delay(1);
+    } catch (const std::exception& e) {
+        LOG_ERROR("Caught exception:\n%s", e.what());
+    } catch (const std::string& e) {
+        LOG_ERROR("Caught exception:\n%s", e.c_str());
     }
-    Profiler::endFrame();
 
-    m_rendering = false;
+    shutdownNow();
+}
 
-    Engine::graphics()->getDevice()->waitIdle();
+void Application::shutdownNow() {
+    if (!m_shutdown) {
+        m_shutdown = true;
 
-    m_updateThread.join(); // Wait for update thread to shut down
+        LOG_INFO("Application shutting down");
 
-    cleanupInternal();
+        m_running = false;
+        m_rendering = false;
+
+        Engine::graphics()->getDevice()->waitIdle();
+
+        if (m_updateThread.joinable())
+            m_updateThread.join(); // Wait for update thread to shut down
+
+        cleanupInternal();
+    }
 }
 
 void Application::runUpdateThread() {

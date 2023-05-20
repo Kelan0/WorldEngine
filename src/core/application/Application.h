@@ -70,6 +70,8 @@ public:
 private:
     void start();
 
+    void shutdownNow();
+
     void runUpdateThread();
 
     bool parseArgs(int argc, char* argv[]);
@@ -111,6 +113,7 @@ private:
 
     bool m_rendering;
     bool m_running;
+    bool m_shutdown;
 };
 
 template<class T>
