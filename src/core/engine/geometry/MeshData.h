@@ -153,6 +153,8 @@ public:
 
     void createQuad(const glm::vec3& p00, const glm::vec3& p01, const glm::vec3& p11, const glm::vec3& p10, const glm::vec3& normal);
 
+    void createPlane(const glm::vec3& origin, const glm::vec3& u, const glm::vec3& v, const glm::vec3& normal, const glm::vec2& scale, const glm::uvec2& subdivisions);
+
     void createCuboid(const glm::vec3& pos0, const glm::vec3& pos1, const glm::vec3& tex0, const glm::vec3& tex1);
 
     void createCuboid(const glm::vec3& pos0, const glm::vec3& pos1);
@@ -544,6 +546,56 @@ void MeshData<Vertex_t>::createQuad(const glm::vec3& p00, const glm::vec3& p01, 
 template<typename Vertex_t>
 void MeshData<Vertex_t>::createQuad(const glm::vec3& p00, const glm::vec3& p01, const glm::vec3& p11, const glm::vec3& p10, const glm::vec3& normal) {
     createQuad(p00, p01, p11, p10, normal, normal, normal, normal, glm::vec2(0.0F, 0.0F), glm::vec2(0.0F, 1.0F), glm::vec2(1.0F, 1.0F), glm::vec2(1.0F, 0.0F));
+}
+
+template<typename Vertex_t>
+void MeshData<Vertex_t>::createPlane(const glm::vec3& origin, const glm::vec3& u, const glm::vec3& v, const glm::vec3& normal, const glm::vec2& scale, const glm::uvec2& subdivisions) {
+    uint32_t vertexCountU = subdivisions.x + 2;
+    uint32_t vertexCountV = subdivisions.y + 2;
+
+    float textureIncrementU = 1.0F / (float)(vertexCountU - 1);
+    float textureIncrementV = 1.0F / (float)(vertexCountV - 1);
+    float offsetIncrementU = scale.x * textureIncrementU;
+    float offsetIncrementV = scale.y * textureIncrementV;
+
+    bool reversedNormal = glm::dot(normal, glm::cross(u, v)) < 0.0F;
+
+    Index iu, iv;
+    float offsetU, offsetV;
+    glm::vec2 texture;
+
+    pushState();
+
+    for (iv = 0, offsetV = 0.0F, texture.y = 0.0F; iv < (Index)vertexCountV; ++iv) {
+        offsetV += offsetIncrementV;
+        texture.y += textureIncrementV;
+
+        for (iu = 0, offsetU = 0.0F, texture.x = 0.0F; iu < (Index)vertexCountU; ++iu) {
+            offsetU += offsetIncrementU;
+            texture.x += textureIncrementU;
+
+            glm::vec3 position = origin + (u * offsetU) + (v * offsetV);
+            addVertex(position, normal, texture);
+        }
+    }
+
+
+    for (iv = 0; iv < (Index)(vertexCountV - 1); ++iv) {
+        for (iu = 0; iu < (Index)(vertexCountU - 1); ++iu) {
+            Index i00 = (iu + 0) + (iv + 0) * vertexCountV;
+            Index i10 = (iu + 1) + (iv + 0) * vertexCountV;
+            Index i11 = (iu + 1) + (iv + 1) * vertexCountV;
+            Index i01 = (iu + 0) + (iv + 1) * vertexCountV;
+
+            if (reversedNormal) {
+                addQuad(i00, i01, i11, i10);
+            } else {
+                addQuad(i00, i10, i11, i01);
+            }
+        }
+    }
+
+    popState();
 }
 
 template<typename Vertex_t>
