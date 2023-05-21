@@ -293,7 +293,7 @@ add_executable(${PROJECT_NAME}
         src/core/engine/ConfigManager.cpp
         src/core/engine/ConfigManager.h
         src/core/engine/physics/RigidBody.cpp
-        src/core/engine/physics/RigidBody.h src/core/engine/physics/PhysicsSystem.cpp src/core/engine/physics/PhysicsSystem.h src/demo/BloomTestApplication.cpp src/demo/BloomTestApplication.h src/demo/RenderStressTestApplication.cpp src/demo/RenderStressTestApplication.h src/core/engine/scene/bound/BoundingVolume.cpp src/core/engine/scene/bound/BoundingVolume.h src/core/util/Logger.cpp src/core/util/Logger.h src/demo/TerrainTestApplication.cpp src/demo/TerrainTestApplication.h src/core/engine/scene/terrain/TerrainComponent.cpp src/core/engine/scene/terrain/TerrainComponent.h src/core/engine/renderer/TerrainRenderer.cpp src/core/engine/renderer/TerrainRenderer.h)
+        src/core/engine/physics/RigidBody.h src/core/engine/physics/PhysicsSystem.cpp src/core/engine/physics/PhysicsSystem.h src/demo/BloomTestApplication.cpp src/demo/BloomTestApplication.h src/demo/RenderStressTestApplication.cpp src/demo/RenderStressTestApplication.h src/core/engine/scene/bound/BoundingVolume.cpp src/core/engine/scene/bound/BoundingVolume.h src/core/util/Logger.cpp src/core/util/Logger.h src/demo/TerrainTestApplication.cpp src/demo/TerrainTestApplication.h src/core/engine/renderer/TerrainRenderer.cpp src/core/engine/renderer/TerrainRenderer.h src/core/engine/scene/terrain/QuadtreeTerrain.cpp src/core/engine/scene/terrain/QuadtreeTerrain.h)
 
 target_link_libraries(${PROJECT_NAME}
         ${Vulkan_LIBRARIES}

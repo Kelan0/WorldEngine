@@ -24,6 +24,8 @@ private:
     double cameraPitch = 0.0F;
     double cameraYaw = 0.0F;
     float playerMovementSpeed = 1.0F;
+    float targetZoomFactor = 1.0F;
+    float currentZoomFactor = 1.0F;
 };
 
 

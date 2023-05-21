@@ -30,7 +30,7 @@ enum DeferredAttachmentType {
 
 class DeferredRenderer {
 private:
-    struct GeometryPassUniformData {
+    struct GeometryPassCameraInfoUniformData {
         GPUCamera prevCamera;
         GPUCamera camera;
         glm::vec2 taaPreviousJitterOffset;
@@ -75,7 +75,11 @@ public:
 
     void preRender(double dt);
 
-    void renderGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum);
+    void updateCamera(double dt, const RenderCamera* renderCamera);
+
+    void renderEntitiesGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum);
+
+    void renderTerrainGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum);
 
     void renderLightingPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum);
 
@@ -128,11 +132,15 @@ private:
 
     bool createFramebuffer(FrameImages* frame);
 
-    bool createGeometryGraphicsPipeline();
+    bool createTerrainGeometryGraphicsPipeline();
+
+    bool createEntityGeometryGraphicsPipeline();
 
     bool createLightingGraphicsPipeline();
 
-    std::shared_ptr<GraphicsPipeline> getGeometryGraphicsPipeline();
+    std::shared_ptr<GraphicsPipeline> getTerrainGeometryGraphicsPipeline();
+
+    std::shared_ptr<GraphicsPipeline> getEntityGeometryGraphicsPipeline();
 
     bool createRenderPass();
 
@@ -140,8 +148,10 @@ private:
 
 private:
     SharedResource<RenderPass> m_renderPass;
-    std::shared_ptr<GraphicsPipeline> m_geometryWireframeGraphicsPipeline;
-    std::shared_ptr<GraphicsPipeline> m_geometryGraphicsPipeline;
+    std::shared_ptr<GraphicsPipeline> m_terrainWireframeGeometryGraphicsPipeline;
+    std::shared_ptr<GraphicsPipeline> m_terrainGeometryGraphicsPipeline;
+    std::shared_ptr<GraphicsPipeline> m_entityWireframeGeometryGraphicsPipeline;
+    std::shared_ptr<GraphicsPipeline> m_entityGeometryGraphicsPipeline;
     std::shared_ptr<GraphicsPipeline> m_lightingGraphicsPipeline;
     FrameResource<RenderResources> m_resources;
     SharedResource<DescriptorSetLayout> m_globalDescriptorSetLayout;

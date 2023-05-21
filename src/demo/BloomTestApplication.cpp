@@ -426,6 +426,10 @@ void BloomTestApplication::handleUserInput(double dt) {
         input()->toggleMouseGrabbed();
     }
 
+    if (input()->keyPressed(SDL_SCANCODE_F2)) {
+        Engine::instance()->setRenderWireframeEnabled(!Engine::instance()->isRenderWireframeEnabled());
+    }
+
     if (input()->isMouseGrabbed()) {
         Transform& cameraTransform = Engine::scene()->getMainCameraEntity().getComponent<Transform>();
         glm::ivec2 dMouse = input()->getRelativeMouseState();
@@ -464,7 +468,7 @@ void BloomTestApplication::handleUserInput(double dt) {
         if (input()->keyDown(SDL_SCANCODE_LCTRL)) {
             int zoomIncr = input()->getMouseScrollAmount().y > 0 ? 1 : input()->getMouseScrollAmount().y < 0 ? -1 : 0;
             if (zoomIncr != 0)
-                targetZoomFactor *= glm::pow(1.5F, (float)zoomIncr);
+                targetZoomFactor *= glm::pow(1.15F, (float)zoomIncr);
         } else {
             targetZoomFactor = 1.0F;
         }
@@ -478,7 +482,10 @@ void BloomTestApplication::handleUserInput(double dt) {
     if (targetZoomFactor > 1500.0F)
         targetZoomFactor = 1500.0F;
 
-    currentZoomFactor = glm::lerp(currentZoomFactor, targetZoomFactor, 0.2F);
+    float zoomInSpeed = 10.0F;
+    float zoomOutSpeed = 10.0F;
+
+    currentZoomFactor = glm::lerp(currentZoomFactor, targetZoomFactor, glm::min(1.0F, (float)((targetZoomFactor > currentZoomFactor ? zoomInSpeed : zoomOutSpeed) * dt)));
 
     Camera& camera = Engine::scene()->getMainCameraEntity().getComponent<Camera>();
     double fov = glm::radians(90.0);

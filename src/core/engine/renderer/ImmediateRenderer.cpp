@@ -96,19 +96,22 @@ ImmediateRenderer::~ImmediateRenderer() {
         delete it->second;
 
     for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i) {
-        delete m_resources[i]->descriptorSet;
-        delete m_resources[i]->uniformBuffer;
-        delete m_resources[i]->framebuffer;
-        delete m_resources[i]->frameColourImageView;
-        delete m_resources[i]->frameColourImage;
-        delete m_resources[i]->frameDepthImageView;
-        delete m_resources[i]->frameDepthImage;
+        if (m_resources[i] != nullptr) {
+            delete m_resources[i]->descriptorSet;
+            delete m_resources[i]->uniformBuffer;
+            delete m_resources[i]->framebuffer;
+            delete m_resources[i]->frameColourImageView;
+            delete m_resources[i]->frameColourImage;
+            delete m_resources[i]->frameDepthImageView;
+            delete m_resources[i]->frameDepthImage;
+        }
     }
 
     Engine::eventDispatcher()->disconnect(&ImmediateRenderer::recreateSwapchain, this);
 }
 
 bool ImmediateRenderer::init() {
+    LOG_INFO("Initializing ImmediateRenderer");
 
     const SharedResource<DescriptorPool>& descriptorPool = Engine::graphics()->descriptorPool();
 

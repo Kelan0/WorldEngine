@@ -11,9 +11,9 @@ class Scene;
 class PhysicsSystem;
 class UIRenderer;
 class SceneRenderer;
+class TerrainRenderer;
 class LightRenderer;
 class ImmediateRenderer;
-class DeferredGeometryRenderPass;
 class ReprojectionRenderer;
 class DeferredRenderer;
 class PostProcessRenderer;
@@ -40,6 +40,8 @@ public:
     UIRenderer* getUIRenderer() const;
 
     SceneRenderer* getSceneRenderer() const;
+
+    TerrainRenderer* getTerrainRenderer() const;
 
     LightRenderer* getLightRenderer() const;
 
@@ -110,6 +112,7 @@ private:
     PhysicsSystem* m_physicsSystem;
     UIRenderer* m_uiRenderer;
     SceneRenderer* m_sceneRenderer;
+    TerrainRenderer* m_terrainRenderer;
     LightRenderer* m_lightRenderer;
     ImmediateRenderer* m_immediateRenderer;
     DeferredRenderer* m_deferredRenderer;

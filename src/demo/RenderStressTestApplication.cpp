@@ -141,6 +141,10 @@ void RenderStressTestApplication::handleUserInput(double dt) {
         input()->toggleMouseGrabbed();
     }
 
+    if (input()->keyPressed(SDL_SCANCODE_F2)) {
+        Engine::instance()->setRenderWireframeEnabled(!Engine::instance()->isRenderWireframeEnabled());
+    }
+
     if (input()->isMouseGrabbed()) {
         Transform& cameraTransform = Engine::scene()->getMainCameraEntity().getComponent<Transform>();
         glm::ivec2 dMouse = input()->getRelativeMouseState();

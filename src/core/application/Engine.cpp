@@ -5,6 +5,7 @@
 #include "core/engine/scene/bound/Frustum.h"
 #include "core/engine/physics/PhysicsSystem.h"
 #include "core/engine/renderer/SceneRenderer.h"
+#include "core/engine/renderer/TerrainRenderer.h"
 #include "core/engine/renderer/renderPasses/UIRenderer.h"
 #include "core/engine/renderer/renderPasses/LightRenderer.h"
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
@@ -27,6 +28,7 @@ Engine::Engine():
     m_physicsSystem(new PhysicsSystem()),
     m_uiRenderer(new UIRenderer()),
     m_sceneRenderer(new SceneRenderer()),
+    m_terrainRenderer(new TerrainRenderer()),
     m_lightRenderer(new LightRenderer()),
     m_immediateRenderer(new ImmediateRenderer()),
     m_deferredRenderer(new DeferredRenderer()),
@@ -50,6 +52,7 @@ Engine::~Engine() {
     delete m_scene; // Scene is destroyed before SceneRenderer since destruction of components may interact with SceneRenderer. This might need to change.
     delete m_physicsSystem;
     delete m_uiRenderer;
+    delete m_terrainRenderer;
     delete m_sceneRenderer;
     delete m_lightRenderer;
     delete m_immediateRenderer;
@@ -86,6 +89,10 @@ UIRenderer* Engine::getUIRenderer() const {
 
 SceneRenderer* Engine::getSceneRenderer() const {
     return m_sceneRenderer;
+}
+
+TerrainRenderer* Engine::getTerrainRenderer() const {
+    return m_terrainRenderer;
 }
 
 LightRenderer* Engine::getLightRenderer() const {
@@ -217,6 +224,10 @@ bool Engine::init(SDL_Window* windowHandle) {
         return false;
     }
 
+    PROFILE_REGION("Engine initialize - TerrainRenderer")
+    m_terrainRenderer->setScene(m_scene);
+    if (!m_terrainRenderer->init()) {
+        LOG_ERROR("Engine initialize failed - TerrainRenderer");
         return false;
     }
 
@@ -266,6 +277,7 @@ void Engine::preRender(double dt) {
     m_uiRenderer->preRender(dt);
     m_physicsSystem->preRender(dt);
     m_sceneRenderer->preRender(dt);
+    m_terrainRenderer->preRender(dt);
     m_lightRenderer->preRender(dt);
     m_deferredRenderer->preRender(dt);
     m_reprojectionRenderer->preRender(dt);
@@ -305,11 +317,16 @@ void Engine::render(double dt) {
 
     m_lightRenderer->render(dt, commandBuffer, m_renderCamera);
 
+    m_deferredRenderer->updateCamera(dt, m_renderCamera);
     m_deferredRenderer->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
+
     m_deferredRenderer->beginGeometrySubpass(commandBuffer, vk::SubpassContents::eInline);
-    m_deferredRenderer->renderGeometryPass(dt, commandBuffer, m_renderCamera, m_viewFrustum);
+    m_deferredRenderer->renderTerrainGeometryPass(dt, commandBuffer, m_renderCamera, m_viewFrustum);
+    m_deferredRenderer->renderEntitiesGeometryPass(dt, commandBuffer, m_renderCamera, m_viewFrustum);
+
     m_deferredRenderer->beginLightingSubpass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredRenderer->renderLightingPass(dt, commandBuffer, m_renderCamera, m_viewFrustum);
+
     commandBuffer.endRenderPass();
 
     if (m_debugCompositeEnabled) {

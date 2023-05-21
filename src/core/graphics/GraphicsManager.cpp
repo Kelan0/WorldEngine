@@ -211,7 +211,7 @@ bool GraphicsManager::createVulkanInstance(SDL_Window* windowHandle, const char*
 #endif
 
     if (enableValidationLayers) {
-        LOG_INFO("Enabling Vulkan validation layers");
+        LOG_WARN("Enabling Vulkan validation layers - This will probably heavily impact performance");
     }
 
     uint32_t instanceExtensionCount;
@@ -293,13 +293,16 @@ bool GraphicsManager::createDebugUtilsMessenger() {
 
     struct Validator {
         static VKAPI_ATTR VkBool32 VKAPI_CALL validate(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
+//            PROFILE_SCOPE("Vulkan DebugUtilsMessenger validation callback");
             if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
                 if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
                     LOG_ERROR("[VULKAN API] %s", pCallbackData->pMessage);
                 } else if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
                     LOG_WARN("[VULKAN API] %s", pCallbackData->pMessage);
-                } else {
+                } else if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
                     LOG_INFO("[VULKAN API] %s", pCallbackData->pMessage);
+                } else if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
+                    LOG_DEBUG("[VULKAN API] %s", pCallbackData->pMessage);
                 }
             }
 
@@ -323,7 +326,8 @@ bool GraphicsManager::createDebugUtilsMessenger() {
     messengerCreateInfo.setMessageType(
             vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
             vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-            vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance);
+            vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
+            vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding);
 
     messengerCreateInfo.setPfnUserCallback(Validator::validate);
 
@@ -952,6 +956,8 @@ void GraphicsManager::endFrame() {
 
     commandBuffer.end();
 
+    Profiler::endGraphicsFrame();
+
     PROFILE_REGION("Wait for image fence")
 
     if (m_swapchain.imagesInFlight[m_swapchain.currentImageIndex]) {
@@ -959,8 +965,6 @@ void GraphicsManager::endFrame() {
         assert(result == vk::Result::eSuccess);
     }
     m_swapchain.imagesInFlight[m_swapchain.currentImageIndex] = frameFence;
-
-    Profiler::endGraphicsFrame(); // Needs to go after waitForFences due to possible cleanup of in-use graphics resources in endGraphicsFrame
 
     PROFILE_REGION("Reset frame fence")
     m_device.device->resetFences({frameFence});

@@ -125,11 +125,12 @@ bool Application::getArgValue(int argc, char* argv[], int& index, const std::vec
 
 bool Application::initInternal() {
     PROFILE_SCOPE("Application::initInternal")
+    LOG_INFO("Full initialization started");
 
     m_mainThreadId = std::this_thread::get_id();
     LOG_INFO("Initializing application on main thread 0x%016llx", ThreadUtils::getThreadHashedId(m_mainThreadId));
 
-    PROFILE_REGION("Init SDL")
+    PROFILE_REGION("Initialize SDL")
 
     LOG_INFO("Initializing SDL");
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
@@ -156,8 +157,10 @@ bool Application::initInternal() {
     }
 
     PROFILE_REGION("Init Application")
+    LOG_INFO("Initializing application");
     init();
 
+    LOG_INFO("Full initialization complete");
     return true;
 }
 

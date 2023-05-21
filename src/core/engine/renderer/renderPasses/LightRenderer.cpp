@@ -50,18 +50,24 @@ LightRenderer::~LightRenderer() {
     delete m_vsmBlurIntermediateImage;
 
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
-        delete m_shadowRenderPassResources[i]->descriptorSet;
-        delete m_shadowRenderPassResources[i]->cameraInfoBuffer;
-        delete m_lightingRenderPassResources[i]->descriptorSet;
-        delete m_lightingRenderPassResources[i]->lightInfoBuffer;
-        delete m_lightingRenderPassResources[i]->shadowMapBuffer;
-        delete m_lightingRenderPassResources[i]->uniformBuffer;
-//        delete m_vsmBlurResources[i]->descriptorSet;
+        if (m_shadowRenderPassResources[i] != nullptr) {
+            delete m_shadowRenderPassResources[i]->descriptorSet;
+            delete m_shadowRenderPassResources[i]->cameraInfoBuffer;
+        }
+        if (m_lightingRenderPassResources[i] != nullptr) {
+            delete m_lightingRenderPassResources[i]->descriptorSet;
+            delete m_lightingRenderPassResources[i]->lightInfoBuffer;
+            delete m_lightingRenderPassResources[i]->shadowMapBuffer;
+            delete m_lightingRenderPassResources[i]->uniformBuffer;
+        }
 
-        for (auto& descriptorSet : m_vsmBlurResources[i]->descriptorSetsBlurX)
-            delete descriptorSet;
-        for (auto& descriptorSet : m_vsmBlurResources[i]->descriptorSetsBlurY)
-            delete descriptorSet;
+        if (m_vsmBlurResources[i] != nullptr) {
+//            delete m_vsmBlurResources[i]->descriptorSet;
+            for (auto &descriptorSet: m_vsmBlurResources[i]->descriptorSetsBlurX)
+                delete descriptorSet;
+            for (auto &descriptorSet: m_vsmBlurResources[i]->descriptorSetsBlurY)
+                delete descriptorSet;
+        }
     }
 
     for (auto& entry : m_inactiveShadowMaps) {
@@ -80,6 +86,7 @@ LightRenderer::~LightRenderer() {
 }
 
 bool LightRenderer::init() {
+    LOG_INFO("Initializing LightRenderer");
 
     initEmptyShadowMap();
 
@@ -363,7 +370,7 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, co
                 commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_shadowGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
 
                 m_shadowRenderPass->begin(commandBuffer, cascadedShadowMap->getCascadeFramebuffer(j), vk::SubpassContents::eInline);
-                Engine::instance()->getSceneRenderer()->render(dt, commandBuffer, &frustum);
+                Engine::instance()->getSceneRenderer()->drawEntities(dt, commandBuffer, &frustum);
                 commandBuffer.endRenderPass();
 
                 shadowMapImages.emplace_back(cascadedShadowMap->getCascadeShadowVarianceImageView(j));

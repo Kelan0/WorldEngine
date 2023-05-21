@@ -16,8 +16,6 @@ class Texture;
 class Material;
 class Image2D;
 
-class TerrainRenderer;
-
 class SceneRenderer {
 public:
     SceneRenderer();
@@ -28,7 +26,7 @@ public:
 
     void preRender(double dt);
 
-    void render(double dt, const vk::CommandBuffer& commandBuffer, const Frustum* frustum);
+    void drawEntities(double dt, const vk::CommandBuffer& commandBuffer, const Frustum* frustum);
 
     void setScene(Scene* scene);
 
@@ -45,8 +43,6 @@ public:
     uint32_t registerTexture(Texture* texture);
 
     uint32_t registerMaterial(Material* material);
-
-    TerrainRenderer* getTerrainRenderer() const;
 
 private:
     void initMissingTextureMaterial();
@@ -180,8 +176,6 @@ private:
     double m_previousPartialTicks;
 
     uint32_t m_numAddedRenderEntities;
-
-    TerrainRenderer* m_terrainRenderer;
 };
 
 

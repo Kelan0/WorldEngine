@@ -1,5 +1,4 @@
 #include "core/engine/renderer/SceneRenderer.h"
-#include "core/engine/renderer/TerrainRenderer.h"
 #include "core/graphics/ImageData.h"
 #include "core/graphics/Image2D.h"
 #include "core/graphics/ImageView.h"
@@ -22,7 +21,6 @@ struct AlwaysUpdateFlag { uint8_t _v; };
 
 SceneRenderer::SceneRenderer():
     m_scene(nullptr),
-    m_terrainRenderer(new TerrainRenderer()),
     m_numRenderEntities(0),
     m_previousPartialTicks(1.0),
     m_numAddedRenderEntities(0) {
@@ -31,14 +29,14 @@ SceneRenderer::SceneRenderer():
 SceneRenderer::~SceneRenderer() {
     LOG_INFO("Destroying SceneRenderer");
 
-    delete m_terrainRenderer;
-
     for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
-        delete m_resources[i]->objectIndicesBuffer;
-        delete m_resources[i]->worldTransformBuffer;
-        delete m_resources[i]->materialDataBuffer;
-        delete m_resources[i]->objectDescriptorSet;
-        delete m_resources[i]->materialDescriptorSet;
+        if (m_resources[i] != nullptr) {
+            delete m_resources[i]->objectIndicesBuffer;
+            delete m_resources[i]->worldTransformBuffer;
+            delete m_resources[i]->materialDataBuffer;
+            delete m_resources[i]->objectDescriptorSet;
+            delete m_resources[i]->materialDescriptorSet;
+        }
     }
 }
 
@@ -59,13 +57,13 @@ bool SceneRenderer::init() {
     initialImageLayouts.resize(maxTextures, vk::ImageLayout::eShaderReadOnlyOptimal);
 
     m_objectDescriptorSetLayout = builder
-            .addStorageBuffer(0, vk::ShaderStageFlagBits::eVertex)
-            .addStorageBuffer(1, vk::ShaderStageFlagBits::eVertex)
+            .addStorageBuffer(0, vk::ShaderStageFlagBits::eVertex) // object data buffer (transform and other info)
+            .addStorageBuffer(1, vk::ShaderStageFlagBits::eVertex) // object indices buffer
             .build("SceneRenderer-ObjectDescriptorSetLayout");
 
     m_materialDescriptorSetLayout = builder
-            .addCombinedImageSampler(0, vk::ShaderStageFlagBits::eFragment, maxTextures)
-            .addStorageBuffer(1, vk::ShaderStageFlagBits::eFragment)
+            .addCombinedImageSampler(0, vk::ShaderStageFlagBits::eFragment, maxTextures) // All material textures
+            .addStorageBuffer(1, vk::ShaderStageFlagBits::eFragment) // material data buffer (material properties & texture indices)
             .build("SceneRenderer-MaterialDescriptorSetLayout");
 
     for (int i = 0; i < CONCURRENT_FRAMES; ++i) {
@@ -96,9 +94,6 @@ bool SceneRenderer::init() {
 
     m_previousPartialTicks = 1.0; // First frame considers one tick to have passed (m_previousPartialTicks > current partialTicks)
 
-    if (!m_terrainRenderer->init()) {
-        return false;
-    }
     return true;
 }
 
@@ -115,20 +110,16 @@ void SceneRenderer::preRender(double dt) {
 
     m_previousPartialTicks = Engine::instance()->getPartialTicks();
     m_numAddedRenderEntities = 0;
-
-    m_terrainRenderer->preRender(dt);
 }
 
-void SceneRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, const Frustum* frustum) {
-    PROFILE_SCOPE("SceneRenderer::render")
-    PROFILE_BEGIN_GPU_CMD("SceneRenderer::render", commandBuffer);
-
-    m_terrainRenderer->render(dt, commandBuffer, frustum);
+void SceneRenderer::drawEntities(double dt, const vk::CommandBuffer& commandBuffer, const Frustum* frustum) {
+    PROFILE_SCOPE("SceneRenderer::drawEntities")
+    PROFILE_BEGIN_GPU_CMD("SceneRenderer::drawEntities", commandBuffer);
 
     applyFrustumCulling(frustum);
     recordRenderCommands(dt, commandBuffer);
 
-    PROFILE_END_GPU_CMD("SceneRenderer::render", commandBuffer);
+    PROFILE_END_GPU_CMD("SceneRenderer::drawEntities", commandBuffer);
 }
 
 void SceneRenderer::setScene(Scene* scene) {
@@ -211,10 +202,6 @@ uint32_t SceneRenderer::registerMaterial(Material* material) {
         materialIndex = it->second;
     }
     return materialIndex;
-}
-
-TerrainRenderer* SceneRenderer::getTerrainRenderer() const {
-    return m_terrainRenderer;
 }
 
 void SceneRenderer::initMissingTextureMaterial() {

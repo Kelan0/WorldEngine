@@ -2,7 +2,7 @@
 #include "core/graphics/ImageCube.h"
 #include "core/engine/renderer/EnvironmentMap.h"
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
-#include "core/engine/scene/terrain/TerrainComponent.h"
+#include "core/engine/scene/terrain/QuadtreeTerrain.h"
 #include "core/engine/scene/Scene.h"
 #include "core/application/InputHandler.h"
 #include "core/engine/scene/EntityHierarchy.h"
@@ -35,7 +35,7 @@ void TerrainTestApplication::init() {
 
     Entity terrainEntity = EntityHierarchy::create(Engine::scene(), "terrainEntity");
     terrainEntity.addComponent<Transform>().translate(0.0, 0.0, 0.0);
-    terrainEntity.addComponent<TerrainComponent>();
+    terrainEntity.addComponent<QuadtreeTerrainComponent>();
 }
 
 void TerrainTestApplication::cleanup() {
@@ -56,14 +56,19 @@ void TerrainTestApplication::handleUserInput(double dt) {
         input()->toggleMouseGrabbed();
     }
 
+    if (input()->keyPressed(SDL_SCANCODE_F2)) {
+        Engine::instance()->setRenderWireframeEnabled(!Engine::instance()->isRenderWireframeEnabled());
+    }
+
     if (input()->isMouseGrabbed()) {
         Transform& cameraTransform = Engine::scene()->getMainCameraEntity().getComponent<Transform>();
         glm::ivec2 dMouse = input()->getRelativeMouseState();
         if (isViewportInverted())
             dMouse.y *= -1;
 
-        cameraPitch += dMouse.y * 0.001F;
-        cameraYaw -= dMouse.x * 0.001F;
+        const float mouseSensitivity = 0.001F / currentZoomFactor;
+        cameraPitch += dMouse.y * mouseSensitivity;
+        cameraYaw -= dMouse.x * mouseSensitivity;
         if (cameraYaw > +M_PI) cameraYaw -= M_PI * 2.0;
         if (cameraYaw < -M_PI) cameraYaw += M_PI * 2.0;
         if (cameraPitch > +M_PI * 0.5) cameraPitch = +M_PI * 0.5;
@@ -84,5 +89,30 @@ void TerrainTestApplication::handleUserInput(double dt) {
             movementDir = cameraTransform.getRotationMatrix() * glm::normalize(movementDir);
             cameraTransform.translate(movementDir * (double)playerMovementSpeed * dt);
         }
+
+        if (input()->keyDown(SDL_SCANCODE_LCTRL)) {
+            int zoomIncr = input()->getMouseScrollAmount().y > 0 ? 1 : input()->getMouseScrollAmount().y < 0 ? -1 : 0;
+            if (zoomIncr != 0)
+                targetZoomFactor *= glm::pow(1.15F, (float)zoomIncr);
+        } else {
+            targetZoomFactor = 1.0F;
+        }
+    } else {
+        targetZoomFactor = 1.0F;
     }
+
+    if (targetZoomFactor < 0.66F)
+        targetZoomFactor = 0.66F;
+
+    if (targetZoomFactor > 1500.0F)
+        targetZoomFactor = 1500.0F;
+
+    float zoomInSpeed = 10.0F;
+    float zoomOutSpeed = 10.0F;
+
+    currentZoomFactor = glm::lerp(currentZoomFactor, targetZoomFactor, glm::min(1.0F, (float)((targetZoomFactor > currentZoomFactor ? zoomInSpeed : zoomOutSpeed) * dt)));
+
+    Camera& camera = Engine::scene()->getMainCameraEntity().getComponent<Camera>();
+    double fov = glm::radians(90.0);
+    camera.setFov(fov / currentZoomFactor);
 }
