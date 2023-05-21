@@ -24,4 +24,12 @@ struct ScreenMaximisedEvent {
     uint8_t _v;
 };
 
+struct WindowFocusLostEvent {
+    uint8_t _v;
+};
+
+struct WindowFocusGainedEvent {
+    uint8_t _v;
+};
+
 #endif //WORLDENGINE_APPLICATIONEVENTS_H
