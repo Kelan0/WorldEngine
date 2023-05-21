@@ -35,17 +35,19 @@ public:
 public:
     Frustum();
 
-    explicit Frustum(const glm::dmat4& viewProjection);
+    explicit Frustum(const glm::dvec3& origin, const glm::dmat4& viewProjection);
 
     explicit Frustum(const RenderCamera& renderCamera);
 
     Frustum(const Transform& transform, const Camera& camera);
 
-    Frustum& set(const glm::dmat4& viewProjection);
+    Frustum& set(const glm::dvec3& origin, const glm::dmat4& viewProjection);
 
     Frustum& set(const RenderCamera& renderCamera);
 
     Frustum& set(const Transform& transform, const Camera& camera);
+
+    const glm::dvec3& getOrigin() const;
 
     const Plane& getPlane(size_t planeIndex) const;
 
@@ -68,6 +70,7 @@ private:
     void getRenderCorners(glm::dvec3* corners) const;
 
 private:
+    glm::dvec3 m_origin;
     Plane m_planes[NumPlanes];
     mutable glm::dvec3 m_corners[NumCorners];
 };

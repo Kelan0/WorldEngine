@@ -2,10 +2,14 @@
 #include "core/graphics/ImageCube.h"
 #include "core/engine/renderer/EnvironmentMap.h"
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
-#include "core/engine/scene/terrain/QuadtreeTerrain.h"
+#include "core/engine/scene/terrain/QuadtreeTerrainComponent.h"
+#include "core/engine/scene/terrain/TerrainTileQuadtree.h"
 #include "core/engine/scene/Scene.h"
 #include "core/application/InputHandler.h"
 #include "core/engine/scene/EntityHierarchy.h"
+#include "core/engine/renderer/Material.h"
+#include "core/engine/renderer/RenderComponent.h"
+#include "core/graphics/Mesh.h"
 
 TerrainTestApplication::TerrainTestApplication() {
 
@@ -18,6 +22,8 @@ TerrainTestApplication::~TerrainTestApplication() {
 void TerrainTestApplication::init() {
 
     setTickrate(60.0);
+
+    MeshData<Vertex> testMeshData;
 
     ImageCubeConfiguration imageCubeConfig{};
     imageCubeConfig.device = Engine::graphics()->getDevice();
@@ -35,7 +41,38 @@ void TerrainTestApplication::init() {
 
     Entity terrainEntity = EntityHierarchy::create(Engine::scene(), "terrainEntity");
     terrainEntity.addComponent<Transform>().translate(0.0, 0.0, 0.0);
-    terrainEntity.addComponent<QuadtreeTerrainComponent>();
+    QuadtreeTerrainComponent& terrain = terrainEntity.addComponent<QuadtreeTerrainComponent>().setSize(glm::dvec2(32.0, 32.0));
+
+
+    testMeshData.clear();
+    testMeshData.createUVSphere(glm::vec3(0.0F), 0.1F, 45, 45);
+    testMeshData.computeTangents();
+    MeshConfiguration sphereMeshConfig{};
+    sphereMeshConfig.device = Engine::graphics()->getDevice();
+    sphereMeshConfig.setMeshData(&testMeshData);
+    std::shared_ptr<Mesh> sphereMesh = std::shared_ptr<Mesh>(Mesh::create(sphereMeshConfig, "Demo-SphereMesh"));
+
+    size_t numSpheresX = 17;
+    size_t numSpheresZ = 17;
+
+    for (size_t i = 0; i < numSpheresX; ++i) {
+        for (size_t j = 0; j < numSpheresZ; ++j) {
+
+            MaterialConfiguration sphereMaterial1Config{};
+            sphereMaterial1Config.device = Engine::graphics()->getDevice();
+            sphereMaterial1Config.setAlbedo(glm::vec3(0.5F));
+            sphereMaterial1Config.setRoughness(1.0F - (((float)i + 0.5F) / (float)numSpheresX));
+            sphereMaterial1Config.setMetallic(1.0F - (((float)j + 0.5F) / (float)numSpheresX));
+            std::shared_ptr<Material> sphereMaterial1 = std::shared_ptr<Material> (Material::create(sphereMaterial1Config, "Demo-SphereMaterial1-" + std::to_string(i) + "-" + std::to_string(j)));
+
+            glm::dvec2 normPos = glm::dvec2(i, j) / glm::dvec2(numSpheresX - 1, numSpheresZ - 1);
+            glm::dvec3 pos = terrain.getTileQuadtree()->getNodePosition(normPos);
+
+            Entity sphereEntity1 = EntityHierarchy::create(Engine::scene(), "sphereEntity[" + std::to_string(i) + ", " + std::to_string(j) + "]");
+            sphereEntity1.addComponent<Transform>().translate(pos.x, pos.z + 0.1F, pos.y);
+            sphereEntity1.addComponent<RenderComponent>().setMesh(sphereMesh).setMaterial(sphereMaterial1);
+        }
+    }
 }
 
 void TerrainTestApplication::cleanup() {

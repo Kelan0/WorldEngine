@@ -32,12 +32,12 @@ void main() {
     out_NormalXYZ_Metallic.w = 0.0;
     outEmissionRGB_AO.rgb = vec3(0.0);
     outEmissionRGB_AO.a = 1.0;
+    outVelocityXY.xy = vec2(0.0, 0.0);
 
-    vec2 currPositionNDC = (fs_currPosition.xy / fs_currPosition.w);
-    vec2 prevPositionNDC = (fs_prevPosition.xy / fs_prevPosition.w);
-    vec2 currPosition = (currPositionNDC.xy - taaCurrentJitterOffset.xy);
-    vec2 prevPosition = (prevPositionNDC.xy - taaPreviousJitterOffset.xy);
-    vec2 velocity = (currPosition.xy - prevPosition.xy) * vec2(0.5, -0.5);
-
-    outVelocityXY.xy = velocity * VELOCITY_PRECISION_SCALE; // Scale velocity to maintain precision. It needs to be divided again when accessed
+//    vec2 currPositionNDC = (fs_currPosition.xy / fs_currPosition.w);
+//    vec2 prevPositionNDC = (fs_prevPosition.xy / fs_prevPosition.w);
+//    vec2 currPosition = (currPositionNDC.xy - taaCurrentJitterOffset.xy);
+//    vec2 prevPosition = (prevPositionNDC.xy - taaPreviousJitterOffset.xy);
+//    vec2 velocity = (currPosition.xy - prevPosition.xy) * vec2(0.5, -0.5);
+//    outVelocityXY.xy = velocity * VELOCITY_PRECISION_SCALE; // Scale velocity to maintain precision. It needs to be divided again when accessed
 }

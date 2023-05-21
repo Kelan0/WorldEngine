@@ -196,10 +196,9 @@ void DeferredRenderer::renderTerrainGeometryPass(double dt, const vk::CommandBuf
 
     auto graphicsPipeline = getTerrainGeometryGraphicsPipeline();
 
-    std::array<vk::DescriptorSet, 1> descriptorSets = {
+    std::array<vk::DescriptorSet, 2> descriptorSets = {
             m_resources->globalDescriptorSet->getDescriptorSet(),
-//            Engine::instance()->getSceneRenderer()->getObjectDescriptorSet()->getDescriptorSet(),
-//            Engine::instance()->getSceneRenderer()->getMaterialDescriptorSet()->getDescriptorSet(),
+            Engine::instance()->getTerrainRenderer()->getTerrainDescriptorSet()->getDescriptorSet()
     };
 
     std::array<uint32_t, 0> dynamicOffsets = {}; // zero-size array okay?
@@ -515,8 +514,7 @@ bool DeferredRenderer::createTerrainGeometryGraphicsPipeline() {
     pipelineConfig.setAttachmentBlendState(0, AttachmentBlendState(false, 0b1111));
     pipelineConfig.setAttachmentBlendState(1, AttachmentBlendState(false, 0b1111));
     pipelineConfig.addDescriptorSetLayout(m_globalDescriptorSetLayout->getDescriptorSetLayout());
-    pipelineConfig.addDescriptorSetLayout(Engine::instance()->getSceneRenderer()->getObjectDescriptorSetLayout()->getDescriptorSetLayout());
-    pipelineConfig.addDescriptorSetLayout(Engine::instance()->getSceneRenderer()->getMaterialDescriptorSetLayout()->getDescriptorSetLayout());
+    pipelineConfig.addDescriptorSetLayout(Engine::instance()->getTerrainRenderer()->getTerrainDescriptorSetLayout()->getDescriptorSetLayout());
     return m_terrainGeometryGraphicsPipeline->recreate(pipelineConfig, "DeferredRenderer-TerrainGeometryGraphicsPipeline");
 }
 

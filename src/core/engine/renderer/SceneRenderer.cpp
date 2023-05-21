@@ -471,14 +471,12 @@ void SceneRenderer::streamEntityRenderData() {
 }
 
 void* SceneRenderer::mapObjectIndicesBuffer(size_t maxObjects) {
-    PROFILE_SCOPE("SceneRenderer::mapObjectIndicesBuffer")
 
     maxObjects = CEIL_TO_MULTIPLE(maxObjects, 4);
 
     vk::DeviceSize newBufferSize = sizeof(uint32_t) * maxObjects;
 
     if (m_resources->objectIndicesBuffer == nullptr || newBufferSize > m_resources->objectIndicesBuffer->getSize()) {
-        PROFILE_SCOPE("Allocate ObjectIndicesBuffer");
 
         BufferConfiguration objectIndicesBufferConfig{};
         objectIndicesBufferConfig.device = Engine::graphics()->getDevice();
@@ -499,12 +497,10 @@ void* SceneRenderer::mapObjectIndicesBuffer(size_t maxObjects) {
 }
 
 void* SceneRenderer::mapObjectDataBuffer(size_t maxObjects) {
-    PROFILE_SCOPE("SceneRenderer::mapObjectDataBuffer")
 
     vk::DeviceSize newBufferSize = sizeof(GPUObjectData) * maxObjects;
 
     if (m_resources->worldTransformBuffer == nullptr || newBufferSize > m_resources->worldTransformBuffer->getSize()) {
-        PROFILE_SCOPE("Allocate WorldTransformBuffer");
 
         BufferConfiguration worldTransformBufferConfig{};
         worldTransformBufferConfig.device = Engine::graphics()->getDevice();
@@ -525,12 +521,10 @@ void* SceneRenderer::mapObjectDataBuffer(size_t maxObjects) {
 }
 
 void* SceneRenderer::mapMaterialDataBuffer(size_t maxObjects) {
-    PROFILE_SCOPE("SceneRenderer::mapMaterialDataBuffer")
 
     vk::DeviceSize newBufferSize = sizeof(GPUMaterial) * maxObjects;
 
     if (m_resources->materialDataBuffer == nullptr || newBufferSize > m_resources->materialDataBuffer->getSize()) {
-        PROFILE_SCOPE("Allocate materialDataBuffer");
 
         BufferConfiguration materialDataBufferConfig{};
         materialDataBufferConfig.device = Engine::graphics()->getDevice();

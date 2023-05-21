@@ -1,5 +1,5 @@
-#ifndef WORLDENGINE_QUADTREETERRAIN_H
-#define WORLDENGINE_QUADTREETERRAIN_H
+#ifndef WORLDENGINE_QUADTREETERRAINCOMPONENT_H
+#define WORLDENGINE_QUADTREETERRAINCOMPONENT_H
 
 #include "core/core.h"
 
@@ -27,23 +27,12 @@ public:
 
     double getHeightScale() const;
 
-    TerrainTileQuadtree* getTileQuadtree() const;
+    const std::unique_ptr<TerrainTileQuadtree>& getTileQuadtree() const;
 
 private:
-    uint32_t m_maxQuadtreeDepth;
     uint32_t m_tileResolution;
-    glm::dvec2 m_size;
-    double m_heightScale;
-
-    TerrainTileQuadtree* m_tileQuadtree;
+    std::unique_ptr<TerrainTileQuadtree> m_tileQuadtree;
 };
 
 
-class TerrainTileQuadtree {
-public:
-
-private:
-
-};
-
-#endif //WORLDENGINE_QUADTREETERRAIN_H
+#endif //WORLDENGINE_QUADTREETERRAINCOMPONENT_H

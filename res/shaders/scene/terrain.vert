@@ -4,6 +4,10 @@
 
 #include "shaders/common/structures.glsl"
 
+struct TerrainData {
+    mat4 modelMatrix;
+};
+
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec3 tangent;
@@ -23,9 +27,13 @@ layout(std140, set = 0, binding = 0) uniform UBO1 {
     vec2 taaCurrentJitterOffset;
 };
 
+layout(std140, set = 1, binding = 0) readonly buffer TerrainDataBuffer {
+    TerrainData terrainData[];
+};
+
 void main() {
-    mat4 prevModelMatrix = mat4(1.0);
-    mat4 modelMatrix = mat4(1.0);
+//    mat4 prevModelMatrix = mat4(1.0);
+    mat4 modelMatrix = terrainData[gl_InstanceIndex].modelMatrix;
 
     mat3 normalMatrix = transpose(inverse(mat3(camera.viewMatrix) * mat3(modelMatrix)));
 
@@ -38,7 +46,7 @@ void main() {
     fs_tangent = worldTangent.xyz;
     fs_bitangent = worldBitangent.xyz;
     fs_texture = texture;
-    fs_prevPosition = prevCamera.viewProjectionMatrix * prevModelMatrix * vec4(position, 1.0);
+//    fs_prevPosition = prevCamera.viewProjectionMatrix * prevModelMatrix * vec4(position, 1.0);
     fs_currPosition = camera.viewProjectionMatrix * worldPos;
 
     gl_Position = fs_currPosition;

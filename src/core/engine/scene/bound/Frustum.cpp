@@ -3,22 +3,23 @@
 #include "core/application/Engine.h"
 
 Frustum::Frustum():
-    Frustum(glm::dmat4(1.0)) {
+    Frustum(glm::dvec3(0.0), glm::dmat4(1.0)) {
 }
 
 Frustum::Frustum(const RenderCamera& renderCamera) {
     this->set(renderCamera);
 }
 
-Frustum::Frustum(const glm::dmat4& viewProjection) {
-    this->set(viewProjection);
+Frustum::Frustum(const glm::dvec3& origin, const glm::dmat4& viewProjection) {
+    this->set(origin, viewProjection);
 }
 
 Frustum::Frustum(const Transform& transform, const Camera& camera) {
     this->set(transform, camera);
 }
 
-Frustum &Frustum::set(const glm::dmat4& viewProjection) {
+Frustum &Frustum::set(const glm::dvec3& origin, const glm::dmat4& viewProjection) {
+    m_origin = origin;
 
     m_planes[Plane_Left][0] = viewProjection[0][3] + viewProjection[0][0];
     m_planes[Plane_Left][1] = viewProjection[1][3] + viewProjection[1][0];
@@ -60,7 +61,7 @@ Frustum &Frustum::set(const glm::dmat4& viewProjection) {
 }
 
 Frustum &Frustum::set(const RenderCamera& renderCamera) {
-    this->set(renderCamera.getViewProjectionMatrix());
+    this->set(renderCamera.getTransform().getTranslation(), renderCamera.getViewProjectionMatrix());
     return *this;
 }
 
@@ -68,8 +69,12 @@ Frustum &Frustum::set(const Transform& transform, const Camera& camera) {
     glm::dmat4 projectionMatrix = camera.getProjectionMatrix();
     glm::dmat4 viewMatrix = glm::inverse(transform.getMatrix());
     glm::dmat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
-    this->set(viewProjectionMatrix);
+    this->set(transform.getTranslation(), viewProjectionMatrix);
     return *this;
+}
+
+const glm::dvec3& Frustum::getOrigin() const {
+    return m_origin;
 }
 
 const Plane& Frustum::getPlane(size_t planeIndex) const {
@@ -92,6 +97,7 @@ const glm::dvec3& Frustum::getCorner(size_t cornerIndex) const {
             case Corner_Right_Top_Far: m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Right], m_planes[Plane_Top], m_planes[Plane_Far]); break;
             case Corner_Right_Bottom_Far: m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Right], m_planes[Plane_Bottom], m_planes[Plane_Far]); break;
             case Corner_Left_Bottom_Far: m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Left], m_planes[Plane_Bottom], m_planes[Plane_Far]); break;
+            default: break;
         }
     }
     return m_corners[cornerIndex];

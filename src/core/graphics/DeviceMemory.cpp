@@ -27,7 +27,7 @@ bool findSmallestFreeBlock(const DeviceMemoryHeap::BlockRange& block, const Size
     if (!block.free) return true; // Consider allocated blocks to have 0 size
     const vk::DeviceSize blockBegin = DeviceMemoryManager::getAlignedOffset(block.offset, size.alignment);
     const vk::DeviceSize blockEnd = block.offset + block.size;
-    const vk::DeviceSize blockSize = blockEnd - blockBegin;
+    const vk::DeviceSize blockSize = blockEnd <= blockBegin ? 0 : blockEnd - blockBegin;
     return blockSize < size.size;
 }
 

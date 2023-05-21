@@ -567,16 +567,16 @@ void MeshData<Vertex_t>::createPlane(const glm::vec3& origin, const glm::vec3& u
     pushState();
 
     for (iv = 0, offsetV = 0.0F, texture.y = 0.0F; iv < (Index)vertexCountV; ++iv) {
-        offsetV += offsetIncrementV;
-        texture.y += textureIncrementV;
-
         for (iu = 0, offsetU = 0.0F, texture.x = 0.0F; iu < (Index)vertexCountU; ++iu) {
-            offsetU += offsetIncrementU;
-            texture.x += textureIncrementU;
 
             glm::vec3 position = origin + (u * offsetU) + (v * offsetV);
             addVertex(position, normal, texture);
+
+            offsetU += offsetIncrementU;
+            texture.x += textureIncrementU;
         }
+        offsetV += offsetIncrementV;
+        texture.y += textureIncrementV;
     }
 
 
