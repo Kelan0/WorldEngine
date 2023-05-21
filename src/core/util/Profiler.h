@@ -27,6 +27,7 @@
 #endif
 
 struct ShutdownGraphicsEvent;
+struct RecreateSwapchainEvent;
 
 struct __profile_handle {
     const char* name = nullptr;
@@ -77,6 +78,8 @@ private:
         bool allAvailable = false;
         std::vector<uint64_t> queryResults;
         uint32_t id = 0;
+        std::string name;
+        uint32_t framesSinceDestroyed = 0;
     };
 
     struct GPUQuery {
@@ -187,15 +190,17 @@ public:
 private:
     static bool writeTimestamp(const vk::CommandBuffer& commandBuffer, const vk::PipelineStageFlagBits& pipelineStage, GPUQuery* outQuery);
 
-    static bool getNextQueryPool(GPUQueryPool** queryPool);
+    static bool getNextQueryPool(const vk::CommandBuffer& commandBuffer, GPUQueryPool** queryPool);
 
     static bool createGpuTimestampQueryPool(const vk::Device& device, uint32_t capacity, vk::QueryPool* queryPool);
 
     static void destroyQueryPool(GPUQueryPool* queryPool);
 
-    static void resetQueryPools(GPUQueryPool** queryPools, size_t count);
+    static void resetQueryPools(const vk::CommandBuffer& commandBuffer, GPUQueryPool** queryPools, size_t count);
 
     static void onCleanupGraphics(ShutdownGraphicsEvent* event);
+
+    static void onRecreateSwapchain(RecreateSwapchainEvent* event);
 
     static ThreadContext& threadContext();
 
