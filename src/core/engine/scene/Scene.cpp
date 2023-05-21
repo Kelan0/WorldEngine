@@ -15,8 +15,9 @@ Scene::~Scene() {
     m_registry.clear();
 }
 
-void Scene::init() {
+bool Scene::init() {
     PROFILE_SCOPE("Scene::init")
+    LOG_INFO("Initializing Scene");
     enableEvents<EntityHierarchy>();
 
     m_eventDispatcher->connect<ComponentRemovedEvent<EntityHierarchy>>([](ComponentRemovedEvent<EntityHierarchy>* event) {
@@ -31,6 +32,8 @@ void Scene::init() {
     m_defaultCamera.addComponent<Camera>().setFovDegrees(90.0).setClippingPlanes(0.05, 500.0);
     m_defaultCamera.addComponent<Transform>();
     setMainCameraEntity(nullptr);
+
+    return true;
 }
 
 void Scene::preTick(double dt) {

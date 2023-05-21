@@ -41,17 +41,20 @@ ReprojectionRenderer::~ReprojectionRenderer() {
         delete m_previousFrame.image;
     }
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
-        delete m_resources[i]->reprojectionDescriptorSet;
-        delete m_resources[i]->reprojectionUniformBuffer;
-        delete m_resources[i]->frame.framebuffer;
-        delete m_resources[i]->frame.imageView;
-        delete m_resources[i]->frame.image;
+        if (m_resources[i] != nullptr) {
+            delete m_resources[i]->reprojectionDescriptorSet;
+            delete m_resources[i]->reprojectionUniformBuffer;
+            delete m_resources[i]->frame.framebuffer;
+            delete m_resources[i]->frame.imageView;
+            delete m_resources[i]->frame.image;
+        }
     }
 
     Engine::eventDispatcher()->disconnect(&ReprojectionRenderer::recreateSwapchain, this);
 }
 
 bool ReprojectionRenderer::init() {
+    LOG_INFO("Initializing ReprojectionRenderer");
     m_reprojectionGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(Engine::graphics()->getDevice(), "ReprojectionRenderer-ReprojectionGraphicsPipeline"));
 
     const SharedResource<DescriptorPool>& descriptorPool = Engine::graphics()->descriptorPool();

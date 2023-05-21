@@ -34,6 +34,7 @@ UIRenderer::~UIRenderer() {
 }
 
 bool UIRenderer::init(SDL_Window* windowHandle) {
+    LOG_INFO("Initializing UIRenderer");
 
     ImGui::GetIO(); // Initialize IO
     ImGui::StyleColorsDark();

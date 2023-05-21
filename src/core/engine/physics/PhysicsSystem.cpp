@@ -12,6 +12,7 @@ PhysicsSystem::~PhysicsSystem() {
 }
 
 bool PhysicsSystem::init() {
+    LOG_INFO("Initializing PhysicsSystem");
     m_scene->enableEvents<RigidBody>();
     m_scene->getEventDispatcher()->connect<ComponentAddedEvent<RigidBody>>(&PhysicsSystem::onRigidBodyAdded, this);
     m_scene->getEventDispatcher()->connect<ComponentRemovedEvent<RigidBody>>(&PhysicsSystem::onRigidBodyRemoved, this);

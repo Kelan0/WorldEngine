@@ -46,24 +46,28 @@ PostProcessRenderer::~PostProcessRenderer() {
     Engine::eventDispatcher()->disconnect(&PostProcessRenderer::recreateSwapchain, this);
 
     for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i) {
-        delete m_resources[i]->postProcessDescriptorSet;
-        delete m_resources[i]->postProcessUniformBuffer;
-        delete m_resources[i]->bloomBlurUniformBuffer;
-        delete m_resources[i]->bloomBlurInputDescriptorSet;
-        for (auto& descriptorSet : m_resources[i]->bloomBlurDescriptorSets)
-            delete descriptorSet;
-        for (auto& framebuffer : m_resources[i]->bloomBlurMipFramebuffers)
-            delete framebuffer;
-        for (auto& imageView : m_resources[i]->bloomBlurMipImageViews)
-            delete imageView;
-        delete m_resources[i]->bloomTextureImageView;
-        delete m_resources[i]->bloomBlurImage;
+        if (m_resources[i] != nullptr) {
+            delete m_resources[i]->postProcessDescriptorSet;
+            delete m_resources[i]->postProcessUniformBuffer;
+            delete m_resources[i]->bloomBlurUniformBuffer;
+            delete m_resources[i]->bloomBlurInputDescriptorSet;
+            for (auto &descriptorSet: m_resources[i]->bloomBlurDescriptorSets)
+                delete descriptorSet;
+            for (auto &framebuffer: m_resources[i]->bloomBlurMipFramebuffers)
+                delete framebuffer;
+            for (auto &imageView: m_resources[i]->bloomBlurMipImageViews)
+                delete imageView;
+            delete m_resources[i]->bloomTextureImageView;
+            delete m_resources[i]->bloomBlurImage;
+        }
     }
 
     delete m_exposureHistogram;
 }
 
 bool PostProcessRenderer::init() {
+    LOG_INFO("Initializing PostProcessRenderer");
+
     if (!m_exposureHistogram->init()) {
         LOG_ERROR("Failed to initialize PostProcessRenderer ExposureHistogram");
         return false;

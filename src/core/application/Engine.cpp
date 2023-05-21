@@ -182,51 +182,73 @@ Engine* Engine::instance() {
 
 bool Engine::init(SDL_Window* windowHandle) {
     PROFILE_SCOPE("Engine::init")
+    LOG_INFO("Engine initialization started");
 
-    PROFILE_REGION("Init GraphicsManager")
-
+    PROFILE_REGION("Engine initialize - GraphicsManager")
     if (!m_graphics->init(windowHandle, "WorldEngine")) {
-        LOG_ERROR("Failed to initialize graphics engine");
+        LOG_ERROR("Engine initialize failed - GraphicsManager");
         return false;
     }
 
-    PROFILE_REGION("Init UIRenderer")
-    if (!m_uiRenderer->init(windowHandle))
+    PROFILE_REGION("Engine initialize - UIRenderer")
+    if (!m_uiRenderer->init(windowHandle)) {
+        LOG_ERROR("Engine initialize failed - UIRenderer");
         return false;
+    }
 
-    PROFILE_REGION("Init Scene")
-    m_scene->init();
+    PROFILE_REGION("Engine initialize - Scene")
+    if (!m_scene->init()) {
+        LOG_ERROR("Engine initialize failed - Scene");
+        return false;
+    }
     m_eventDispatcher->repeatAll(m_scene->getEventDispatcher());
 
-    PROFILE_REGION("Init PhysicsSystem")
+    PROFILE_REGION("Engine initialize - PhysicsSystem")
     m_physicsSystem->setScene(m_scene);
-    if (!m_physicsSystem->init())
+    if (!m_physicsSystem->init()) {
+        LOG_ERROR("Engine initialize failed - PhysicsSystem");
         return false;
+    }
 
-    PROFILE_REGION("Init SceneRenderer")
+    PROFILE_REGION("Engine initialize - SceneRenderer")
     m_sceneRenderer->setScene(m_scene);
-    if (!m_sceneRenderer->init())
+    if (!m_sceneRenderer->init()) {
+        LOG_ERROR("Engine initialize failed - SceneRenderer");
         return false;
+    }
 
-    PROFILE_REGION("Init LightRenderer")
-    if (!m_lightRenderer->init())
         return false;
+    }
 
-    PROFILE_REGION("Init ImmediateRenderer")
-    if (!m_immediateRenderer->init())
+    PROFILE_REGION("Engine initialize - LightRenderer")
+    if (!m_lightRenderer->init()) {
+        LOG_ERROR("Engine initialize failed - LightRenderer");
         return false;
+    }
 
-    PROFILE_REGION("Init DeferredRenderer")
-    if (!m_deferredRenderer->init())
+    PROFILE_REGION("Engine initialize - ImmediateRenderer")
+    if (!m_immediateRenderer->init()) {
+        LOG_ERROR("Engine initialize failed - ImmediateRenderer");
         return false;
+    }
 
-    PROFILE_REGION("Init ReprojectionRenderer")
-    if (!m_reprojectionRenderer->init())
+    PROFILE_REGION("Engine initialize - DeferredRenderer")
+    if (!m_deferredRenderer->init()) {
+        LOG_ERROR("Engine initialize failed - DeferredRenderer");
         return false;
+    }
 
-    PROFILE_REGION("Init PostProcessRenderer")
-    if (!m_postProcessingRenderer->init())
+    PROFILE_REGION("Engine initialize - ReprojectionRenderer")
+    if (!m_reprojectionRenderer->init()) {
+        LOG_ERROR("Engine initialize failed - ReprojectionRenderer");
         return false;
+    }
+
+    PROFILE_REGION("Engine initialize - PostProcessRenderer")
+    if (!m_postProcessingRenderer->init()) {
+        LOG_ERROR("Engine initialize failed - PostProcessRenderer");
+        return false;
+    }
 
     m_runTime = 0.0;
     m_accumulatedTime = 0.0;
@@ -234,6 +256,7 @@ bool Engine::init(SDL_Window* windowHandle) {
 
     m_startTime = std::chrono::high_resolution_clock::now();
 
+    LOG_INFO("Engine initialization complete");
     return true;
 }
 

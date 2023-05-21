@@ -40,7 +40,7 @@ public:
 
     ~Scene();
 
-    void init();
+    bool init();
 
     void preTick(double dt);
 
