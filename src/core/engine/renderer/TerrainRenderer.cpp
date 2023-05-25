@@ -50,7 +50,7 @@ bool TerrainRenderer::init() {
     }
 
     MeshData<Vertex> terrainTileMeshData;
-    terrainTileMeshData.createPlane(glm::vec3(-0.5F, 0.0F, -0.5F), glm::vec3(1, 0, 0), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0), glm::vec2(1.0F), glm::uvec2(15, 15));
+    terrainTileMeshData.createPlane(glm::vec3(0.0F, 0.0F, 0.0F), glm::vec3(1, 0, 0), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0), glm::vec2(1.0F), glm::uvec2(15, 15));
 
     MaterialConfiguration terrainTileMaterialConfig{};
     terrainTileMaterialConfig.device = Engine::graphics()->getDevice();
@@ -84,7 +84,7 @@ void TerrainRenderer::drawTerrain(double dt, const vk::CommandBuffer& commandBuf
     }
 
     if (!m_terrainDataBuffer.empty()) {
-        GPUTerrainData *mappedTerrainDataBuffer = static_cast<GPUTerrainData *>(mapTerrainDataBuffer(m_terrainDataBuffer.size()));
+        GPUTerrainData *mappedTerrainDataBuffer = static_cast<GPUTerrainData *>(mapTerrainDataBuffer(m_terrainDataBuffer.capacity()));
         memcpy(&mappedTerrainDataBuffer[0], &m_terrainDataBuffer[0], m_terrainDataBuffer.size() * sizeof(GPUTerrainData));
 
         m_terrainTileMesh->draw(commandBuffer, m_terrainDataBuffer.size(), 0);
@@ -95,17 +95,27 @@ void TerrainRenderer::updateQuadtreeTerrainTiles(const QuadtreeTerrainComponent&
     quadtreeTerrain.getTileQuadtree()->setTransform(transform);
     quadtreeTerrain.getTileQuadtree()->update(frustum);
 
-    const std::vector<TerrainTileQuadtree::NodeQuad>& nodes = quadtreeTerrain.getTileQuadtree()->getLeafNodeQuads();
+    const std::vector<TerrainTileQuadtree::TileTreeNode>& nodes = quadtreeTerrain.getTileQuadtree()->getNodes();
 
     Transform tileTransform{};
 
     glm::dvec3 terrainScale(quadtreeTerrain.getSize().x, quadtreeTerrain.getHeightScale(), quadtreeTerrain.getSize().y);
 
     for (auto it = nodes.begin(); it != nodes.end(); ++it) {
-        const TerrainTileQuadtree::NodeQuad& nodeQuad = *it;
+        const TerrainTileQuadtree::TileTreeNode& node = *it;
 
-        tileTransform.setTranslation(nodeQuad.normalizedCoord.x * terrainScale.x, 0.0F, nodeQuad.normalizedCoord.y * terrainScale.z);
-        tileTransform.setScale(nodeQuad.normalizedSize * terrainScale);
+        if (TerrainTileQuadtree::isDeleted(node) || TerrainTileQuadtree::hasChildren(node))
+            continue;
+
+        glm::dvec2 treePosition = glm::dvec2(node.treePosition);// + glm::dvec2(0.5);
+        glm::dvec2 coord = quadtreeTerrain.getTileQuadtree()->getNormalizedNodeCoordinate(treePosition, node.treeDepth);
+        double size = quadtreeTerrain.getTileQuadtree()->getNormalizedNodeSizeForTreeDepth(node.treeDepth);
+
+        double x = coord.x * terrainScale.x - terrainScale.x * 0.5;
+        double y = 0.0F - node.treeDepth * 0.075;
+        double z = coord.y * terrainScale.z - terrainScale.z * 0.5;
+        tileTransform.setTranslation(x, y, z);
+        tileTransform.setScale(size * terrainScale);
 
         GPUTerrainData& terrainData = m_terrainDataBuffer.emplace_back();
         Transform::fillMatrixf(tileTransform, terrainData.modelMatrix);

@@ -41,7 +41,7 @@ void TerrainTestApplication::init() {
 
     Entity terrainEntity = EntityHierarchy::create(Engine::scene(), "terrainEntity");
     terrainEntity.addComponent<Transform>().translate(0.0, 0.0, 0.0);
-    QuadtreeTerrainComponent& terrain = terrainEntity.addComponent<QuadtreeTerrainComponent>().setSize(glm::dvec2(32.0, 32.0));
+    QuadtreeTerrainComponent& terrain = terrainEntity.addComponent<QuadtreeTerrainComponent>().setSize(glm::dvec2(1000.0, 1000.0)).setMaxQuadtreeDepth(12);
 
 
     testMeshData.clear();
@@ -133,6 +133,14 @@ void TerrainTestApplication::handleUserInput(double dt) {
                 targetZoomFactor *= glm::pow(1.15F, (float)zoomIncr);
         } else {
             targetZoomFactor = 1.0F;
+
+            int speedIncr = input()->getMouseScrollAmount().y > 0 ? 1 : input()->getMouseScrollAmount().y < 0 ? -1 : 0;
+            if (speedIncr != 0) {
+                playerMovementSpeed *= glm::pow(1.15F, (float)speedIncr);
+                float maxPlayerMovementSpeed = glm::pow(1.15F, 32.0F);
+                float minPlayerMovementSpeed = glm::pow(1.15F, -20.0F);
+                playerMovementSpeed = glm::clamp(playerMovementSpeed, minPlayerMovementSpeed, maxPlayerMovementSpeed);
+            }
         }
     } else {
         targetZoomFactor = 1.0F;

@@ -23,7 +23,19 @@ TerrainTileQuadtree::TerrainTileQuadtree(uint32_t maxQuadtreeDepth, const glm::d
     rootNode.quadIndex = (QuadIndex)0;
     m_nodes.emplace_back(rootNode);
 
-    m_leafNodeQuads.emplace_back(getNodeQuad(0));
+//    size_t rootChildIndex = splitNode(0);
+//
+//    size_t indexTopLeft = rootChildIndex + QuadIndex_TopLeft;
+//    size_t indexBottomLeft = rootChildIndex + QuadIndex_BottomLeft;
+//    size_t indexTopRight = rootChildIndex + QuadIndex_TopRight;
+//    size_t indexBottomRight = rootChildIndex + QuadIndex_BottomRight;
+//
+//    for (int i = 0; i < 8; ++i) {
+//        indexTopLeft = splitNode(indexTopLeft) + QuadIndex_BottomRight;
+//        indexBottomLeft = splitNode(indexBottomLeft) + QuadIndex_TopRight;
+//        indexTopRight = splitNode(indexTopRight) + QuadIndex_BottomLeft;
+//        indexBottomRight = splitNode(indexBottomRight) + QuadIndex_TopLeft;
+//    }
 }
 
 TerrainTileQuadtree::~TerrainTileQuadtree() {
@@ -31,21 +43,110 @@ TerrainTileQuadtree::~TerrainTileQuadtree() {
 }
 
 void TerrainTileQuadtree::update(const Frustum* frustum) {
-    glm::dvec2 normalizedNodeCoord = getNormalizedNodeCoordinate(0, glm::dvec2(0.5, 0.5));
-    glm::dvec3 position = getNodePosition(normalizedNodeCoord);
 
-//    double distance = glm::distance(position, frustum->getOrigin());
+    glm::dvec3 localCameraOrigin = glm::dvec3(glm::inverse(m_transform.getMatrix()) * glm::dvec4(frustum->getOrigin(), 1.0));
+    localCameraOrigin.x += m_size.x * 0.5;
+    localCameraOrigin.z += m_size.y * 0.5;
+
+//    LOG_DEBUG("Camera origin: [%.2f %.2f %.2f], Local camera origin: [%.2f %.2f %.2f]", frustum->getOrigin().x, frustum->getOrigin().y, frustum->getOrigin().z, localCameraOrigin.x, localCameraOrigin.y, localCameraOrigin.z);
+
+    double maxSize = glm::max(m_size.x, m_size.y);
+
+    double splitThreshold = 3.0;
+
+    m_nodeSplitList.clear();
+    m_nodeMergeList.clear();
+
+
+//    std::stack<size_t> unvisitedNodes;
+//    unvisitedNodes.push(0);
+//
+//    while (!unvisitedNodes.empty()) {
+//        const size_t &nodeIndex = unvisitedNodes.top();
+//        unvisitedNodes.pop();
+//
+//        const TileTreeNode &node = m_nodes[nodeIndex];
+//        if (isDeleted(node))
+//            continue;
+//
+//        double normalizedNodeSize = getNormalizedNodeSizeForTreeDepth(node.treeDepth);
+//        glm::dvec2 normalizedNodeCenterCoord = (glm::dvec2(node.treePosition) + glm::dvec2(0.5)) * normalizedNodeSize;
+//        glm::dvec3 nodeCenterPos(normalizedNodeCenterCoord.x * m_size.x, 0.0, normalizedNodeCenterCoord.y * m_size.y);
+//
+//        glm::dvec3 cameraToNodePosition = nodeCenterPos - localCameraOrigin;
+//        double cameraDistanceSq = glm::dot(cameraToNodePosition, cameraToNodePosition);
+//
+//        double edgeSize = normalizedNodeSize * maxSize;
+//        double splitDistance = edgeSize * splitThreshold;
+//    }
+
+
+    for (size_t i = 0; i < m_nodes.size(); ++i) {
+        const TileTreeNode& node = m_nodes[i];
+        if (isDeleted(node))
+            continue;
+
+        double normalizedNodeSize = getNormalizedNodeSizeForTreeDepth(node.treeDepth);
+        glm::dvec2 normalizedNodeCenterCoord = (glm::dvec2(node.treePosition) + glm::dvec2(0.5)) * normalizedNodeSize;
+        glm::dvec3 nodeCenterPos(normalizedNodeCenterCoord.x * m_size.x, 0.0, normalizedNodeCenterCoord.y * m_size.y);
+
+        glm::dvec3 cameraToNodePosition = nodeCenterPos - localCameraOrigin;
+        double cameraDistanceSq = glm::dot(cameraToNodePosition, cameraToNodePosition);
+
+        double edgeSize = normalizedNodeSize * maxSize;
+        double splitDistance = edgeSize * splitThreshold;
+
+        if (cameraDistanceSq < splitDistance * splitDistance) {
+            // Close enough to split
+
+            if (hasChildren(node) || node.treeDepth >= m_maxQuadtreeDepth)
+                continue; // Cannot split
+
+            splitNode(i);
+
+        } else if (cameraDistanceSq > splitDistance * splitDistance) {
+            // Far enough to merge
+
+            if (!hasChildren(node))
+                continue; // Cannot merge
+
+            mergeNode(i);
+        }
+    }
+
+//    // Sort split list from near to far. Closest nodes are split first.
+//    std::sort(m_nodeSplitList.begin(), m_nodeSplitList.end(), [](const NodeUpdate& lhs, const NodeUpdate& rhs) {
+//        return lhs.distance < rhs.distance;
+//    });
+//
+//    // // Sort merge list from far to near. Furthest nodes are merged first. ~~~~~~~~~~
+//    std::sort(m_nodeMergeList.begin(), m_nodeMergeList.end(), [](const NodeUpdate& lhs, const NodeUpdate& rhs) {
+//        if (lhs.treeDepth != rhs.treeDepth)
+//            return lhs.treeDepth < rhs.treeDepth;
+//        return lhs.distance > rhs.distance;
+//    });
+//
+//    size_t maxSplits = 8;
+//    size_t maxMerges = 1;
+//
+//    for (auto it = m_nodeSplitList.begin(); it != m_nodeSplitList.end() && maxSplits > 0; ++it, --maxSplits) {
+//        assert(it->index < m_nodes.size() && !hasChildren(m_nodes[it->index]));
+//        LOG_DEBUG("Splitting node %zu at depth %u", it->index, m_nodes[it->index].treeDepth);
+//        splitNode(it->index);
+//    }
+//    for (auto it = m_nodeMergeList.begin(); it != m_nodeMergeList.end() && maxMerges > 0; ++it, --maxMerges) {
+//        assert(it->index < m_nodes.size() && hasChildren(m_nodes[it->index]));
+//        LOG_DEBUG("Merging node %zu at depth %u", it->index, m_nodes[it->index].treeDepth);
+//        mergeNode(it->index);
+//    }
 }
 
-const std::vector<TerrainTileQuadtree::NodeQuad>& TerrainTileQuadtree::getLeafNodeQuads() {
-    return m_leafNodeQuads;
+const std::vector<TerrainTileQuadtree::TileTreeNode>& TerrainTileQuadtree::getNodes() {
+    return m_nodes;
 }
 
-glm::dvec2 TerrainTileQuadtree::getNormalizedNodeCoordinate(size_t nodeIndex, const glm::dvec2& offset) {
-    assert(nodeIndex < m_nodes.size() && "TerrainTileQuadtree::getNormalizedNodeCoordinate - node index out of range");
-
-    const TileTreeNode& node = m_nodes[nodeIndex];
-    return (glm::dvec2(node.treePosition) + offset) * getNormalizedNodeSizeForTreeDepth(node.treeDepth);
+glm::dvec2 TerrainTileQuadtree::getNormalizedNodeCoordinate(const glm::dvec2& treePosition, uint8_t treeDepth) {
+    return treePosition * getNormalizedNodeSizeForTreeDepth(treeDepth);
 }
 
 double TerrainTileQuadtree::getNormalizedNodeSizeForTreeDepth(uint8_t treeDepth) {
@@ -58,20 +159,6 @@ glm::dvec3 TerrainTileQuadtree::getNodePosition(const glm::dvec2& normalizedNode
 
 glm::dvec2 TerrainTileQuadtree::getNodeSize(uint8_t treeDepth) {
     return m_size * getNormalizedNodeSizeForTreeDepth(treeDepth);
-}
-
-TerrainTileQuadtree::NodeQuad TerrainTileQuadtree::getNodeQuad(size_t nodeIndex) {
-    assert(nodeIndex < m_nodes.size() && "TerrainTileQuadtree::getNodeQuad - node index out of range");
-
-    const TileTreeNode& node = m_nodes[nodeIndex];
-
-    NodeQuad nodeQuad{};
-    nodeQuad.treeDepth = node.treeDepth;
-    nodeQuad.treePosition = node.treePosition;
-    nodeQuad.normalizedCoord = getNormalizedNodeCoordinate(nodeIndex, glm::dvec2(0.0));
-    nodeQuad.normalizedSize = getNormalizedNodeSizeForTreeDepth(node.treeDepth);
-
-    return nodeQuad;
 }
 
 const Transform& TerrainTileQuadtree::getTransform() const {
@@ -106,7 +193,20 @@ void TerrainTileQuadtree::setHeightScale(double heightScale) {
     m_heightScale = heightScale;
 }
 
-void TerrainTileQuadtree::splitNode(size_t nodeIndex) {
+bool TerrainTileQuadtree::hasChildren(const TileTreeNode& node) {
+    return node.childOffset != UINT32_MAX;
+}
+
+bool TerrainTileQuadtree::isDeleted(const TileTreeNode& node) {
+    return node.childOffset == 0;
+}
+
+
+size_t TerrainTileQuadtree::getChildIndex(size_t nodeIndex, uint32_t childOffset, QuadIndex quadIndex) {
+    return nodeIndex + childOffset + quadIndex;
+}
+
+size_t TerrainTileQuadtree::splitNode(size_t nodeIndex) {
     assert(nodeIndex < m_nodes.size() && "TerrainTileQuadtree::splitNode - node index out of range");
 
     TileTreeNode& parentNode = m_nodes[nodeIndex];
@@ -119,14 +219,46 @@ void TerrainTileQuadtree::splitNode(size_t nodeIndex) {
     childNode.childOffset = UINT32_MAX;
     childNode.treeDepth = parentNode.treeDepth + 1;
 
+    glm::uvec2 childTreePosition = glm::uvec2(2) * parentNode.treePosition;
+
+    // Note: parentNode reference is invalidated by the addition of new children below.
     for (int i = 0; i < 4; ++i) {
         childNode.parentOffset = (uint32_t)(m_nodes.size() - nodeIndex); // Offset to subtract from this child nodes index to reach its parent.
         childNode.quadIndex = (QuadIndex)i;
-        childNode.treePosition = glm::uvec2(2) * parentNode.treePosition + QUAD_OFFSETS[childNode.quadIndex];
+        childNode.treePosition = childTreePosition + QUAD_OFFSETS[childNode.quadIndex];
         m_nodes.emplace_back(childNode);
     }
+
+    return firstChildIndex;
 }
 
-void TerrainTileQuadtree::mergeNode(size_t nodeIndex) {
+size_t TerrainTileQuadtree::mergeNode(size_t nodeIndex) {
+    assert(nodeIndex < m_nodes.size() && "TerrainTileQuadtree::mergeNode - node index out of range");
 
+    TileTreeNode& node = m_nodes[nodeIndex];
+    if (isDeleted(node) || !hasChildren(node)) {
+        return SIZE_MAX; // Node has no children. Nothing to merge.
+    }
+
+    int64_t firstChildIndex = (int64_t)(nodeIndex + node.childOffset);
+    node.childOffset = UINT32_MAX;
+
+    for (int i = 0; i < 4; ++i) {
+        size_t childIndex = firstChildIndex + i;
+//        if (hasChildren(m_nodes[childIndex]))
+//            mergeNode(childIndex);
+        m_nodes[childIndex].childOffset = 0; // Child points to self, indicates deleted node.
+    }
+
+
+//    m_nodes.erase(m_nodes.begin() + firstChildIndex, m_nodes.begin() + firstChildIndex + 4);
+//
+//    for (size_t i = 0; i < m_nodes.size() && i < firstChildIndex; ++i) {
+//        if (hasChildren(m_nodes[i]) && i + m_nodes[i].childOffset >= firstChildIndex) {
+//            assert(m_nodes[i].childOffset > 4); // childOffset cannot be 0 (child cannot be self)
+//            m_nodes[i].childOffset -= 4;
+//        }
+//    }
+
+    return (size_t)firstChildIndex;
 }

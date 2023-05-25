@@ -3,7 +3,7 @@
 
 
 QuadtreeTerrainComponent::QuadtreeTerrainComponent():
-        m_tileQuadtree(new TerrainTileQuadtree(6, glm::dvec2(1000.0, 1000.0), 100.0)),
+        m_tileQuadtree(new TerrainTileQuadtree(8, glm::dvec2(1000.0, 1000.0), 100.0)),
         m_tileResolution(64) {
 }
 
