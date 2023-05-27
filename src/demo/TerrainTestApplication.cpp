@@ -25,6 +25,8 @@ void TerrainTestApplication::init() {
 
     MeshData<Vertex> testMeshData;
 
+    Engine::scene()->getMainCameraEntity().getComponent<Camera>().setClippingPlanes(0.1, 1000.0);
+
     ImageCubeConfiguration imageCubeConfig{};
     imageCubeConfig.device = Engine::graphics()->getDevice();
     imageCubeConfig.format = vk::Format::eR32G32B32A32Sfloat;
@@ -63,7 +65,7 @@ void TerrainTestApplication::init() {
             sphereMaterial1Config.setAlbedo(glm::vec3(0.5F));
             sphereMaterial1Config.setRoughness(1.0F - (((float)i + 0.5F) / (float)numSpheresX));
             sphereMaterial1Config.setMetallic(1.0F - (((float)j + 0.5F) / (float)numSpheresX));
-            std::shared_ptr<Material> sphereMaterial1 = std::shared_ptr<Material> (Material::create(sphereMaterial1Config, "Demo-SphereMaterial1-" + std::to_string(i) + "-" + std::to_string(j)));
+            std::shared_ptr<Material> sphereMaterial1 = std::shared_ptr<Material>(Material::create(sphereMaterial1Config, "Demo-SphereMaterial1-" + std::to_string(i) + "-" + std::to_string(j)));
 
             glm::dvec2 normPos = glm::dvec2(i, j) / glm::dvec2(numSpheresX - 1, numSpheresZ - 1);
             glm::dvec3 pos = terrain.getTileQuadtree()->getNodePosition(normPos);
@@ -111,7 +113,7 @@ void TerrainTestApplication::handleUserInput(double dt) {
         if (cameraPitch > +M_PI * 0.5) cameraPitch = +M_PI * 0.5;
         if (cameraPitch < -M_PI * 0.5) cameraPitch = -M_PI * 0.5;
 
-        cameraTransform.setRotation((float) cameraPitch, (float) cameraYaw);
+        cameraTransform.setRotation((float)cameraPitch, (float)cameraYaw);
 
         glm::dvec3 movementDir(0.0);
 

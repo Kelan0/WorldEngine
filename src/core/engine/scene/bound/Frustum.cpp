@@ -2,8 +2,8 @@
 #include "core/engine/renderer/ImmediateRenderer.h"
 #include "core/application/Engine.h"
 
-Frustum::Frustum():
-    Frustum(glm::dvec3(0.0), glm::dmat4(1.0)) {
+Frustum::Frustum() :
+        Frustum(glm::dvec3(0.0), glm::dmat4(1.0)) {
 }
 
 Frustum::Frustum(const RenderCamera& renderCamera) {
@@ -18,7 +18,7 @@ Frustum::Frustum(const Transform& transform, const Camera& camera) {
     this->set(transform, camera);
 }
 
-Frustum &Frustum::set(const glm::dvec3& origin, const glm::dmat4& viewProjection) {
+Frustum& Frustum::set(const glm::dvec3& origin, const glm::dmat4& viewProjection) {
     m_origin = origin;
 
     m_planes[Plane_Left][0] = viewProjection[0][3] + viewProjection[0][0];
@@ -60,12 +60,12 @@ Frustum &Frustum::set(const glm::dvec3& origin, const glm::dmat4& viewProjection
     return *this;
 }
 
-Frustum &Frustum::set(const RenderCamera& renderCamera) {
+Frustum& Frustum::set(const RenderCamera& renderCamera) {
     this->set(renderCamera.getTransform().getTranslation(), renderCamera.getViewProjectionMatrix());
     return *this;
 }
 
-Frustum &Frustum::set(const Transform& transform, const Camera& camera) {
+Frustum& Frustum::set(const Transform& transform, const Camera& camera) {
     glm::dmat4 projectionMatrix = camera.getProjectionMatrix();
     glm::dmat4 viewMatrix = glm::inverse(transform.getMatrix());
     glm::dmat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
@@ -89,15 +89,32 @@ const glm::dvec3& Frustum::getCorner(size_t cornerIndex) const {
     if (glm::isnan(m_corners[cornerIndex].x)) {
         switch (cornerIndex) {
             // m_corners is mutable so that it can be edited from const methods
-            case Corner_Left_Top_Near: m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Left], m_planes[Plane_Top], m_planes[Plane_Near]); break;
-            case Corner_Right_Top_Near: m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Right], m_planes[Plane_Top], m_planes[Plane_Near]); break;
-            case Corner_Right_Bottom_Near: m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Right], m_planes[Plane_Bottom], m_planes[Plane_Near]); break;
-            case Corner_Left_Bottom_Near: m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Left], m_planes[Plane_Bottom], m_planes[Plane_Near]); break;
-            case Corner_Left_Top_Far: m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Left], m_planes[Plane_Top], m_planes[Plane_Far]); break;
-            case Corner_Right_Top_Far: m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Right], m_planes[Plane_Top], m_planes[Plane_Far]); break;
-            case Corner_Right_Bottom_Far: m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Right], m_planes[Plane_Bottom], m_planes[Plane_Far]); break;
-            case Corner_Left_Bottom_Far: m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Left], m_planes[Plane_Bottom], m_planes[Plane_Far]); break;
-            default: break;
+            case Corner_Left_Top_Near:
+                m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Left], m_planes[Plane_Top], m_planes[Plane_Near]);
+                break;
+            case Corner_Right_Top_Near:
+                m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Right], m_planes[Plane_Top], m_planes[Plane_Near]);
+                break;
+            case Corner_Right_Bottom_Near:
+                m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Right], m_planes[Plane_Bottom], m_planes[Plane_Near]);
+                break;
+            case Corner_Left_Bottom_Near:
+                m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Left], m_planes[Plane_Bottom], m_planes[Plane_Near]);
+                break;
+            case Corner_Left_Top_Far:
+                m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Left], m_planes[Plane_Top], m_planes[Plane_Far]);
+                break;
+            case Corner_Right_Top_Far:
+                m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Right], m_planes[Plane_Top], m_planes[Plane_Far]);
+                break;
+            case Corner_Right_Bottom_Far:
+                m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Right], m_planes[Plane_Bottom], m_planes[Plane_Far]);
+                break;
+            case Corner_Left_Bottom_Far:
+                m_corners[cornerIndex] = Plane::triplePlaneIntersection(m_planes[Plane_Left], m_planes[Plane_Bottom], m_planes[Plane_Far]);
+                break;
+            default:
+                break;
         }
     }
     return m_corners[cornerIndex];

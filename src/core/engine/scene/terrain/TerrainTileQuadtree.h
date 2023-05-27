@@ -18,9 +18,14 @@ public:
     static std::array<glm::uvec2, 4> QUAD_OFFSETS;
 
     struct TileTreeNode {
-        uint32_t parentOffset; // Parent node is always before the child nodes in the array. parentOffset is the number of indices before this node to get to the parent
-        uint32_t childOffset; // Child nodes are always after the parent node in the array. childOffset is the number of indices after this node to get to the first of 4 children. All 4 are consecutive.
-        uint8_t treeDepth;
+        uint32_t childOffset;
+        union {
+            uint8_t _packed0;
+            struct {
+                uint8_t treeDepth : 6; // 6-bits, max depth is 63
+                uint8_t deleted : 1;
+            };
+        };
         glm::uvec2 treePosition;
         QuadIndex quadIndex;
     };
@@ -62,8 +67,6 @@ public:
 
     static bool isDeleted(const TileTreeNode& node);
 
-    static size_t getChildIndex(size_t nodeIndex, uint32_t childOffset, QuadIndex quadIndex);
-
 private:
     size_t splitNode(size_t nodeIndex);
 
@@ -85,9 +88,6 @@ private:
     glm::dvec2 m_size;
     double m_heightScale;
     std::vector<TileTreeNode> m_nodes;
-
-    std::vector<NodeUpdate> m_nodeSplitList;
-    std::vector<NodeUpdate> m_nodeMergeList;
 };
 
 

@@ -32,8 +32,8 @@
 #define BRDF_INTEGRATION_MAP_BINDING 9
 
 
-DeferredRenderer::DeferredRenderer():
-    m_previousFrame(FrameImages{}) {
+DeferredRenderer::DeferredRenderer() :
+        m_previousFrame(FrameImages{}) {
 }
 
 DeferredRenderer::~DeferredRenderer() {
@@ -154,8 +154,8 @@ void DeferredRenderer::updateCamera(double dt, const RenderCamera* renderCamera)
     if (Engine::instance()->getReprojectionRenderer()->isTaaEnabled()) {
         uniformData.taaPreviousJitterOffset = Engine::instance()->getReprojectionRenderer()->getTaaPreviousJitterOffset();
         uniformData.taaCurrentJitterOffset = Engine::instance()->getReprojectionRenderer()->getTaaCurrentJitterOffset();
-        glm::mat4 previousJitterOffsetMatrix = glm::translate(glm::mat4(1.0F),glm::vec3(uniformData.taaPreviousJitterOffset, 0.0F));
-        glm::mat4 currentJitterOffsetMatrix = glm::translate(glm::mat4(1.0F),glm::vec3(uniformData.taaCurrentJitterOffset, 0.0F));
+        glm::mat4 previousJitterOffsetMatrix = glm::translate(glm::mat4(1.0F), glm::vec3(uniformData.taaPreviousJitterOffset, 0.0F));
+        glm::mat4 currentJitterOffsetMatrix = glm::translate(glm::mat4(1.0F), glm::vec3(uniformData.taaCurrentJitterOffset, 0.0F));
         uniformData.prevCamera.projectionMatrix = previousJitterOffsetMatrix * uniformData.prevCamera.projectionMatrix;
         uniformData.prevCamera.viewProjectionMatrix = previousJitterOffsetMatrix * uniformData.prevCamera.viewProjectionMatrix;
         uniformData.camera.projectionMatrix = currentJitterOffsetMatrix * uniformData.camera.projectionMatrix;
@@ -244,15 +244,15 @@ void DeferredRenderer::renderLightingPass(double dt, const vk::CommandBuffer& co
         assert(environmentMap != nullptr);
         assert(environmentMap->getEnvironmentMapTexture() != nullptr && environmentMap->getDiffuseIrradianceMapTexture() != nullptr && environmentMap->getSpecularReflectionMapTexture() != nullptr);
 
-        descriptorSetWriter.writeImage(ALBEDO_TEXTURE_BINDING, m_attachmentSampler.get(), getAlbedoImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
-        descriptorSetWriter.writeImage(NORMAL_TEXTURE_BINDING, m_attachmentSampler.get(), getNormalImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
-        descriptorSetWriter.writeImage(EMISSION_TEXTURE_BINDING, m_attachmentSampler.get(), getEmissionImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
-        descriptorSetWriter.writeImage(VELOCITY_TEXTURE_BINDING, m_attachmentSampler.get(), getVelocityImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
-        descriptorSetWriter.writeImage(DEPTH_TEXTURE_BINDING, m_depthSampler.get(), getDepthImageView(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
-        descriptorSetWriter.writeImage(ENVIRONMENT_CUBEMAP_BINDING,environmentMap->getEnvironmentMapTexture().get(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
-        descriptorSetWriter.writeImage(SPECULAR_REFLECTION_CUBEMAP_BINDING,environmentMap->getSpecularReflectionMapTexture().get(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
-        descriptorSetWriter.writeImage(DIFFUSE_IRRADIANCE_CUBEMAP_BINDING,environmentMap->getDiffuseIrradianceMapTexture().get(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
-        descriptorSetWriter.writeImage(BRDF_INTEGRATION_MAP_BINDING, EnvironmentMap::getBRDFIntegrationMap(commandBuffer).get(),vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+        descriptorSetWriter.writeImage(ALBEDO_TEXTURE_BINDING, m_attachmentSampler.get(), getAlbedoImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+        descriptorSetWriter.writeImage(NORMAL_TEXTURE_BINDING, m_attachmentSampler.get(), getNormalImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+        descriptorSetWriter.writeImage(EMISSION_TEXTURE_BINDING, m_attachmentSampler.get(), getEmissionImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+        descriptorSetWriter.writeImage(VELOCITY_TEXTURE_BINDING, m_attachmentSampler.get(), getVelocityImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+        descriptorSetWriter.writeImage(DEPTH_TEXTURE_BINDING, m_depthSampler.get(), getDepthImageView(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+        descriptorSetWriter.writeImage(ENVIRONMENT_CUBEMAP_BINDING, environmentMap->getEnvironmentMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+        descriptorSetWriter.writeImage(SPECULAR_REFLECTION_CUBEMAP_BINDING, environmentMap->getSpecularReflectionMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+        descriptorSetWriter.writeImage(DIFFUSE_IRRADIANCE_CUBEMAP_BINDING, environmentMap->getDiffuseIrradianceMapTexture().get(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
+        descriptorSetWriter.writeImage(BRDF_INTEGRATION_MAP_BINDING, EnvironmentMap::getBRDFIntegrationMap(commandBuffer).get(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1);
     }
     descriptorSetWriter.write();
 
@@ -352,12 +352,18 @@ ImageView* DeferredRenderer::getPreviousOutputFrameImageView() const {
 
 vk::Format DeferredRenderer::getAttachmentFormat(uint32_t attachment) const {
     switch (attachment) {
-        case Attachment_AlbedoRGB_Roughness: return vk::Format::eR8G8B8A8Unorm;
-        case Attachment_NormalXYZ_Metallic: return vk::Format::eR16G16B16A16Sfloat;
-        case Attachment_EmissionRGB_AO: return vk::Format::eR16G16B16A16Unorm;
-        case Attachment_VelocityXY: return vk::Format::eR16G16B16A16Sfloat;
-        case Attachment_Depth: return Engine::graphics()->getDepthFormat();
-        case Attachment_LightingRGB: return getOutputColourFormat();
+        case Attachment_AlbedoRGB_Roughness:
+            return vk::Format::eR8G8B8A8Unorm;
+        case Attachment_NormalXYZ_Metallic:
+            return vk::Format::eR16G16B16A16Sfloat;
+        case Attachment_EmissionRGB_AO:
+            return vk::Format::eR16G16B16A16Unorm;
+        case Attachment_VelocityXY:
+            return vk::Format::eR16G16B16A16Sfloat;
+        case Attachment_Depth:
+            return Engine::graphics()->getDepthFormat();
+        case Attachment_LightingRGB:
+            return getOutputColourFormat();
         default:
             assert(false);
             return vk::Format::eUndefined;
@@ -413,9 +419,9 @@ void DeferredRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
 
 bool DeferredRenderer::createFramebuffer(FrameImages* frame) {
     delete frame->framebuffer;
-    for (const auto& imageView: frame->imageViews)
+    for (const auto& imageView : frame->imageViews)
         delete imageView;
-    for (const auto& image: frame->images)
+    for (const auto& image : frame->images)
         delete image;
 
     frame->rendered = false;

@@ -1,6 +1,7 @@
 #include "TerrainTileQuadtree.h"
 #include "core/engine/scene/bound/Frustum.h"
 #include "core/util/Logger.h"
+#include "core/util/Profiler.h"
 
 // These must match the order of the QuadIndex enum
 std::array<glm::uvec2, 4> TerrainTileQuadtree::QUAD_OFFSETS = {
@@ -10,13 +11,13 @@ std::array<glm::uvec2, 4> TerrainTileQuadtree::QUAD_OFFSETS = {
         glm::uvec2(1, 1)  // QuadIndex_BottomRight
 };
 
-TerrainTileQuadtree::TerrainTileQuadtree(uint32_t maxQuadtreeDepth, const glm::dvec2& size, double heightScale):
+TerrainTileQuadtree::TerrainTileQuadtree(uint32_t maxQuadtreeDepth, const glm::dvec2& size, double heightScale) :
         m_maxQuadtreeDepth(maxQuadtreeDepth),
         m_size(size),
         m_heightScale(heightScale) {
 
     TileTreeNode rootNode{};
-    rootNode.parentOffset = UINT32_MAX;
+//    rootNode.parentOffset = UINT32_MAX;
     rootNode.childOffset = UINT32_MAX;
     rootNode.treeDepth = 0;
     rootNode.treePosition = glm::uvec2(0, 0);
@@ -43,6 +44,8 @@ TerrainTileQuadtree::~TerrainTileQuadtree() {
 }
 
 void TerrainTileQuadtree::update(const Frustum* frustum) {
+    PROFILE_SCOPE("TerrainTileQuadtree::update");
+    auto t0 = Performance::now();
 
     glm::dvec3 localCameraOrigin = glm::dvec3(glm::inverse(m_transform.getMatrix()) * glm::dvec4(frustum->getOrigin(), 1.0));
     localCameraOrigin.x += m_size.x * 0.5;
@@ -54,37 +57,27 @@ void TerrainTileQuadtree::update(const Frustum* frustum) {
 
     double splitThreshold = 3.0;
 
-    m_nodeSplitList.clear();
-    m_nodeMergeList.clear();
+    std::vector<uint32_t> parentOffsets;
+    parentOffsets.resize(m_nodes.size(), UINT32_MAX);
+
+    std::vector<size_t> deletedNodeIndices;
+    std::stack<size_t> unvisitedNodes;
+    unvisitedNodes.push(0);
+
+    PROFILE_REGION("Split and merge nodes")
 
 
-//    std::stack<size_t> unvisitedNodes;
-//    unvisitedNodes.push(0);
-//
-//    while (!unvisitedNodes.empty()) {
-//        const size_t &nodeIndex = unvisitedNodes.top();
-//        unvisitedNodes.pop();
-//
-//        const TileTreeNode &node = m_nodes[nodeIndex];
-//        if (isDeleted(node))
-//            continue;
-//
-//        double normalizedNodeSize = getNormalizedNodeSizeForTreeDepth(node.treeDepth);
-//        glm::dvec2 normalizedNodeCenterCoord = (glm::dvec2(node.treePosition) + glm::dvec2(0.5)) * normalizedNodeSize;
-//        glm::dvec3 nodeCenterPos(normalizedNodeCenterCoord.x * m_size.x, 0.0, normalizedNodeCenterCoord.y * m_size.y);
-//
-//        glm::dvec3 cameraToNodePosition = nodeCenterPos - localCameraOrigin;
-//        double cameraDistanceSq = glm::dot(cameraToNodePosition, cameraToNodePosition);
-//
-//        double edgeSize = normalizedNodeSize * maxSize;
-//        double splitDistance = edgeSize * splitThreshold;
-//    }
+    while (!unvisitedNodes.empty()) {
+        size_t nodeIndex = unvisitedNodes.top();
+        unvisitedNodes.pop();
 
+        assert(nodeIndex < m_nodes.size());
 
-    for (size_t i = 0; i < m_nodes.size(); ++i) {
-        const TileTreeNode& node = m_nodes[i];
-        if (isDeleted(node))
+        const TileTreeNode& node = m_nodes[nodeIndex];
+        if (isDeleted(node)) {
+            deletedNodeIndices.emplace_back(nodeIndex);
             continue;
+        }
 
         double normalizedNodeSize = getNormalizedNodeSizeForTreeDepth(node.treeDepth);
         glm::dvec2 normalizedNodeCenterCoord = (glm::dvec2(node.treePosition) + glm::dvec2(0.5)) * normalizedNodeSize;
@@ -99,46 +92,130 @@ void TerrainTileQuadtree::update(const Frustum* frustum) {
         if (cameraDistanceSq < splitDistance * splitDistance) {
             // Close enough to split
 
-            if (hasChildren(node) || node.treeDepth >= m_maxQuadtreeDepth)
-                continue; // Cannot split
-
-            splitNode(i);
+            if (!hasChildren(node) && node.treeDepth < m_maxQuadtreeDepth) {
+                // NOTE: splitNode here will grow the list, and potentially invalidate the node reference above.
+                size_t firstChildIndex = splitNode(nodeIndex);
+                for (int i = 0; i < 4; ++i)
+                    parentOffsets.emplace_back((uint32_t)((firstChildIndex + i) - nodeIndex));
+            }
 
         } else if (cameraDistanceSq > splitDistance * splitDistance) {
             // Far enough to merge
 
-            if (!hasChildren(node))
-                continue; // Cannot merge
+            if (hasChildren(node)) {
+                // NOTE: mergeNode is okay while iterating, it will not affect the size of the array or move anything around.
+                size_t deletedChildIndex = mergeNode(nodeIndex);
+                for (int i = 0; i < 4; ++i, ++deletedChildIndex)
+                    deletedNodeIndices.emplace_back(deletedChildIndex);
+            }
+        }
 
-            mergeNode(i);
+        // node reference above may have been invalidated here, so we must index the nodes array directly
+        if (hasChildren(m_nodes[nodeIndex])) {
+            size_t firstChildIndex = nodeIndex + m_nodes[nodeIndex].childOffset;
+            assert(firstChildIndex <= m_nodes.size() - 4);
+            for (int i = 3; i >= 0; --i) {
+                size_t childIndex = firstChildIndex + i;
+                unvisitedNodes.push(childIndex);
+                parentOffsets[childIndex] = (uint32_t)(childIndex - nodeIndex);
+            }
         }
     }
 
-//    // Sort split list from near to far. Closest nodes are split first.
-//    std::sort(m_nodeSplitList.begin(), m_nodeSplitList.end(), [](const NodeUpdate& lhs, const NodeUpdate& rhs) {
-//        return lhs.distance < rhs.distance;
-//    });
-//
-//    // // Sort merge list from far to near. Furthest nodes are merged first. ~~~~~~~~~~
-//    std::sort(m_nodeMergeList.begin(), m_nodeMergeList.end(), [](const NodeUpdate& lhs, const NodeUpdate& rhs) {
-//        if (lhs.treeDepth != rhs.treeDepth)
-//            return lhs.treeDepth < rhs.treeDepth;
-//        return lhs.distance > rhs.distance;
-//    });
-//
-//    size_t maxSplits = 8;
-//    size_t maxMerges = 1;
-//
-//    for (auto it = m_nodeSplitList.begin(); it != m_nodeSplitList.end() && maxSplits > 0; ++it, --maxSplits) {
-//        assert(it->index < m_nodes.size() && !hasChildren(m_nodes[it->index]));
-//        LOG_DEBUG("Splitting node %zu at depth %u", it->index, m_nodes[it->index].treeDepth);
-//        splitNode(it->index);
-//    }
-//    for (auto it = m_nodeMergeList.begin(); it != m_nodeMergeList.end() && maxMerges > 0; ++it, --maxMerges) {
-//        assert(it->index < m_nodes.size() && hasChildren(m_nodes[it->index]));
-//        LOG_DEBUG("Merging node %zu at depth %u", it->index, m_nodes[it->index].treeDepth);
-//        mergeNode(it->index);
-//    }
+    PROFILE_REGION("Mark all deleted subtrees")
+
+    for (const size_t& nodeIndex : deletedNodeIndices)
+        unvisitedNodes.push(nodeIndex);
+
+    while (!unvisitedNodes.empty()) {
+        size_t nodeIndex = unvisitedNodes.top();
+        unvisitedNodes.pop();
+
+        TileTreeNode& node = m_nodes[nodeIndex];
+        node.deleted = true;
+
+        if (!hasChildren(node))
+            continue;
+
+        for (int i = 3; i >= 0; --i) {
+            unvisitedNodes.push(nodeIndex + node.childOffset + i);
+        }
+    }
+
+    PROFILE_REGION("Cleanup deleted nodes")
+    size_t firstIndex = 0;
+    for (; firstIndex < m_nodes.size() && !isDeleted(m_nodes[firstIndex]); ++firstIndex);
+
+    if (firstIndex < m_nodes.size()) {
+        for (size_t i = firstIndex; i < m_nodes.size(); ++i) {
+            if (!isDeleted(m_nodes[i])) {
+                uint32_t offset = (uint32_t)(i - firstIndex);
+
+                assert(parentOffsets[i] != UINT32_MAX);
+
+                size_t parentIndex = i - parentOffsets[i];
+                assert(m_nodes[parentIndex].childOffset < m_nodes.size() - parentIndex);
+
+                if (hasChildren(m_nodes[i])) {
+                    for (int j = 0; j < 4; ++j) {
+                        size_t childIndex = i + m_nodes[i].childOffset + j;
+                        size_t childParentIndex = childIndex - parentOffsets[childIndex];
+                        assert(childParentIndex + m_nodes[childParentIndex].childOffset == childIndex - j);
+                        parentOffsets[childIndex] += offset;
+                    }
+                    m_nodes[i].childOffset += offset;
+                }
+
+                // This node is the first child of its parent. The offset from the parent to this node also needs to shift accordingly.
+                if (parentIndex + m_nodes[parentIndex].childOffset == i) {
+                    assert(m_nodes[parentIndex].childOffset > offset);
+                    assert(parentIndex + m_nodes[parentIndex].childOffset == i - m_nodes[i].quadIndex);
+                    m_nodes[parentIndex].childOffset -= offset;
+                }
+
+                // Node moves from index i to firstIndex, the offset from this node to its parent needs to decrement accordingly
+                if (parentIndex < firstIndex) {
+                    parentOffsets[i] -= offset;
+                    assert(parentOffsets[i] <= firstIndex);
+                }
+
+                // element at index i moves to firstIndex
+#if 0
+                std::swap(m_nodes[firstIndex], m_nodes[i]);
+                std::swap(parentOffsets[firstIndex], parentOffsets[i]);
+#else
+                m_nodes[firstIndex] = m_nodes[i];
+                parentOffsets[firstIndex] = parentOffsets[i];
+#endif
+
+#if _DEBUG
+                if (parentOffsets[firstIndex] != UINT32_MAX) {
+                    size_t testParentIndex = firstIndex - parentOffsets[firstIndex];
+                    assert(m_nodes[testParentIndex].childOffset <= firstIndex - testParentIndex);
+                    assert(testParentIndex + m_nodes[testParentIndex].childOffset == firstIndex - m_nodes[firstIndex].quadIndex);
+                }
+#endif
+
+                ++firstIndex;
+            }
+        }
+
+        LOG_DEBUG("Removing %zu deleted nodes in %.2f msec", (size_t)m_nodes.size() - firstIndex, Performance::milliseconds(t0));
+
+        PROFILE_REGION("Erase deleted nodes")
+        m_nodes.erase(m_nodes.begin() + (decltype(m_nodes)::difference_type)firstIndex, m_nodes.end());
+        parentOffsets.erase(parentOffsets.begin() + (decltype(parentOffsets)::difference_type)firstIndex, parentOffsets.end());
+
+
+#if _DEBUG
+        // SANITY CHECK - every entry in the parentOffsets array must make sense.
+        for (size_t i = 1; i < m_nodes.size(); ++i) {
+            assert(!isDeleted(m_nodes[i]));
+            size_t parentIndex = i - parentOffsets[i];
+            assert(parentIndex + m_nodes[parentIndex].childOffset == i - m_nodes[i].quadIndex);
+        }
+#endif
+    }
 }
 
 const std::vector<TerrainTileQuadtree::TileTreeNode>& TerrainTileQuadtree::getNodes() {
@@ -198,13 +275,10 @@ bool TerrainTileQuadtree::hasChildren(const TileTreeNode& node) {
 }
 
 bool TerrainTileQuadtree::isDeleted(const TileTreeNode& node) {
-    return node.childOffset == 0;
+//    return node.childOffset == 0;
+    return node.deleted;
 }
 
-
-size_t TerrainTileQuadtree::getChildIndex(size_t nodeIndex, uint32_t childOffset, QuadIndex quadIndex) {
-    return nodeIndex + childOffset + quadIndex;
-}
 
 size_t TerrainTileQuadtree::splitNode(size_t nodeIndex) {
     assert(nodeIndex < m_nodes.size() && "TerrainTileQuadtree::splitNode - node index out of range");
@@ -212,8 +286,12 @@ size_t TerrainTileQuadtree::splitNode(size_t nodeIndex) {
     TileTreeNode& parentNode = m_nodes[nodeIndex];
     assert(parentNode.childOffset == UINT32_MAX && "TerrainTileQuadtree::splitNode - node already split");
 
+
     size_t firstChildIndex = m_nodes.size();
-    parentNode.childOffset = (uint32_t)(firstChildIndex - nodeIndex); // Offset to add to the parent nodes index to reach its first child. All 4 children are consecutive
+
+//    LOG_DEBUG("Splitting node %zu [%u %u %u] - children at %zu", nodeIndex, parentNode.treePosition.x, parentNode.treePosition.y, parentNode.treeDepth, firstChildIndex);
+
+    parentNode.childOffset = (uint32_t)(firstChildIndex - nodeIndex);
 
     TileTreeNode childNode{};
     childNode.childOffset = UINT32_MAX;
@@ -223,7 +301,7 @@ size_t TerrainTileQuadtree::splitNode(size_t nodeIndex) {
 
     // Note: parentNode reference is invalidated by the addition of new children below.
     for (int i = 0; i < 4; ++i) {
-        childNode.parentOffset = (uint32_t)(m_nodes.size() - nodeIndex); // Offset to subtract from this child nodes index to reach its parent.
+//        childNode.parentOffset = (uint32_t)(m_nodes.size() - nodeIndex); // Offset to subtract from this child nodes index to reach its parent.
         childNode.quadIndex = (QuadIndex)i;
         childNode.treePosition = childTreePosition + QUAD_OFFSETS[childNode.quadIndex];
         m_nodes.emplace_back(childNode);
@@ -241,24 +319,17 @@ size_t TerrainTileQuadtree::mergeNode(size_t nodeIndex) {
     }
 
     int64_t firstChildIndex = (int64_t)(nodeIndex + node.childOffset);
+
+//    LOG_DEBUG("Merging node %zu [%u %u %u] - children at %lld", nodeIndex, node.treePosition.x, node.treePosition.y, node.treeDepth, firstChildIndex);
+
     node.childOffset = UINT32_MAX;
 
     for (int i = 0; i < 4; ++i) {
         size_t childIndex = firstChildIndex + i;
 //        if (hasChildren(m_nodes[childIndex]))
 //            mergeNode(childIndex);
-        m_nodes[childIndex].childOffset = 0; // Child points to self, indicates deleted node.
+        m_nodes[childIndex].deleted = true;
     }
-
-
-//    m_nodes.erase(m_nodes.begin() + firstChildIndex, m_nodes.begin() + firstChildIndex + 4);
-//
-//    for (size_t i = 0; i < m_nodes.size() && i < firstChildIndex; ++i) {
-//        if (hasChildren(m_nodes[i]) && i + m_nodes[i].childOffset >= firstChildIndex) {
-//            assert(m_nodes[i].childOffset > 4); // childOffset cannot be 0 (child cannot be self)
-//            m_nodes[i].childOffset -= 4;
-//        }
-//    }
 
     return (size_t)firstChildIndex;
 }

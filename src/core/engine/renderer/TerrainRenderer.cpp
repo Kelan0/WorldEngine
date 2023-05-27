@@ -13,12 +13,9 @@
 #include "RenderComponent.h"
 
 
-
-
-
-TerrainRenderer::TerrainRenderer():
-    m_scene(nullptr),
-    m_terrainTileMesh(nullptr) {
+TerrainRenderer::TerrainRenderer() :
+        m_scene(nullptr),
+        m_terrainTileMesh(nullptr) {
 }
 
 TerrainRenderer::~TerrainRenderer() {
@@ -84,10 +81,10 @@ void TerrainRenderer::drawTerrain(double dt, const vk::CommandBuffer& commandBuf
     }
 
     if (!m_terrainDataBuffer.empty()) {
-        GPUTerrainData *mappedTerrainDataBuffer = static_cast<GPUTerrainData *>(mapTerrainDataBuffer(m_terrainDataBuffer.capacity()));
+        GPUTerrainData* mappedTerrainDataBuffer = static_cast<GPUTerrainData*>(mapTerrainDataBuffer(m_terrainDataBuffer.capacity()));
         memcpy(&mappedTerrainDataBuffer[0], &m_terrainDataBuffer[0], m_terrainDataBuffer.size() * sizeof(GPUTerrainData));
 
-        m_terrainTileMesh->draw(commandBuffer, m_terrainDataBuffer.size(), 0);
+        m_terrainTileMesh->draw(commandBuffer, (uint32_t)m_terrainDataBuffer.size(), 0);
     }
 }
 
