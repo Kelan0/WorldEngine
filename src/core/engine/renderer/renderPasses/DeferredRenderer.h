@@ -77,10 +77,6 @@ public:
 
     void updateCamera(double dt, const RenderCamera* renderCamera);
 
-    void renderEntitiesGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum);
-
-    void renderTerrainGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum);
-
     void renderLightingPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum);
 
     void beginRenderPass(const vk::CommandBuffer& commandBuffer, const vk::SubpassContents& subpassContents);
@@ -127,6 +123,20 @@ public:
 
     void setEnvironmentMap(const std::shared_ptr<EnvironmentMap>& environmentMap);
 
+    const SharedResource<RenderPass>& getRnderPass() const;
+
+    const std::shared_ptr<GraphicsPipeline>& getTerrainGeometryGraphicsPipeline() const;
+
+    const std::shared_ptr<GraphicsPipeline>& getEntityGeometryGraphicsPipeline() const;
+
+    const SharedResource<DescriptorSetLayout>& getGlobalDescriptorSetLayout() const;
+
+    const SharedResource<DescriptorSetLayout>& getLightingDescriptorSetLayout() const;
+
+    DescriptorSet* getGlobalDescriptorSet() const;
+
+    DescriptorSet* getLightingDescriptorSet() const;
+
 private:
     void recreateSwapchain(RecreateSwapchainEvent* event);
 
@@ -137,10 +147,6 @@ private:
     bool createEntityGeometryGraphicsPipeline();
 
     bool createLightingGraphicsPipeline();
-
-    std::shared_ptr<GraphicsPipeline> getTerrainGeometryGraphicsPipeline();
-
-    std::shared_ptr<GraphicsPipeline> getEntityGeometryGraphicsPipeline();
 
     bool createRenderPass();
 

@@ -232,3 +232,14 @@ bool Frustum::contains(const glm::dvec3& point) const {
     return true; // Point is on the positive side of all 6 frustum planes.
 }
 
+Frustum Frustum::transform(const Frustum& frustum, const glm::dmat4& matrix) {
+    Frustum returnValue{};
+
+    returnValue.m_origin = glm::dvec3(matrix * glm::dvec4(frustum.getOrigin(), 1.0));
+
+    for (int i = 0; i < NumPlanes; ++i) {
+        returnValue.m_planes[i] = Plane::transform(frustum.getPlane(i), matrix);
+    }
+    return returnValue;
+}
+

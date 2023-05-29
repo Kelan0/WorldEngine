@@ -12,17 +12,22 @@ Plane::Plane(double a, double b, double c, double d):
 
 Plane::Plane(const glm::dvec3& point, const glm::dvec3& normal):
     normal(normal),
-    offset(-1.0 * glm::dot(normal, point)) {
+    offset(glm::dot(normal, point)) {
 }
 
-Plane::Plane(const Plane& copy):
-    normal(copy.normal),
-    offset(copy.offset) {
-}
+Plane::Plane(const Plane& copy) = default;
 
-Plane::Plane(Plane&& move):
+Plane::Plane(Plane&& move) noexcept:
     normal(std::exchange(move.normal, glm::dvec3(0.0))),
     offset(std::exchange(move.offset, 0.0)) {
+}
+
+Plane& Plane::operator=(const Plane& copy) = default;
+
+Plane& Plane::operator=(Plane&& move)  noexcept {
+    normal = std::exchange(move.normal, glm::dvec3(0.0));
+    offset = std::exchange(move.offset, 0.0);
+    return *this;
 }
 
 bool Plane::isDegenerate() const {
@@ -59,6 +64,10 @@ double Plane::length(const Plane& plane) {
 
 double Plane::length() const {
     return glm::sqrt(lengthSquared());
+}
+
+glm::dvec3 Plane::getOrigin() const {
+    return normal * offset;
 }
 
 const glm::dvec3& Plane::getNormal() const {
@@ -164,4 +173,18 @@ glm::dvec3 Plane::triplePlaneIntersection(const Plane& a, const Plane& b, const 
     glm::dvec3 cxa = glm::cross(c.getNormal(), a.getNormal());
     glm::dvec3 r = -a.getOffset() * bxc - b.getOffset() * cxa - c.getOffset() * axb;
     return r * (1.0 / dot(a.getNormal(), bxc));
+}
+
+Plane Plane::transform(const Plane& plane, const glm::dmat4& matrix, bool skewMatrix) {
+    glm::dvec4 origin = glm::dvec4(plane.getOrigin(), 1.0);
+    glm::dvec4 normal = glm::dvec4(plane.getNormal(), 0.0);
+
+    origin = matrix * origin;
+    if (skewMatrix) {
+        normal = glm::transpose(glm::inverse(matrix)) * normal;
+    } else {
+        normal = matrix * normal;
+    }
+
+    return Plane(origin, normal);
 }

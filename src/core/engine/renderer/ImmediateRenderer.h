@@ -85,6 +85,8 @@ private:
     };
 
     struct RenderResources {
+        Buffer* vertexBuffer;
+        Buffer* indexBuffer;
         Buffer* uniformBuffer = nullptr;
         DescriptorSet* descriptorSet = nullptr;
         Framebuffer* framebuffer = nullptr;
@@ -204,8 +206,6 @@ private:
     glm::vec2 m_texture;
     glm::u8vec4 m_colour;
 
-    Buffer* m_vertexBuffer;
-    Buffer* m_indexBuffer;
     FrameResource<RenderResources> m_resources;
     SharedResource<DescriptorSetLayout> m_descriptorSetLayout;
 

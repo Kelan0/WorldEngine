@@ -109,6 +109,10 @@ public:
 
     glm::dvec3 calculateClosestPoint(const glm::dvec3& point) const override;
 
+    void drawLines() const;
+
+    void drawFill() const;
+
 private:
     glm::dvec3 m_center;
     double m_radius;

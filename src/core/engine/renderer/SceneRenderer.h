@@ -26,6 +26,8 @@ public:
 
     void preRender(double dt);
 
+    void renderGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum);
+
     void drawEntities(double dt, const vk::CommandBuffer& commandBuffer, const Frustum* frustum);
 
     void setScene(Scene* scene);

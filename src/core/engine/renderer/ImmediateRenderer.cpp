@@ -72,8 +72,6 @@ ImmediateRenderer::ImmediateRenderer():
         m_normal(0, 0, 0),
         m_texture(0, 0),
         m_colour(0, 0, 0, 0),
-        m_vertexBuffer(nullptr),
-        m_indexBuffer(nullptr),
         m_vertexCount(0),
         m_indexCount(0),
         m_firstChangedVertex(0),
@@ -90,14 +88,14 @@ ImmediateRenderer::ImmediateRenderer():
 
 ImmediateRenderer::~ImmediateRenderer() {
     LOG_INFO("Destroying ImmediateRenderer");
-    delete m_vertexBuffer;
-    delete m_indexBuffer;
     for (auto it = m_graphicsPipelines.begin(); it != m_graphicsPipelines.end(); ++it)
         delete it->second;
 
     for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         if (m_resources[i] != nullptr) {
             delete m_resources[i]->descriptorSet;
+            delete m_resources[i]->vertexBuffer;
+            delete m_resources[i]->indexBuffer;
             delete m_resources[i]->uniformBuffer;
             delete m_resources[i]->framebuffer;
             delete m_resources[i]->frameColourImageView;
@@ -183,8 +181,8 @@ void ImmediateRenderer::render(double dt, const vk::CommandBuffer& commandBuffer
         std::array<uint32_t, 1> dynamicOffsets = { (uint32_t)(index * alignedUniformBufferSize) };
 
         commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
-        commandBuffer.bindVertexBuffers(0, 1, &m_vertexBuffer->getBuffer(), &vertexBufferOffset);
-        commandBuffer.bindIndexBuffer(m_indexBuffer->getBuffer(), indexBufferOffset, vk::IndexType::eUint32);
+        commandBuffer.bindVertexBuffers(0, 1, &m_resources->vertexBuffer->getBuffer(), &vertexBufferOffset);
+        commandBuffer.bindIndexBuffer(m_resources->indexBuffer->getBuffer(), indexBufferOffset, vk::IndexType::eUint32);
 
 
         commandBuffer.drawIndexed(command.indexCount, 1, 0, 0, 0);
@@ -207,7 +205,6 @@ void ImmediateRenderer::render(double dt, const vk::CommandBuffer& commandBuffer
 }
 
 void ImmediateRenderer::begin(MeshPrimitiveType primitiveType) {
-    PROFILE_SCOPE("ImmediateRenderer::begin");
 
     if (m_currentCommand != nullptr) {
         LOG_ERROR("Cannot begin debug render group. Current group is not ended");
@@ -241,7 +238,6 @@ void ImmediateRenderer::begin(MeshPrimitiveType primitiveType) {
 }
 
 void ImmediateRenderer::end() {
-    PROFILE_SCOPE("ImmediateRenderer::end");
 
     if (m_currentCommand->primitiveType == PrimitiveType_LineLoop) {
         addIndex(0); // Loop back to the first vertex
@@ -330,7 +326,6 @@ void ImmediateRenderer::colour(float r, float g, float b) {
 }
 
 void ImmediateRenderer::pushMatrix(MatrixMode matrixMode) {
-    PROFILE_SCOPE("ImmediateRenderer::pushMatrix");
     auto& stack = matrixStack(matrixMode);
 
 #if _DEBUG || IMMEDIATE_MODE_VALIDATION
@@ -352,7 +347,6 @@ void ImmediateRenderer::pushMatrix() {
 }
 
 void ImmediateRenderer::popMatrix(MatrixMode matrixMode) {
-    PROFILE_SCOPE("ImmediateRenderer::popMatrix");
     auto& stack = matrixStack(matrixMode);
 
 #if _DEBUG || IMMEDIATE_MODE_VALIDATION
@@ -461,7 +455,6 @@ ImageView* ImmediateRenderer::getOutputFrameImageView() const {
 
 
 void ImmediateRenderer::addVertex(const ColouredVertex& vertex) {
-    PROFILE_SCOPE("ImmediateRenderer::addVertex");
 
     constexpr float eps = std::numeric_limits<float>::epsilon();
 
@@ -479,7 +472,6 @@ void ImmediateRenderer::addVertex(const ColouredVertex& vertex) {
 }
 
 void ImmediateRenderer::addIndex(uint32_t index) {
-    PROFILE_SCOPE("ImmediateRenderer::addIndex");
 
     if (m_firstChangedIndex == (uint32_t)(-1))
         if (m_indexCount >= m_indices.size() || index != m_indices[m_indexCount])
@@ -518,8 +510,11 @@ std::stack<glm::mat4>& ImmediateRenderer::matrixStack() {
 void ImmediateRenderer::uploadBuffers() {
     PROFILE_SCOPE("ImmediateRenderer::uploadBuffers");
 
+//    if (m_vertices.capacity() > m_vertices.size() * 4)
+//        m_vertices.shrink_to_fit();
+
     const size_t vertexBufferCapacity = m_vertices.capacity() * sizeof(ColouredVertex);
-    if (m_vertexBuffer == nullptr || m_vertexBuffer->getSize() < vertexBufferCapacity) {
+    if (m_resources->vertexBuffer == nullptr || m_resources->vertexBuffer->getSize() < vertexBufferCapacity) {
         PROFILE_REGION("Recreate vertex buffer");
 
         BufferConfiguration vertexBufferConfig{};
@@ -528,12 +523,12 @@ void ImmediateRenderer::uploadBuffers() {
         vertexBufferConfig.usage = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
 //        vertexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;// | vk::MemoryPropertyFlagBits::eHostVisible;
         vertexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-        delete m_vertexBuffer;
-        m_vertexBuffer = Buffer::create(vertexBufferConfig, "ImmediateRenderer-VertexBuffer");
+        delete m_resources->vertexBuffer;
+        m_resources->vertexBuffer = Buffer::create(vertexBufferConfig, "ImmediateRenderer-VertexBuffer");
     }
 
     const size_t indexBufferCapacity = m_indices.capacity() * sizeof(uint32_t);
-    if (m_indexBuffer == nullptr || m_indexBuffer->getSize() < indexBufferCapacity) {
+    if (m_resources->indexBuffer == nullptr || m_resources->indexBuffer->getSize() < indexBufferCapacity) {
         PROFILE_REGION("Recreate index buffer");
 
         BufferConfiguration indexBufferConfig{};
@@ -542,8 +537,8 @@ void ImmediateRenderer::uploadBuffers() {
         indexBufferConfig.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
 //        indexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;// | vk::MemoryPropertyFlagBits::eHostVisible;
         indexBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-        delete m_indexBuffer;
-        m_indexBuffer = Buffer::create(indexBufferConfig, "ImmediateRenderer-IndexBuffer");
+        delete m_resources->indexBuffer;
+        m_resources->indexBuffer = Buffer::create(indexBufferConfig, "ImmediateRenderer-IndexBuffer");
     }
 
     vk::DeviceSize alignedUniformBufferSize = Engine::graphics()->getAlignedUniformBufferOffset(sizeof(UniformBufferData));
@@ -568,18 +563,18 @@ void ImmediateRenderer::uploadBuffers() {
 
     PROFILE_REGION("Upload vertices");
     if (!m_vertices.empty()) {
-//        m_vertexBuffer->upload(0, m_vertices.size() * sizeof(ColouredVertex), m_vertices.data());
-        if (m_firstChangedVertex != (uint32_t)(-1)) {
-            m_vertexBuffer->upload(m_firstChangedVertex * sizeof(ColouredVertex),(m_vertices.size() - m_firstChangedVertex) * sizeof(ColouredVertex),&m_vertices[m_firstChangedVertex]);
-        }
+        m_resources->vertexBuffer->upload(0, m_vertices.size() * sizeof(ColouredVertex), m_vertices.data());
+//        if (m_firstChangedVertex != (uint32_t)(-1)) {
+//            m_resources->vertexBuffer->upload(m_firstChangedVertex * sizeof(ColouredVertex),(m_vertices.size() - m_firstChangedVertex) * sizeof(ColouredVertex),&m_vertices[m_firstChangedVertex]);
+//        }
     }
 
     PROFILE_REGION("Upload indices");
     if (!m_indices.empty()) {
-//        m_indexBuffer->upload(0, m_indices.size() * sizeof(uint32_t), m_indices.data());
-        if (m_firstChangedIndex != (uint32_t)(-1)) {
-            m_indexBuffer->upload(m_firstChangedIndex * sizeof(uint32_t),(m_indices.size() - m_firstChangedIndex) * sizeof(uint32_t),&m_indices[m_firstChangedIndex]);
-        }
+        m_resources->indexBuffer->upload(0, m_indices.size() * sizeof(uint32_t), m_indices.data());
+//        if (m_firstChangedIndex != (uint32_t)(-1)) {
+//            m_resources->indexBuffer->upload(m_firstChangedIndex * sizeof(uint32_t),(m_indices.size() - m_firstChangedIndex) * sizeof(uint32_t),&m_indices[m_firstChangedIndex]);
+//        }
     }
 
     PROFILE_REGION("Upload uniforms");

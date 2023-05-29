@@ -20,7 +20,11 @@ public:
 
     Plane(const Plane& copy);
 
-    Plane(Plane&& move);
+    Plane(Plane&& move) noexcept ;
+
+    Plane& operator=(const Plane& copy);
+
+    Plane& operator=(Plane&& move) noexcept;
 
     bool isDegenerate() const;
 
@@ -35,6 +39,8 @@ public:
     static double length(const Plane& plane);
 
     double length() const;
+
+    glm::dvec3 getOrigin() const;
 
     const glm::dvec3& getNormal() const;
 
@@ -55,6 +61,8 @@ public:
     // Fast triple-plane intersection point, assumes that the planes WILL intersect
     // at a single point, and none are parallel, or intersect along a line.
     static glm::dvec3 triplePlaneIntersection(const Plane& a, const Plane& b, const Plane& c);
+
+    static Plane transform(const Plane& plane, const glm::dmat4& matrix, bool skewMatrix = false);
 
 public:
     glm::dvec3 normal;

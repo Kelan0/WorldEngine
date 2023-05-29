@@ -5,7 +5,9 @@
 #include "core/graphics/Texture.h"
 #include "core/graphics/Buffer.h"
 #include "core/graphics/Mesh.h"
+#include "core/graphics/GraphicsPipeline.h"
 #include "core/engine/renderer/Material.h"
+#include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/scene/bound/Frustum.h"
 #include "core/util/Logger.h"
 
@@ -110,6 +112,27 @@ void SceneRenderer::preRender(double dt) {
 
     m_previousPartialTicks = Engine::instance()->getPartialTicks();
     m_numAddedRenderEntities = 0;
+}
+
+void SceneRenderer::renderGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum) {
+    PROFILE_SCOPE("SceneRenderer::renderGeometryPass");
+    PROFILE_BEGIN_GPU_CMD("SceneRenderer::renderGeometryPass", commandBuffer);
+
+    auto graphicsPipeline = Engine::instance()->getDeferredRenderer()->getEntityGeometryGraphicsPipeline();
+
+    std::array<vk::DescriptorSet, 3> descriptorSets = {
+            Engine::instance()->getDeferredRenderer()->getGlobalDescriptorSet()->getDescriptorSet(),
+            Engine::instance()->getSceneRenderer()->getObjectDescriptorSet()->getDescriptorSet(),
+            Engine::instance()->getSceneRenderer()->getMaterialDescriptorSet()->getDescriptorSet(),
+    };
+
+    std::array<uint32_t, 0> dynamicOffsets = {}; // zero-size array okay?
+
+    graphicsPipeline->bind(commandBuffer);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
+
+    Engine::instance()->getSceneRenderer()->drawEntities(dt, commandBuffer, frustum);
+    PROFILE_END_GPU_CMD("SceneRenderer::renderGeometryPass", commandBuffer);
 }
 
 void SceneRenderer::drawEntities(double dt, const vk::CommandBuffer& commandBuffer, const Frustum* frustum) {
@@ -404,6 +427,9 @@ void SceneRenderer::updateEntityWorldTransforms() {
     const auto& renderEntities = m_scene->registry()->group<RenderComponent, RenderInfo, Transform>();
 
     assert(m_objectDataBuffer.size() >= renderEntities.size());
+
+    // TODO: not update transforms for entities that never move.
+    // TODO: calculate transforms for entity hierarchy.
 
     size_t index = 0;
     for (auto it = renderEntities.begin(); it != renderEntities.end(); ++it, ++index) {

@@ -27,13 +27,19 @@ layout(std140, set = 0, binding = 0) uniform UBO1 {
     vec2 taaCurrentJitterOffset;
 };
 
-layout(std140, set = 1, binding = 0) readonly buffer TerrainDataBuffer {
+layout(std140, set = 1, binding = 0) uniform UBO2 {
+    mat4 terrainTransformMatrix;
+//    vec4 terrainScale;
+};
+
+layout(std140, set = 1, binding = 1) readonly buffer TerrainDataBuffer {
     TerrainData terrainData[];
 };
 
 void main() {
 //    mat4 prevModelMatrix = mat4(1.0);
-    mat4 modelMatrix = terrainData[gl_InstanceIndex].modelMatrix;
+    mat4 terrainTileMatrix = terrainData[gl_InstanceIndex].modelMatrix;
+    mat4 modelMatrix = terrainTransformMatrix * terrainTileMatrix;
 
     mat3 normalMatrix = transpose(inverse(mat3(camera.viewMatrix) * mat3(modelMatrix)));
 

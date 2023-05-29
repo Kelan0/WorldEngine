@@ -1,6 +1,7 @@
 #include "core/engine/scene/bound/BoundingVolume.h"
-
-
+#include "core/engine/geometry/MeshData.h"
+#include "core/engine/renderer/ImmediateRenderer.h"
+#include "core/application/Engine.h"
 
 
 // Test if two spheres intersect
@@ -325,6 +326,69 @@ double BoundingSphere::calculateMinDistance(const glm::dvec3& other) const {
 
 glm::dvec3 BoundingSphere::calculateClosestPoint(const glm::dvec3& point) const {
     return calculateClosestPoint_Sphere_Point(*this, point);
+}
+
+void BoundingSphere::drawLines() const {
+    static MeshData<Vertex> disc(PrimitiveType_Line);
+
+    if (disc.getVertexCount() == 0) {
+        const uint32_t discSegments = 20;
+        disc.createDisc(glm::vec3(0.0F), glm::vec3(1, 0, 0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1), 1.0F, discSegments);
+        disc.pushTransform();
+        disc.rotateDegrees(90.0F, 1.0F, 0.0F, 0.0F);
+        disc.createDisc(glm::vec3(0.0F), glm::vec3(1, 0, 0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1), 1.0F, discSegments);
+        disc.popTransform();
+        disc.pushTransform();
+        disc.rotateDegrees(90.0F, 0.0F, 1.0F, 0.0F);
+        disc.createDisc(glm::vec3(0.0F), glm::vec3(1, 0, 0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1), 1.0F, discSegments);
+        disc.popTransform();
+    }
+
+    ImmediateRenderer* renderer = Engine::instance()->getImmediateRenderer();
+
+    const auto& vertices = disc.getVertices();
+    const auto& indices = disc.getIndices();
+
+    renderer->pushMatrix();
+    renderer->translate(m_center);
+    renderer->scale((float)m_radius);
+
+    renderer->begin(PrimitiveType_Line);
+
+    for (int i = 0; i < indices.size(); ++i) {
+        const Vertex& v0 = vertices[indices[i]];
+        renderer->vertex(v0.position);
+    }
+
+    renderer->end();
+    renderer->popMatrix();
+}
+
+void BoundingSphere::drawFill() const {
+    static MeshData<Vertex> disc(PrimitiveType_Triangle);
+    if (disc.getVertexCount() == 0) {
+        disc.createUVSphere(glm::vec3(0.0F), 1.0F, 18, 18);
+    }
+
+    ImmediateRenderer* renderer = Engine::instance()->getImmediateRenderer();
+
+    const auto& vertices = disc.getVertices();
+    const auto& indices = disc.getIndices();
+
+    renderer->pushMatrix();
+    renderer->translate(m_center);
+    renderer->scale((float)m_radius);
+
+    renderer->begin(PrimitiveType_Triangle);
+
+    for (int i = 0; i < indices.size(); ++i) {
+        const Vertex& v0 = vertices[indices[i]];
+        renderer->normal(v0.normal);
+        renderer->vertex(v0.position);
+    }
+
+    renderer->end();
+    renderer->popMatrix();
 }
 
 

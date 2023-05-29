@@ -155,6 +155,8 @@ public:
 
     void createPlane(const glm::vec3& origin, const glm::vec3& u, const glm::vec3& v, const glm::vec3& normal, const glm::vec2& scale, const glm::uvec2& subdivisions);
 
+    void createDisc(const glm::vec3& center, const glm::vec3& u, const glm::vec3& v, const glm::vec3& normal, float radius, uint32_t segments);
+
     void createCuboid(const glm::vec3& pos0, const glm::vec3& pos1, const glm::vec3& tex0, const glm::vec3& tex1);
 
     void createCuboid(const glm::vec3& pos0, const glm::vec3& pos1);
@@ -599,6 +601,47 @@ void MeshData<Vertex_t>::createPlane(const glm::vec3& origin, const glm::vec3& u
 }
 
 template<typename Vertex_t>
+void MeshData<Vertex_t>::createDisc(const glm::vec3& center, const glm::vec3& u, const glm::vec3& v, const glm::vec3& normal, float radius, uint32_t segments) {
+    if (radius < 1e-6)
+        return;
+
+    segments = glm::max(segments, 3u);
+
+    bool reversedNormal = glm::dot(normal, glm::cross(u, v)) < 0.0F;
+
+    pushState();
+
+    float theta = 0.0;
+    float thetaIncrement = glm::two_pi<float>() / (float)segments;
+
+    glm::vec2 uv;
+
+    for (uint32_t i = 0; i < segments; ++i) {
+        uv.x = glm::cos(theta);
+        uv.y = glm::sin(theta);
+
+        glm::vec3 position = center + (u * uv.x * radius) + (v * uv.y * radius);
+        addVertex(position, normal, uv * 0.5F + 0.5F);
+
+        theta += thetaIncrement;
+    }
+
+    Index i0 = m_primitiveType != PrimitiveType_Line ? addVertex(center, normal, glm::vec2(0.5, 0.5)) : 0;
+
+    for (uint32_t i = 0; i < segments; ++i) {
+        if (m_primitiveType == PrimitiveType_Line) {
+            createLinePrimitive(i, (i + 1) % segments);
+        } else if (m_primitiveType == PrimitiveType_Point) {
+            createPointPrimitive(i);
+        } else {
+            addTriangle(i0, i, (i + 1) % segments);
+        }
+    }
+
+    popState();
+}
+
+template<typename Vertex_t>
 void MeshData<Vertex_t>::createCuboid(const glm::vec3& pos0, const glm::vec3& pos1, const glm::vec3& tex0, const glm::vec3& tex1) {
     createQuad(
             glm::vec3(pos0.x, pos0.y, pos0.z),
@@ -767,6 +810,9 @@ void MeshData<Vertex_t>::addTriangle(Index i0, Index i1, Index i2) {
             createPointPrimitive(i0);
             createPointPrimitive(i1);
             createPointPrimitive(i2);
+            break;
+        default:
+            assert(false); // Unsupported primitive type
             break;
     }
 }

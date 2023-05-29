@@ -138,6 +138,21 @@ void DeferredRenderer::preRender(double dt) {
 //        swapFrameImage(m_prevFrameImage, &m_resources->frameImage);
 //    }
     swapFrame();
+
+    if (Engine::instance()->isRenderWireframeEnabled()) {
+
+        if (m_terrainWireframeGeometryGraphicsPipeline == nullptr) {
+            GraphicsPipelineConfiguration pipelineConfig = m_terrainGeometryGraphicsPipeline->getConfig();
+            pipelineConfig.polygonMode = vk::PolygonMode::eLine;
+            m_terrainWireframeGeometryGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(pipelineConfig, "DeferredRenderer-TerrainWireframeGeometryGraphicsPipeline"));
+        }
+
+        if (m_entityWireframeGeometryGraphicsPipeline == nullptr) {
+            GraphicsPipelineConfiguration pipelineConfig = m_entityGeometryGraphicsPipeline->getConfig();
+            pipelineConfig.polygonMode = vk::PolygonMode::eLine;
+            m_entityWireframeGeometryGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(pipelineConfig, "DeferredRenderer-EntityWireframeGeometryGraphicsPipeline"));
+        }
+    }
 }
 
 void DeferredRenderer::updateCamera(double dt, const RenderCamera* renderCamera) {
@@ -167,48 +182,6 @@ void DeferredRenderer::updateCamera(double dt, const RenderCamera* renderCamera)
 
     m_resources->cameraInfoBuffer->upload(0, sizeof(GeometryPassCameraInfoUniformData), &uniformData);
 //    renderCamera->uploadCameraData(m_resources->cameraInfoBuffer, 0);
-}
-
-void DeferredRenderer::renderEntitiesGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum) {
-    PROFILE_SCOPE("DeferredRenderer::renderEntitiesGeometryPass");
-    PROFILE_BEGIN_GPU_CMD("DeferredRenderer::renderEntitiesGeometryPass", commandBuffer);
-
-    auto graphicsPipeline = getEntityGeometryGraphicsPipeline();
-
-    std::array<vk::DescriptorSet, 3> descriptorSets = {
-            m_resources->globalDescriptorSet->getDescriptorSet(),
-            Engine::instance()->getSceneRenderer()->getObjectDescriptorSet()->getDescriptorSet(),
-            Engine::instance()->getSceneRenderer()->getMaterialDescriptorSet()->getDescriptorSet(),
-    };
-
-    std::array<uint32_t, 0> dynamicOffsets = {}; // zero-size array okay?
-
-    graphicsPipeline->bind(commandBuffer);
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
-
-    Engine::instance()->getSceneRenderer()->drawEntities(dt, commandBuffer, frustum);
-    PROFILE_END_GPU_CMD("DeferredRenderer::renderEntitiesGeometryPass", commandBuffer);
-}
-
-void DeferredRenderer::renderTerrainGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum) {
-    PROFILE_SCOPE("DeferredRenderer::renderTerrainGeometryPass");
-    PROFILE_BEGIN_GPU_CMD("DeferredRenderer::renderTerrainGeometryPass", commandBuffer);
-
-    auto graphicsPipeline = getTerrainGeometryGraphicsPipeline();
-
-    std::array<vk::DescriptorSet, 2> descriptorSets = {
-            m_resources->globalDescriptorSet->getDescriptorSet(),
-            Engine::instance()->getTerrainRenderer()->getTerrainDescriptorSet()->getDescriptorSet()
-    };
-
-    std::array<uint32_t, 0> dynamicOffsets = {}; // zero-size array okay?
-
-    graphicsPipeline->bind(commandBuffer);
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
-
-    Engine::instance()->getTerrainRenderer()->drawTerrain(dt, commandBuffer, frustum);
-
-    PROFILE_END_GPU_CMD("DeferredRenderer::renderTerrainGeometryPass", commandBuffer);
 }
 
 void DeferredRenderer::renderLightingPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum) {
@@ -387,6 +360,42 @@ void DeferredRenderer::setEnvironmentMap(const std::shared_ptr<EnvironmentMap>& 
     m_environmentMap = environmentMap;
 }
 
+const SharedResource<RenderPass>& DeferredRenderer::getRnderPass() const {
+    return m_renderPass;
+}
+
+const std::shared_ptr<GraphicsPipeline>& DeferredRenderer::getTerrainGeometryGraphicsPipeline() const {
+    if (Engine::instance()->isRenderWireframeEnabled() && m_terrainWireframeGeometryGraphicsPipeline != nullptr) {
+        return m_terrainWireframeGeometryGraphicsPipeline;
+    } else {
+        return m_terrainGeometryGraphicsPipeline;
+    }
+}
+
+const std::shared_ptr<GraphicsPipeline>& DeferredRenderer::getEntityGeometryGraphicsPipeline() const {
+    if (Engine::instance()->isRenderWireframeEnabled() && m_entityWireframeGeometryGraphicsPipeline != nullptr) {
+        return m_entityWireframeGeometryGraphicsPipeline;
+    } else {
+        return m_entityGeometryGraphicsPipeline;
+    }
+}
+
+const SharedResource<DescriptorSetLayout>& DeferredRenderer::getGlobalDescriptorSetLayout() const {
+    return m_globalDescriptorSetLayout;
+}
+
+const SharedResource<DescriptorSetLayout>& DeferredRenderer::getLightingDescriptorSetLayout() const {
+    return m_lightingDescriptorSetLayout;
+}
+
+DescriptorSet* DeferredRenderer::getGlobalDescriptorSet() const {
+    return m_resources->globalDescriptorSet;
+}
+
+DescriptorSet* DeferredRenderer::getLightingDescriptorSet() const {
+    return m_resources->lightingPassDescriptorSet;
+}
+
 void DeferredRenderer::recreateSwapchain(RecreateSwapchainEvent* event) {
     bool success;
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
@@ -555,36 +564,6 @@ bool DeferredRenderer::createLightingGraphicsPipeline() {
     pipelineConfig.addDescriptorSetLayout(m_lightingDescriptorSetLayout.get());
     pipelineConfig.addDescriptorSetLayout(Engine::instance()->getLightRenderer()->getLightingRenderPassDescriptorSetLayout().get());
     return m_lightingGraphicsPipeline->recreate(pipelineConfig, "DeferredRenderer-LightingGraphicsPipeline");
-}
-
-std::shared_ptr<GraphicsPipeline> DeferredRenderer::getTerrainGeometryGraphicsPipeline() {
-    if (Engine::instance()->isRenderWireframeEnabled()) {
-
-        if (m_terrainWireframeGeometryGraphicsPipeline == nullptr) {
-            GraphicsPipelineConfiguration pipelineConfig = m_terrainGeometryGraphicsPipeline->getConfig();
-            pipelineConfig.polygonMode = vk::PolygonMode::eLine;
-            m_terrainWireframeGeometryGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(pipelineConfig, "DeferredRenderer-TerrainWireframeGeometryGraphicsPipeline"));
-        }
-
-        return m_terrainWireframeGeometryGraphicsPipeline;
-    } else {
-        return m_terrainGeometryGraphicsPipeline;
-    }
-}
-
-std::shared_ptr<GraphicsPipeline> DeferredRenderer::getEntityGeometryGraphicsPipeline() {
-    if (Engine::instance()->isRenderWireframeEnabled()) {
-
-        if (m_entityWireframeGeometryGraphicsPipeline == nullptr) {
-            GraphicsPipelineConfiguration pipelineConfig = m_entityGeometryGraphicsPipeline->getConfig();
-            pipelineConfig.polygonMode = vk::PolygonMode::eLine;
-            m_entityWireframeGeometryGraphicsPipeline = std::shared_ptr<GraphicsPipeline>(GraphicsPipeline::create(pipelineConfig, "DeferredRenderer-EntityWireframeGeometryGraphicsPipeline"));
-        }
-
-        return m_entityWireframeGeometryGraphicsPipeline;
-    } else {
-        return m_entityGeometryGraphicsPipeline;
-    }
 }
 
 bool DeferredRenderer::createRenderPass() {

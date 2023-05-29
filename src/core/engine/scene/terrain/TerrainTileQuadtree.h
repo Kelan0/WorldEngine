@@ -15,6 +15,12 @@ public:
         QuadIndex_BottomRight = 3, // 0b11
     };
 
+    enum Visibility {
+        Visibility_NotVisible = 0,
+        Visibility_PartiallyVisible = 1,
+        Visibility_FullyVisible = 2,
+    };
+
     static std::array<glm::uvec2, 4> QUAD_OFFSETS;
 
     struct TileTreeNode {
@@ -24,6 +30,7 @@ public:
             struct {
                 uint8_t treeDepth : 6; // 6-bits, max depth is 63
                 uint8_t deleted : 1;
+                uint8_t visible : 1;
             };
         };
         glm::uvec2 treePosition;
@@ -37,15 +44,21 @@ public:
 
     void update(const Frustum* frustum);
 
-    const std::vector<TileTreeNode>& getNodes();
+    const TileTreeNode& getNode(size_t index) const;
 
-    glm::dvec2 getNormalizedNodeCoordinate(const glm::dvec2& treePosition, uint8_t treeDepth);
+    template<class Fn>
+    void forEachLeafNode(Fn callback);
 
-    double getNormalizedNodeSizeForTreeDepth(uint8_t treeDepth);
+    template<class Fn>
+    void traverseTreeNodes(std::vector<size_t>& unvisitedNodesStack, Fn callback);
 
-    glm::dvec3 getNodePosition(const glm::dvec2& normalizedNodeCoordinate);
+    glm::dvec2 getNormalizedNodeCoordinate(const glm::dvec2& treePosition, uint8_t treeDepth) const;
 
-    glm::dvec2 getNodeSize(uint8_t treeDepth);
+    double getNormalizedNodeSizeForTreeDepth(uint8_t treeDepth) const;
+
+    glm::dvec3 getNodePosition(const glm::dvec2& normalizedNodeCoordinate) const;
+
+    glm::dvec2 getNodeSize(uint8_t treeDepth) const;
 
     const Transform& getTransform() const;
 
@@ -67,28 +80,81 @@ public:
 
     static bool isDeleted(const TileTreeNode& node);
 
+    static bool isVisible(const TileTreeNode& node);
+
 private:
+    void updateSubdivisions(const Frustum* frustum, std::vector<size_t>& deletedNodeIndices, std::vector<size_t>& unvisitedNodesStack);
+
+    void updateVisibility(const Frustum* frustum, std::vector<size_t>& unvisitedNodesStack);
+
+    void markAllDeletedSubtrees(std::vector<size_t>& deletedNodeIndices, std::vector<size_t>& unvisitedNodesStack);
+
+    void cleanupDeletedNodes();
+
+    Visibility calculateNodeVisibility(const Frustum* frustum, const TileTreeNode& node);
+
     size_t splitNode(size_t nodeIndex);
 
     size_t mergeNode(size_t nodeIndex);
 
 private:
-    enum NodeUpdateType {
-        NodeUpdateType_Split = 0,
-        NodeUpdateType_Merge = 1,
-    };
-    struct NodeUpdate {
-        size_t index;
-        double distance;
-        uint8_t treeDepth;
-    };
-private:
     Transform m_transform;
     uint32_t m_maxQuadtreeDepth;
     glm::dvec2 m_size;
     double m_heightScale;
+    double m_splitThreshold;
     std::vector<TileTreeNode> m_nodes;
+    std::vector<uint32_t> m_parentOffsets;
 };
+
+
+
+
+template<class Fn>
+void TerrainTileQuadtree::forEachLeafNode(Fn callback) {
+    for (size_t i = 0; i < m_nodes.size(); ++i) {
+        const TileTreeNode& node = m_nodes[i]; // Node must not be modified
+
+        if (hasChildren(node))
+            continue;
+
+        if constexpr(std::is_void_v<std::invoke_result_t<Fn, decltype(this), decltype(node), decltype(i)>>) {
+            callback(this, node, i);
+        } else {
+            bool breakLoop = callback(this, node, i);
+            if (breakLoop)
+                break;
+        }
+    }
+}
+
+template<class Fn>
+void TerrainTileQuadtree::traverseTreeNodes(std::vector<size_t>& unvisitedNodesStack, Fn callback) {
+    unvisitedNodesStack.clear();
+    unvisitedNodesStack.emplace_back(0); // root
+
+    while (!unvisitedNodesStack.empty()) {
+        size_t nodeIndex = unvisitedNodesStack.back();
+        unvisitedNodesStack.pop_back();
+
+        const TileTreeNode& node = m_nodes[nodeIndex];
+
+        if constexpr(std::is_void_v<std::invoke_result_t<Fn, decltype(this), decltype(node), decltype(nodeIndex)>>) {
+            callback(this, node, nodeIndex);
+        } else {
+            bool ignoreSubtree = callback(this, node, nodeIndex);
+            if (ignoreSubtree)
+                continue;
+        }
+
+        // Callback could have caused our node reference above to become invalid. Access via index from this point on.
+        if (!hasChildren(m_nodes[nodeIndex]))
+            continue;
+
+        for (int i = 3; i >= 0; --i) // Push children in reverse order, so they are popped in ascending order.
+            unvisitedNodesStack.emplace_back(nodeIndex + m_nodes[nodeIndex].childOffset + i);
+    }
+}
 
 
 #endif //WORLDENGINE_TERRAINTILEQUADTREE_H

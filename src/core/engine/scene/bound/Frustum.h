@@ -65,6 +65,7 @@ public:
 
     bool contains(const glm::dvec3& point) const;
 
+    static Frustum transform(const Frustum& frustum, const glm::dmat4& matrix);
 
 private:
     void getRenderCorners(glm::dvec3* corners) const;

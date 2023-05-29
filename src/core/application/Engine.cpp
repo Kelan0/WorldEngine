@@ -321,8 +321,8 @@ void Engine::render(double dt) {
     m_deferredRenderer->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
 
     m_deferredRenderer->beginGeometrySubpass(commandBuffer, vk::SubpassContents::eInline);
-    m_deferredRenderer->renderTerrainGeometryPass(dt, commandBuffer, m_renderCamera, m_viewFrustum);
-    m_deferredRenderer->renderEntitiesGeometryPass(dt, commandBuffer, m_renderCamera, m_viewFrustum);
+    m_terrainRenderer->renderGeometryPass(dt, commandBuffer, m_renderCamera, m_viewFrustum);
+    m_sceneRenderer->renderGeometryPass(dt, commandBuffer, m_renderCamera, m_viewFrustum);
 
     m_deferredRenderer->beginLightingSubpass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredRenderer->renderLightingPass(dt, commandBuffer, m_renderCamera, m_viewFrustum);

@@ -22,6 +22,8 @@ public:
 
     void preRender(double dt);
 
+    void renderGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum);
+
     void drawTerrain(double dt, const vk::CommandBuffer& commandBuffer, const Frustum* frustum);
 
     void setScene(Scene* scene);
@@ -35,15 +37,22 @@ public:
 private:
     void updateQuadtreeTerrainTiles(const QuadtreeTerrainComponent& quadtreeTerrain, const Transform& transform, double dt, const Frustum* frustum);
 
-    void* mapTerrainDataBuffer(size_t maxObjects);
+    void* mapTerrainTileDataBuffer(size_t maxObjects);
+
+    void* mapTerrainUniformBuffer(size_t maxObjects);
 
 private:
-    struct GPUTerrainData {
+    struct GPUTerrainTileData {
         glm::mat4 modelMatrix;
     };
 
+    struct GPUTerrainUniformData {
+        glm::mat4 terrainTransformMatrix;
+    };
+
     struct RenderResources {
-        Buffer* terrainDataBuffer;
+        Buffer* terrainUniformBuffer;
+        Buffer* terrainTileDataBuffer;
         DescriptorSet* terrainDescriptorSet;
     };
 
@@ -54,7 +63,7 @@ private:
     SharedResource<DescriptorSetLayout> m_terrainDescriptorSetLayout;
 
     std::shared_ptr<Mesh> m_terrainTileMesh;
-    std::vector<GPUTerrainData> m_terrainDataBuffer;
+    std::vector<GPUTerrainTileData> m_terrainTileDataBuffer;
 
 };
 
