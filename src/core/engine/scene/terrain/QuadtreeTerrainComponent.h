@@ -4,6 +4,7 @@
 #include "core/core.h"
 
 class TerrainTileQuadtree;
+class TerrainTileSupplier;
 
 class QuadtreeTerrainComponent {
 public:
@@ -19,6 +20,8 @@ public:
 
     QuadtreeTerrainComponent& setHeightScale(double heightScale);
 
+    QuadtreeTerrainComponent& setTileSupplier(const std::shared_ptr<TerrainTileSupplier>& tileSupplier);
+
     uint32_t getMaxQuadtreeDepth() const;
 
     uint32_t getTileResolution() const;
@@ -26,6 +29,8 @@ public:
     const glm::dvec2& getSize() const;
 
     double getHeightScale() const;
+
+    const std::shared_ptr<TerrainTileSupplier>& getTileSupplier() const;
 
     const std::unique_ptr<TerrainTileQuadtree>& getTileQuadtree() const;
 

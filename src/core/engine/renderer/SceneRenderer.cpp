@@ -463,7 +463,7 @@ void SceneRenderer::updateEntityMaterials() {
     }
 
     if (m_resources->updateTextureDescriptorStartIndex != UINT32_MAX) {
-        uint32_t descriptorCount = m_resources->materialDescriptorSet->getLayout()->findBinding(0).descriptorCount;
+        uint32_t descriptorCount = m_resources->materialDescriptorSet->getLayout()->getBinding(0).descriptorCount;
         uint32_t arrayCount = (m_resources->updateTextureDescriptorEndIndex - m_resources->updateTextureDescriptorStartIndex) + 1;
         arrayCount = glm::min(arrayCount, descriptorCount);
 

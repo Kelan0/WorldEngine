@@ -4,6 +4,7 @@
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/scene/terrain/QuadtreeTerrainComponent.h"
 #include "core/engine/scene/terrain/TerrainTileQuadtree.h"
+#include "core/engine/scene/terrain/TerrainTileSupplier.h"
 #include "core/engine/scene/Scene.h"
 #include "core/application/InputHandler.h"
 #include "core/engine/scene/EntityHierarchy.h"
@@ -38,12 +39,20 @@ void TerrainTestApplication::init() {
 
     std::shared_ptr<EnvironmentMap> skyboxEnvironmentMap = std::make_shared<EnvironmentMap>(skyboxImageCube);
     skyboxEnvironmentMap->update();
-
     Engine::instance()->getDeferredRenderer()->setEnvironmentMap(skyboxEnvironmentMap);
+
+    Image2DConfiguration heightmapImageConfig{};
+    heightmapImageConfig.device = Engine::graphics()->getDevice();
+    heightmapImageConfig.filePath = "terrain/heightmap_1/heightmap2.hdr";
+    heightmapImageConfig.usage = vk::ImageUsageFlagBits::eSampled;
+    heightmapImageConfig.format = vk::Format::eR32Sfloat;
+    std::shared_ptr<Image2D> heightmapImage = std::shared_ptr<Image2D>(Image2D::create(heightmapImageConfig, "TerrainTestHeightmap"));
+
+    std::shared_ptr<TerrainTileSupplier> tileSupplier = std::make_shared<HeightmapTerrainTileSupplier>(heightmapImage);
 
     Entity terrainEntity0 = EntityHierarchy::create(Engine::scene(), "terrainEntity0");
     terrainEntity0.addComponent<Transform>().translate(0.0, 0.0, 0.0);
-    QuadtreeTerrainComponent& terrain0 = terrainEntity0.addComponent<QuadtreeTerrainComponent>().setSize(glm::dvec2(1000.0, 1000.0)).setMaxQuadtreeDepth(12);
+    QuadtreeTerrainComponent& terrain0 = terrainEntity0.addComponent<QuadtreeTerrainComponent>().setTileSupplier(tileSupplier).setSize(glm::dvec2(1000.0, 1000.0)).setHeightScale(250.0).setMaxQuadtreeDepth(12);
 
 //    Entity terrainEntity1 = EntityHierarchy::create(Engine::scene(), "terrainEntity1");
 //    terrainEntity1.addComponent<Transform>().translate(400.0, -30.0, 0.0).rotate(1.0F, 0.0F, 0.0F, glm::pi<float>() * 0.5F);

@@ -1,10 +1,18 @@
-#include "TerrainTileQuadtree.h"
+#include "core/engine/scene/terrain/TerrainTileQuadtree.h"
+#include "core/engine/scene/terrain/TerrainTileSupplier.h"
 #include "core/engine/scene/bound/Frustum.h"
-#include "core/util/Logger.h"
-#include "core/util/Profiler.h"
 #include "core/engine/scene/Entity.h"
 #include "core/engine/scene/Scene.h"
 #include "core/engine/renderer/ImmediateRenderer.h"
+#include "core/util/Logger.h"
+#include "core/util/Profiler.h"
+
+#define DEBUG_RENDER_BOUNDING_VOLUMES 0
+
+#if DEBUG_RENDER_BOUNDING_VOLUMES
+std::vector<BoundingSphere> testBoundingSpheres;
+#endif
+
 
 // These must match the order of the QuadIndex enum
 std::array<glm::uvec2, 4> TerrainTileQuadtree::QUAD_OFFSETS = {
@@ -18,7 +26,8 @@ TerrainTileQuadtree::TerrainTileQuadtree(uint32_t maxQuadtreeDepth, const glm::d
         m_maxQuadtreeDepth(maxQuadtreeDepth),
         m_size(size),
         m_heightScale(heightScale),
-        m_splitThreshold(2.0) {
+        m_splitThreshold(2.0),
+        m_tileSupplier(nullptr) {
 
     TileTreeNode rootNode{};
 //    rootNode.parentOffset = UINT32_MAX;
@@ -120,6 +129,14 @@ void TerrainTileQuadtree::setHeightScale(double heightScale) {
     m_heightScale = heightScale;
 }
 
+const std::shared_ptr<TerrainTileSupplier>& TerrainTileQuadtree::getTileSupplier() const {
+    return m_tileSupplier;
+}
+
+void TerrainTileQuadtree::setTileSupplier(const std::shared_ptr<TerrainTileSupplier>& tileSupplier) {
+    m_tileSupplier = tileSupplier;
+}
+
 bool TerrainTileQuadtree::hasChildren(const TileTreeNode& node) {
     return node.childOffset != UINT32_MAX;
 }
@@ -195,8 +212,6 @@ void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector
     });
 }
 
-std::vector<BoundingSphere> testBoundingSpheres;
-
 void TerrainTileQuadtree::updateVisibility(const Frustum* frustum, std::vector<size_t>& unvisitedNodesStack) {
     PROFILE_SCOPE("TerrainTileQuadtree::updateVisibility")
 
@@ -214,7 +229,9 @@ void TerrainTileQuadtree::updateVisibility(const Frustum* frustum, std::vector<s
 
     size_t traversalCount = 0;
 
+#if DEBUG_RENDER_BOUNDING_VOLUMES
     testBoundingSpheres.clear();
+#endif
 
     while (!unvisitedNodesStack.empty()) {
         size_t nodeIndex = unvisitedNodesStack.back();
@@ -238,7 +255,7 @@ void TerrainTileQuadtree::updateVisibility(const Frustum* frustum, std::vector<s
         }
     }
 
-    LOG_DEBUG("Visibility check traversed %zu nodes, %zu fully visible subtrees", traversalCount, fullyVisibleSubtrees.size());
+//    LOG_DEBUG("Visibility check traversed %zu nodes, %zu fully visible subtrees", traversalCount, fullyVisibleSubtrees.size());
 
     PROFILE_REGION("Update fully visible subtrees")
 
@@ -260,34 +277,30 @@ void TerrainTileQuadtree::updateVisibility(const Frustum* frustum, std::vector<s
             unvisitedNodesStack.emplace_back(nodeIndex + m_nodes[nodeIndex].childOffset + i);
     }
 
-//    Entity mainCamera = Engine::scene()->getMainCameraEntity();
-//    Transform& cameraTransform = mainCamera.getComponent<Transform>();
-//    Camera& cameraProjection = mainCamera.getComponent<Camera>();
-//
-//    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_Projection);
-//    Engine::instance()->getImmediateRenderer()->pushMatrix();
-//    Engine::instance()->getImmediateRenderer()->loadMatrix(cameraProjection.getProjectionMatrix());
-//    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_ModelView);
-//    Engine::instance()->getImmediateRenderer()->pushMatrix();
-//    Engine::instance()->getImmediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
-//
-//    Engine::instance()->getImmediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
-//    Engine::instance()->getImmediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
-//
-//    for (auto& bs : testBoundingSpheres) {
-//        Engine::instance()->getImmediateRenderer()->setLineWidth(1.0F);
-//        Engine::instance()->getImmediateRenderer()->setBlendEnabled(false);
-//        Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(false);
-//        Engine::instance()->getImmediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
-//        Engine::instance()->getImmediateRenderer()->setColourMultiplierEnabled(true);
-//        Engine::instance()->getImmediateRenderer()->setBackfaceColourMultiplier(glm::vec4(0.4F, 1.0F, 0.4F, 0.2F));
-//        bs.drawLines();
-//    }
-//
-//    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_ModelView);
-//    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_Projection);
+#if DEBUG_RENDER_BOUNDING_VOLUMES
+    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_Projection);
+    Engine::instance()->getImmediateRenderer()->pushMatrix();
+    Engine::instance()->getImmediateRenderer()->loadMatrix(Engine::scene()->getMainCameraEntity().getComponent<Camera>().getProjectionMatrix());
+    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_ModelView);
+    Engine::instance()->getImmediateRenderer()->pushMatrix();
+    Engine::instance()->getImmediateRenderer()->loadMatrix(glm::inverse(glm::mat4(Engine::scene()->getMainCameraEntity().getComponent<Transform>().getMatrix())));
+
+    Engine::instance()->getImmediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
+    Engine::instance()->getImmediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
+
+    Engine::instance()->getImmediateRenderer()->setLineWidth(1.0F);
+    Engine::instance()->getImmediateRenderer()->setBlendEnabled(false);
+    Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(false);
+    Engine::instance()->getImmediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
+
+    for (auto& bs : testBoundingSpheres)
+        bs.drawLines();
+
+    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_ModelView);
+    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_Projection);
 
     testBoundingSpheres.clear();
+#endif
 }
 
 void TerrainTileQuadtree::markAllDeletedSubtrees(std::vector<size_t>& deletedNodeIndices, std::vector<size_t>& unvisitedNodesStack) {
@@ -312,7 +325,7 @@ void TerrainTileQuadtree::markAllDeletedSubtrees(std::vector<size_t>& deletedNod
     }
 }
 
-TerrainTileQuadtree::Visibility TerrainTileQuadtree::calculateNodeVisibility(const Frustum* frustum, const TileTreeNode& node) {
+TerrainTileQuadtree::Visibility TerrainTileQuadtree::calculateNodeVisibility(const Frustum* frustum, const TileTreeNode& node) const {
     double normalizedNodeSize = getNormalizedNodeSizeForTreeDepth(node.treeDepth);
     glm::dvec2 normalizedCoord00 = glm::dvec2(node.treePosition) * normalizedNodeSize;
     glm::dvec2 normalizedCoord01 = glm::dvec2(node.treePosition + glm::uvec2(0, 1)) * normalizedNodeSize;
@@ -335,7 +348,9 @@ TerrainTileQuadtree::Visibility TerrainTileQuadtree::calculateNodeVisibility(con
     if (!c00 && !c01 && !c10 && !c11) {
         double r = 0.5 * normalizedNodeSize * glm::max(m_size.x, m_size.y) * glm::root_two<double>();
         BoundingSphere boundingSphere((position00 + position01 + position10 + position11) * 0.25, r);
+#if DEBUG_RENDER_BOUNDING_VOLUMES
         testBoundingSpheres.emplace_back(boundingSphere);
+#endif
 
         if (!frustum->intersects(boundingSphere))
             return Visibility_NotVisible;

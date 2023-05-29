@@ -31,6 +31,11 @@ QuadtreeTerrainComponent& QuadtreeTerrainComponent::setHeightScale(double height
     return *this;
 }
 
+QuadtreeTerrainComponent& QuadtreeTerrainComponent::setTileSupplier(const std::shared_ptr<TerrainTileSupplier>& tileSupplier) {
+    m_tileQuadtree->setTileSupplier(tileSupplier);
+    return *this;
+}
+
 uint32_t QuadtreeTerrainComponent::getMaxQuadtreeDepth() const {
     return m_tileQuadtree->getMaxQuadtreeDepth();
 }
@@ -45,6 +50,10 @@ const glm::dvec2& QuadtreeTerrainComponent::getSize() const {
 
 double QuadtreeTerrainComponent::getHeightScale() const {
     return m_tileQuadtree->getHeightScale();
+}
+
+const std::shared_ptr<TerrainTileSupplier>& QuadtreeTerrainComponent::getTileSupplier() const {
+    return m_tileQuadtree->getTileSupplier();
 }
 
 const std::unique_ptr<TerrainTileQuadtree>& QuadtreeTerrainComponent::getTileQuadtree() const {

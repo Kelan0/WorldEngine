@@ -50,6 +50,7 @@ ImageData::~ImageData() {
 }
 
 ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desiredLayout, ImagePixelFormat desiredFormat) {
+
     auto it = s_imageCache.find(filePath);
     if (it != s_imageCache.end()) {
         return it->second;
@@ -73,6 +74,9 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
     uint8_t* data;
 
     std::string absFilePath = Application::instance()->getAbsoluteResourceFilePath(filePath);
+
+    LOG_INFO("Loading image \"%s\"", absFilePath.c_str());
+    auto t0 = Performance::now();
 
     if (channelSize == 1) {
         data = reinterpret_cast<uint8_t*>(stbi_load(absFilePath.c_str(), &width, &height, &channels, desiredChannelCount));
@@ -119,7 +123,7 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
         return nullptr;
     }
 
-    LOG_INFO("Loaded image \"%s\"", absFilePath.c_str());
+    LOG_INFO("Finished loading image \"%s\" - Took %.2f msec", absFilePath.c_str(), Performance::milliseconds(t0));
 
     ImageData* image = new ImageData(data, width, height, layout, format, AllocationType_Stbi);
 
@@ -984,6 +988,7 @@ bool ImageUtil::upload(const vk::CommandBuffer& commandBuffer, const vk::Image& 
         return false;
     }
 
+    // TODO: we should limit the size of the i,age staging buffer, and upload the data in chunks if it does not all fit within the buffer.
     Buffer* srcBuffer = getImageStagingBuffer(imageRegion, bytesPerPixel);
     if (srcBuffer == nullptr) {
         LOG_ERROR("Unable to upload Image: Failed to get staging buffer");

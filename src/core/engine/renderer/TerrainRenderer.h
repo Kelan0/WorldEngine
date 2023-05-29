@@ -9,6 +9,10 @@ class Frustum;
 class Transform;
 class QuadtreeTerrainComponent;
 class Buffer;
+class Texture;
+class Sampler;
+class Image2D;
+class ImageView;
 class DescriptorSet;
 class DescriptorSetLayout;
 
@@ -41,13 +45,21 @@ private:
 
     void* mapTerrainUniformBuffer(size_t maxObjects);
 
+    void initializeDefaultEmptyHeightmapTexture();
+
 private:
     struct GPUTerrainTileData {
-        glm::mat4 modelMatrix;
+        glm::vec2 tilePosition;
+        glm::vec2 tileSize;
+        glm::vec2 textureOffset;
+        glm::vec2 textureSize;
     };
 
     struct GPUTerrainUniformData {
         glm::mat4 terrainTransformMatrix;
+        glm::vec4 terrainScale;
+        uint32_t heightmapTextureIndex;
+        uint32_t _pad0[3];
     };
 
     struct RenderResources {
@@ -64,6 +76,10 @@ private:
 
     std::shared_ptr<Mesh> m_terrainTileMesh;
     std::vector<GPUTerrainTileData> m_terrainTileDataBuffer;
+
+    std::shared_ptr<Sampler> m_defaultHeightmapSampler;
+    std::shared_ptr<Image2D> m_defaultEmptyHeightmapImage;
+    std::shared_ptr<ImageView> m_defaultEmptyHeightmapImageView;
 
 };
 

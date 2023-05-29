@@ -8,9 +8,10 @@
 layout(location = 0) in vec3 fs_normal;
 layout(location = 1) in vec3 fs_tangent;
 layout(location = 2) in vec3 fs_bitangent;
-layout(location = 3) in vec2 fs_texture;
+layout(location = 3) in vec2 fs_textureCoord;
 layout(location = 4) in vec4 fs_prevPosition;
 layout(location = 5) in vec4 fs_currPosition;
+layout(location = 6) in flat uint fs_heightmapTextureIndex;
 
 
 layout(location = 0) out vec4 out_AlbedoRGB_Roughness;
@@ -25,10 +26,37 @@ layout(std140, set = 0, binding = 0) uniform UBO1 {
     vec2 taaCurrentJitterOffset;
 };
 
+layout(std140, set = 1, binding = 0) uniform UBO2 {
+    mat4 terrainTransformMatrix;
+    vec4 terrainScale;
+    uvec4 heightmapTextureIndex;
+};
+
+layout(set = 1, binding = 2) uniform sampler2D heightmapTextures[];
+
 void main() {
+
+    const float elevationScale = terrainScale.z;
+    const ivec3 off = ivec3(1, 1, 0);
+    float hL = textureOffset(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord, ivec2(-1, 0)).r * elevationScale;
+    float hR = textureOffset(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord, ivec2(+1, 0)).r * elevationScale;
+    float hD = textureOffset(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord, ivec2(0, -1)).r * elevationScale;
+    float hU = textureOffset(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord, ivec2(0, +1)).r * elevationScale;
+    vec3 N;
+    N.x = hL - hR;
+    N.y = hD - hU;
+    N.z = 2.0;
+
+    mat3 TBN = mat3(fs_tangent, fs_bitangent, fs_normal);
+    N = TBN * N;
+
+    N = normalize(N);
+
     out_AlbedoRGB_Roughness.rgb = vec3(0.1, 0.6, 0.1);
+//    out_AlbedoRGB_Roughness.rgb = vec3(fract(fs_textureCoord * 1), 0.0);
+//    out_AlbedoRGB_Roughness.rgb = vec3(fs_normal * 0.5 + 0.5);
     out_AlbedoRGB_Roughness.w = 1.0;
-    out_NormalXYZ_Metallic.xyz = normalize(fs_normal);
+    out_NormalXYZ_Metallic.xyz = N;
     out_NormalXYZ_Metallic.w = 0.0;
     outEmissionRGB_AO.rgb = vec3(0.0);
     outEmissionRGB_AO.a = 1.0;

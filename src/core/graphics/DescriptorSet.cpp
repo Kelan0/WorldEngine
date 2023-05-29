@@ -143,13 +143,13 @@ int32_t DescriptorSetLayout::findBindingIndex(uint32_t binding) const {
     return -1;
 }
 
-const vk::DescriptorSetLayoutBinding& DescriptorSetLayout::findBinding(uint32_t binding) const {
+const vk::DescriptorSetLayoutBinding& DescriptorSetLayout::getBinding(uint32_t binding) const {
     int index = findBindingIndex(binding);
     assert(index >= 0);
-    return getBinding(index);
+    return getBindingByIndex(index);
 }
 
-const vk::DescriptorSetLayoutBinding& DescriptorSetLayout::getBinding(int32_t index) const {
+const vk::DescriptorSetLayoutBinding& DescriptorSetLayout::getBindingByIndex(int32_t index) const {
     assert(index >= 0 && (uint32_t)index < m_key.bindingCount);
     return m_key.pBindings[index];
 }
@@ -312,7 +312,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeBuffer(uint32_t binding, const vk
     int bindingIndex = m_descriptorSet->getLayout()->findBindingIndex(binding);
     assert(bindingIndex >= 0);
 
-    const auto& bindingInfo = m_descriptorSet->getLayout()->getBinding(bindingIndex);
+    const auto& bindingInfo = m_descriptorSet->getLayout()->getBindingByIndex(bindingIndex);
 
     assert(bindingInfo.descriptorCount == 1);
 
@@ -350,7 +350,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeTexelBufferView(uint32_t binding,
     int bindingIndex = m_descriptorSet->getLayout()->findBindingIndex(binding);
     assert(bindingIndex >= 0);
 
-    const auto& bindingInfo = m_descriptorSet->getLayout()->getBinding(bindingIndex);
+    const auto& bindingInfo = m_descriptorSet->getLayout()->getBindingByIndex(bindingIndex);
 
     assert(bindingInfo.descriptorCount == 1);
 
@@ -380,7 +380,7 @@ DescriptorSetWriter& DescriptorSetWriter::writeImage(uint32_t binding, const vk:
 #endif
     assert(imageInfos != nullptr);
 
-    const auto& bindingInfo = m_descriptorSet->getLayout()->getBinding(bindingIndex);
+    const auto& bindingInfo = m_descriptorSet->getLayout()->getBindingByIndex(bindingIndex);
 
     assert(arrayCount > 0);
     assert((arrayIndex + arrayCount) <= bindingInfo.descriptorCount);

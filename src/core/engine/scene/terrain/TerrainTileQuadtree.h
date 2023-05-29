@@ -5,6 +5,7 @@
 #include "core/engine/scene/Transform.h"
 
 class Frustum;
+class TerrainTileSupplier;
 
 class TerrainTileQuadtree {
 public:
@@ -76,6 +77,10 @@ public:
 
     void setHeightScale(double heightScale);
 
+    const std::shared_ptr<TerrainTileSupplier>& getTileSupplier() const;
+
+    void setTileSupplier(const std::shared_ptr<TerrainTileSupplier>& tileSupplier);
+
     static bool hasChildren(const TileTreeNode& node);
 
     static bool isDeleted(const TileTreeNode& node);
@@ -91,7 +96,7 @@ private:
 
     void cleanupDeletedNodes();
 
-    Visibility calculateNodeVisibility(const Frustum* frustum, const TileTreeNode& node);
+    Visibility calculateNodeVisibility(const Frustum* frustum, const TileTreeNode& node) const;
 
     size_t splitNode(size_t nodeIndex);
 
@@ -105,6 +110,7 @@ private:
     double m_splitThreshold;
     std::vector<TileTreeNode> m_nodes;
     std::vector<uint32_t> m_parentOffsets;
+    std::shared_ptr<TerrainTileSupplier> m_tileSupplier;
 };
 
 

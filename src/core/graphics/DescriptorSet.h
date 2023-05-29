@@ -86,9 +86,9 @@ public:
 
     int32_t findBindingIndex(uint32_t binding) const;
 
-    const vk::DescriptorSetLayoutBinding& findBinding(uint32_t binding) const;
+    const vk::DescriptorSetLayoutBinding& getBinding(uint32_t binding) const;
 
-    const vk::DescriptorSetLayoutBinding& getBinding(int32_t index) const;
+    const vk::DescriptorSetLayoutBinding& getBindingByIndex(int32_t index) const;
 
     uint32_t getBindingCount() const;
 
