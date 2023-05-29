@@ -120,14 +120,14 @@ void TerrainTestApplication::render(double dt) {
         Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(true);
         Engine::instance()->getImmediateRenderer()->colour(1.0F, 0.0F, 0.0F, 0.25F);
         Engine::instance()->getViewFrustum()->drawFill();
-        bs.drawFill();
+//        bs.drawFill();
 
         Engine::instance()->getImmediateRenderer()->setLineWidth(1.0F);
         Engine::instance()->getImmediateRenderer()->setBlendEnabled(false);
         Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(false);
         Engine::instance()->getImmediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
         Engine::instance()->getViewFrustum()->drawLines();
-        bs.drawLines();
+//        bs.drawLines();
     }
 
     Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_ModelView);

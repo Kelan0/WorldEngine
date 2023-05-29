@@ -225,8 +225,8 @@ void ImmediateRenderer::begin(MeshPrimitiveType primitiveType) {
     uniformBufferData.resolution = Engine::graphics()->getResolution();
     uniformBufferData.depthTestEnabled = m_renderState.depthTestEnabled;
     uniformBufferData.useColour = m_renderState.useColour;
-    uniformBufferData.frontfaceColour = m_renderState.frontfaceColour;
-    uniformBufferData.backfaceColour = m_renderState.backfaceColour;
+    uniformBufferData.frontfaceColour = glm::vec4(1.0, 0.0, 0.5, 0.5);//m_renderState.frontfaceColour;
+    uniformBufferData.backfaceColour = glm::vec4(0.3, 1.0, 0.1, 0.7);//m_renderState.backfaceColour;
 
 //    LOG_DEBUG("Begin modelViewMatrix:\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]",
 //           m_currentCommand->modelViewMatrix[0][0], m_currentCommand->modelViewMatrix[1][0], m_currentCommand->modelViewMatrix[2][0], m_currentCommand->modelViewMatrix[3][0],

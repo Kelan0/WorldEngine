@@ -63,10 +63,11 @@ private:
         glm::mat4 modelViewMatrix;
         glm::mat4 projectionMatrix;
         glm::vec2 resolution;
-        bool depthTestEnabled;
-        bool useColour;
+        uint32_t _pad0[2];
         glm::vec4 frontfaceColour;
         glm::vec4 backfaceColour;
+        uint32_t depthTestEnabled;
+        uint32_t useColour;
     };
 
     struct RenderState {

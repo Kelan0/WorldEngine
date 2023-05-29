@@ -17,10 +17,10 @@ layout(set = 0, binding = 0) uniform UBO1 {
     mat4 modelViewMatrix;
     mat4 projectionMatrix;
     vec2 resolution;
-    int depthTestEnabled;
-    bool useColour;
     vec4 frontfaceColour;
     vec4 backfaceColour;
+    bool depthTestEnabled;
+    bool useColour;
 };
 
 void main() {

@@ -12,10 +12,10 @@ layout(set = 0, binding = 0) uniform UBO1 {
     mat4 modelViewMatrix;
     mat4 projectionMatrix;
     vec2 resolution;
-    bool depthTestEnabled;
-    bool useColour;
     vec4 frontfaceColour;
     vec4 backfaceColour;
+    bool depthTestEnabled;
+    bool useColour;
 };
 
 layout(set = 0, binding = 1) uniform sampler2D frameDepthTexture;
@@ -30,6 +30,9 @@ void main() {
         }
     }
     outColour = fs_colour;
+    if (fragDepth > frameDepth) {
+        outColour.a *= 0.25;
+    }
     if (useColour) {
 //        outColour *= gl_FrontFacing ? vec4(1.0, 0.0, 0.0, 1.0) : vec4(0.0, 1.0, 0.0, 1.0);
         outColour *= gl_FrontFacing ? frontfaceColour : backfaceColour;
