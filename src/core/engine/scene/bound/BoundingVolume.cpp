@@ -357,6 +357,7 @@ void BoundingSphere::drawLines() const {
 
     for (int i = 0; i < indices.size(); ++i) {
         const Vertex& v0 = vertices[indices[i]];
+        renderer->normal(v0.position);
         renderer->vertex(v0.position);
     }
 

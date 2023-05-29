@@ -224,6 +224,9 @@ void ImmediateRenderer::begin(MeshPrimitiveType primitiveType) {
     uniformBufferData.projectionMatrix = m_projectionMatrixStack.top();
     uniformBufferData.resolution = Engine::graphics()->getResolution();
     uniformBufferData.depthTestEnabled = m_renderState.depthTestEnabled;
+    uniformBufferData.useColour = m_renderState.useColour;
+    uniformBufferData.frontfaceColour = m_renderState.frontfaceColour;
+    uniformBufferData.backfaceColour = m_renderState.backfaceColour;
 
 //    LOG_DEBUG("Begin modelViewMatrix:\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]\n[%.2f %.2f %.2f %.2f]",
 //           m_currentCommand->modelViewMatrix[0][0], m_currentCommand->modelViewMatrix[1][0], m_currentCommand->modelViewMatrix[2][0], m_currentCommand->modelViewMatrix[3][0],
@@ -429,6 +432,21 @@ void ImmediateRenderer::setCullMode(const vk::CullModeFlags& cullMode) {
     m_renderState.cullMode = cullMode;
 }
 
+void ImmediateRenderer::setColourMultiplierEnabled(bool enabled) {
+    validateCompleteCommand();
+    m_renderState.useColour = enabled;
+}
+
+void ImmediateRenderer::setFrontfaceColourMultiplier(const glm::vec4& colour) {
+    validateCompleteCommand();
+    m_renderState.frontfaceColour = colour;
+}
+
+void ImmediateRenderer::setBackfaceColourMultiplier(const glm::vec4& colour) {
+    validateCompleteCommand();
+    m_renderState.backfaceColour = colour;
+}
+
 void ImmediateRenderer::setBlendEnabled(bool enabled) {
     m_renderState.blendEnabled = enabled;
 }
@@ -619,6 +637,8 @@ GraphicsPipeline* ImmediateRenderer::getGraphicsPipeline(const RenderCommand& re
         pipelineConfiguration.setDynamicState(vk::DynamicState::eDepthTestEnableEXT, true);
         pipelineConfiguration.setDynamicState(vk::DynamicState::eCullModeEXT, true);
         pipelineConfiguration.setDynamicState(vk::DynamicState::eLineWidth, true);
+
+//        pipelineConfiguration.polygonMode = vk::PolygonMode::eLine;
 
         AttachmentBlendState attachmentBlendState;
         attachmentBlendState.blendEnable = renderCommand.state.blendEnabled;

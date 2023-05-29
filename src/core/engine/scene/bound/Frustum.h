@@ -49,6 +49,8 @@ public:
 
     const glm::dvec3& getOrigin() const;
 
+    const glm::dvec3& getForwardAxis() const;
+
     const Plane& getPlane(size_t planeIndex) const;
 
     const glm::dvec3& getCorner(size_t cornerIndex) const;

@@ -77,6 +77,10 @@ const glm::dvec3& Frustum::getOrigin() const {
     return m_origin;
 }
 
+const glm::dvec3& Frustum::getForwardAxis() const {
+    return m_planes[Plane_Near].getNormal();
+}
+
 const Plane& Frustum::getPlane(size_t planeIndex) const {
     assert(planeIndex < NumPlanes);
 

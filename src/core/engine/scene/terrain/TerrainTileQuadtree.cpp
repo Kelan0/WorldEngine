@@ -260,30 +260,32 @@ void TerrainTileQuadtree::updateVisibility(const Frustum* frustum, std::vector<s
             unvisitedNodesStack.emplace_back(nodeIndex + m_nodes[nodeIndex].childOffset + i);
     }
 
-    Entity mainCamera = Engine::scene()->getMainCameraEntity();
-    Transform& cameraTransform = mainCamera.getComponent<Transform>();
-    Camera& cameraProjection = mainCamera.getComponent<Camera>();
-
-    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_Projection);
-    Engine::instance()->getImmediateRenderer()->pushMatrix();
-    Engine::instance()->getImmediateRenderer()->loadMatrix(cameraProjection.getProjectionMatrix());
-    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_ModelView);
-    Engine::instance()->getImmediateRenderer()->pushMatrix();
-    Engine::instance()->getImmediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
-
-    Engine::instance()->getImmediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
-    Engine::instance()->getImmediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
-
-    for (auto& bs : testBoundingSpheres) {
-        Engine::instance()->getImmediateRenderer()->setLineWidth(1.0F);
-        Engine::instance()->getImmediateRenderer()->setBlendEnabled(false);
-        Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(false);
-        Engine::instance()->getImmediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
-        bs.drawLines();
-    }
-
-    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_ModelView);
-    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_Projection);
+//    Entity mainCamera = Engine::scene()->getMainCameraEntity();
+//    Transform& cameraTransform = mainCamera.getComponent<Transform>();
+//    Camera& cameraProjection = mainCamera.getComponent<Camera>();
+//
+//    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_Projection);
+//    Engine::instance()->getImmediateRenderer()->pushMatrix();
+//    Engine::instance()->getImmediateRenderer()->loadMatrix(cameraProjection.getProjectionMatrix());
+//    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_ModelView);
+//    Engine::instance()->getImmediateRenderer()->pushMatrix();
+//    Engine::instance()->getImmediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
+//
+//    Engine::instance()->getImmediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
+//    Engine::instance()->getImmediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
+//
+//    for (auto& bs : testBoundingSpheres) {
+//        Engine::instance()->getImmediateRenderer()->setLineWidth(1.0F);
+//        Engine::instance()->getImmediateRenderer()->setBlendEnabled(false);
+//        Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(false);
+//        Engine::instance()->getImmediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
+//        Engine::instance()->getImmediateRenderer()->setColourMultiplierEnabled(true);
+//        Engine::instance()->getImmediateRenderer()->setBackfaceColourMultiplier(glm::vec4(0.4F, 1.0F, 0.4F, 0.2F));
+//        bs.drawLines();
+//    }
+//
+//    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_ModelView);
+//    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_Projection);
 
     testBoundingSpheres.clear();
 }
@@ -331,7 +333,7 @@ TerrainTileQuadtree::Visibility TerrainTileQuadtree::calculateNodeVisibility(con
         return Visibility_FullyVisible;
 
     if (!c00 && !c01 && !c10 && !c11) {
-        double r = normalizedNodeSize * glm::max(m_size.x, m_size.y) * glm::root_two<double>();
+        double r = 0.5 * normalizedNodeSize * glm::max(m_size.x, m_size.y) * glm::root_two<double>();
         BoundingSphere boundingSphere((position00 + position01 + position10 + position11) * 0.25, r);
         testBoundingSpheres.emplace_back(boundingSphere);
 

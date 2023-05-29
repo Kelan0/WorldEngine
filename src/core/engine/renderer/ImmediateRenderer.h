@@ -64,6 +64,9 @@ private:
         glm::mat4 projectionMatrix;
         glm::vec2 resolution;
         bool depthTestEnabled;
+        bool useColour;
+        glm::vec4 frontfaceColour;
+        glm::vec4 backfaceColour;
     };
 
     struct RenderState {
@@ -73,20 +76,23 @@ private:
         BlendMode colourBlendMode;
         BlendMode alphaBlendMode;
         float lineWidth = 1.0F;
+        bool useColour = false;
+        glm::vec4 frontfaceColour = glm::vec4(1.0F, 1.0F, 1.0F, 1.0F);
+        glm::vec4 backfaceColour = glm::vec4(1.0F, 1.0F, 1.0F, 1.0F);
     };
 
     struct RenderCommand {
-        MeshPrimitiveType primitiveType;
+        MeshPrimitiveType primitiveType = PrimitiveType_Triangle;
         RenderState state;
-        uint32_t vertexOffset;
-        uint32_t indexOffset;
-        uint32_t vertexCount;
-        uint32_t indexCount;
+        uint32_t vertexOffset = 0;
+        uint32_t indexOffset = 0;
+        uint32_t vertexCount = 0;
+        uint32_t indexCount = 0;
     };
 
     struct RenderResources {
-        Buffer* vertexBuffer;
-        Buffer* indexBuffer;
+        Buffer* vertexBuffer = nullptr;
+        Buffer* indexBuffer = nullptr;
         Buffer* uniformBuffer = nullptr;
         DescriptorSet* descriptorSet = nullptr;
         Framebuffer* framebuffer = nullptr;
@@ -153,6 +159,12 @@ public:
     void setDepthTestEnabled(bool enabled);
 
     void setCullMode(const vk::CullModeFlags& cullMode);
+
+    void setColourMultiplierEnabled(bool enabled);
+
+    void setFrontfaceColourMultiplier(const glm::vec4& colour);
+
+    void setBackfaceColourMultiplier(const glm::vec4& colour);
 
     void setBlendEnabled(bool enabled);
     void setColourBlendMode(vk::BlendFactor src, vk::BlendFactor dst, vk::BlendOp op);
