@@ -2,7 +2,8 @@
 #define WORLDENGINE_TERRAINRENDERER_H
 
 #include "core/core.h"
-#include "core/engine/scene/Scene.h"
+#include "core/graphics/GraphicsResource.h"
+#include "core/graphics/FrameResource.h"
 
 class Mesh;
 class Frustum;
@@ -15,6 +16,7 @@ class Image2D;
 class ImageView;
 class DescriptorSet;
 class DescriptorSetLayout;
+class Scene;
 
 class TerrainRenderer {
 public:

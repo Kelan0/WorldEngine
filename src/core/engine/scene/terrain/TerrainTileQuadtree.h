@@ -6,6 +6,7 @@
 
 class Frustum;
 class TerrainTileSupplier;
+class AxisAlignedBoundingBox;
 
 class TerrainTileQuadtree {
 public:
@@ -27,14 +28,18 @@ public:
     struct TileTreeNode {
         uint32_t childOffset;
         union {
-            uint8_t _packed0;
+            uint32_t _packed0;
             struct {
-                uint8_t treeDepth : 6; // 6-bits, max depth is 63
-                uint8_t deleted : 1;
+                uint32_t elementIndex : 31;
                 uint8_t visible : 1;
             };
         };
+    };
+
+    struct TraversalInfo {
+        size_t nodeIndex;
         glm::uvec2 treePosition;
+        uint8_t treeDepth;
         QuadIndex quadIndex;
     };
 
@@ -45,13 +50,8 @@ public:
 
     void update(const Frustum* frustum);
 
-    const TileTreeNode& getNode(size_t index) const;
-
     template<class Fn>
-    void forEachLeafNode(Fn callback);
-
-    template<class Fn>
-    void traverseTreeNodes(std::vector<size_t>& unvisitedNodesStack, Fn callback);
+    void traverseTreeNodes(std::vector<TraversalInfo>& traversalStack, Fn callback);
 
     glm::dvec2 getNormalizedNodeCoordinate(const glm::dvec2& treePosition, uint8_t treeDepth) const;
 
@@ -81,24 +81,30 @@ public:
 
     void setTileSupplier(const std::shared_ptr<TerrainTileSupplier>& tileSupplier);
 
-    static bool hasChildren(const TileTreeNode& node);
+    bool hasChildren(size_t nodeIndex);
 
-    static bool isDeleted(const TileTreeNode& node);
+    bool isDeleted(size_t nodeIndex);
 
-    static bool isVisible(const TileTreeNode& node);
+    bool isVisible(size_t nodeIndex);
+
+    size_t getChildIndex(size_t nodeIndex, QuadIndex quadIndex);
+
+    AxisAlignedBoundingBox getNodeBoundingBox(size_t nodeIndex, const glm::uvec2& treePosition, uint8_t treeDepth) const;
+
+    Visibility calculateNodeVisibility(const Frustum* frustum, size_t nodeIndex, const glm::uvec2& treePosition, uint8_t treeDepth) const;
 
 private:
-    void updateSubdivisions(const Frustum* frustum, std::vector<size_t>& deletedNodeIndices, std::vector<size_t>& unvisitedNodesStack);
+    void updateSubdivisions(const Frustum* frustum, std::vector<size_t>& deletedNodeIndices, std::vector<TraversalInfo>& traversalStack);
 
-    void updateVisibility(const Frustum* frustum, std::vector<size_t>& unvisitedNodesStack);
+    void updateVisibility(const Frustum* frustum, std::vector<TraversalInfo>& traversalStack, std::vector<size_t>& fullyVisibleSubtrees);
 
-    void markAllDeletedSubtrees(std::vector<size_t>& deletedNodeIndices, std::vector<size_t>& unvisitedNodesStack);
+    void markVisibleSubtrees(std::vector<size_t>& visibleNodeIndices, std::vector<size_t>& unvisitedNodesStack);
+
+    void markDeletedSubtrees(std::vector<size_t>& deletedNodeIndices, std::vector<size_t>& unvisitedNodesStack);
 
     void cleanupDeletedNodes();
 
-    Visibility calculateNodeVisibility(const Frustum* frustum, const TileTreeNode& node) const;
-
-    size_t splitNode(size_t nodeIndex);
+    size_t splitNode(size_t nodeIndex, const glm::uvec2& treePosition, uint8_t treeDepth);
 
     size_t mergeNode(size_t nodeIndex);
 
@@ -115,50 +121,46 @@ private:
 
 
 
-
 template<class Fn>
-void TerrainTileQuadtree::forEachLeafNode(Fn callback) {
-    for (size_t i = 0; i < m_nodes.size(); ++i) {
-        const TileTreeNode& node = m_nodes[i]; // Node must not be modified
+void TerrainTileQuadtree::traverseTreeNodes(std::vector<TraversalInfo>& traversalStack, Fn callback) {
 
-        if (hasChildren(node))
-            continue;
+    TraversalInfo traversalInfo{};
+    traversalInfo.nodeIndex = 0;
+    traversalInfo.treePosition = glm::uvec2(0, 0);
+    traversalInfo.treeDepth = 0;
+    traversalInfo.quadIndex = (QuadIndex)0;
 
-        if constexpr(std::is_void_v<std::invoke_result_t<Fn, decltype(this), decltype(node), decltype(i)>>) {
-            callback(this, node, i);
+    traversalStack.clear();
+    traversalStack.emplace_back(traversalInfo);
+
+    while (!traversalStack.empty()) {
+        traversalInfo = traversalStack.back();
+        traversalStack.pop_back();
+
+        assert(!isDeleted(traversalInfo.nodeIndex));
+
+        if constexpr(std::is_void_v<std::invoke_result_t<Fn, decltype(this), decltype(traversalInfo)>>) {
+            callback(this, traversalInfo);
         } else {
-            bool breakLoop = callback(this, node, i);
-            if (breakLoop)
-                break;
-        }
-    }
-}
-
-template<class Fn>
-void TerrainTileQuadtree::traverseTreeNodes(std::vector<size_t>& unvisitedNodesStack, Fn callback) {
-    unvisitedNodesStack.clear();
-    unvisitedNodesStack.emplace_back(0); // root
-
-    while (!unvisitedNodesStack.empty()) {
-        size_t nodeIndex = unvisitedNodesStack.back();
-        unvisitedNodesStack.pop_back();
-
-        const TileTreeNode& node = m_nodes[nodeIndex];
-
-        if constexpr(std::is_void_v<std::invoke_result_t<Fn, decltype(this), decltype(node), decltype(nodeIndex)>>) {
-            callback(this, node, nodeIndex);
-        } else {
-            bool ignoreSubtree = callback(this, node, nodeIndex);
+            bool ignoreSubtree = callback(this, traversalInfo);
             if (ignoreSubtree)
                 continue;
         }
 
         // Callback could have caused our node reference above to become invalid. Access via index from this point on.
-        if (!hasChildren(m_nodes[nodeIndex]))
+        if (!hasChildren(traversalInfo.nodeIndex))
             continue;
 
-        for (int i = 3; i >= 0; --i) // Push children in reverse order, so they are popped in ascending order.
-            unvisitedNodesStack.emplace_back(nodeIndex + m_nodes[nodeIndex].childOffset + i);
+        size_t firstChildIndex = traversalInfo.nodeIndex + m_nodes[traversalInfo.nodeIndex].childOffset;
+
+        for (int i = 3; i >= 0; --i) { // Push children in reverse order, so they are popped in ascending order.
+            traversalStack.emplace_back(TraversalInfo{
+                .nodeIndex = firstChildIndex + i,
+                .treePosition = traversalInfo.treePosition * 2u + QUAD_OFFSETS[i],
+                .treeDepth = (uint8_t)(traversalInfo.treeDepth + 1u),
+                .quadIndex = (QuadIndex)i
+            });
+        }
     }
 }
 

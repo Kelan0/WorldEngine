@@ -11,6 +11,11 @@
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/renderer/Material.h"
 #include "core/graphics/GraphicsPipeline.h"
+#include "core/graphics/GraphicsManager.h"
+#include "core/graphics/DescriptorSet.h"
+#include "core/graphics/ImageData.h"
+#include "core/graphics/Image2D.h"
+#include "core/graphics/Buffer.h"
 #include "core/graphics/Mesh.h"
 #include "core/util/Logger.h"
 #include "RenderComponent.h"
@@ -193,18 +198,22 @@ void TerrainRenderer::updateQuadtreeTerrainTiles(const QuadtreeTerrainComponent&
 
     glm::dvec3 terrainScale(quadtreeTerrain.getSize().x, quadtreeTerrain.getHeightScale(), quadtreeTerrain.getSize().y);
 
+    std::vector<TerrainTileQuadtree::TraversalInfo> traversalStack;
 
-    quadtreeTerrain.getTileQuadtree()->forEachLeafNode([this, &terrainScale](TerrainTileQuadtree* tileQuadtree, const TerrainTileQuadtree::TileTreeNode& node, size_t index) {
+    quadtreeTerrain.getTileQuadtree()->traverseTreeNodes(traversalStack, [this](TerrainTileQuadtree* tileQuadtree, const TerrainTileQuadtree::TraversalInfo& traversalInfo) {
+        if (!tileQuadtree->isVisible(traversalInfo.nodeIndex)) {
+            return true; // Skip whole subtree
+        }
+        if (tileQuadtree->hasChildren(traversalInfo.nodeIndex)) {
+            return false; // Continue down the tree.
+        }
 
-        if (!TerrainTileQuadtree::isVisible(node))
-            return; // Ignore invisible nodes
-
-        glm::dvec2 treePosition = glm::dvec2(node.treePosition);// + glm::dvec2(0.5);
-        glm::dvec2 tileCoord = tileQuadtree->getNormalizedNodeCoordinate(treePosition, node.treeDepth);
-        double tileSize = tileQuadtree->getNormalizedNodeSizeForTreeDepth(node.treeDepth);
+        glm::dvec2 treePosition = glm::dvec2(traversalInfo.treePosition);// + glm::dvec2(0.5);
+        glm::dvec2 tileCoord = tileQuadtree->getNormalizedNodeCoordinate(treePosition, traversalInfo.treeDepth);
+        double tileSize = tileQuadtree->getNormalizedNodeSizeForTreeDepth(traversalInfo.treeDepth);
 
 //        double x = tileCoord.x * terrainScale.x - terrainScale.x * 0.5;
-//        double y = 0.0F;// - node.treeDepth * 0.1;
+//        double y = 0.0F;// - traversalInfo.treeDepth * 0.1;
 //        double z = tileCoord.y * terrainScale.z - terrainScale.z * 0.5;
 //        Transform tileTransform;
 //        tileTransform.translate(x, y, z);
@@ -215,6 +224,8 @@ void TerrainRenderer::updateQuadtreeTerrainTiles(const QuadtreeTerrainComponent&
         terrainData.tileSize = glm::vec2(tileSize * tileQuadtree->getSize());
         terrainData.textureOffset = glm::vec2(tileCoord);
         terrainData.textureSize = glm::vec2((float)tileSize);
+
+        return false;
     });
 }
 

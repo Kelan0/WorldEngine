@@ -319,6 +319,7 @@ void main() {
         vec3 ambient = (kD * diffuse + specular) * surface.ambientOcclusion;// * shadow;
 
          finalColour = ambient + Lo;
+//         finalColour = vec3(surface.viewNormal);
     }
 
 //     vec2 testPos = vec2(fs_texture.x, 1.0 - fs_texture.y);
@@ -347,6 +348,10 @@ void main() {
         }
     }
 
-//    finalColour = vec3(subpassLoad(texture_NormalXYZ_Metallic).xyz * 0.5 + 0.5);
+//    if (surface.exists) {
+//        finalColour = vec3(normalize(surface.viewNormal.xyz) * 0.5 + 0.5);
+////        finalColour = vec3(surface.roughness);
+//    }
+
     outColor = vec4(finalColour, 1.0);
 }
