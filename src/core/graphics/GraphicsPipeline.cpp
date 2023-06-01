@@ -9,6 +9,7 @@
 #include "core/engine/event/EventDispatcher.h"
 #include "core/engine/event/GraphicsEvents.h"
 #include "core/util/Util.h"
+#include "core/util/Logger.h"
 
 
 AttachmentBlendState::AttachmentBlendState(bool blendEnable, vk::ColorComponentFlags colourWriteMask):

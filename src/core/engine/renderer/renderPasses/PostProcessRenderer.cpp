@@ -6,6 +6,7 @@
 #include "core/engine/event/EventDispatcher.h"
 #include "core/engine/event/GraphicsEvents.h"
 #include "core/graphics/GraphicsPipeline.h"
+#include "core/graphics/GraphicsManager.h"
 #include "core/graphics/Buffer.h"
 #include "core/graphics/Image2D.h"
 #include "core/graphics/ImageView.h"

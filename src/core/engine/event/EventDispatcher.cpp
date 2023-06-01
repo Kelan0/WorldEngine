@@ -94,7 +94,7 @@ void TimerId::decrRef() {
 }
 
 EventDispatcher::EventDispatcher():
-    m_lastUpdate(Performance::zero_moment),
+    m_lastUpdate(Time::zero_moment),
     m_triggerStack(0) { // lastUpdate is zero nanoseconds since epoch
 }
 
@@ -117,8 +117,8 @@ EventDispatcher::~EventDispatcher() {
 }
 
 void EventDispatcher::update() {
-    Performance::moment_t currentTime = Performance::now();
-    if (m_lastUpdate == Performance::zero_moment) {
+    Time::moment_t currentTime = Time::now();
+    if (m_lastUpdate == Time::zero_moment) {
         m_lastUpdate = currentTime; // First update, sync from epoch to now
     }
     uint64_t elapsedNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(currentTime - m_lastUpdate).count();
@@ -202,22 +202,22 @@ bool EventDispatcher::isRepeatingAll(EventDispatcher* eventDispatcher) {
 }
 
 TimerId EventDispatcher::setTimeout(const TimeoutEvent::Callback& callback, double durationMilliseconds) {
-    return setTimeout(callback, std::chrono::duration_cast<Performance::duration_t>(std::chrono::duration<double, std::milli>(durationMilliseconds)));
+    return setTimeout(callback, std::chrono::duration_cast<Time::duration_t>(std::chrono::duration<double, std::milli>(durationMilliseconds)));
 }
 
-TimerId EventDispatcher::setTimeout(const TimeoutEvent::Callback& callback, const Performance::duration_t& duration) {
+TimerId EventDispatcher::setTimeout(const TimeoutEvent::Callback& callback, const Time::duration_t& duration) {
 
     TimerId id = TimerId::get();
     TimeoutEvent* timeout = new TimeoutEvent();
     timeout->eventDispatcher = this;
-    timeout->startTime = Performance::now();
+    timeout->startTime = Time::now();
     timeout->endTime = timeout->startTime + duration;
     timeout->callback = callback;
     timeout->id = id;
 
     m_timeoutIds.insert(std::make_pair(id, timeout));
 
-    auto it = std::upper_bound(m_timeouts.begin(), m_timeouts.end(), timeout->endTime, [](const Performance::moment_t& endTime, const TimeoutEvent* timeoutEvent) {
+    auto it = std::upper_bound(m_timeouts.begin(), m_timeouts.end(), timeout->endTime, [](const Time::moment_t& endTime, const TimeoutEvent* timeoutEvent) {
         return endTime < timeoutEvent->endTime;
     });
 
@@ -227,14 +227,14 @@ TimerId EventDispatcher::setTimeout(const TimeoutEvent::Callback& callback, cons
 }
 
 TimerId EventDispatcher::setInterval(const IntervalEvent::Callback& callback, double durationMilliseconds) {
-    return setInterval(callback, std::chrono::duration_cast<Performance::duration_t>(std::chrono::duration<double, std::milli>(durationMilliseconds)));
+    return setInterval(callback, std::chrono::duration_cast<Time::duration_t>(std::chrono::duration<double, std::milli>(durationMilliseconds)));
 }
 
-TimerId EventDispatcher::setInterval(const IntervalEvent::Callback& callback, const Performance::duration_t& duration) {
+TimerId EventDispatcher::setInterval(const IntervalEvent::Callback& callback, const Time::duration_t& duration) {
     TimerId id = TimerId::get();
     IntervalEvent* interval = new IntervalEvent();
     interval->eventDispatcher = this;
-    interval->startTime = Performance::now();
+    interval->startTime = Time::now();
     interval->lastTime = interval->startTime;
     interval->partialTicks = 0.0;
     interval->duration = duration;

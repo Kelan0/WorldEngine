@@ -3,6 +3,7 @@
 #include "core/thread/ThreadUtils.h"
 #include "core/util/Profiler.h"
 #include "core/util/Logger.h"
+#include "core/util/Time.h"
 
 
 std::unordered_map<std::thread::id, std::atomic_size_t> ThreadPool::s_maxTaskSizes;
@@ -73,7 +74,7 @@ BaseTask* ThreadPool::nextTask(Thread* currentThread) {
     size_t attempts = 0;
     size_t failedLocks = 0;
     size_t emptyQueues = 0;
-    auto t0 = Performance::now();
+    auto t0 = Time::now();
 
     std::uniform_int_distribution<size_t> rand(0, m_threads.size() - 1);
     size_t offset = rand(random());

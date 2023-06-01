@@ -13,6 +13,7 @@
 #include "core/engine/event/GraphicsEvents.h"
 #include "core/util/Profiler.h"
 #include "core/util/Util.h"
+#include "core/util/Logger.h"
 
 uint64_t GraphicsManager::s_nextResourceID = 0;
 

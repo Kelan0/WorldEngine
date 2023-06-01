@@ -4,12 +4,11 @@
 
 #include "core/core.h"
 #include "core/graphics/FrameResource.h"
-#include "core/engine/renderer/RenderCamera.h"
+#include "core/graphics/GraphicsResource.h"
 #include "core/engine/renderer/ShadowMap.h"
-#include "core/engine/renderer/RenderLight.h"
 
-class ShadowMap;
 class LightComponent;
+class RenderCamera;
 class GraphicsPipeline;
 class ComputePipeline;
 class RenderPass;
@@ -18,6 +17,10 @@ class DescriptorSet;
 class DescriptorSetLayout;
 class Texture;
 class ImageView;
+class Sampler;
+class Transform;
+struct GPUCamera;
+struct GPULight;
 
 #define MAX_SHADOW_MAPS 1024
 #define MAX_SIMULTANEOUS_VSM_BLUR 8

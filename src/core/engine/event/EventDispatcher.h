@@ -3,9 +3,9 @@
 #define WORLDENGINE_EVENTDISPATCHER_H
 
 #include "core/core.h"
-#include "core/util/Profiler.h"
+#include "core/util/Time.h"
 #include "extern/entt/entt/signal/dispatcher.hpp"
-#include "core/engine/event/GraphicsEvents.h"
+#include "core/util/Profiler.h"
 
 class EventDispatcher;
 
@@ -69,8 +69,8 @@ struct TimeoutEvent {
     typedef std::function<void(TimeoutEvent*)> Callback;
 
     EventDispatcher* eventDispatcher;
-    Performance::moment_t startTime;
-    Performance::moment_t endTime;
+    Time::moment_t startTime;
+    Time::moment_t endTime;
     Callback callback;
     TimerId id;
 };
@@ -79,9 +79,9 @@ struct IntervalEvent {
 //    typedef void(*Callback)(IntervalEvent*);
     typedef std::function<void(IntervalEvent*)> Callback;
     EventDispatcher* eventDispatcher;
-    Performance::moment_t startTime;
-    Performance::moment_t lastTime;
-    Performance::duration_t duration;
+    Time::moment_t startTime;
+    Time::moment_t lastTime;
+    Time::duration_t duration;
     double partialTicks;
     Callback callback;
     TimerId id;
@@ -204,11 +204,11 @@ public:
 
     TimerId setTimeout(const TimeoutEvent::Callback& callback, double durationMilliseconds);
 
-    TimerId setTimeout(const TimeoutEvent::Callback& callback, const Performance::duration_t& duration);
+    TimerId setTimeout(const TimeoutEvent::Callback& callback, const Time::duration_t& duration);
 
     TimerId setInterval(const IntervalEvent::Callback& callback, double durationMilliseconds);
 
-    TimerId setInterval(const IntervalEvent::Callback& callback, const Performance::duration_t& duration);
+    TimerId setInterval(const IntervalEvent::Callback& callback, const Time::duration_t& duration);
 
     bool clearTimeout(TimerId& id);
 
@@ -226,7 +226,7 @@ private:
     std::vector<TimeoutEvent*> m_timeouts;
     std::unordered_map<TimerId, TimeoutEvent*> m_timeoutIds;
     std::unordered_map<TimerId, IntervalEvent*> m_intervalIds;
-    Performance::moment_t m_lastUpdate;
+    Time::moment_t m_lastUpdate;
     uint32_t m_triggerStack;
 };
 

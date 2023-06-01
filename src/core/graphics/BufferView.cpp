@@ -1,5 +1,6 @@
 #include "core/graphics/BufferView.h"
 #include "core/graphics/Buffer.h"
+#include "core/graphics/GraphicsManager.h"
 #include "core/util/Logger.h"
 
 

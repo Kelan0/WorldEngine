@@ -3,6 +3,7 @@
 
 #include "core/core.h"
 #include "core/graphics/FrameResource.h"
+#include "core/graphics/GraphicsResource.h"
 #include "core/graphics/GraphicsPipeline.h"
 #include "core/engine/geometry/MeshData.h"
 
@@ -16,6 +17,7 @@ class RenderPass;
 class Framebuffer;
 class ImageView;
 class Image2D;
+class Buffer;
 
 enum MatrixMode {
     MatrixMode_ModelView = 0,

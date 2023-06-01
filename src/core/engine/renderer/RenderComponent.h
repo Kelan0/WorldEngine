@@ -3,10 +3,8 @@
 #define WORLDENGINE_RENDERCOMPONENT_H
 
 #include "core/core.h"
-#include "core/util/EntityChangeTracker.h"
-#include "core/engine/scene/Transform.h"
-#include "core/engine/scene/bound/BoundingVolume.h"
 
+class BoundingVolume;
 class Material;
 class Mesh;
 

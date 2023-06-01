@@ -4,7 +4,6 @@
 #include "core/core.h"
 #include "core/graphics/GraphicsResource.h"
 #include "core/graphics/FrameResource.h"
-#include "core/engine/event/GraphicsEvents.h"
 
 struct RecreateSwapchainEvent;
 
@@ -12,6 +11,7 @@ class DescriptorSetLayout;
 class GraphicsPipeline;
 class ComputePipeline;
 class DescriptorSet;
+class RenderPass;
 class Framebuffer;
 class ImageView;
 class Sampler;

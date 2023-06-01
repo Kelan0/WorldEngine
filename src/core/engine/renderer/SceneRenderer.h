@@ -3,18 +3,19 @@
 
 #include "core/core.h"
 #include "core/graphics/FrameResource.h"
-#include "core/graphics/GraphicsPipeline.h"
-#include "core/engine/renderer/RenderCamera.h"
+#include "core/graphics/GraphicsResource.h"
 #include "core/engine/scene/Scene.h"
-#include "core/engine/renderer/RenderComponent.h"
-#include "core/engine/scene/bound/Frustum.h"
 
+class Mesh;
 class Buffer;
 class DescriptorSet;
 class DescriptorSetLayout;
 class Texture;
 class Material;
 class Image2D;
+class Frustum;
+class RenderCamera;
+class RenderComponent;
 
 class SceneRenderer {
 public:

@@ -5,15 +5,17 @@
 #include "core/engine/event/GraphicsEvents.h"
 #include "core/application/Application.h"
 #include "core/application/Engine.h"
+#include "core/graphics/GraphicsManager.h"
 #include "core/graphics/ImageCube.h"
 #include "core/graphics/ImageView.h"
 #include "core/graphics/Texture.h"
-#include "core/graphics/GraphicsManager.h"
 #include "core/graphics/ComputePipeline.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/Buffer.h"
 #include "core/graphics/CommandPool.h"
 #include "core/util/Profiler.h"
+#include "core/util/Time.h"
+#include "core/util/Logger.h"
 
 
 #define MAX_SPECULAR_MIP_LEVELS 8
@@ -72,7 +74,7 @@ void EnvironmentMap::update() {
         m_needsRecompute = false;
 
         LOG_DEBUG("Updating environment map");
-        auto t0 = Performance::now();
+        auto t0 = Time::now();
 
         if (!m_environmentImage)
             return; // No environment image, do nothing
@@ -162,7 +164,7 @@ void EnvironmentMap::update() {
         assert(result == vk::Result::eSuccess);
         computeQueue.waitIdle();
 
-        LOG_DEBUG("======== Updating environment map took %.2f msec", Performance::milliseconds(t0));
+        LOG_DEBUG("======== Updating environment map took %.2f msec", Time::milliseconds(t0));
     }
 }
 

@@ -5,6 +5,8 @@
 #include "core/graphics/GraphicsManager.h"
 #include "core/engine/event/EventDispatcher.h"
 #include "core/engine/event/GraphicsEvents.h"
+#include "core/graphics/FrameResource.h"
+#include "core/util/Logger.h"
 #include <thread>
 
 uint32_t nextQueryPoolId = 1;
@@ -16,53 +18,11 @@ std::string stringListIds(const std::vector<uint32_t>& ids) {
     return str;
 }
 
-thread_local Performance::moment_t Performance::s_lastTime = Performance::now();
 #if PROFILING_ENABLED && INTERNAL_PROFILING_ENABLED
 std::unordered_map<uint64_t, Profiler::ThreadContext*> Profiler::s_threadContexts;
 std::mutex Profiler::s_threadContextsMtx;
 #endif
 
-Performance::duration_t Performance::mark() {
-    return mark(s_lastTime);
-}
-
-Performance::duration_t Performance::mark(moment_t startTime) {
-    duration_t elapsed = now() - startTime;
-    s_lastTime = now();
-    return elapsed;
-}
-
-double Performance::markMsec() {
-    return milliseconds(mark());
-}
-
-Performance::moment_t Performance::now() {
-    return std::chrono::high_resolution_clock::now();
-}
-
-uint64_t Performance::nanoseconds(const duration_t& duration) {
-    return (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
-}
-
-uint64_t Performance::nanoseconds(const moment_t& startTime, const moment_t& endTime) {
-    return nanoseconds(endTime - startTime);
-}
-
-uint64_t Performance::nanoseconds(const moment_t& startTime) {
-    return nanoseconds(now() - startTime);
-}
-
-double Performance::milliseconds(const duration_t& duration) {
-    return (double)nanoseconds(duration) / 1000000.0;
-}
-
-double Performance::milliseconds(const moment_t& startTime, const moment_t& endTime) {
-    return milliseconds(endTime - startTime);
-}
-
-double Performance::milliseconds(const moment_t& startTime) {
-    return milliseconds(now() - startTime);
-}
 
 
 Profiler::ThreadContext::ThreadContext() {
@@ -185,7 +145,7 @@ void Profiler::beginCPU(const profile_id& id) {
         parent.lastChildIndex = ctx.currentIndex;
     }
 
-    profile->startTime = Performance::now();
+    profile->startTime = Time::now();
 #endif
 #endif
 }
@@ -204,7 +164,7 @@ void Profiler::endCPU() {
     assert(ctx.currentIndex < ctx.frameProfiles.size());
     CPUProfile* profile = &ctx.frameProfiles[ctx.currentIndex];
     ctx.currentIndex = profile->parentIndex;
-    profile->endTime = Performance::now();
+    profile->endTime = Time::now();
 #endif
 #endif
 }

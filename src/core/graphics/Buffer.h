@@ -3,11 +3,11 @@
 #define WORLDENGINE_BUFFER_H
 
 #include "core/core.h"
-#include "core/graphics/GraphicsManager.h"
-#include "core/graphics/FrameResource.h"
 #include "core/graphics/GraphicsResource.h"
+#include "core/graphics/FrameResource.h"
 
 struct ShutdownGraphicsEvent;
+class DeviceMemoryBlock;
 
 struct BufferConfiguration {
     WeakResource<vkr::Device> device;

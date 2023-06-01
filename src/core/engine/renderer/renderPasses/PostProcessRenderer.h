@@ -9,6 +9,7 @@ class Buffer;
 class DescriptorSet;
 class DescriptorSetLayout;
 class GraphicsPipeline;
+class RenderPass;
 class Sampler;
 class Image2D;
 class ImageView;

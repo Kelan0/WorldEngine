@@ -123,6 +123,10 @@ uint64_t Engine::getCurrentFrameCount() const {
     return m_currentFrameCount;
 }
 
+uint32_t Engine::getSwapchainFrameIndex() const {
+    return m_graphics->getCurrentFrameIndex();
+}
+
 bool Engine::isDebugCompositeEnabled() const {
     return m_debugCompositeEnabled;
 }

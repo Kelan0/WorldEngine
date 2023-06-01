@@ -1,5 +1,9 @@
 #include "core/engine/scene/bound/Frustum.h"
+#include "core/engine/scene/bound/BoundingVolume.h"
+#include "core/engine/scene/Transform.h"
+#include "core/engine/scene/Camera.h"
 #include "core/engine/renderer/ImmediateRenderer.h"
+#include "core/engine/renderer/RenderCamera.h"
 #include "core/application/Engine.h"
 
 Frustum::Frustum() :

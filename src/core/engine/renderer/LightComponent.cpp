@@ -1,5 +1,6 @@
 
 #include "core/engine/renderer/LightComponent.h"
+#include "core/engine/renderer/ShadowMap.h"
 
 LightComponent::LightComponent():
     m_type(LightType_Invalid),

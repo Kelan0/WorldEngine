@@ -2,6 +2,7 @@
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
 #include "core/engine/event/GraphicsEvents.h"
 #include "core/engine/event/EventDispatcher.h"
+#include "core/graphics/GraphicsManager.h"
 #include "core/graphics/GraphicsPipeline.h"
 #include "core/graphics/ComputePipeline.h"
 #include "core/graphics/DescriptorSet.h"

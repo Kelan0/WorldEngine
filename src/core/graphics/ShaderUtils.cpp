@@ -7,6 +7,7 @@
 #include "core/graphics/GraphicsManager.h"
 #include "core/engine/event/EventDispatcher.h"
 #include "core/util/Util.h"
+#include "core/util/Logger.h"
 
 struct DependencyFileInfo {
     std::string filePath;

@@ -3,6 +3,7 @@
 
 #include "core/core.h"
 #include "core/graphics/FrameResource.h"
+#include "core/graphics/GraphicsResource.h"
 
 class RenderPass;
 class GraphicsPipeline;

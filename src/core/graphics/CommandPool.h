@@ -3,7 +3,7 @@
 #define WORLDENGINE_COMMANDPOOL_H
 
 #include "core/core.h"
-#include "core/graphics/GraphicsManager.h"
+#include "core/graphics/GraphicsResource.h"
 
 struct CommandPoolConfiguration {
     WeakResource<vkr::Device> device;

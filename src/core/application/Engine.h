@@ -57,6 +57,8 @@ public:
 
     uint64_t getCurrentFrameCount() const;
 
+    uint32_t getSwapchainFrameIndex() const;
+
     double getPartialFrames() const;
 
     double getPartialTicks() const;

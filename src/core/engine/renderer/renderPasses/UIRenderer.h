@@ -2,15 +2,13 @@
 #define WORLDENGINE_UIRENDERER_H
 
 #include "core/core.h"
-#include "core/util/Util.h"
 #include "core/engine/ui/UI.h"
-#include "core/graphics/FrameResource.h"
-#include "core/graphics/RenderPass.h"
 
 struct ImGuiContext;
 struct ImPlotContext;
 struct SDL_Window;
 union SDL_Event;
+class RenderPass;
 
 class UIRenderer {
 public:

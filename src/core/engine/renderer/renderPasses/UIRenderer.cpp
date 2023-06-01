@@ -8,6 +8,8 @@
 #include "extern/imgui/implot.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/graphics/CommandPool.h"
+#include "core/graphics/RenderPass.h"
+#include "core/graphics/GraphicsManager.h"
 #include "core/engine/ui/PerformanceGraphUI.h"
 #include "core/util/Logger.h"
 

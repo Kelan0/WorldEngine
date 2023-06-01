@@ -1,4 +1,6 @@
 #include "core/graphics/CommandPool.h"
+#include "core/graphics/GraphicsManager.h"
+#include "core/application/Engine.h"
 #include "core/util/Logger.h"
 
 CommandPool::CommandPool(const WeakResource<vkr::Device>& device, const vk::CommandPool& commandPool, const std::string& name):

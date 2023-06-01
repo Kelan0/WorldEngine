@@ -1,5 +1,6 @@
 
 #include "core/engine/renderer/Material.h"
+#include "core/graphics/Texture.h"
 
 void MaterialConfiguration::setAlbedo(const glm::uvec3& albedo) {
     this->albedoMap.reset();

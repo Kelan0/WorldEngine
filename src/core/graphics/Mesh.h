@@ -4,10 +4,11 @@
 
 #include "core/core.h"
 
-#include "core/graphics/GraphicsManager.h"
-#include "core/graphics/Buffer.h"
+#include "core/graphics/GraphicsResource.h"
 #include "core/engine/geometry/MeshData.h"
 
+
+class Buffer;
 
 struct MeshConfiguration {
     WeakResource<vkr::Device> device;

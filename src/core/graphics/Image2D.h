@@ -3,10 +3,11 @@
 #define WORLDENGINE_IMAGE2D_H
 
 #include "core/core.h"
-#include "core/graphics/ImageData.h"
 #include "core/graphics/GraphicsResource.h"
+#include "core/graphics/ImageData.h"
 
 class DeviceMemoryBlock;
+class ImageData;
 
 
 struct Image2DConfiguration {

@@ -3,7 +3,7 @@
 #define WORLDENGINE_TRANSFORM_H
 
 #include "core/core.h"
-#include "core/util/EntityChangeTracker.h"
+//#include "core/util/EntityChangeTracker.h"
 
 class Transform {
     friend class SceneRenderer;

@@ -2,9 +2,9 @@
 #define WORLDENGINE_DEFERREDRENDERER_H
 
 #include "core/core.h"
-#include "core/engine/renderer/RenderCamera.h"
 #include "core/graphics/FrameResource.h"
-#include "core/engine/scene/bound/Frustum.h"
+#include "core/graphics/GraphicsResource.h"
+#include "core/engine/renderer/RenderCamera.h"
 
 class GraphicsPipeline;
 class Image2D;
@@ -15,6 +15,7 @@ class Framebuffer;
 class DescriptorSetLayout;
 class DescriptorSet;
 class Buffer;
+class Frustum;
 class EnvironmentMap;
 struct RecreateSwapchainEvent;
 

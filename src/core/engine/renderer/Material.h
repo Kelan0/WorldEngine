@@ -4,7 +4,6 @@
 
 #include "core/core.h"
 #include "core/graphics/ImageView.h"
-#include "core/graphics/Image2D.h"
 #include "core/graphics/Texture.h"
 
 struct MaterialConfiguration {

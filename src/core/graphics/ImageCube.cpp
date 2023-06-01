@@ -11,7 +11,9 @@
 #include "core/engine/event/EventDispatcher.h"
 #include "core/engine/event/GraphicsEvents.h"
 #include "core/util/Util.h"
+#include "core/util/Time.h"
 #include "core/util/Logger.h"
+#include "core/util/Profiler.h"
 
 
 ComputePipeline* ImageCube::s_computeEquirectangularPipeline = nullptr;
@@ -242,9 +244,9 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         }
 
         if (generateMipmap) {
-            auto t0 = Performance::now();
+            auto t0 = Time::now();
             returnImage->generateMipmap(vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor, mipLevels, dstState);
-            LOG_DEBUG("Took %.2f msec to generate %u mipmap levels for ImageCube", Performance::milliseconds(t0), mipLevels);
+            LOG_DEBUG("Took %.2f msec to generate %u mipmap levels for ImageCube", Time::milliseconds(t0), mipLevels);
         }
 
     } else if (suppliedFaceData) {
@@ -264,9 +266,9 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         }
 
         if (generateMipmap) {
-            auto t0 = Performance::now();
+            auto t0 = Time::now();
             returnImage->generateMipmap(vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor, mipLevels, dstState);
-            LOG_DEBUG("Took %.2f msec to generate %u mipmap levels for ImageCube", Performance::milliseconds(t0), mipLevels);
+            LOG_DEBUG("Took %.2f msec to generate %u mipmap levels for ImageCube", Time::milliseconds(t0), mipLevels);
         }
     } else if (generateMipmap) {
         LOG_WARN("GenerateMipmap requested for ImageCube \"%s\", but no source data was uploaded to generate from", name.c_str());

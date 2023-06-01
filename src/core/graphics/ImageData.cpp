@@ -6,6 +6,9 @@
 #include "core/graphics/ComputePipeline.h"
 #include "core/graphics/DescriptorSet.h"
 #include "core/util/Util.h"
+#include "core/util/Profiler.h"
+#include "core/util/Time.h"
+#include "core/util/Logger.h"
 #include "core/engine/event/EventDispatcher.h"
 #include "core/engine/event/GraphicsEvents.h"
 #include "core/application/Application.h"
@@ -76,7 +79,7 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
     std::string absFilePath = Application::instance()->getAbsoluteResourceFilePath(filePath);
 
     LOG_INFO("Loading image \"%s\"", absFilePath.c_str());
-    auto t0 = Performance::now();
+    auto t0 = Time::now();
 
     if (channelSize == 1) {
         data = reinterpret_cast<uint8_t*>(stbi_load(absFilePath.c_str(), &width, &height, &channels, desiredChannelCount));
@@ -123,7 +126,7 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
         return nullptr;
     }
 
-    LOG_INFO("Finished loading image \"%s\" - Took %.2f msec", absFilePath.c_str(), Performance::milliseconds(t0));
+    LOG_INFO("Finished loading image \"%s\" - Took %.2f msec", absFilePath.c_str(), Time::milliseconds(t0));
 
     ImageData* image = new ImageData(data, width, height, layout, format, AllocationType_Stbi);
 

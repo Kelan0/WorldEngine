@@ -5,7 +5,6 @@
 
 #include "core/core.h"
 #include "core/application/Engine.h"
-#include "core/graphics/GraphicsManager.h"
 #include <type_traits>
 
 // FrameResource holds CONCURRENT_FRAMES number of T pointers (or T references if is_ptr is false), and automatically
@@ -23,7 +22,7 @@ private:
 public:
     FrameResource(ArrayType& resource);
 
-    FrameResource(FrameResource&& move);
+    FrameResource(FrameResource&& move) noexcept ;
 
     FrameResource(std::nullptr_t);
 
@@ -74,7 +73,7 @@ inline FrameResource<T, is_ptr>::FrameResource(ArrayType& resource):
 }
 
 template<typename T, bool is_ptr>
-inline FrameResource<T, is_ptr>::FrameResource(FrameResource&& move) {
+inline FrameResource<T, is_ptr>::FrameResource(FrameResource&& move) noexcept {
     for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
         ArrayType::at(i) = std::exchange(move.at(i), Type{});
     }
@@ -131,7 +130,7 @@ inline const FrameResource<T, is_ptr>::Type& FrameResource<T, is_ptr>::get(size_
 
 template<typename T, bool is_ptr>
 inline const FrameResource<T, is_ptr>::Type& FrameResource<T, is_ptr>::get() const {
-    return ArrayType::at(Engine::graphics()->getCurrentFrameIndex());
+    return ArrayType::at(Engine::instance()->getSwapchainFrameIndex());
 }
 
 template<typename T, bool is_ptr>
@@ -146,7 +145,7 @@ inline void FrameResource<T, is_ptr>::set(size_t index, const Type& resource) {
 
 template<typename T, bool is_ptr>
 inline void FrameResource<T, is_ptr>::set(const Type& resource) {
-    set(Engine::graphics()->getCurrentFrameIndex(), std::move(resource));
+    set(Engine::instance()->getSwapchainFrameIndex(), std::move(resource));
 }
 
 template<typename T, bool is_ptr>

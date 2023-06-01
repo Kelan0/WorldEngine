@@ -6,9 +6,6 @@
 
 #include "core/engine/scene/Transform.h"
 #include "core/engine/scene/Camera.h"
-//#include "core/engine/scene/bound/Frustum.h"
-#include "core/graphics/FrameResource.h"
-#include "core/graphics/DescriptorSet.h"
 
 class Buffer;
 

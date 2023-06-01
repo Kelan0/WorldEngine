@@ -1,6 +1,7 @@
 #include "core/engine/ui/PerformanceGraphUI.h"
 #include "core/application/Application.h"
 #include "core/util/Profiler.h"
+#include "core/util/Time.h"
 #include "core/util/Util.h"
 #include "extern/imgui/imgui.h"
 #include "extern/imgui/imgui_internal.h"
@@ -19,7 +20,7 @@ PerformanceGraphUI::PerformanceGraphUI():
         m_profilerDisplayMode(ProfilerDisplayMode_HotFunctionList),
         m_maxFrameProfiles(500),
         m_averageAccumulationDuration(std::chrono::milliseconds(333)),
-        m_lastAverageAccumulationTime(Performance::zero_moment),
+        m_lastAverageAccumulationTime(Time::zero_moment),
         m_averageAccumulationFrameCount(0),
         m_rollingAverageUpdateFactor(0.05F) {
 }
@@ -117,7 +118,7 @@ void PerformanceGraphUI::update(double dt) {
 
         for (size_t i = 0; i < threadProfiles.size(); ++i) {
             const ThreadProfile& profile = threadProfiles[i];
-            currentFrame->profileData[i].elapsedMillis = (float)Performance::milliseconds(profile.startTime, profile.endTime);
+            currentFrame->profileData[i].elapsedMillis = (float)Time::milliseconds(profile.startTime, profile.endTime);
             assert(currentFrame->profileData[i].elapsedMillis >= 0.0);
         }
 
@@ -140,7 +141,7 @@ void PerformanceGraphUI::update(double dt) {
             updateFrameGraphLayerInstances(currentFrame->profileData, threadInfo);
         }
 
-        float rootElapsed = (float)Performance::milliseconds(threadProfiles[0].startTime, threadProfiles[0].endTime);
+        float rootElapsed = (float)Time::milliseconds(threadProfiles[0].startTime, threadProfiles[0].endTime);
         updateFrameGraphInfo(threadInfo, rootElapsed);
     }
 
@@ -1263,9 +1264,9 @@ void PerformanceGraphUI::updateAccumulatedAverages() {
 
     float invAverageDivisor = 1.0F / (float)m_averageAccumulationFrameCount;
 
-    auto currentTime = Performance::now();
+    auto currentTime = Time::now();
     auto elapsedTime = currentTime - m_lastAverageAccumulationTime;
-    if (elapsedTime >= m_averageAccumulationDuration || m_lastAverageAccumulationTime == Performance::zero_moment) {
+    if (elapsedTime >= m_averageAccumulationDuration || m_lastAverageAccumulationTime == Time::zero_moment) {
         m_lastAverageAccumulationTime = currentTime;
         m_averageAccumulationFrameCount = 0;
 

@@ -12,6 +12,7 @@ class RenderPass;
 class Buffer;
 class DescriptorSet;
 class DescriptorSetLayout;
+class ImageView;
 
 enum ShadowMapType : uint8_t {
     ShadowMapType_Simple = 0,

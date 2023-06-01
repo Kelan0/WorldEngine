@@ -1,6 +1,8 @@
 #include "core/graphics/Buffer.h"
 #include "core/graphics/DeviceMemory.h"
 #include "core/graphics/CommandPool.h"
+#include "core/graphics/FrameResource.h"
+#include "core/graphics/GraphicsManager.h"
 #include "core/application/Engine.h"
 #include "core/engine/event/EventDispatcher.h"
 #include "core/engine/event/GraphicsEvents.h"

@@ -4,11 +4,11 @@
 
 #include "core/core.h"
 #include "Engine.h"
-#include "core/util/Logger.h"
 
 #include <SDL2/SDL.h>
 
 class InputHandler;
+class Logger;
 
 class Application {
     NO_COPY(Application);

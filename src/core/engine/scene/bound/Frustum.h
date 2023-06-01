@@ -2,11 +2,12 @@
 #define WORLDENGINE_FRUSTUM_H
 
 #include "core/core.h"
-#include "core/engine/scene/Transform.h"
-#include "core/engine/scene/Camera.h"
-#include "core/engine/renderer/RenderCamera.h"
 #include "core/engine/scene/bound/Plane.h"
-#include "core/engine/scene/bound/BoundingVolume.h"
+
+class Camera;
+class RenderCamera;
+class BoundingVolume;
+class Transform;
 
 class Frustum {
 public:

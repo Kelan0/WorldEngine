@@ -4,6 +4,7 @@
 #include "core/core.h"
 #include "core/engine/ui/UI.h"
 #include "core/util/Profiler.h"
+#include "core/util/Time.h"
 
 class PerformanceGraphUI : public UI {
     typedef Profiler::CPUProfile ThreadProfile;
@@ -209,8 +210,8 @@ private:
     ProfileVisibilityMode m_profileVisibilityMode;
     ProfilerDisplayMode m_profilerDisplayMode;
 
-    Performance::moment_t m_lastAverageAccumulationTime;
-    Performance::duration_t m_averageAccumulationDuration;
+    Time::moment_t m_lastAverageAccumulationTime;
+    Time::duration_t m_averageAccumulationDuration;
     size_t m_averageAccumulationFrameCount;
     float m_rollingAverageUpdateFactor;
     std::string m_profileNameFilterText;

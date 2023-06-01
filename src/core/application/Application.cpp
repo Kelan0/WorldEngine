@@ -13,8 +13,8 @@
 #include "core/util/PlatformUtils.h"
 #include "core/util/Profiler.h"
 #include "core/util/Logger.h"
+#include "core/util/Time.h"
 #include "core/util/Util.h"
-#include <chrono>
 #include <filesystem>
 
 Application* Application::s_instance = nullptr;

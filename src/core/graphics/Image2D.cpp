@@ -1,4 +1,5 @@
 #include "core/graphics/Image2D.h"
+#include "core/graphics/ImageData.h"
 #include "core/graphics/Buffer.h"
 #include "core/graphics/DeviceMemory.h"
 #include "core/graphics/CommandPool.h"

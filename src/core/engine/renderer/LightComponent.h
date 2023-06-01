@@ -4,7 +4,6 @@
 
 #include "core/core.h"
 #include "core/engine/renderer/RenderLight.h"
-#include "core/engine/renderer/ShadowMap.h"
 
 class ShadowMap;
 

@@ -1,7 +1,8 @@
 #include "core/engine/renderer/RenderComponent.h"
-#include "core/application/Engine.h"
 #include "core/engine/renderer/SceneRenderer.h"
 #include "core/engine/renderer/Material.h"
+#include "core/engine/scene/bound/BoundingVolume.h"
+#include "core/application/Engine.h"
 
 RenderComponent::RenderComponent():
     RenderComponent(UpdateType_Dynamic, UpdateType_Static) {
