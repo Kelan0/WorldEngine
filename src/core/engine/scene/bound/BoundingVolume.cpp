@@ -40,9 +40,9 @@ bool intersects_AABB_AABB(const AxisAlignedBoundingBox& a, const AxisAlignedBoun
     glm::dvec3 aMax = a.getBoundMax();
     glm::dvec3 bMin = b.getBoundMin();
     glm::dvec3 bMax = b.getBoundMax();
-    return	(aMin.x <= bMax.x && aMax.x >= bMin.x) &&
-              (aMin.y <= bMax.y && aMax.y >= bMin.y) &&
-              (aMin.z <= bMax.z && aMax.z >= bMin.z);
+    return (aMin.x <= bMax.x && aMax.x >= bMin.x) &&
+           (aMin.y <= bMax.y && aMax.y >= bMin.y) &&
+           (aMin.z <= bMax.z && aMax.z >= bMin.z);
 }
 
 // Test if sphere A contains point B
@@ -93,9 +93,10 @@ bool contains_AABB_Point(const AxisAlignedBoundingBox& a, const glm::dvec3& b) {
     glm::dvec3 aMax = a.getBoundMax();
 
     return b.x >= aMin.x && b.x <= aMax.x &&
-            b.y >= aMin.y && b.y <= aMax.y &&
-            b.z >= aMin.z && b.z <= aMax.z;
+           b.y >= aMin.y && b.y <= aMax.y &&
+           b.z >= aMin.z && b.z <= aMax.z;
 }
+
 // Test if AABB A contains sphere B
 // Implementation from https://github.com/erich666/GraphicsGems/blob/master/gems/BoxSphere.c (hollow box, solid sphere)
 bool contains_AABB_Sphere(const AxisAlignedBoundingBox& a, const BoundingSphere& b) {
@@ -107,12 +108,12 @@ bool contains_AABB_Sphere(const AxisAlignedBoundingBox& a, const BoundingSphere&
     double d;
     bool face = false;
 
-    for (int i = 0; i < 3; i++ ) {
-        if (sphereCenter[i] < bMin[i] ) {
+    for (int i = 0; i < 3; i++) {
+        if (sphereCenter[i] < bMin[i]) {
             face = true;
             d = sphereCenter[i] - bMin[i];
             dmin += d * d;
-        } else if (sphereCenter[i] > bMax[i] ) {
+        } else if (sphereCenter[i] > bMax[i]) {
             face = true;
             d = sphereCenter[i] - bMax[i];
             dmin += d * d;
@@ -203,11 +204,8 @@ glm::dvec3 calculateClosestPoint_AABB_Point(const AxisAlignedBoundingBox& a, con
 }
 
 
-
-
-
-BoundingVolume::BoundingVolume(Type type):
-    m_type(type) {
+BoundingVolume::BoundingVolume(Type type) :
+        m_type(type) {
 }
 
 BoundingVolume::~BoundingVolume() = default;
@@ -217,18 +215,16 @@ BoundingVolume::Type BoundingVolume::getType() const {
 }
 
 
-
-
-BoundingSphere::BoundingSphere(const glm::dvec3& center, double radius):
-    BoundingVolume(Type_Sphere),
-    m_center(center),
-    m_radius(radius) {
+BoundingSphere::BoundingSphere(const glm::dvec3& center, double radius) :
+        BoundingVolume(Type_Sphere),
+        m_center(center),
+        m_radius(radius) {
 }
 
-BoundingSphere::BoundingSphere(double centerX, double centerY, double centerZ, double radius):
-    BoundingVolume(Type_Sphere),
-    m_center(centerX, centerY, centerZ),
-    m_radius(radius) {
+BoundingSphere::BoundingSphere(double centerX, double centerY, double centerZ, double radius) :
+        BoundingVolume(Type_Sphere),
+        m_center(centerX, centerY, centerZ),
+        m_radius(radius) {
 }
 
 BoundingSphere::~BoundingSphere() = default;
@@ -329,25 +325,25 @@ glm::dvec3 BoundingSphere::calculateClosestPoint(const glm::dvec3& point) const 
 }
 
 void BoundingSphere::drawLines() const {
-    static MeshData<Vertex> disc(PrimitiveType_Line);
+    static MeshData<Vertex> discMesh(PrimitiveType_Line);
 
-    if (disc.getVertexCount() == 0) {
+    if (discMesh.getVertexCount() == 0) {
         const uint32_t discSegments = 20;
-        disc.createDisc(glm::vec3(0.0F), glm::vec3(1, 0, 0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1), 1.0F, discSegments);
-        disc.pushTransform();
-        disc.rotateDegrees(90.0F, 1.0F, 0.0F, 0.0F);
-        disc.createDisc(glm::vec3(0.0F), glm::vec3(1, 0, 0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1), 1.0F, discSegments);
-        disc.popTransform();
-        disc.pushTransform();
-        disc.rotateDegrees(90.0F, 0.0F, 1.0F, 0.0F);
-        disc.createDisc(glm::vec3(0.0F), glm::vec3(1, 0, 0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1), 1.0F, discSegments);
-        disc.popTransform();
+        discMesh.createDisc(glm::vec3(0.0F), glm::vec3(1, 0, 0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1), 1.0F, discSegments);
+        discMesh.pushTransform();
+        discMesh.rotateDegrees(90.0F, 1.0F, 0.0F, 0.0F);
+        discMesh.createDisc(glm::vec3(0.0F), glm::vec3(1, 0, 0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1), 1.0F, discSegments);
+        discMesh.popTransform();
+        discMesh.pushTransform();
+        discMesh.rotateDegrees(90.0F, 0.0F, 1.0F, 0.0F);
+        discMesh.createDisc(glm::vec3(0.0F), glm::vec3(1, 0, 0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1), 1.0F, discSegments);
+        discMesh.popTransform();
     }
 
     ImmediateRenderer* renderer = Engine::instance()->getImmediateRenderer();
 
-    const auto& vertices = disc.getVertices();
-    const auto& indices = disc.getIndices();
+    const auto& vertices = discMesh.getVertices();
+    const auto& indices = discMesh.getIndices();
 
     renderer->pushMatrix();
     renderer->translate(m_center);
@@ -355,8 +351,8 @@ void BoundingSphere::drawLines() const {
 
     renderer->begin(PrimitiveType_Line);
 
-    for (int i = 0; i < indices.size(); ++i) {
-        const Vertex& v0 = vertices[indices[i]];
+    for (auto index : indices) {
+        const Vertex& v0 = vertices[index];
         renderer->normal(v0.position);
         renderer->vertex(v0.position);
     }
@@ -366,15 +362,15 @@ void BoundingSphere::drawLines() const {
 }
 
 void BoundingSphere::drawFill() const {
-    static MeshData<Vertex> disc(PrimitiveType_Triangle);
-    if (disc.getVertexCount() == 0) {
-        disc.createUVSphere(glm::vec3(0.0F), 1.0F, 18, 18);
+    static MeshData<Vertex> discMesh(PrimitiveType_Triangle);
+    if (discMesh.getVertexCount() == 0) {
+        discMesh.createUVSphere(glm::vec3(0.0F), 1.0F, 18, 18);
     }
 
     ImmediateRenderer* renderer = Engine::instance()->getImmediateRenderer();
 
-    const auto& vertices = disc.getVertices();
-    const auto& indices = disc.getIndices();
+    const auto& vertices = discMesh.getVertices();
+    const auto& indices = discMesh.getIndices();
 
     renderer->pushMatrix();
     renderer->translate(m_center);
@@ -382,8 +378,8 @@ void BoundingSphere::drawFill() const {
 
     renderer->begin(PrimitiveType_Triangle);
 
-    for (int i = 0; i < indices.size(); ++i) {
-        const Vertex& v0 = vertices[indices[i]];
+    for (auto index : indices) {
+        const Vertex& v0 = vertices[index];
         renderer->normal(v0.normal);
         renderer->vertex(v0.position);
     }
@@ -393,17 +389,13 @@ void BoundingSphere::drawFill() const {
 }
 
 
-
-
-
-
-AxisAlignedBoundingBox::AxisAlignedBoundingBox():
-    BoundingVolume(Type_AxisAlignedBoundingBox),
-    m_center(0.0, 0.0, 0.0),
-    m_halfExtents(0.0, 0.0, 0.0) {
+AxisAlignedBoundingBox::AxisAlignedBoundingBox() :
+        BoundingVolume(Type_AxisAlignedBoundingBox),
+        m_center(0.0, 0.0, 0.0),
+        m_halfExtents(0.0, 0.0, 0.0) {
 }
 
-AxisAlignedBoundingBox::AxisAlignedBoundingBox(const glm::dvec3& center, const glm::dvec3& halfExtents):
+AxisAlignedBoundingBox::AxisAlignedBoundingBox(const glm::dvec3& center, const glm::dvec3& halfExtents) :
         BoundingVolume(Type_AxisAlignedBoundingBox),
         m_center(center),
         m_halfExtents(glm::abs(halfExtents)) {
@@ -444,13 +436,57 @@ glm::dvec3 AxisAlignedBoundingBox::getBoundMin() const {
     return m_center - m_halfExtents;
 }
 
+double AxisAlignedBoundingBox::getBoundMinX() const {
+    return m_center.x - m_halfExtents.x;
+}
+
+double AxisAlignedBoundingBox::getBoundMinY() const {
+    return m_center.y - m_halfExtents.y;
+}
+
+double AxisAlignedBoundingBox::getBoundMinZ() const {
+    return m_center.z - m_halfExtents.z;
+}
+
 glm::dvec3 AxisAlignedBoundingBox::getBoundMax() const {
     return m_center + m_halfExtents;
+}
+
+double AxisAlignedBoundingBox::getBoundMaxX() const {
+    return m_center.x + m_halfExtents.x;
+}
+
+double AxisAlignedBoundingBox::getBoundMaxY() const {
+    return m_center.y + m_halfExtents.y;
+}
+
+double AxisAlignedBoundingBox::getBoundMaxZ() const {
+    return m_center.z + m_halfExtents.z;
 }
 
 void AxisAlignedBoundingBox::setBoundMinMax(const glm::dvec3& boundMin, const glm::dvec3& boundMax) {
     m_center = (boundMin + boundMax) * 0.5;
     m_halfExtents = glm::abs(boundMax - boundMin) * 0.5;
+}
+
+glm::dvec3 AxisAlignedBoundingBox::getCorner(int cornerIndex) const {
+    return glm::dvec3(
+            (cornerIndex & Axis_X) ? (m_center.x + m_halfExtents.x) : (m_center.x - m_halfExtents.x),
+            (cornerIndex & Axis_Y) ? (m_center.y + m_halfExtents.y) : (m_center.y - m_halfExtents.y),
+            (cornerIndex & Axis_Z) ? (m_center.z + m_halfExtents.z) : (m_center.z - m_halfExtents.z));
+}
+
+std::array<glm::dvec3, 8> AxisAlignedBoundingBox::getCorners() const {
+    std::array<glm::dvec3, 8> corners{};
+    corners[Corner_X0_Y0_Z0] = glm::dvec3(m_center.x - m_halfExtents.x, m_center.y - m_halfExtents.y, m_center.z - m_halfExtents.z);
+    corners[Corner_X0_Y0_Z1] = glm::dvec3(m_center.x - m_halfExtents.x, m_center.y - m_halfExtents.y, m_center.z + m_halfExtents.z);
+    corners[Corner_X0_Y1_Z0] = glm::dvec3(m_center.x - m_halfExtents.x, m_center.y + m_halfExtents.y, m_center.z - m_halfExtents.z);
+    corners[Corner_X0_Y1_Z1] = glm::dvec3(m_center.x - m_halfExtents.x, m_center.y + m_halfExtents.y, m_center.z + m_halfExtents.z);
+    corners[Corner_X1_Y0_Z0] = glm::dvec3(m_center.x + m_halfExtents.x, m_center.y - m_halfExtents.y, m_center.z - m_halfExtents.z);
+    corners[Corner_X1_Y0_Z1] = glm::dvec3(m_center.x + m_halfExtents.x, m_center.y - m_halfExtents.y, m_center.z + m_halfExtents.z);
+    corners[Corner_X1_Y1_Z0] = glm::dvec3(m_center.x + m_halfExtents.x, m_center.y + m_halfExtents.y, m_center.z - m_halfExtents.z);
+    corners[Corner_X1_Y1_Z1] = glm::dvec3(m_center.x + m_halfExtents.x, m_center.y + m_halfExtents.y, m_center.z + m_halfExtents.z);
+    return corners;
 }
 
 bool AxisAlignedBoundingBox::intersects(const BoundingVolume& other) const {
@@ -523,4 +559,60 @@ double AxisAlignedBoundingBox::calculateMinDistance(const glm::dvec3& other) con
 
 glm::dvec3 AxisAlignedBoundingBox::calculateClosestPoint(const glm::dvec3& point) const {
     return calculateClosestPoint_AABB_Point(*this, point);
+}
+
+void AxisAlignedBoundingBox::drawLines() const {
+    static MeshData<Vertex> boxMesh(PrimitiveType_Line);
+
+    if (boxMesh.getVertexCount() == 0) {
+        boxMesh.createCuboid(glm::vec3(-1.0F), glm::vec3(+1.0F));
+    }
+
+    ImmediateRenderer* renderer = Engine::instance()->getImmediateRenderer();
+
+    const auto& vertices = boxMesh.getVertices();
+    const auto& indices = boxMesh.getIndices();
+
+    renderer->pushMatrix();
+    renderer->translate(m_center);
+    renderer->scale(m_halfExtents);
+
+    renderer->begin(PrimitiveType_Line);
+
+    for (auto index : indices) {
+        const Vertex& v0 = vertices[index];
+        renderer->normal(v0.normal);
+        renderer->vertex(v0.position);
+    }
+
+    renderer->end();
+    renderer->popMatrix();
+}
+
+void AxisAlignedBoundingBox::drawFill() const {
+    static MeshData<Vertex> boxMesh(PrimitiveType_Triangle);
+
+    if (boxMesh.getVertexCount() == 0) {
+        boxMesh.createCuboid(glm::vec3(-1.0F), glm::vec3(+1.0F));
+    }
+
+    ImmediateRenderer* renderer = Engine::instance()->getImmediateRenderer();
+
+    const auto& vertices = boxMesh.getVertices();
+    const auto& indices = boxMesh.getIndices();
+
+    renderer->pushMatrix();
+    renderer->translate(m_center);
+    renderer->scale(m_halfExtents);
+
+    renderer->begin(PrimitiveType_Line);
+
+    for (auto index : indices) {
+        const Vertex& v0 = vertices[index];
+        renderer->normal(v0.normal);
+        renderer->vertex(v0.position);
+    }
+
+    renderer->end();
+    renderer->popMatrix();
 }

@@ -120,6 +120,22 @@ private:
 
 class AxisAlignedBoundingBox : public BoundingVolume {
 public:
+    enum {
+        Axis_X = 0b100,
+        Axis_Y = 0b010,
+        Axis_Z = 0b001,
+    };
+    enum {
+        Corner_X0_Y0_Z0 = 0b000,
+        Corner_X0_Y0_Z1 = 0b001,
+        Corner_X0_Y1_Z0 = 0b010,
+        Corner_X0_Y1_Z1 = 0b011,
+        Corner_X1_Y0_Z0 = 0b100,
+        Corner_X1_Y0_Z1 = 0b101,
+        Corner_X1_Y1_Z0 = 0b110,
+        Corner_X1_Y1_Z1 = 0b111,
+    };
+public:
     AxisAlignedBoundingBox();
 
     AxisAlignedBoundingBox(const glm::dvec3& center, const glm::dvec3& halfExtents);
@@ -139,10 +155,20 @@ public:
     void setHalfExtents(double halfExtentX, double halfExtentY, double halfExtentZ);
 
     glm::dvec3 getBoundMin() const;
+    double getBoundMinX() const;
+    double getBoundMinY() const;
+    double getBoundMinZ() const;
 
     glm::dvec3 getBoundMax() const;
+    double getBoundMaxX() const;
+    double getBoundMaxY() const;
+    double getBoundMaxZ() const;
 
     void setBoundMinMax(const glm::dvec3& boundMin, const glm::dvec3& boundMax);
+
+    glm::dvec3 getCorner(int cornerIndex) const;
+
+    std::array<glm::dvec3, 8> getCorners() const;
 
     bool intersects(const BoundingVolume& other) const override;
 
@@ -155,6 +181,11 @@ public:
     double calculateMinDistance(const glm::dvec3& other) const override;
 
     glm::dvec3 calculateClosestPoint(const glm::dvec3& point) const override;
+
+    void drawLines() const;
+
+    void drawFill() const;
+
 private:
     glm::dvec3 m_center;
     glm::dvec3 m_halfExtents;
