@@ -43,7 +43,7 @@ private:
 // https://stackoverflow.com/questions/2620218/fastest-container-or-algorithm-for-unique-reusable-ids-in-c
 
 template<typename ID, bool ThreadSafe>
-const ID IdManager<ID, ThreadSafe>::NULL_ID = (ID)0;
+const ID IdManager<ID, ThreadSafe>::NULL_ID = (ID)0; // First ID is 1
 
 template<typename ID, bool ThreadSafe>
 IdManager<ID, ThreadSafe>::IdManager() {

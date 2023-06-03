@@ -29,8 +29,11 @@ TerrainTileQuadtree::TerrainTileQuadtree(uint32_t maxQuadtreeDepth, const glm::d
 
     TileTreeNode rootNode{};
     rootNode.childOffset = UINT32_MAX;
-    rootNode.elementIndex = 0;
     m_nodes.emplace_back(rootNode);
+    m_nodeTileData.emplace_back(NodeData{
+        .minElevation = 0.0F,
+        .maxElevation = 1.0F,
+    });
 }
 
 TerrainTileQuadtree::~TerrainTileQuadtree() {
@@ -133,16 +136,14 @@ size_t TerrainTileQuadtree::getChildIndex(size_t nodeIndex, QuadIndex quadIndex)
 AxisAlignedBoundingBox TerrainTileQuadtree::getNodeBoundingBox(size_t nodeIndex, const glm::uvec2& treePosition, uint8_t treeDepth) const {
     double normalizedNodeSize = getNormalizedNodeSizeForTreeDepth(treeDepth);
 
-    double minElevation = 0.0;
-    double maxElevation = m_heightScale;
+    double minElevation = m_nodeTileData[nodeIndex].minElevation * m_heightScale;
+    double maxElevation = m_nodeTileData[nodeIndex].maxElevation * m_heightScale;
 
-    if (m_tileSupplier != nullptr && m_nodes[nodeIndex].elementIndex != 0) {
-        TileDataReference tile = m_tileSupplier->getTile(m_nodes[nodeIndex].elementIndex);
-        if (tile != nullptr) {
-            minElevation = tile.getMinHeight() * m_heightScale;
-            maxElevation = tile.getMaxHeight() * m_heightScale;
-        }
-    }
+//    if (m_tileSupplier != nullptr) {
+//        TileDataReference tile = m_tileSupplier->getTile(glm::dvec2(treePosition) * normalizedNodeSize, glm::dvec2(normalizedNodeSize));
+//        minElevation = tile.getMinHeight() * m_heightScale;
+//        maxElevation = tile.getMaxHeight() * m_heightScale;
+//    }
 
     double centerX = ((((double)treePosition.x + 0.5) * normalizedNodeSize) - 0.5) * m_size.x;
     double centerZ = ((((double)treePosition.y + 0.5) * normalizedNodeSize) - 0.5) * m_size.x;
@@ -226,6 +227,18 @@ void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector
             }
         }
 
+        glm::dvec2 tileOffset = glm::dvec2(node.treePosition * 2u + QUAD_OFFSETS[node.quadIndex]) * normalizedNodeSize;
+        TileDataReference tile = m_tileSupplier->getTile(tileOffset, glm::dvec2(normalizedNodeSize));
+        tile.notifyUsed();
+
+        if (tile.isAvailable()) {
+            m_nodeTileData[node.nodeIndex].minElevation = tile.getMinHeight();
+            m_nodeTileData[node.nodeIndex].maxElevation = tile.getMaxHeight();
+        } else {
+            m_nodeTileData[node.nodeIndex].minElevation = 0.0F;
+            m_nodeTileData[node.nodeIndex].maxElevation = 1.0F;
+        }
+
         // node reference above may have been invalidated here, so we must index the nodes array directly
         if (hasChildren(node.nodeIndex)) {
             size_t firstChildIndex = getChildIndex(node.nodeIndex, (QuadIndex)0);
@@ -234,6 +247,16 @@ void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector
                 size_t childIndex = firstChildIndex + i;
                 m_parentOffsets[childIndex] = (uint32_t)(childIndex - node.nodeIndex);
             }
+        } else {
+
+//            if (m_nodeTileData[node.nodeIndex] == nullptr) {
+//                glm::dvec2 tileOffset = glm::dvec2(node.treePosition * 2u + QUAD_OFFSETS[node.quadIndex]) * normalizedNodeSize;
+//                m_tileSupplier->getTile(tileOffset, glm::dvec2(normalizedNodeSize));
+//                m_nodeTileData[node.nodeIndex] = m_tileSupplier->getTile(tileOffset, glm::dvec2(normalizedNodeSize));
+//            }
+//            if (m_nodeTileData[node.nodeIndex] != nullptr) {
+//                m_nodeTileData[node.nodeIndex].notifyUsed();
+//            }
         }
         return false; // Traverse subtree
     });
@@ -329,9 +352,7 @@ void TerrainTileQuadtree::markDeletedSubtrees(std::vector<size_t>& deletedNodeIn
 
 //        m_nodes[nodeIndex].deleted = true;
         m_nodes[nodeIndex].childOffset = 0;
-        if (m_nodes[nodeIndex].elementIndex != 0) {
-            m_tileSupplier->releaseTileData(m_nodes[nodeIndex].elementIndex);
-        }
+//        m_nodeTileData[nodeIndex].release();
     }
 }
 
@@ -380,9 +401,11 @@ void TerrainTileQuadtree::cleanupDeletedNodes() {
 #if 0
                 std::swap(m_nodes[firstIndex], m_nodes[i]);
                 std::swap(m_parentOffsets[firstIndex], m_parentOffsets[i]);
+                std::swap(m_nodeTileData[firstIndex], m_nodeTileData[i]);
 #else
                 m_nodes[firstIndex] = m_nodes[i];
                 m_parentOffsets[firstIndex] = m_parentOffsets[i];
+                m_nodeTileData[firstIndex] = std::move(m_nodeTileData[i]);
 #endif
 
 #if _DEBUG
@@ -402,9 +425,13 @@ void TerrainTileQuadtree::cleanupDeletedNodes() {
         PROFILE_REGION("Erase deleted nodes")
         m_nodes.erase(m_nodes.begin() + (decltype(m_nodes)::difference_type)firstIndex, m_nodes.end());
         m_parentOffsets.erase(m_parentOffsets.begin() + (decltype(m_parentOffsets)::difference_type)firstIndex, m_parentOffsets.end());
+        m_nodeTileData.erase(m_nodeTileData.begin() + (decltype(m_nodeTileData)::difference_type)firstIndex, m_nodeTileData.end());
 
 
 #if _DEBUG
+        assert(m_nodes.size() == m_parentOffsets.size());
+        assert(m_nodeTileData.size() == m_parentOffsets.size());
+
         // SANITY CHECK - every entry in the m_parentOffsets array must make sense.
         for (size_t i = 1; i < m_nodes.size(); ++i) {
             assert(!isDeleted(i));
@@ -419,6 +446,7 @@ void TerrainTileQuadtree::cleanupDeletedNodes() {
         LOG_DEBUG("Deallocating unused memory for %zu quadtree terrain nodes", m_nodes.capacity() - m_nodes.size());
         m_nodes.shrink_to_fit();
         m_parentOffsets.shrink_to_fit();
+        m_nodeTileData.shrink_to_fit();
     }
 }
 
@@ -448,7 +476,13 @@ size_t TerrainTileQuadtree::splitNode(size_t nodeIndex, const glm::uvec2& treePo
     // Note: node reference is invalidated by the addition of new children below.
     for (int i = 0; i < 4; ++i) {
         glm::dvec2 tileOffset = glm::dvec2(treePosition * 2u + QUAD_OFFSETS[i]) * normalizedNodeSize;
-        childNode.elementIndex = m_tileSupplier->requestTileData(tileOffset, tileSize);
+        TileDataReference tile = m_tileSupplier->getTile(tileOffset, tileSize);
+        tile.notifyUsed();
+
+        m_nodeTileData.emplace_back(NodeData{
+            .minElevation = 0.0F,
+            .maxElevation = 1.0F
+        });
         m_parentOffsets.emplace_back((uint32_t)(m_nodes.size() - nodeIndex)); // Offset to subtract from this child nodes index to reach its parent.
         m_nodes.emplace_back(childNode);
     }

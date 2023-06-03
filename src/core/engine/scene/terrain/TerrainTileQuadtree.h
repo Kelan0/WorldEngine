@@ -7,8 +7,11 @@
 class Frustum;
 class TerrainTileSupplier;
 class AxisAlignedBoundingBox;
+class TileDataReference;
 
 class TerrainTileQuadtree {
+    NO_COPY(TerrainTileQuadtree);
+    NO_MOVE(TerrainTileQuadtree);
 public:
     enum QuadIndex : uint8_t {
         QuadIndex_TopLeft = 0,     // 0b00 // Binary digits of index indicate quadrant
@@ -28,9 +31,8 @@ public:
     struct TileTreeNode {
         uint32_t childOffset;
         union {
-            uint32_t _packed0;
+            uint8_t _packed0;
             struct {
-                uint32_t elementIndex : 31;
                 uint8_t visible : 1;
             };
         };
@@ -109,6 +111,11 @@ private:
     size_t mergeNode(size_t nodeIndex);
 
 private:
+    struct NodeData {
+        float minElevation = 0.0F;
+        float maxElevation = 1.0F;
+    };
+private:
     Transform m_transform;
     uint32_t m_maxQuadtreeDepth;
     glm::dvec2 m_size;
@@ -116,6 +123,7 @@ private:
     double m_splitThreshold;
     std::vector<TileTreeNode> m_nodes;
     std::vector<uint32_t> m_parentOffsets;
+    std::vector<NodeData> m_nodeTileData;
     std::shared_ptr<TerrainTileSupplier> m_tileSupplier;
 };
 

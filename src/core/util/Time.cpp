@@ -38,7 +38,7 @@ uint64_t Time::nanoseconds(const moment_t& startTime) {
 }
 
 double Time::milliseconds(const duration_t& duration) {
-    return (double)nanoseconds(duration) / 1000000.0;
+    return (double)nanoseconds(duration) * 1e-6;
 }
 
 double Time::milliseconds(const moment_t& startTime, const moment_t& endTime) {
