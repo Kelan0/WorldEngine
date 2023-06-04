@@ -161,6 +161,14 @@ void ExposureHistogram::update(double dt, const vk::CommandBuffer& commandBuffer
     averagePushConstantData.exposureCompensation = m_exposureCompensation;
     averagePushConstantData.dt = (float)dt;
 
+    vk::BufferMemoryBarrier bufferMemoryBarrier{};
+    bufferMemoryBarrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+    bufferMemoryBarrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+    bufferMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bufferMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bufferMemoryBarrier.buffer = m_resources->histogramBuffer->getBuffer();
+    bufferMemoryBarrier.offset = 0;
+    bufferMemoryBarrier.size = m_resources->histogramBuffer->getSize();
 
     std::array<vk::DescriptorSet, 1> descriptorSets = {
             m_resources->descriptorSet->getDescriptorSet()
@@ -176,6 +184,8 @@ void ExposureHistogram::update(double dt, const vk::CommandBuffer& commandBuffer
     workgroupCountX = INT_DIV_CEIL(m_binCount, workgroupSize);
     m_histogramClearComputePipeline->dispatch(commandBuffer, workgroupCountX, 1, 1);
 
+    commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlagBits::eByRegion, 0, nullptr, 1, &bufferMemoryBarrier, 0, nullptr);
+
     m_histogramAccumulationComputePipeline->bind(commandBuffer);
     const vk::PipelineLayout& accumulatePipelineLayout = m_histogramAccumulationComputePipeline->getPipelineLayout();
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, accumulatePipelineLayout, 0, descriptorSets, nullptr);
@@ -184,6 +194,8 @@ void ExposureHistogram::update(double dt, const vk::CommandBuffer& commandBuffer
     workgroupCountX = INT_DIV_CEIL(m_resolution.x, workgroupSize);
     workgroupCountY = INT_DIV_CEIL(m_resolution.y, workgroupSize);
     m_histogramAccumulationComputePipeline->dispatch(commandBuffer, workgroupCountX, workgroupCountY, 1);
+
+    commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlagBits::eByRegion, 0, nullptr, 1, &bufferMemoryBarrier, 0, nullptr);
 
     m_histogramAverageComputePipeline->bind(commandBuffer);
     const vk::PipelineLayout& averagePipelineLayout = m_histogramAverageComputePipeline->getPipelineLayout();
