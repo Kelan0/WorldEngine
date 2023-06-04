@@ -15,8 +15,13 @@
 #define PROFILE_DOMAIN_NAME "WorldEngine"
 #endif
 
-#define PROFILING_ENABLED 1
+#ifndef PROFILING_ENABLED
+#define PROFILING_ENABLED 0
+#endif
+
+#ifndef INTERNAL_PROFILING_ENABLED
 #define INTERNAL_PROFILING_ENABLED 1
+#endif
 
 #ifndef PROFILE_GPU_STACK_LIMIT
 #define PROFILE_GPU_STACK_LIMIT 128
@@ -231,13 +236,13 @@ private:
     Profiler::endGPU(name, commandBuffer); \
 }
 
-#define PROFILE_CATEGORY(name)
-
 #else
 
 #define PROFILE_SCOPE(name)
 #define PROFILE_REGION(name)
-#define PROFILE_END_REGION(x)
+#define PROFILE_END_REGION()
+#define PROFILE_BEGIN_GPU_CMD(name, commandBuffer)
+#define PROFILE_END_GPU_CMD(name, commandBuffer)
 
 #endif
 
