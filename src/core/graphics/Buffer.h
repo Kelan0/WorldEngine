@@ -64,7 +64,7 @@ public:
 public:
     static const Buffer* getStagingBuffer();
 
-    static bool stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data, vk::DeviceSize srcStride = 0, vk::DeviceSize dstStride = 0, vk::DeviceSize elementSize = 0);
+    static bool stagedUpload(Buffer* dstBuffer, Buffer* stagingBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data, vk::DeviceSize srcStride = 0, vk::DeviceSize dstStride = 0, vk::DeviceSize elementSize = 0);
 
     static bool mappedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data, vk::DeviceSize srcStride = 0, vk::DeviceSize dstStride = 0, vk::DeviceSize elementSize = 0);
 

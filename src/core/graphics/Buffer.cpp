@@ -209,7 +209,7 @@ bool Buffer::upload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize siz
 #endif
 
     if (!dstBuffer->hasMemoryProperties(vk::MemoryPropertyFlagBits::eHostVisible)) {
-        return Buffer::stagedUpload(dstBuffer, offset, bufferSize, data, srcStride, dstStride, elementSize);
+        return Buffer::stagedUpload(dstBuffer, nullptr, offset, bufferSize, data, srcStride, dstStride, elementSize);
     } else {
         return Buffer::mappedUpload(dstBuffer, offset, bufferSize, data, srcStride, dstStride, elementSize);
     }
@@ -263,7 +263,7 @@ const Buffer* Buffer::getStagingBuffer() {
     return s_stagingBuffer.get();
 }
 
-bool Buffer::stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data, vk::DeviceSize srcStride, vk::DeviceSize dstStride, vk::DeviceSize elementSize) {
+bool Buffer::stagedUpload(Buffer* dstBuffer, Buffer* stagingBuffer, vk::DeviceSize offset, vk::DeviceSize size, const void* data, vk::DeviceSize srcStride, vk::DeviceSize dstStride, vk::DeviceSize elementSize) {
     if (size == 0) {
         return true; // We "successfully" uploaded nothing... This is valid
     }
@@ -276,9 +276,13 @@ bool Buffer::stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSi
         assert(elementCount * elementSize == size); // if elementSize is provided, the size of the data buffer must be a multiple of elementSize
         dstSize = elementCount * dstStride;
     }
-    reserveStagingBuffer(dstBuffer->getDevice(), dstSize);
 
-    vk::DeviceSize stageSize = glm::min(s_stagingBuffer->getSize(), dstSize);
+    if (stagingBuffer == nullptr) {
+        reserveStagingBuffer(dstBuffer->getDevice(), dstSize);
+        stagingBuffer = s_stagingBuffer.get();
+    }
+
+    vk::DeviceSize stageSize = glm::min(stagingBuffer->getSize(), dstSize);
     if (dstStride != 0) {
         stageSize = FLOOR_TO_MULTIPLE(stageSize, dstStride);
         assert(stageSize != 0);
@@ -291,12 +295,12 @@ bool Buffer::stagedUpload(Buffer* dstBuffer, vk::DeviceSize offset, vk::DeviceSi
     vk::DeviceSize stages = INT_DIV_CEIL(dstSize, stageSize);
 
     for (vk::DeviceSize i = 0; i < stages; ++i, stageOffset += stageSize) {
-        if (!Buffer::mappedUpload(s_stagingBuffer.get(), 0, stageSize, stageData + stageOffset, srcStride, dstStride, elementSize)) {
+        if (!Buffer::mappedUpload(stagingBuffer, 0, stageSize, stageData + stageOffset, srcStride, dstStride, elementSize)) {
             LOG_ERROR("Failed to upload data to staging buffer");
             return false;
         }
 
-        if (!Buffer::copy(s_stagingBuffer.get(), dstBuffer, stageSize, 0, offset + stageOffset)) {
+        if (!Buffer::copy(stagingBuffer, dstBuffer, stageSize, 0, offset + stageOffset)) {
             LOG_ERROR("Failed to copy data from staging buffer");
             return false;
         }
@@ -368,9 +372,10 @@ void Buffer::resizeStagingBuffer(const WeakResource<vkr::Device>& device, vk::De
     stagingBufferConfig.size = stagingBufferSize;
     stagingBufferConfig.usage = vk::BufferUsageFlagBits::eTransferSrc;
     stagingBufferConfig.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-    FrameResource<Buffer>::create(s_stagingBuffer, stagingBufferConfig, "Buffer-UploadStagingBuffer");
-    //s_stagingBuffer = std::unique_ptr<Buffer>(Buffer::create(stagingBufferConfig));
-    assert(s_stagingBuffer != nullptr);
+    if (!FrameResource<Buffer>::create(s_stagingBuffer, stagingBufferConfig, "Buffer-UploadStagingBuffer")) {
+        LOG_FATAL("Failed to create buffer staging buffer");
+        assert(false);
+    }
 }
 
 void Buffer::reserveStagingBuffer(const WeakResource<vkr::Device>& device, vk::DeviceSize size) {

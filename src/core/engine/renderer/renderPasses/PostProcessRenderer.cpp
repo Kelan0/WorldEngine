@@ -529,7 +529,7 @@ bool PostProcessRenderer::createBloomBlurFramebuffer(RenderResources* resources)
     subresourceRange.baseMipLevel = 0;
     subresourceRange.levelCount = imageConfig.mipLevels;
     ImageUtil::transitionLayout(commandBuffer, resources->bloomBlurImage->getImage(), subresourceRange, ImageTransition::FromAny(), ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader));
-    ImageUtil::endTransferCommands(**Engine::graphics()->getQueue(QUEUE_TRANSFER_MAIN), true);
+    ImageUtil::endTransferCommands(commandBuffer, **Engine::graphics()->getQueue(QUEUE_TRANSFER_MAIN), true, nullptr);
 
     return true;
 }

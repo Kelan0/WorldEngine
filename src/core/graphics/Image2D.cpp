@@ -167,12 +167,12 @@ bool Image2D::upload(Image2D* dstImage, void* data, ImagePixelLayout pixelLayout
     assert(dstImage != nullptr);
     assert(data != nullptr);
 
-    if (pixelLayout == ImagePixelLayout::Invalid) {
+    if (pixelLayout == ImagePixelLayout::Invalid || pixelLayout >= ImagePixelLayout::Count) {
         LOG_ERROR("Unable to upload data for Image2D \"%s\": Invalid image pixel layout", dstImage->getName().c_str());
         return false;
     }
 
-    if (pixelFormat == ImagePixelFormat::Invalid) {
+    if (pixelFormat == ImagePixelFormat::Invalid || pixelFormat >= ImagePixelFormat::Count) {
         LOG_ERROR("Unable to upload data for Image2D \"%s\": Invalid image pixel format", dstImage->getName().c_str());
         return false;
     }
@@ -219,7 +219,7 @@ bool Image2D::upload(Image2D* dstImage, void* data, ImagePixelLayout pixelLayout
         ImageUtil::transitionLayout(transferCommandBuffer, dstImage->getImage(), subresourceRange, ImageTransition::FromAny(), dstState);
     }
 
-    ImageUtil::endTransferCommands(**Engine::graphics()->getQueue(QUEUE_TRANSFER_MAIN), true);
+    ImageUtil::endTransferCommands(transferCommandBuffer, **Engine::graphics()->getQueue(QUEUE_TRANSFER_MAIN), true, nullptr);
 
     delete tempImageData;
     return success;
@@ -229,8 +229,84 @@ bool Image2D::upload(void* data, ImagePixelLayout pixelLayout, ImagePixelFormat 
     return Image2D::upload(this, data, pixelLayout, pixelFormat, aspectMask, imageRegion, dstState);
 }
 
+bool Image2D::readPixels(Image2D* srcImage, void* dstPixels, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
+    assert(srcImage != nullptr);
+    assert(dstPixels != nullptr);
+
+    if (pixelLayout == ImagePixelLayout::Invalid || pixelLayout >= ImagePixelLayout::Count) {
+        LOG_ERROR("Unable to read pixel data for Image2D \"%s\": Invalid image pixel layout", srcImage->getName().c_str());
+        return false;
+    }
+
+    if (pixelFormat == ImagePixelFormat::Invalid || pixelFormat >= ImagePixelFormat::Count) {
+        LOG_ERROR("Unable to read pixel data for Image2D \"%s\": Invalid image pixel format", srcImage->getName().c_str());
+        return false;
+    }
+
+    ImagePixelLayout srcPixelLayout;
+    ImagePixelFormat srcPixelFormat;
+    if (!ImageData::getPixelLayoutAndFormat(srcImage->getFormat(), srcPixelLayout, srcPixelFormat)) {
+        LOG_ERROR("Unable to read pixel data for Image2D \"%s\": There is no corresponding pixel layout or format for the destination images format %s", srcImage->getName().c_str(), vk::to_string(srcImage->getFormat()).c_str());
+        return false;
+    }
+
+    if (!validateImageRegion(srcImage, imageRegion)) {
+        return false;
+    }
+
+    uint32_t bytesPerPixel = ImageData::getChannelSize(srcPixelFormat) * ImageData::getChannels(srcPixelLayout);
+
+    if (bytesPerPixel == 0) {
+        LOG_ERROR("Unable to read pixel data for Image2D \"%s\": Invalid image pixel format", srcImage->getName().c_str());
+        return false;
+    }
+
+    const vk::CommandBuffer& transferCommandBuffer = ImageUtil::beginTransferCommands();
+
+    vk::BufferImageCopy imageCopy{};
+    imageCopy.setBufferOffset(0);
+    imageCopy.setBufferRowLength(0);
+    imageCopy.setBufferImageHeight(0);
+    imageCopy.imageSubresource.setAspectMask(aspectMask);
+    imageCopy.imageSubresource.setMipLevel(imageRegion.baseMipLevel);
+    imageCopy.imageSubresource.setBaseArrayLayer(imageRegion.baseLayer);
+    imageCopy.imageSubresource.setLayerCount(imageRegion.layerCount);
+    imageCopy.imageOffset.setX((int32_t)imageRegion.x);
+    imageCopy.imageOffset.setY((int32_t)imageRegion.y);
+    imageCopy.imageOffset.setZ((int32_t)imageRegion.z);
+    imageCopy.imageExtent.setWidth(imageRegion.width);
+    imageCopy.imageExtent.setHeight(imageRegion.height);
+    imageCopy.imageExtent.setDepth(imageRegion.depth);
+
+    Buffer* buffer = ImageUtil::getImageStagingBuffer(imageRegion, bytesPerPixel);
+
+    bool success = ImageUtil::transferImageToBuffer(transferCommandBuffer, buffer->getBuffer(), srcImage->getImage(), imageCopy, dstState);
+
+    ImageUtil::endTransferCommands(transferCommandBuffer, **Engine::graphics()->getQueue(QUEUE_TRANSFER_MAIN), true, nullptr);
+
+    if (srcPixelFormat != pixelFormat || srcPixelLayout != pixelLayout) {
+        ImageData* tempImageData = ImageData::mutate(static_cast<uint8_t*>(buffer->map()), imageRegion.width, imageRegion.height, srcPixelLayout, srcPixelFormat, pixelLayout, pixelFormat);
+        memcpy(dstPixels, tempImageData->getData(), ImageUtil::getImageSizeBytes(imageRegion, bytesPerPixel));
+        delete tempImageData;
+
+    } else {
+        memcpy(dstPixels, buffer->map(), ImageUtil::getImageSizeBytes(imageRegion, bytesPerPixel));
+    }
+
+    return success;
+}
+
+bool Image2D::readPixels(void* dstPixels, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
+    return Image2D::readPixels(this, dstPixels, pixelLayout, pixelFormat, aspectMask, imageRegion, dstState);
+}
+
 bool Image2D::generateMipmap(Image2D* image, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& dstState) {
-    return ImageUtil::generateMipmap(image->getImage(), image->getFormat(), filter, aspectMask, 0, 1, image->getWidth(), image->getHeight(), 1, mipLevels, dstState);
+    const vk::CommandBuffer& commandBuffer = ImageUtil::beginTransferCommands();
+
+    bool success = ImageUtil::generateMipmap(commandBuffer, image->getImage(), image->getFormat(), filter, aspectMask, 0, 1, image->getWidth(), image->getHeight(), 1, mipLevels, dstState);
+
+    ImageUtil::endTransferCommands(commandBuffer, **Engine::graphics()->getQueue(QUEUE_GRAPHICS_TRANSFER_MAIN), true, nullptr);
+    return success;
 }
 
 bool Image2D::generateMipmap(vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& dstState) {
