@@ -750,7 +750,7 @@ bool ImageData::ImageTransform::isNoOp() const {
 }
 
 void ImageData::ImageTransform::initComputeResources() {
-    Engine::graphics()->commandPool()->allocateCommandBuffer("image_compute_buffer", {vk::CommandBufferLevel::ePrimary});
+    Engine::graphics()->commandPool()->allocateNamedCommandBuffer("image_compute_buffer", {vk::CommandBufferLevel::ePrimary});
 }
 
 void ImageData::ImageTransform::destroyComputeResources() {
@@ -1192,16 +1192,16 @@ void ImageUtil::endTransferCommands(const vk::CommandBuffer& transferCommandBuff
 
 const vk::CommandBuffer& ImageUtil::getTransferCommandBuffer() {
     if (!Engine::graphics()->commandPool()->hasCommandBuffer("image_transfer_buffer"))
-        Engine::graphics()->commandPool()->allocateCommandBuffer("image_transfer_buffer", {vk::CommandBufferLevel::ePrimary});
+        Engine::graphics()->commandPool()->allocateNamedCommandBuffer("image_transfer_buffer", {vk::CommandBufferLevel::ePrimary});
 
-    return **Engine::graphics()->commandPool()->getCommandBuffer("image_transfer_buffer");
+    return **Engine::graphics()->commandPool()->getNamedCommandBuffer("image_transfer_buffer");
 }
 
 const vk::CommandBuffer& ImageUtil::getComputeCommandBuffer() {
     if (!Engine::graphics()->commandPool()->hasCommandBuffer("image_compute_buffer"))
-        Engine::graphics()->commandPool()->allocateCommandBuffer("image_compute_buffer", {vk::CommandBufferLevel::ePrimary});
+        Engine::graphics()->commandPool()->allocateNamedCommandBuffer("image_compute_buffer", {vk::CommandBufferLevel::ePrimary});
 
-    return **Engine::graphics()->commandPool()->getCommandBuffer("image_compute_buffer");
+    return **Engine::graphics()->commandPool()->getNamedCommandBuffer("image_compute_buffer");
 }
 
 const vk::Queue& ImageUtil::getComputeQueue() {

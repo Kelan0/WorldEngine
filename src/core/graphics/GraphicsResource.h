@@ -199,6 +199,7 @@ public:
         ResourceType_CommandPool = 16,
         ResourceType_DeviceMemoryHeap = 17,
         ResourceType_Material = 18,
+        ResourceType_Fence = 19,
     };
 
 public:

@@ -38,6 +38,7 @@ class DeviceMemoryManager;
 class DeviceMemoryBlock;
 class Framebuffer;
 class ImageView;
+class Fence;
 
 enum QueueType {
     QueueType_GraphicsBit = VK_QUEUE_GRAPHICS_BIT,

@@ -7,6 +7,7 @@
 #include "core/graphics/Image2D.h"
 #include "core/graphics/Buffer.h"
 #include "core/graphics/Framebuffer.h"
+#include "core/graphics/Fence.h"
 #include "core/application/Engine.h"
 #include "core/application/Application.h"
 #include "core/engine/event/EventDispatcher.h"
@@ -178,7 +179,7 @@ bool GraphicsManager::init(SDL_Window* windowHandle, const char* applicationName
     //descriptorPoolConfig.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
     m_descriptorPool = SharedResource<DescriptorPool>(DescriptorPool::create(descriptorPoolConfig, "GraphicsManager-DefaultDescriptorPool"));
 
-    m_commandPool->allocateCommandBuffer("transfer_buffer", {vk::CommandBufferLevel::ePrimary});
+    m_commandPool->allocateNamedCommandBuffer("transfer_buffer", {vk::CommandBufferLevel::ePrimary});
 
     m_isInitialized = true;
     m_recreateSwapchain = true;
@@ -763,7 +764,7 @@ bool GraphicsManager::recreateSwapchain() {
 
     m_swapchain.commandBuffers.resize(CONCURRENT_FRAMES);
     for (uint32_t i = 0; i < CONCURRENT_FRAMES; ++i) {
-        std::shared_ptr<vkr::CommandBuffer> commandBuffer = m_commandPool->allocateCommandBuffer("swapchain_cmd" + std::to_string(i), {vk::CommandBufferLevel::ePrimary});
+        std::shared_ptr<vkr::CommandBuffer> commandBuffer = m_commandPool->allocateNamedCommandBuffer("swapchain_cmd" + std::to_string(i), {vk::CommandBufferLevel::ePrimary});
         m_swapchain.commandBuffers[i] = std::move(commandBuffer);
     }
 
@@ -1143,8 +1144,7 @@ uint32_t GraphicsManager::getPresentQueueFamilyIndex() const {
 const vk::CommandBuffer& GraphicsManager::beginOneTimeCommandBuffer() {
     CommandBufferConfiguration commandBufferConfig;
     commandBufferConfig.level = vk::CommandBufferLevel::ePrimary;
-//    const vk::CommandBuffer& commandBuffer = **Engine::graphics()->commandPool()->getOrCreateCommandBuffer("one_time_cmd", commandBufferConfig);
-    const vk::CommandBuffer& commandBuffer = commandPool()->getTemporaryCommandBuffer("one_time_cmd", commandBufferConfig);
+    const vk::CommandBuffer& commandBuffer = commandPool()->getTemporaryCommandBuffer("GraphicsManager-OneTimeCmdBuffer", commandBufferConfig);
 
     vk::CommandBufferBeginInfo commandBeginInfo;
     commandBeginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
@@ -1155,12 +1155,12 @@ const vk::CommandBuffer& GraphicsManager::beginOneTimeCommandBuffer() {
 void GraphicsManager::endOneTimeCommandBuffer(const vk::CommandBuffer& commandBuffer, const vk::Queue& queue) {
     commandBuffer.end();
 
-    const vk::Fence& fence = commandPool()->releaseTemporaryCommandBufferFence(commandBuffer);
+    Fence* fence = commandPool()->releaseTemporaryCommandBufferFence(commandBuffer);
 
     vk::SubmitInfo queueSubmitInfo{};
     queueSubmitInfo.setCommandBufferCount(1);
     queueSubmitInfo.setPCommandBuffers(&commandBuffer);
-    vk::Result result = queue.submit(1, &queueSubmitInfo, fence);
+    vk::Result result = queue.submit(1, &queueSubmitInfo, fence->getFence());
     assert(result == vk::Result::eSuccess);
 
 }
@@ -1261,6 +1261,8 @@ vk::ColorSpaceKHR GraphicsManager::getColourSpace() const {
 
 void GraphicsManager::setObjectName(const vk::Device& device, uint64_t objectHandle, vk::ObjectType objectType, const char* objectName) {
     if (objectName != nullptr) {
+        assert(objectHandle != 0);
+
         vk::DebugUtilsObjectNameInfoEXT objectNameInfo{};
         objectNameInfo.objectHandle = objectHandle;
         objectNameInfo.objectType = objectType;

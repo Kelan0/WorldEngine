@@ -1,5 +1,6 @@
 #include "core/graphics/CommandPool.h"
 #include "core/graphics/GraphicsManager.h"
+#include "core/graphics/Fence.h"
 #include "core/application/Engine.h"
 #include "core/util/Logger.h"
 
@@ -9,22 +10,33 @@ CommandPool::CommandPool(const WeakResource<vkr::Device>& device, const vk::Comm
 }
 
 CommandPool::~CommandPool() {
-    for (auto& commandBuffer : m_commandBuffers) {
-        if (commandBuffer.second.use_count() > 1) {
+    for (auto& commandBuffer : m_namedCommandBuffers) {
+        if (commandBuffer.second.use_count() > 1)
             LOG_WARN("Command buffer \"%s\" has %llu external references when command pool was destroyed", commandBuffer.first.c_str(), (uint64_t)(commandBuffer.second.use_count() - 1));
+    }
+
+    size_t cmdBufCount = 0;
+    size_t refCount = 0;
+    for (auto& commandBuffer : m_unnamedCommandBuffers) {
+        if (commandBuffer.use_count() > 1) {
+            refCount += commandBuffer.use_count() - 1;
+            ++cmdBufCount;
         }
     }
+    if (refCount > 0)
+        LOG_WARN("%zu unnamed command buffers have %zu external references when command pool was destroyed", cmdBufCount, refCount);
 
     for (auto& [commandBuffer, fence] : m_temporaryCmdBufferFences) {
         (**m_device).freeCommandBuffers(m_commandPool, 1, &commandBuffer);
-        (**m_device).destroyFence(fence);
+        delete fence;
     }
 
     for (auto& fence : m_unusedFences) {
-        (**m_device).destroyFence(fence);
+        delete fence;
     }
 
-    m_commandBuffers.clear();
+    m_namedCommandBuffers.clear();
+    m_unnamedCommandBuffers.clear();
     (**m_device).destroyCommandPool(m_commandPool);
 }
 
@@ -58,16 +70,8 @@ const vk::CommandPool& CommandPool::getCommandPool() const {
     return m_commandPool;
 }
 
-std::shared_ptr<vkr::CommandBuffer> CommandPool::allocateCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration) {
-#if _DEBUG
-    if (m_commandBuffers.find(name) != m_commandBuffers.end()) {
-        LOG_FATAL("Unable to create command buffer \"%s\", it already exists", name.c_str());
-        assert(false);
-        return nullptr;
-    }
-#endif
-
-    vk::CommandBufferAllocateInfo commandBufferAllocInfo;
+std::shared_ptr<vkr::CommandBuffer> CommandPool::allocateCommandBuffer(const CommandBufferConfiguration& commandBufferConfiguration, const std::string& name) {
+    vk::CommandBufferAllocateInfo commandBufferAllocInfo{};
     commandBufferAllocInfo.setCommandPool(m_commandPool);
     commandBufferAllocInfo.setCommandBufferCount(1);
     commandBufferAllocInfo.setLevel(commandBufferConfiguration.level);
@@ -77,30 +81,54 @@ std::shared_ptr<vkr::CommandBuffer> CommandPool::allocateCommandBuffer(const std
 
     Engine::graphics()->setObjectName(**m_device, (uint64_t)(VkCommandBuffer)(**commandBuffer), vk::ObjectType::eCommandBuffer, name.c_str());
 
-    m_commandBuffers.insert(std::make_pair(name, commandBuffer));
+    m_unnamedCommandBuffers.emplace_back(commandBuffer);
 
     return commandBuffer;
 }
 
-std::shared_ptr<vkr::CommandBuffer> CommandPool::getOrCreateCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration) {
+std::shared_ptr<vkr::CommandBuffer> CommandPool::allocateNamedCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration) {
+#if _DEBUG
+    if (m_namedCommandBuffers.find(name) != m_namedCommandBuffers.end()) {
+        LOG_FATAL("Unable to create command buffer \"%s\", it already exists", name.c_str());
+        assert(false);
+        return nullptr;
+    }
+#endif
+
+    vk::CommandBufferAllocateInfo commandBufferAllocInfo{};
+    commandBufferAllocInfo.setCommandPool(m_commandPool);
+    commandBufferAllocInfo.setCommandBufferCount(1);
+    commandBufferAllocInfo.setLevel(commandBufferConfiguration.level);
+    std::vector<vkr::CommandBuffer> commandBuffers = m_device->allocateCommandBuffers(commandBufferAllocInfo);
+
+    std::shared_ptr<vkr::CommandBuffer> commandBuffer = std::make_shared<vkr::CommandBuffer>(std::move(commandBuffers[0]));
+
+    Engine::graphics()->setObjectName(**m_device, (uint64_t)(VkCommandBuffer)(**commandBuffer), vk::ObjectType::eCommandBuffer, name.c_str());
+
+    m_namedCommandBuffers.insert(std::make_pair(name, commandBuffer));
+
+    return commandBuffer;
+}
+
+std::shared_ptr<vkr::CommandBuffer> CommandPool::getOrCreateNamedCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration) {
     if (hasCommandBuffer(name)) {
-        return getCommandBuffer(name);
+        return getNamedCommandBuffer(name);
     } else {
-        return allocateCommandBuffer(name, commandBufferConfiguration);
+        return allocateNamedCommandBuffer(name, commandBufferConfiguration);
     }
 }
 
-std::shared_ptr<vkr::CommandBuffer> CommandPool::getCommandBuffer(const std::string& name) {
+std::shared_ptr<vkr::CommandBuffer> CommandPool::getNamedCommandBuffer(const std::string& name) {
 #if _DEBUG
-    assert(m_commandBuffers.contains(name));
+    assert(m_namedCommandBuffers.contains(name));
 #endif
-    return m_commandBuffers.at(name);
+    return m_namedCommandBuffers.at(name);
 }
 
 void CommandPool::freeCommandBuffer(const std::string& name) {
 #if _DEBUG
-    auto it = m_commandBuffers.find(name);
-    if (it == m_commandBuffers.end()) {
+    auto it = m_namedCommandBuffers.find(name);
+    if (it == m_namedCommandBuffers.end()) {
         LOG_ERROR("Tried to free command buffer \"%s\" but it was already freed", name.c_str());
         return;
     }
@@ -111,7 +139,7 @@ void CommandPool::freeCommandBuffer(const std::string& name) {
         return;
     }
 #endif
-    m_commandBuffers.erase(name);
+    m_namedCommandBuffers.erase(name);
 }
 
 const vk::CommandBuffer& CommandPool::getTemporaryCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration) {
@@ -121,19 +149,7 @@ const vk::CommandBuffer& CommandPool::getTemporaryCommandBuffer(const std::strin
 
     updateTemporaryCommandBuffers();
 
-    vk::Fence fence = nullptr;
-
-    if (m_unusedFences.empty()) {
-        vk::FenceCreateInfo fenceCreateInfo{};
-        result = device.createFence(&fenceCreateInfo, nullptr, &fence);
-        assert(result == vk::Result::eSuccess && fence);
-        Engine::graphics()->setObjectName(device, (uint64_t)(VkFence)fence, vk::ObjectType::eFence, name.c_str());
-    } else {
-        fence = m_unusedFences.back();
-        result = device.resetFences(1, &fence);
-        assert(result == vk::Result::eSuccess);
-        m_unusedFences.pop_back();
-    }
+    Fence* fence = getFence();
 
     vk::CommandBufferAllocateInfo commandBufferAllocInfo{};
     commandBufferAllocInfo.setCommandPool(m_commandPool);
@@ -153,7 +169,7 @@ const vk::CommandBuffer& CommandPool::getTemporaryCommandBuffer(const std::strin
     return it->first;
 }
 
-vk::Fence CommandPool::releaseTemporaryCommandBufferFence(const vk::CommandBuffer& commandBuffer) {
+Fence* CommandPool::releaseTemporaryCommandBufferFence(const vk::CommandBuffer& commandBuffer) {
     updateTemporaryCommandBuffers();
     auto it = m_temporaryCmdBufferFences.find(commandBuffer);
     if (it == m_temporaryCmdBufferFences.end()) {
@@ -165,12 +181,10 @@ vk::Fence CommandPool::releaseTemporaryCommandBufferFence(const vk::CommandBuffe
 void CommandPool::updateTemporaryCommandBuffers() {
     const vk::Device& device = **m_device;
 
-    vk::Result result;
-
     for (auto it = m_temporaryCmdBufferFences.begin(); it != m_temporaryCmdBufferFences.end();) {
-        const vk::Fence& fence = it->second;
-        result = device.waitForFences(1, &fence, VK_FALSE, 0);
-        if (result == vk::Result::eSuccess) {
+        Fence* fence = it->second;
+
+        if (fence->wait(0)) {
             const vk::CommandBuffer& commandBuffer = it->first;
             device.freeCommandBuffers(m_commandPool, 1, &commandBuffer);
             m_unusedFences.emplace_back(fence);
@@ -181,6 +195,19 @@ void CommandPool::updateTemporaryCommandBuffers() {
     }
 }
 
+Fence* CommandPool::getFence() {
+    if (m_unusedFences.empty()) {
+        FenceConfiguration fenceConfig{};
+        fenceConfig.device = m_device;
+        return Fence::create(fenceConfig, "CommandPool-Fence");
+    } else {
+        Fence* fence = m_unusedFences.back();
+        m_unusedFences.pop_back();
+        fence->reset();
+        return fence;
+    }
+}
+
 bool CommandPool::hasCommandBuffer(const std::string& name) const {
-    return m_commandBuffers.count(name) > 0;
+    return m_namedCommandBuffers.count(name) > 0;
 }

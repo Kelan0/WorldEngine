@@ -5,6 +5,8 @@
 #include "core/core.h"
 #include "core/graphics/GraphicsResource.h"
 
+class Fence;
+
 struct CommandPoolConfiguration {
     WeakResource<vkr::Device> device;
     uint32_t queueFamilyIndex;
@@ -28,15 +30,17 @@ public:
 
     const vk::CommandPool& getCommandPool() const;
 
-    std::shared_ptr<vkr::CommandBuffer> allocateCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration);
+    std::shared_ptr<vkr::CommandBuffer> allocateCommandBuffer(const CommandBufferConfiguration& commandBufferConfiguration, const std::string& name);
 
-    std::shared_ptr<vkr::CommandBuffer> getOrCreateCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration);
+    std::shared_ptr<vkr::CommandBuffer> allocateNamedCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration);
 
-    std::shared_ptr<vkr::CommandBuffer> getCommandBuffer(const std::string& name);
+    std::shared_ptr<vkr::CommandBuffer> getOrCreateNamedCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration);
+
+    std::shared_ptr<vkr::CommandBuffer> getNamedCommandBuffer(const std::string& name);
 
     const vk::CommandBuffer& getTemporaryCommandBuffer(const std::string& name, const CommandBufferConfiguration& commandBufferConfiguration);
 
-    vk::Fence releaseTemporaryCommandBufferFence(const vk::CommandBuffer& commandBuffer);
+    Fence* releaseTemporaryCommandBufferFence(const vk::CommandBuffer& commandBuffer);
 
     void freeCommandBuffer(const std::string& name);
 
@@ -45,11 +49,14 @@ public:
 private:
     void updateTemporaryCommandBuffers();
 
+    Fence* getFence();
+
 private:
     vk::CommandPool m_commandPool;
-    std::unordered_map<std::string, std::shared_ptr<vkr::CommandBuffer>> m_commandBuffers;
-    std::unordered_map<vk::CommandBuffer, vk::Fence> m_temporaryCmdBufferFences;
-    std::vector<vk::Fence> m_unusedFences;
+    std::vector<std::shared_ptr<vkr::CommandBuffer>> m_unnamedCommandBuffers;
+    std::unordered_map<std::string, std::shared_ptr<vkr::CommandBuffer>> m_namedCommandBuffers;
+    std::unordered_map<vk::CommandBuffer, Fence*> m_temporaryCmdBufferFences;
+    std::vector<Fence*> m_unusedFences;
 };
 
 #endif //WORLDENGINE_COMMANDPOOL_H
