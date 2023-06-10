@@ -167,14 +167,15 @@ bool DescriptorSetLayout::operator!=(const DescriptorSetLayout& rhs) const {
 }
 
 
-DescriptorPool::DescriptorPool(const WeakResource<vkr::Device>& device, vk::DescriptorPool descriptorPool, bool canFreeDescriptorSets, const std::string& name):
+DescriptorPool::DescriptorPool(const WeakResource<vkr::Device>& device, vk::DescriptorPool descriptorPool, const DescriptorPoolConfiguration& config, const std::string& name):
         GraphicsResource(ResourceType_DescriptorPool, device, name),
         m_descriptorPool(descriptorPool),
-        m_canFreeDescriptorSets(canFreeDescriptorSets) {
+        m_descriptorPoolSizes(config.poolSizes),
+        m_flags(config.flags) {
 }
 
 DescriptorPool::~DescriptorPool() {
-    if (m_canFreeDescriptorSets) {
+    if (canFreeDescriptorSets()) {
         // TODO: should we keep a reference to all DescriptorSetLayouts allocated via this pool and free them here??
     } else {
         (**m_device).resetDescriptorPool(m_descriptorPool);
@@ -200,30 +201,27 @@ DescriptorPool* DescriptorPool::create(const DescriptorPoolConfiguration& descri
     createInfo.setMaxSets(descriptorPoolConfiguration.maxSets);
     createInfo.setPoolSizes(poolSizes);
 
-    bool canFreeDescriptorSets = (bool)(createInfo.flags & vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
-
     const vk::Device& device = **descriptorPoolConfiguration.device.lock(name);
 
     vk::DescriptorPool descriptorPool = device.createDescriptorPool(createInfo);
 
     Engine::graphics()->setObjectName(device, (uint64_t)(VkDescriptorPool)descriptorPool, vk::ObjectType::eDescriptorPool, name);
 
-    return new DescriptorPool(descriptorPoolConfiguration.device, descriptorPool, canFreeDescriptorSets, name);
+    return new DescriptorPool(descriptorPoolConfiguration.device, descriptorPool, descriptorPoolConfiguration, name);
 }
 
 const vk::DescriptorPool& DescriptorPool::getDescriptorPool() const {
     return m_descriptorPool;
 }
 
-bool DescriptorPool::allocate(const vk::DescriptorSetLayout& descriptorSetLayout, vk::DescriptorSet& outDescriptorSet) const {
+vk::Result DescriptorPool::allocate(const vk::DescriptorSetLayout& descriptorSetLayout, vk::DescriptorSet& outDescriptorSet) const {
 
     vk::DescriptorSetAllocateInfo allocateInfo;
     allocateInfo.setDescriptorPool(m_descriptorPool);
     allocateInfo.setDescriptorSetCount(1);
     allocateInfo.setPSetLayouts(&descriptorSetLayout);
     vk::Result result = (**m_device).allocateDescriptorSets(&allocateInfo, &outDescriptorSet);
-
-    return result == vk::Result::eSuccess;
+    return result;
 }
 
 void DescriptorPool::free(const vk::DescriptorSet& descriptorSet) {
@@ -231,7 +229,7 @@ void DescriptorPool::free(const vk::DescriptorSet& descriptorSet) {
 }
 
 bool DescriptorPool::canFreeDescriptorSets() const {
-    return m_canFreeDescriptorSets;
+    return (bool)(m_flags & vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 }
 
 
@@ -272,11 +270,13 @@ DescriptorSet* DescriptorSet::create(const WeakResource<DescriptorSetLayout>& de
     const SharedResource<vkr::Device>& device = descriptorPoolPtr->getDevice();
 
     vk::DescriptorSet descriptorSet = nullptr;
-    bool allocated = descriptorPoolPtr->allocate(descriptorSetLayoutPtr->getDescriptorSetLayout(), descriptorSet);
+    vk::Result result = descriptorPoolPtr->allocate(descriptorSetLayoutPtr->getDescriptorSetLayout(), descriptorSet);
+    if (result != vk::Result::eSuccess) {
+        LOG_ERROR("Failed to allocate descriptor set \"%s\": %s", name.c_str(), vk::to_string(result).c_str());
+        return nullptr;
+    }
 
     Engine::graphics()->setObjectName(**device, (uint64_t)(VkDescriptorSet)descriptorSet, vk::ObjectType::eDescriptorSet, name);
-
-    assert(allocated && descriptorSet);
 
     return new DescriptorSet(device, descriptorPool, descriptorSetLayout, descriptorSet, name);
 }

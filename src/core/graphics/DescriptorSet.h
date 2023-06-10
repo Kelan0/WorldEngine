@@ -28,7 +28,7 @@ struct DescriptorPoolConfiguration {
             {vk::DescriptorType::eSampler,              500},
             {vk::DescriptorType::eCombinedImageSampler, 4000},
             {vk::DescriptorType::eSampledImage,         4000},
-            {vk::DescriptorType::eStorageImage,         1000},
+            {vk::DescriptorType::eStorageImage,         4000},
             {vk::DescriptorType::eUniformTexelBuffer,   1000},
             {vk::DescriptorType::eStorageTexelBuffer,   1000},
             {vk::DescriptorType::eUniformBuffer,        2000},
@@ -66,7 +66,7 @@ private:
     DescriptorSetLayout(const WeakResource<vkr::Device>& device, const vk::DescriptorSetLayout& descriptorSetLayout, Key key, const std::string& name);
 
 public:
-    ~DescriptorSetLayout();
+    ~DescriptorSetLayout() override;
 
     static SharedResource<DescriptorSetLayout> get(const WeakResource<vkr::Device>& device, const vk::DescriptorSetLayoutCreateInfo& descriptorSetLayoutCreateInfo, const std::string& name);
 
@@ -143,7 +143,7 @@ private:
 class DescriptorPool : public GraphicsResource {
     NO_COPY(DescriptorPool);
 private:
-    DescriptorPool(const WeakResource<vkr::Device>& device, vk::DescriptorPool descriptorPool, bool canFreeDescriptorSets, const std::string& name);
+    DescriptorPool(const WeakResource<vkr::Device>& device, vk::DescriptorPool descriptorPool, const DescriptorPoolConfiguration& config, const std::string& name);
 
 public:
     ~DescriptorPool();
@@ -152,7 +152,7 @@ public:
 
     const vk::DescriptorPool& getDescriptorPool() const;
 
-    bool allocate(const vk::DescriptorSetLayout& descriptorSetLayout, vk::DescriptorSet& outDescriptorSet) const;
+    vk::Result allocate(const vk::DescriptorSetLayout& descriptorSetLayout, vk::DescriptorSet& outDescriptorSet) const;
 
     void free(const vk::DescriptorSet& descriptorSet);
 
@@ -160,7 +160,8 @@ public:
 
 private:
     vk::DescriptorPool m_descriptorPool;
-    bool m_canFreeDescriptorSets;
+    std::unordered_map<vk::DescriptorType, uint32_t> m_descriptorPoolSizes;
+    vk::DescriptorPoolCreateFlags m_flags;
 };
 
 
