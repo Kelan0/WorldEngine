@@ -1,8 +1,18 @@
 
 #include "core/engine/scene/terrain/TerrainTileSupplier.h"
+#include "core/engine/event/EventDispatcher.h"
+#include "core/engine/event/GraphicsEvents.h"
+#include "core/graphics/GraphicsManager.h"
+#include "core/graphics/ComputePipeline.h"
+#include "core/graphics/CommandPool.h"
 #include "core/graphics/Image2D.h"
 #include "core/graphics/ImageView.h"
+#include "core/graphics/DescriptorSet.h"
+#include "core/graphics/Buffer.h"
+#include "core/graphics/Texture.h"
+#include "core/application/Engine.h"
 #include "core/util/Logger.h"
+#include "core/graphics/Fence.h"
 
 //size_t allocCounter = 0;
 
@@ -13,9 +23,10 @@ glm::uvec4 debugGetTileId(const glm::dvec2& offset, const glm::dvec2& size) {
                       (uint32_t)glm::ceil(8192.0 * (offset.y + size.y)));
 }
 
-TileData::TileData(const glm::dvec2& tileOffset, const glm::dvec2& tileSize) :
+TileData::TileData(TerrainTileSupplier* tileSupplier, uint32_t tileTextureIndex, const glm::dvec2& tileOffset, const glm::dvec2& tileSize) :
+        tileSupplier(tileSupplier),
+        tileTextureIndex(tileTextureIndex),
         referenceCount(0),
-        tileTextureIndex(UINT32_MAX),
         tileOffset(tileOffset),
         tileSize(tileSize),
         minHeight(0.0),
@@ -24,10 +35,13 @@ TileData::TileData(const glm::dvec2& tileOffset, const glm::dvec2& tileSize) :
         heightData(nullptr),
         timeLastUsed(Time::now()),
         cameraDistance(INFINITY),
-        requested(false),
-        pending(false),
-        available(false),
-        idle(false) {
+        state(State_None),
+        idle(false),
+        deleted(false) {
+
+    assert(tileOffset.x >= 0.0 && tileOffset.y >= 0.0);
+    assert(tileOffset.x + tileSize.x <= 1.0 && tileOffset.y + tileSize.y <= 1.0);
+
 //    glm::uvec4 id = debugGetTileId(tileOffset, tileSize);
 //    ++allocCounter;
 //    LOG_DEBUG("TileData [%u %u, %u %u] constructed - %zu tiles exist", id.x, id.y, id.y, id.z, allocCounter);
@@ -131,7 +145,7 @@ void TileDataReference::setCameraDistance(float cameraDistance) {
 }
 
 bool TileDataReference::isAvailable() const {
-    return valid() && m_tileData->available;
+    return valid() && m_tileData->state == TileData::State_Available;
 }
 
 const glm::dvec2& TileDataReference::getTileOffset() const {
@@ -167,10 +181,6 @@ void TileDataReference::invalidateAllReferences(TileData* tileData) {
 }
 
 
-
-
-
-
 TerrainTileSupplier::TerrainTileSupplier() {
 
 };
@@ -179,44 +189,108 @@ TerrainTileSupplier::~TerrainTileSupplier() {
 }
 
 
+struct TerrainTileHeightRangePushConstants {
+    glm::ivec2 dstResolution;
+    glm::ivec2 tileOffset;
+    uint32_t level;
+    uint32_t srcImageIndex;
+    uint32_t dstImageIndex;
+};
 
 
+SharedResource<DescriptorSetLayout> HeightmapTerrainTileSupplier::s_heightRangeComputeDescriptorSetLayout = nullptr;
+ComputePipeline* HeightmapTerrainTileSupplier::s_heightRangeComputePipeline = nullptr;
+Sampler* HeightmapTerrainTileSupplier::s_heightRangeComputeSampler = nullptr;
 
-
-
-HeightmapTerrainTileSupplier::HeightmapTerrainTileSupplier(const std::shared_ptr<Image2D>& heightmapImage) :
+HeightmapTerrainTileSupplier::HeightmapTerrainTileSupplier(const ImageData* heightmapImageData) :
         TerrainTileSupplier(),
-        m_heightmapImage(heightmapImage),
-        m_heightmapImageView(nullptr) {
+        m_heightmapImageView(nullptr),
+        m_initialized(false) {
 
-    if (m_heightmapImage) {
-        ImageViewConfiguration heightmapImageViewConfig{};
-        heightmapImageViewConfig.device = heightmapImage->getDevice();
-        heightmapImageViewConfig.format = heightmapImage->getFormat();
-        heightmapImageViewConfig.setImage(heightmapImage.get());
-        m_heightmapImageView = std::shared_ptr<ImageView>(ImageView::create(heightmapImageViewConfig, heightmapImage->getName() + "-ImageView"));
+    Image2DConfiguration heightmapImageConfig{};
+    heightmapImageConfig.device = Engine::graphics()->getDevice();
+    heightmapImageConfig.filePath = "terrain/heightmap_1/heightmap2.hdr";
+    heightmapImageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage;
+    heightmapImageConfig.format = vk::Format::eR32Sfloat;
+    m_heightmapImage = std::shared_ptr<Image2D>(Image2D::create(heightmapImageConfig, "HeightmapTerrainTileSupplier-TerrainHeightmapImage"));
 
-        m_loadedTileImageViews.emplace_back(m_heightmapImageView.get());
-    }
+    ImageViewConfiguration heightmapImageViewConfig{};
+    heightmapImageViewConfig.device = Engine::graphics()->getDevice();
+    heightmapImageViewConfig.format = heightmapImageConfig.format;
+    heightmapImageViewConfig.setImage(m_heightmapImage.get());
+    m_heightmapImageView = std::shared_ptr<ImageView>(ImageView::create(heightmapImageViewConfig, "HeightmapTerrainTileSupplier-TerrainHeightmapImageView"));
+
+    m_loadedTileImageViews.emplace_back(m_heightmapImageView.get());
 }
 
 HeightmapTerrainTileSupplier::~HeightmapTerrainTileSupplier() {
-}
+    delete m_heightRangeComputeDescriptorSet;
 
-size_t lastNodesUsedCount = 0;
+    for (RequestTexture* requestTexture : m_availableRequestTextures)
+        deleteRequestTexture(requestTexture);
+
+    std::set<Fence*> fences;
+
+    for (TextureData& textureData : m_tileTextures) {
+        if (textureData.requestTexture != nullptr) {
+            if (textureData.requestTexture->fence != nullptr) {
+                fences.insert(textureData.requestTexture->fence);
+                textureData.requestTexture->fence = nullptr;
+            }
+
+            deleteRequestTexture(textureData.requestTexture);
+        }
+    }
+    for (Fence* fence : fences)
+        delete fence;
+
+    for (auto& [commandBuffer, fence] : m_availableCommandBuffers)
+        delete fence;
+}
 
 void HeightmapTerrainTileSupplier::update() {
 
-    std::vector<TileData*> expiredTiles;
+    if (!m_initialized)
+        init();
 
     auto now = Time::now();
     uint64_t tileIdleTimeoutNanoseconds = (uint64_t)(10 * 1e+9); // 30 seconds
     uint64_t tileExpireTimeoutNanoseconds = (uint64_t)(30 * 1e+9); // 3 minutes
 
-    size_t nodesUsedCount = 0;
 
-    size_t numMadeIdle = 0;
+//    m_requestedTilesQueue.erase(std::remove_if(m_requestedTilesQueue.begin(), m_requestedTilesQueue.end(), [](const TileData* tile) {
+//        return tile->state != TileData::State_Requested || tile->idle;
+//    }), m_requestedTilesQueue.end());
 
+    m_requestedTilesQueue.clear();
+
+
+    // Deallocate tiles that have been idle for too long.
+    for (auto it = m_idleTiles.begin(); it != m_idleTiles.end();) {
+        glm::uvec4 id = it->first;
+        TileData* tileData = it->second;
+
+        if (!tileData->deleted && Time::nanoseconds(tileData->timeLastUsed, now) > tileExpireTimeoutNanoseconds) {
+            tileData->deleted = true;
+        }
+
+        if (!tileData->deleted) {
+            ++it;
+            continue;
+        }
+
+        if (tileData->tileTextureIndex != UINT32_MAX) {
+            assert(tileData->tileTextureIndex < m_tileTextures.size());
+            m_availableTileTextureIndices.emplace_back(tileData->tileTextureIndex);
+        }
+        TileDataReference::invalidateAllReferences(tileData);
+        it = m_idleTiles.erase(it);
+    }
+
+    // TODO: keep availableTileTextureIndices array sorted, and always reuse the lowest index.
+    // TODO: shrink availableTileTextureIndices array if possible, actually deallocate the images at the end
+
+    // Update the active tiles
     for (auto it = m_activeTiles.begin(); it != m_activeTiles.end();) {
         glm::uvec4 id = it->first;
         TileData* tileData = it->second;
@@ -225,41 +299,109 @@ void HeightmapTerrainTileSupplier::update() {
 
         if (Time::nanoseconds(tileData->timeLastUsed, now) > tileIdleTimeoutNanoseconds) {
             it = markIdle(it);
-            ++numMadeIdle;
             continue;
-        } else if (Time::nanoseconds(tileData->timeLastUsed, now) < 1000000 * 100) {
-            ++nodesUsedCount;
+        }
+
+        if (tileData->state == TileData::State_Requested) {
+            if (tileData->tileTextureIndex == UINT32_MAX) {
+                if (!m_availableTileTextureIndices.empty()) {
+                    tileData->tileTextureIndex = m_availableTileTextureIndices.back();
+                    m_availableTileTextureIndices.pop_back();
+
+                } else {
+                    tileData->tileTextureIndex = (uint32_t)m_tileTextures.size();
+                    m_tileTextures.emplace_back(TextureData{});
+                }
+            }
+
+            tileData->state = TileData::State_Pending;
+            m_requestedTilesQueue.emplace_back(tileData);
         }
 
         ++it;
     }
 
-    size_t numDeallocated = 0;
+    if (!m_requestedTilesQueue.empty()) {
 
-    for (auto it = m_idleTiles.begin(); it != m_idleTiles.end();) {
-        glm::uvec4 id = it->first;
-        TileData* tileData = it->second;
+        auto [commandBuffer, fence] = getComputeCommandBuffer();
 
-        bool isDeleted = tileData->deleted;
+        vk::CommandBufferBeginInfo commandBeginInfo{};
+        commandBeginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+        commandBuffer.begin(commandBeginInfo);
 
-        if (!isDeleted && Time::nanoseconds(tileData->timeLastUsed, now) > tileExpireTimeoutNanoseconds) {
-            isDeleted = true;
-            ++numDeallocated;
-            TileDataReference::invalidateAllReferences(tileData);
+        // From the end of the request queue, assign the needed descriptors for each tile until we cannot do so.
+        int32_t i = (int32_t)(m_requestedTilesQueue.size() - 1);
+        for (; i >= 0; --i) {
+            if (!updateTerrainTileHeightRangeDescriptors(commandBuffer, m_requestedTilesQueue[i]))
+                break;
         }
 
-        if (isDeleted) {
-            it = m_idleTiles.erase(it);
-        } else {
-            ++it;
+        ++i; // The last iteration overstepped
+
+        auto it = std::next(m_requestedTilesQueue.begin(), i);
+
+        // For each tile that has a descriptor assigned, dispatch the compute commands
+        for (auto it1 = it; it1 != m_requestedTilesQueue.end(); ++it1) {
+            computeTerrainTileHeightRange(commandBuffer, *it1, fence);
         }
+
+        commandBuffer.end();
+
+        // Pop this many items from the end of the request queue.
+        m_requestedTilesQueue.erase(it, m_requestedTilesQueue.end());
+
+        vk::SubmitInfo queueSubmitInfo;
+        queueSubmitInfo.setCommandBufferCount(1);
+        queueSubmitInfo.setPCommandBuffers(&commandBuffer);
+        const vk::Queue& queue = **Engine::graphics()->getQueue(QUEUE_COMPUTE_MAIN);
+        vk::Result result = queue.submit(1, &queueSubmitInfo, fence->getFence());
+        assert(result == vk::Result::eSuccess);
     }
 
-//    if (numDeallocated > 0 || numMadeIdle > 0 || nodesUsedCount != lastNodesUsedCount) {
-//        if (nodesUsedCount != lastNodesUsedCount)
-//            lastNodesUsedCount = nodesUsedCount;
-//        LOG_DEBUG("%zu tiles made idle, %zu tiles expired, %llu nodes in use", numMadeIdle, numDeallocated, nodesUsedCount);
-//    }
+    std::set<Fence*> signaledFences;
+
+    for (auto it = m_pendingTilesQueue.rbegin(); it != m_pendingTilesQueue.rend(); it++) {
+        TileData* tile = *it;
+        TextureData& textureData = m_tileTextures[tile->tileTextureIndex];
+        RequestTexture* requestTexture = textureData.requestTexture;
+        assert(requestTexture != nullptr);
+        assert(requestTexture->debugUsed);
+
+        if (requestTexture->fence->getStatus() == Fence::Status_NotSignaled) {
+            continue;
+        }
+
+        requestTexture->debugUsed = false;
+
+        if (signaledFences.insert(requestTexture->fence).second) {
+            assert(requestTexture->commandBuffer);
+            m_availableCommandBuffers.emplace_back(requestTexture->commandBuffer, requestTexture->fence);
+        }
+
+        float pixels[2];
+
+        ImageRegion region{};
+        region.setOffset(0, 0, 0);
+        region.setSize(1, 1, 1);
+        region.baseMipLevel = requestTexture->heightRangeTempImage->getMipLevelCount() - 1;
+        region.mipLevelCount = 1;
+        ImageTransitionState transitionState(vk::ImageLayout::eGeneral, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::PipelineStageFlagBits::eComputeShader);
+        requestTexture->heightRangeTempImage->readPixels(pixels, ImagePixelLayout::RG, ImagePixelFormat::Float32, vk::ImageAspectFlagBits::eColor, region, transitionState, transitionState);
+        tile->minHeight = pixels[0];
+        tile->maxHeight = pixels[1];
+
+        makeRequestTextureAvailable(requestTexture);
+        tile->state = TileData::State_Available;
+        textureData.requestTexture = nullptr;
+        requestTexture->fence = nullptr;
+        requestTexture->commandBuffer = nullptr;
+    }
+
+    m_pendingTilesQueue.erase(std::remove_if(m_pendingTilesQueue.begin(), m_pendingTilesQueue.end(), [](const TileData* tile) {
+        return tile->state != TileData::State_Pending;
+    }), m_pendingTilesQueue.end());
+
+    Fence::resetFences(**Engine::graphics()->getDevice(), signaledFences.begin(), signaledFences.end());
 }
 
 const std::vector<ImageView*>& HeightmapTerrainTileSupplier::getLoadedTileImageViews() const {
@@ -292,7 +434,7 @@ TileDataReference HeightmapTerrainTileSupplier::getTile(const glm::dvec2& tileOf
     }
 
     // Tile was not already loaded. Request it.
-    auto result = m_activeTiles.insert(std::make_pair(id, new TileData(tileOffset, tileSize)));
+    auto result = m_activeTiles.insert(std::make_pair(id, new TileData(this, UINT32_MAX, tileOffset, tileSize)));
     assert(result.second && "Tile ID conflict");
 
     tileData = result.first->second;
@@ -321,7 +463,9 @@ HeightmapTerrainTileSupplier::TileIterator HeightmapTerrainTileSupplier::markIdl
 
     assert(tile->referenceCount > 0);
     --tile->referenceCount; // Remove the fake reference so this tile can be deleted if needed.
-    tile->requested = false;
+
+    if (tile->state == TileData::State_Requested)
+        tile->state = TileData::State_None; // State did not progress to pending or available, so un-request this tile.
     tile->idle = true;
 
 //    LOG_DEBUG("Tile [%u %u, %u %u] became idle after %.2f seconds", id.x, id.y, id.z, id.w, Time::milliseconds(tile->timeLastUsed, Time::now()) * 0.001);
@@ -338,6 +482,9 @@ HeightmapTerrainTileSupplier::TileIterator HeightmapTerrainTileSupplier::markAct
     assert(tile != nullptr);
     assert(tile->idle);
 
+    if (tile->state == TileData::State_None)
+        requestTileData(tile);
+
     tile->idle = false;
     ++tile->referenceCount; // Hold a fake reference to keep this tile alive while it's active.
 
@@ -350,8 +497,8 @@ HeightmapTerrainTileSupplier::TileIterator HeightmapTerrainTileSupplier::markAct
 }
 
 void HeightmapTerrainTileSupplier::requestTileData(TileData* tileData) {
-    if (!tileData->available && !tileData->pending)
-        tileData->requested = true;
+    if (tileData->state == TileData::State_None)
+        tileData->state = TileData::State_Requested;
 }
 
 glm::uvec2 HeightmapTerrainTileSupplier::getLowerTexelCoord(const glm::dvec2& normalizedCoord) const {
@@ -372,4 +519,361 @@ glm::uvec4 HeightmapTerrainTileSupplier::getTileId(const glm::dvec2& tileOffset,
     glm::uvec2 texelBoundMin = getLowerTexelCoord(tileOffset);
     glm::uvec2 texelBoundMax = getUpperTexelCoords(tileOffset + tileSize);
     return glm::uvec4(texelBoundMin, texelBoundMax);
+}
+
+void HeightmapTerrainTileSupplier::onCleanupGraphics(ShutdownGraphicsEvent* event) {
+    s_heightRangeComputeDescriptorSetLayout.reset();
+    delete s_heightRangeComputePipeline;
+}
+
+bool HeightmapTerrainTileSupplier::init() {
+    if (m_initialized)
+        return true;
+
+    m_initialized = true;
+
+    const SharedResource<DescriptorPool>& descriptorPool = Engine::graphics()->descriptorPool();
+
+    if (s_heightRangeComputeDescriptorSetLayout == nullptr) {
+        s_heightRangeComputeDescriptorSetLayout = DescriptorSetLayoutBuilder(Engine::graphics()->getDevice())
+                .addCombinedImageSampler(0, vk::ShaderStageFlagBits::eCompute, 1)
+                .addStorageImage(1, vk::ShaderStageFlagBits::eCompute, 128)
+                .addStorageImage(2, vk::ShaderStageFlagBits::eCompute, 128)
+                .build("HeightmapTerrainTileSupplier-HeightRangeComputeDescriptorSetLayout");
+
+        Engine::eventDispatcher()->connect(&HeightmapTerrainTileSupplier::onCleanupGraphics);
+    }
+
+    if (s_heightRangeComputePipeline == nullptr) {
+        ComputePipelineConfiguration heightRangeComputePipelineConfig{};
+        heightRangeComputePipelineConfig.device = Engine::graphics()->getDevice();
+        heightRangeComputePipelineConfig.computeShader = "shaders/terrain/compute_terrainTileHeightRange.glsl";
+        heightRangeComputePipelineConfig.addDescriptorSetLayout(s_heightRangeComputeDescriptorSetLayout.get());
+        heightRangeComputePipelineConfig.addPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(TerrainTileHeightRangePushConstants));
+        s_heightRangeComputePipeline = ComputePipeline::create(heightRangeComputePipelineConfig, "HeightmapTerrainTileSupplier-HeightRangeComputePipeline");
+
+        Engine::eventDispatcher()->connect(&HeightmapTerrainTileSupplier::onCleanupGraphics);
+    }
+
+    if (s_heightRangeComputeSampler == nullptr) {
+        SamplerConfiguration heightRangeComputeSamplerConfig{};
+        heightRangeComputeSamplerConfig.device = Engine::graphics()->getDevice();
+        heightRangeComputeSamplerConfig.minFilter = vk::Filter::eNearest;
+        heightRangeComputeSamplerConfig.magFilter = vk::Filter::eNearest;
+        s_heightRangeComputeSampler = Sampler::create(heightRangeComputeSamplerConfig, "HeightmapTerrainTileSupplier-HeightRangeComputePipeline");
+
+        Engine::eventDispatcher()->connect(&HeightmapTerrainTileSupplier::onCleanupGraphics);
+    }
+
+    m_heightRangeComputeDescriptorSet = DescriptorSet::create(s_heightRangeComputeDescriptorSetLayout, descriptorPool, "HeightmapTerrainTileSupplier-HeightRangeComputeDescriptorSet");
+
+//    // Default every descriptor array index to the full heightmap texture. This isn't used, but they need to be initialized to something.
+//    DescriptorSetWriter(m_heightRangeComputeDescriptorSet)
+//            .writeImage(0, s_heightRangeComputeSampler, m_heightmapImageView.get(), vk::ImageLayout::eGeneral, 0, 128)
+//            .writeImage(1, s_heightRangeComputeSampler, m_heightmapImageView.get(), vk::ImageLayout::eGeneral, 0, 128)
+//            .write();
+
+    DescriptorSetWriter(m_heightRangeComputeDescriptorSet)
+            .writeImage(0, s_heightRangeComputeSampler, m_heightmapImageView.get(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, 1)
+            .writeImage(1, s_heightRangeComputeSampler, m_heightmapImageView.get(), vk::ImageLayout::eGeneral, 0, 128)
+            .writeImage(2, s_heightRangeComputeSampler, m_heightmapImageView.get(), vk::ImageLayout::eGeneral, 0, 128)
+            .write();
+
+    m_numAvailableHeightRangeComputeDescriptors = 128;
+    m_unusedHeightRangeComputeDescriptors.emplace_back(0, m_numAvailableHeightRangeComputeDescriptors);
+
+    return true;
+}
+
+
+HeightmapTerrainTileSupplier::RequestTexture* HeightmapTerrainTileSupplier::createRequestTexture(const vk::CommandBuffer& commandBuffer, uint32_t width, uint32_t height, uint32_t mipLevels) {
+    if (m_numAvailableHeightRangeComputeDescriptors < mipLevels)
+        return nullptr;
+
+    RequestTexture* requestTexture = new RequestTexture();
+
+    Image2DConfiguration imageConfig{};
+    imageConfig.device = Engine::graphics()->getDevice();
+    imageConfig.width = width;
+    imageConfig.height = width;
+    imageConfig.mipLevels = mipLevels;
+    imageConfig.format = vk::Format::eR32G32Sfloat;
+    imageConfig.usage = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage;
+    requestTexture->heightRangeTempImage = Image2D::create(imageConfig, "HeightmapTerrainTileSupplier-HeightRangeComputeTempDownsampleImage");
+
+    ImageViewConfiguration imageViewConfig{};
+    imageViewConfig.device = Engine::graphics()->getDevice();
+    imageViewConfig.format = imageConfig.format;
+    imageViewConfig.image = requestTexture->heightRangeTempImage->getImage();
+    imageViewConfig.mipLevelCount = 1;
+
+    requestTexture->heightRangeTempImageViews.resize(mipLevels);
+
+    for (uint32_t i = 0; i < mipLevels; ++i) {
+        imageViewConfig.baseMipLevel = i;
+        requestTexture->heightRangeTempImageViews[i] = ImageView::create(imageViewConfig, "HeightmapTerrainTileSupplier-HeightRangeComputeTempMipImageView");
+    }
+
+    vk::ImageSubresourceRange subresourceRange(vk::ImageAspectFlagBits::eColor, 0, mipLevels, 0, 1);
+    ImageTransitionState dstState(vk::ImageLayout::eGeneral, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::PipelineStageFlagBits::eComputeShader);
+    ImageUtil::transitionLayout(commandBuffer, requestTexture->heightRangeTempImage->getImage(), subresourceRange, ImageTransition::FromAny(vk::PipelineStageFlagBits::eComputeShader), dstState);
+
+    DescriptorSetWriter writer(m_heightRangeComputeDescriptorSet);
+    for (uint32_t index = 0; index < requestTexture->heightRangeTempImageViews.size(); ) {
+        auto& range = m_unusedHeightRangeComputeDescriptors.back();
+
+        uint32_t usedRange = glm::min(range.second - range.first, (uint32_t)(requestTexture->heightRangeTempImageViews.size() - index));
+        uint32_t rangeStart = range.second - usedRange;
+
+        assert(usedRange > 0);
+
+        requestTexture->heightRangeTempImageDescriptorRanges.emplace_back(rangeStart, rangeStart + usedRange);
+
+        if (usedRange > 1)
+            writer.writeImage(1, s_heightRangeComputeSampler, &requestTexture->heightRangeTempImageViews[index], vk::ImageLayout::eGeneral, rangeStart + 1, usedRange - 1);
+        writer.writeImage(2, s_heightRangeComputeSampler, &requestTexture->heightRangeTempImageViews[index], vk::ImageLayout::eGeneral, rangeStart, usedRange);
+
+        index += usedRange;
+        range.second -= usedRange;
+        if (range.first == range.second)
+            m_unusedHeightRangeComputeDescriptors.pop_back();
+        m_numAvailableHeightRangeComputeDescriptors -= usedRange;
+    }
+    writer.write();
+
+    requestTexture->debugUsed = false;
+
+    return requestTexture;
+}
+
+void HeightmapTerrainTileSupplier::deleteRequestTexture(RequestTexture* requestTexture) {
+    assert(!requestTexture->debugUsed);
+
+    delete requestTexture->heightRangeTempImage;
+
+    for (ImageView* imageView : requestTexture->heightRangeTempImageViews)
+        delete imageView;
+
+    assert(requestTexture->fence == nullptr && !requestTexture->commandBuffer);
+
+    // Free the used descriptor ranges.
+    for (auto range : requestTexture->heightRangeTempImageDescriptorRanges) {
+        // Insert this descriptor range back into the unused list. We keep the list sorted.
+        auto it = std::upper_bound(m_unusedHeightRangeComputeDescriptors.begin(), m_unusedHeightRangeComputeDescriptors.end(), range, [](const std::pair<uint32_t, uint32_t>& lhs, const std::pair<uint32_t, uint32_t>& rhs) {
+//            return (lhs.second - lhs.first) < (rhs.second - rhs.first);
+            return lhs.first < rhs.first;
+        });
+
+        m_unusedHeightRangeComputeDescriptors.insert(it, range);
+        m_numAvailableHeightRangeComputeDescriptors += range.second - range.first;
+        assert(m_numAvailableHeightRangeComputeDescriptors <= 128);
+    }
+
+    size_t numMerged = 0;
+
+    // Merge adjacent free descriptor ranges
+    for (uint32_t i = 1; i < m_unusedHeightRangeComputeDescriptors.size(); ++i) {
+        auto& prev = m_unusedHeightRangeComputeDescriptors[i - 1];
+        auto& curr = m_unusedHeightRangeComputeDescriptors[i];
+        assert(prev.second <= curr.first && curr.first < curr.second && prev.first < prev.second);
+        if (curr.first == prev.second) {
+            ++numMerged;
+            curr.first = prev.first;
+            prev.second = prev.first; // make zero size
+        }
+    }
+
+    // Erase zero-size descriptor ranges
+    m_unusedHeightRangeComputeDescriptors.erase(std::remove_if(m_unusedHeightRangeComputeDescriptors.begin(), m_unusedHeightRangeComputeDescriptors.end(), [](const std::pair<uint32_t, uint32_t>& range) {
+        return range.first == range.second;
+    }), m_unusedHeightRangeComputeDescriptors.end());
+
+    delete requestTexture;
+}
+
+void HeightmapTerrainTileSupplier::makeRequestTextureAvailable(RequestTexture* requestTexture) {
+    // Insert it into the available textures array at the sorted location
+    m_availableRequestTextures.insert(std::upper_bound(m_availableRequestTextures.begin(), m_availableRequestTextures.end(), requestTexture, [](const RequestTexture* lhs, const RequestTexture* rhs) {
+        if (lhs->heightRangeTempImage->getWidth() != rhs->heightRangeTempImage->getWidth()) return lhs->heightRangeTempImage->getWidth() < rhs->heightRangeTempImage->getWidth();
+        return lhs->heightRangeTempImage->getHeight() < rhs->heightRangeTempImage->getHeight();
+    }), requestTexture);
+}
+
+bool HeightmapTerrainTileSupplier::updateTerrainTileHeightRangeDescriptors(const vk::CommandBuffer& commandBuffer, TileData* tileData) {
+
+    glm::uvec2 tileCoordMin = getLowerTexelCoord(tileData->tileOffset);
+    glm::uvec2 tileCoordMax = getUpperTexelCoords(tileData->tileOffset + tileData->tileSize);
+
+    glm::uvec2 tileSize = tileCoordMax - tileCoordMin;
+
+    TextureData& textureData = m_tileTextures[tileData->tileTextureIndex];
+
+    glm::uvec2 imageSize = tileSize / 2u;
+    uint32_t mipLevels = ImageUtil::getMaxMipLevels(imageSize.x, imageSize.y, 1);
+
+    if (textureData.requestTexture != nullptr) {
+        RequestTexture* requestTexture = textureData.requestTexture;
+
+        if (glm::any(glm::lessThan(requestTexture->heightRangeTempImage->getSize(), imageSize)) || requestTexture->heightRangeTempImage->getMipLevelCount() < mipLevels) {
+            // Exiting image is not big enough.
+            textureData.requestTexture = nullptr;
+
+            makeRequestTextureAvailable(requestTexture);
+        }
+    }
+
+    if (textureData.requestTexture != nullptr) {
+        return true;
+    }
+
+    // Find the smallest allocated texture that we can use for this tile.
+    auto it = std::lower_bound(m_availableRequestTextures.begin(), m_availableRequestTextures.end(), imageSize, [](const RequestTexture* lhs, const glm::uvec2& rhs) {
+        if (lhs->heightRangeTempImage->getWidth() != rhs.x) return lhs->heightRangeTempImage->getWidth() < rhs.x;
+        return lhs->heightRangeTempImage->getHeight() < rhs.y;
+    });
+
+    size_t idx = std::distance(m_availableRequestTextures.begin(), it);
+
+    bool hasFoundTextureToReuse = it != m_availableRequestTextures.end();
+    bool hasEnoughDescriptors = m_numAvailableHeightRangeComputeDescriptors >= mipLevels;
+    bool hasTexturesToReuse = !m_availableRequestTextures.empty();
+
+    if (it != m_availableRequestTextures.end()) {
+        assert(it >= m_availableRequestTextures.begin() && it < m_availableRequestTextures.end());
+        textureData.requestTexture = *it;
+        m_availableRequestTextures.erase(it);
+        assert(glm::all(glm::greaterThanEqual(textureData.requestTexture->heightRangeTempImage->getSize(), imageSize)) && textureData.requestTexture->heightRangeTempImage->getMipLevelCount() >= mipLevels);
+    }
+    if (textureData.requestTexture != nullptr) {
+        return true;
+    }
+
+    // We still don't have a texture. We want to try to allocate one.
+    while (m_numAvailableHeightRangeComputeDescriptors < mipLevels && !m_availableRequestTextures.empty()) {
+        // If there is not enough available descriptors to allocate one, delete the allocated textures until we run out, or enough descriptors become available.
+        RequestTexture* requestTexture = m_availableRequestTextures.back();
+        m_availableRequestTextures.pop_back();
+        deleteRequestTexture(requestTexture);
+    }
+
+    textureData.requestTexture = createRequestTexture(commandBuffer, imageSize.x, imageSize.y, mipLevels);
+    if (textureData.requestTexture != nullptr) {
+        return true;
+    }
+
+    return false;
+}
+
+bool HeightmapTerrainTileSupplier::computeTerrainTileHeightRange(const vk::CommandBuffer& commandBuffer, TileData* tileData, Fence* fence) {
+
+    assert(tileData->tileTextureIndex != UINT32_MAX);
+    TextureData& textureData = m_tileTextures[tileData->tileTextureIndex];
+
+    RequestTexture* requestTexture = textureData.requestTexture;
+    assert(requestTexture != nullptr);
+
+    assert(fence != nullptr && fence->getStatus() == Fence::Status_NotSignaled);
+
+    assert(!requestTexture->debugUsed);
+
+    requestTexture->commandBuffer = commandBuffer;
+    requestTexture->fence = fence;
+    requestTexture->debugUsed = true;
+
+    m_pendingTilesQueue.emplace_back(tileData);
+    tileData->state = TileData::State_Pending;
+
+    glm::uvec2 tileCoordMin = getLowerTexelCoord(tileData->tileOffset);
+    glm::uvec2 tileCoordMax = getUpperTexelCoords(tileData->tileOffset + tileData->tileSize);
+
+    ImageRegion region{
+            .x = tileCoordMin.x,
+            .y = tileCoordMin.y,
+            .width = tileCoordMax.x - tileCoordMin.x,
+            .height = tileCoordMax.y - tileCoordMin.y,
+            .layerCount = 1,
+            .mipLevelCount = 1
+    };
+
+    uint32_t imageWidth = region.width / 2;
+    uint32_t imageHeight = region.height / 2;
+    uint32_t mipLevels = ImageUtil::getMaxMipLevels(imageWidth, imageHeight, 1);
+
+    constexpr uint32_t workgroupSize = 16;
+    uint32_t workgroupCountX, workgroupCountY;
+
+    TerrainTileHeightRangePushConstants heightRangeComputePushConstants{};
+    heightRangeComputePushConstants.dstResolution = glm::uvec2(imageWidth, imageHeight);
+    heightRangeComputePushConstants.tileOffset = tileCoordMin;
+    heightRangeComputePushConstants.srcImageIndex = 0;
+
+    uint32_t imageIndex = 0;
+    uint32_t rangeIndex = 0;
+
+    for (uint32_t i = 0; i < mipLevels; ++i) {
+        const auto& range = requestTexture->heightRangeTempImageDescriptorRanges[rangeIndex];
+        heightRangeComputePushConstants.level = i;
+        heightRangeComputePushConstants.dstResolution >>= 1;
+        heightRangeComputePushConstants.dstResolution = glm::max(heightRangeComputePushConstants.dstResolution, 1);
+        heightRangeComputePushConstants.dstImageIndex = range.first + imageIndex;
+
+        s_heightRangeComputePipeline->bind(commandBuffer);
+        const vk::PipelineLayout& clearPipelineLayout = s_heightRangeComputePipeline->getPipelineLayout();
+        commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, clearPipelineLayout, 0, 1, &m_heightRangeComputeDescriptorSet->getDescriptorSet(), 0, nullptr);
+        commandBuffer.pushConstants(clearPipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, sizeof(TerrainTileHeightRangePushConstants), &heightRangeComputePushConstants);
+        workgroupCountX = INT_DIV_CEIL(heightRangeComputePushConstants.dstResolution.x, workgroupSize);
+        workgroupCountY = INT_DIV_CEIL(heightRangeComputePushConstants.dstResolution.y, workgroupSize);
+        s_heightRangeComputePipeline->dispatch(commandBuffer, workgroupCountX, workgroupCountY, 1);
+
+        heightRangeComputePushConstants.tileOffset = glm::uvec2(0u);
+
+        heightRangeComputePushConstants.srcImageIndex = heightRangeComputePushConstants.dstImageIndex;
+
+        ++imageIndex;
+        if (imageIndex >= range.second) {
+            ++rangeIndex;
+            imageIndex = 0;
+        }
+    }
+
+
+//    tileData->state = TileData::State_Pending;
+//
+//    size_t pixelCount = region.width * region.height;
+//    float* pixels = new float[pixelCount];
+//    m_heightmapImage->readPixels(pixels, ImagePixelLayout::R, ImagePixelFormat::Float32, vk::ImageAspectFlagBits::eColor, region, ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eVertexShader | vk::PipelineStageFlagBits::eFragmentShader));
+//
+//    float minElevation = +INFINITY;
+//    float maxElevation = -INFINITY;
+//
+//    for (uint32_t i = 0; i < pixelCount; ++i) {
+//        minElevation = glm::min(minElevation, pixels[i]);
+//        maxElevation = glm::max(maxElevation, pixels[i]);
+//    }
+//    tileData->heightData = pixels;
+//    tileData->minHeight = minElevation;
+//    tileData->maxHeight = maxElevation;
+//
+//    tileData->state = TileData::State_Available;
+
+    return true;
+}
+
+std::pair<vk::CommandBuffer, Fence*> HeightmapTerrainTileSupplier::getComputeCommandBuffer() {
+    if (!m_availableCommandBuffers.empty()) {
+        auto commandBuffer = m_availableCommandBuffers.back();
+        m_availableCommandBuffers.pop_back();
+        assert(commandBuffer.first && commandBuffer.second != nullptr);
+        return commandBuffer;
+    } else {
+        FenceConfiguration fenceConfig{};
+        fenceConfig.device = Engine::graphics()->getDevice();
+        Fence* fence = Fence::create(fenceConfig, "TerrainTileSupplier-PendingTileFence");
+
+        CommandBufferConfiguration commandBufferConfig{};
+        commandBufferConfig.level = vk::CommandBufferLevel::ePrimary;
+        vk::CommandBuffer commandBuffer = **Engine::graphics()->commandPool()->allocateCommandBuffer(commandBufferConfig, "terrain_compute_buffer");
+
+        return std::make_pair(commandBuffer, fence);
+    }
 }

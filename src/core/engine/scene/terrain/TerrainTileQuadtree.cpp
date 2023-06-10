@@ -42,6 +42,7 @@ TerrainTileQuadtree::~TerrainTileQuadtree() {
 
 void TerrainTileQuadtree::update(const Frustum* frustum) {
     PROFILE_SCOPE("TerrainTileQuadtree::update");
+
     std::vector<size_t> tempNodeIndices;
     std::vector<size_t> unvisitedNodesStack;
     std::vector<TraversalInfo> traversalStack;
@@ -57,7 +58,8 @@ void TerrainTileQuadtree::update(const Frustum* frustum) {
     updateVisibility(frustum, traversalStack, tempNodeIndices);
     markVisibleSubtrees(tempNodeIndices, unvisitedNodesStack);
 
-    m_tileSupplier->update();
+    if (m_tileSupplier != nullptr)
+        m_tileSupplier->update();
 }
 
 glm::dvec2 TerrainTileQuadtree::getNormalizedNodeCoordinate(const glm::dvec2& treePosition, uint8_t treeDepth) const {
@@ -198,9 +200,17 @@ void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector
 
     traverseTreeNodes(traversalStack, [&](TerrainTileQuadtree*, const TraversalInfo& node) {
 
+        // TODO: check distance to closest AABB point, or maybe just check distance to center vertical line-segment?
+//        AxisAlignedBoundingBox aabb = getNodeBoundingBox(node.nodeIndex, node.treePosition, node.treeDepth);
+//        aabb.calculateClosestPoint(localCameraOrigin);
+
+        float minElevation = m_nodeTileData[node.nodeIndex].minElevation;
+        float maxElevation = m_nodeTileData[node.nodeIndex].maxElevation;
+        float midElevation = (maxElevation + minElevation) * 0.5F;
+
         double normalizedNodeSize = getNormalizedNodeSizeForTreeDepth(node.treeDepth);
         glm::dvec2 normalizedNodeCenterCoord = (glm::dvec2(node.treePosition) + glm::dvec2(0.5)) * normalizedNodeSize;
-        glm::dvec3 nodeCenterPos(normalizedNodeCenterCoord.x * m_size.x, 0.0, normalizedNodeCenterCoord.y * m_size.y);
+        glm::dvec3 nodeCenterPos(normalizedNodeCenterCoord.x * m_size.x, midElevation * m_heightScale, normalizedNodeCenterCoord.y * m_size.y);
 
         glm::dvec3 cameraToNodePosition = nodeCenterPos - localCameraOrigin;
         double cameraDistanceSq = glm::dot(cameraToNodePosition, cameraToNodePosition);
@@ -227,7 +237,7 @@ void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector
             }
         }
 
-        glm::dvec2 tileOffset = glm::dvec2(node.treePosition * 2u + QUAD_OFFSETS[node.quadIndex]) * normalizedNodeSize;
+        glm::dvec2 tileOffset = glm::dvec2(node.treePosition) * normalizedNodeSize;
         TileDataReference tile = m_tileSupplier->getTile(tileOffset, glm::dvec2(normalizedNodeSize));
         tile.notifyUsed();
 

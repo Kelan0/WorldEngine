@@ -44,14 +44,8 @@ void TerrainTestApplication::init() {
     skyboxEnvironmentMap->update();
     Engine::instance()->getDeferredRenderer()->setEnvironmentMap(skyboxEnvironmentMap);
 
-    Image2DConfiguration heightmapImageConfig{};
-    heightmapImageConfig.device = Engine::graphics()->getDevice();
-    heightmapImageConfig.filePath = "terrain/heightmap_1/heightmap2.hdr";
-    heightmapImageConfig.usage = vk::ImageUsageFlagBits::eSampled;
-    heightmapImageConfig.format = vk::Format::eR32Sfloat;
-    std::shared_ptr<Image2D> heightmapImage = std::shared_ptr<Image2D>(Image2D::create(heightmapImageConfig, "TerrainTestHeightmap"));
-
-    std::shared_ptr<TerrainTileSupplier> tileSupplier = std::make_shared<HeightmapTerrainTileSupplier>(heightmapImage);
+    ImageData* heightmapImageData = ImageData::load("terrain/heightmap_1/heightmap2.hdr", ImagePixelLayout::R, ImagePixelFormat::Float32);
+    std::shared_ptr<TerrainTileSupplier> tileSupplier = std::make_shared<HeightmapTerrainTileSupplier>(heightmapImageData);
 
     Entity terrainEntity0 = EntityHierarchy::create(Engine::scene(), "terrainEntity0");
     terrainEntity0.addComponent<Transform>().translate(0.0, 0.0, 0.0);
