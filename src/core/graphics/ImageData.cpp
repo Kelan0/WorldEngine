@@ -19,6 +19,29 @@ std::unordered_map<std::string, ComputePipeline*> ImageData::ImageTransform::s_t
 FrameResource<Buffer> g_imageStagingBuffer;
 //vk::DeviceSize g_maxStagingBufferSize = 128 * 1024 * 1024; // 128 MiB
 
+
+ImageRegion& ImageRegion::setOffset(offset_type offX, offset_type offY, offset_type offZ) {
+    x = offX;
+    y = offY;
+    z = offZ;
+    return *this;
+}
+
+ImageRegion& ImageRegion::setOffset(const glm::uvec3& offset) {
+    return setOffset((offset_type)offset.x, (offset_type)offset.y, (offset_type)offset.z);
+}
+
+ImageRegion& ImageRegion::setSize(size_type sizeW, size_type sizeH, size_type sizeD) {
+    width = sizeW;
+    height = sizeH;
+    depth = sizeD;
+    return *this;
+}
+
+ImageRegion& ImageRegion::setSize(const glm::uvec3& size) {
+    return setSize((size_type)size.x, (size_type)size.y, (size_type)size.z);
+}
+
 ImageData::ImageData(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, AllocationType allocationType):
         m_data(data),
         m_width(width),
@@ -958,7 +981,7 @@ bool ImageUtil::transitionLayout(const vk::CommandBuffer& commandBuffer, const v
     return true;
 }
 
-bool ImageUtil::upload(const vk::CommandBuffer& commandBuffer, const vk::Image& dstImage, void* data, uint32_t bytesPerPixel, vk::ImageAspectFlags aspectMask, const ImageRegion& imageRegion, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
+bool ImageUtil::upload(const vk::CommandBuffer& commandBuffer, const vk::Image& dstImage, void* data, uint32_t bytesPerPixel, vk::ImageAspectFlags aspectMask, const ImageRegion& imageRegion, const ImageTransitionState& srcState, const ImageTransitionState& dstState) {
 
     if (!dstImage) {
         assert(false);
@@ -1014,12 +1037,12 @@ bool ImageUtil::upload(const vk::CommandBuffer& commandBuffer, const vk::Image& 
     imageCopy.imageExtent.setHeight(imageRegion.height);
     imageCopy.imageExtent.setDepth(imageRegion.depth);
 
-    bool success = transferBufferToImage(commandBuffer, dstImage, srcBuffer->getBuffer(), imageCopy, dstState, srcState);
+    bool success = transferBufferToImage(commandBuffer, dstImage, srcBuffer->getBuffer(), imageCopy, srcState, dstState);
 
     return success;
 }
 
-bool ImageUtil::transferBufferToImage(const vk::CommandBuffer& commandBuffer, const vk::Image& dstImage, const vk::Buffer& srcBuffer, const vk::BufferImageCopy& imageCopy, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
+bool ImageUtil::transferBufferToImage(const vk::CommandBuffer& commandBuffer, const vk::Image& dstImage, const vk::Buffer& srcBuffer, const vk::BufferImageCopy& imageCopy, const ImageTransitionState& srcState, const ImageTransitionState& dstState) {
     PROFILE_BEGIN_GPU_CMD("ImageUtil::transferBufferToImage", commandBuffer);
 
     vk::ImageSubresourceRange subresourceRange{};
@@ -1037,7 +1060,7 @@ bool ImageUtil::transferBufferToImage(const vk::CommandBuffer& commandBuffer, co
     return true;
 }
 
-bool ImageUtil::transferImageToBuffer(const vk::CommandBuffer& commandBuffer, const vk::Buffer& dstBuffer, const vk::Image& srcImage, const vk::BufferImageCopy& imageCopy, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
+bool ImageUtil::transferImageToBuffer(const vk::CommandBuffer& commandBuffer, const vk::Buffer& dstBuffer, const vk::Image& srcImage, const vk::BufferImageCopy& imageCopy, const ImageTransitionState& srcState, const ImageTransitionState& dstState, int a) {
     PROFILE_BEGIN_GPU_CMD("ImageUtil::transferImageToBuffer", commandBuffer);
 
     vk::ImageSubresourceRange subresourceRange{};
@@ -1055,7 +1078,7 @@ bool ImageUtil::transferImageToBuffer(const vk::CommandBuffer& commandBuffer, co
     return true;
 }
 
-bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk::Image& image, vk::Format format, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t baseLayer, uint32_t layerCount, ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth, uint32_t mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState) {
+bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk::Image& image, vk::Format format, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t baseLayer, uint32_t layerCount, ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth, uint32_t mipLevels, const ImageTransitionState& srcState, const ImageTransitionState& dstState, int a) {
     vk::ImageTiling tiling = vk::ImageTiling::eOptimal;
     vk::FormatFeatureFlags testFormatFeatureFlags{};
     if (filter == vk::Filter::eLinear) testFormatFeatureFlags |= vk::FormatFeatureFlagBits::eSampledImageFilterLinear;
@@ -1132,7 +1155,7 @@ bool ImageUtil::generateMipmap(const vk::CommandBuffer& commandBuffer, const vk:
 }
 
 uint32_t ImageUtil::getMaxMipLevels(ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth) {
-    return static_cast<uint32_t>(glm::floor(glm::log2((float)glm::max(glm::max(width, height), depth)))) + 1;
+    return static_cast<uint32_t>(glm::floor(glm::log2((float)glm::max(glm::max(width, height), depth)))) + 1; // +1 because the base level is included.
 }
 
 bool ImageUtil::checkAllImageFormatFeatures(vk::Format format, vk::ImageTiling tiling, vk::FormatFeatureFlags formatFeatureFlags) {
@@ -1264,7 +1287,7 @@ Buffer* ImageUtil::getImageStagingBuffer(const ImageRegion& imageRegion, uint32_
 
 
 
-ImageTransitionState::ImageTransitionState(vk::ImageLayout layout, vk::AccessFlagBits accessMask, vk::PipelineStageFlags pipelineStages, uint32_t queueFamilyIndex):
+ImageTransitionState::ImageTransitionState(vk::ImageLayout layout, vk::AccessFlags accessMask, vk::PipelineStageFlags pipelineStages, uint32_t queueFamilyIndex):
         layout(layout),
         accessMask(accessMask),
         pipelineStages(pipelineStages),

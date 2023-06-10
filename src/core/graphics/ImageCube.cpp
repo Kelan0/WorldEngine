@@ -237,7 +237,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
 
         LOG_INFO("Uploading ImageCube equirectangular data [%d x %d] with face size [%d x %d]", (int32_t)region.width, (int32_t)region.height, (int32_t)size, (int32_t)size);
 
-        if (!returnImage->uploadEquirectangular(equirectangularImageData->getData(), equirectangularImageData->getPixelLayout(), equirectangularImageData->getPixelFormat(), vk::ImageAspectFlagBits::eColor, region, dstState)) {
+        if (!returnImage->uploadEquirectangular(equirectangularImageData->getData(), equirectangularImageData->getPixelLayout(), equirectangularImageData->getPixelFormat(), vk::ImageAspectFlagBits::eColor, region, ImageTransition::FromAny(), dstState)) {
             LOG_ERROR("Failed to upload buffer data");
             delete returnImage;
             returnImage = nullptr;
@@ -245,7 +245,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
 
         if (generateMipmap) {
             auto t0 = Time::now();
-            returnImage->generateMipmap(vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor, mipLevels, dstState);
+            returnImage->generateMipmap(vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor, mipLevels, ImageTransition::FromAny(), dstState);
             LOG_DEBUG("Took %.2f msec to generate %u mipmap levels for ImageCube", Time::milliseconds(t0), mipLevels);
         }
 
@@ -258,7 +258,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
         LOG_INFO("Uploading ImageCube face data with face size [%d x %d]", (int32_t)size, (int32_t)size);
 
         for (size_t i = 0; i < 6; ++i) {
-            if (!returnImage->uploadFace((ImageCubeFace)i, cubeFacesImageData[i]->getData(), cubeFacesImageData[i]->getPixelLayout(), cubeFacesImageData[i]->getPixelFormat(), vk::ImageAspectFlagBits::eColor, region, dstState)) {
+            if (!returnImage->uploadFace((ImageCubeFace)i, cubeFacesImageData[i]->getData(), cubeFacesImageData[i]->getPixelLayout(), cubeFacesImageData[i]->getPixelFormat(), vk::ImageAspectFlagBits::eColor, region, ImageTransition::FromAny(), dstState)) {
                 LOG_ERROR("Failed to upload buffer data");
                 delete returnImage;
                 returnImage = nullptr;
@@ -267,7 +267,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
 
         if (generateMipmap) {
             auto t0 = Time::now();
-            returnImage->generateMipmap(vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor, mipLevels, dstState);
+            returnImage->generateMipmap(vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor, mipLevels, ImageTransition::FromAny(), dstState);
             LOG_DEBUG("Took %.2f msec to generate %u mipmap levels for ImageCube", Time::milliseconds(t0), mipLevels);
         }
     } else if (generateMipmap) {
@@ -278,7 +278,7 @@ ImageCube* ImageCube::create(const ImageCubeConfiguration& imageCubeConfiguratio
     return returnImage;
 }
 
-bool ImageCube::uploadFace(ImageCube* dstImage, ImageCubeFace face, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
+bool ImageCube::uploadFace(ImageCube* dstImage, ImageCubeFace face, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& srcState, const ImageTransitionState& dstState) {
     assert(dstImage != nullptr);
     assert(data != nullptr);
 
@@ -321,7 +321,7 @@ bool ImageCube::uploadFace(ImageCube* dstImage, ImageCubeFace face, void* data, 
 
     const vk::CommandBuffer& commandBuffer = ImageUtil::beginTransferCommands();
 
-    bool success = ImageUtil::upload(commandBuffer, dstImage->getImage(), uploadData, bytesPerPixel, aspectMask, imageRegion, dstState);
+    bool success = ImageUtil::upload(commandBuffer, dstImage->getImage(), uploadData, bytesPerPixel, aspectMask, imageRegion, srcState, dstState);
 
     ImageUtil::endTransferCommands(commandBuffer, **Engine::graphics()->getQueue(QUEUE_TRANSFER_MAIN), true, nullptr);
 
@@ -329,7 +329,7 @@ bool ImageCube::uploadFace(ImageCube* dstImage, ImageCubeFace face, void* data, 
     return success;
 }
 
-bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
+bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& srcState, const ImageTransitionState& dstState) {
     assert(dstImage != nullptr);
     assert(data != nullptr);
 
@@ -489,7 +489,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, ImagePixe
 
     const vk::CommandBuffer& transferCommandBuffer = ImageUtil::beginTransferCommands();
 
-    success = ImageUtil::transferBufferToImage(transferCommandBuffer, dstImage->getImage(), tempBuffer->getBuffer(), imageCopy, dstState);
+    success = ImageUtil::transferBufferToImage(transferCommandBuffer, dstImage->getImage(), tempBuffer->getBuffer(), imageCopy, srcState, dstState);
 
     if (dstImage->getMipLevelCount() > 1) {
         // Transition all other mip levels to dstState, since transferBuffer only transitions imageCopy.imageSubresource.mipLevel
@@ -499,7 +499,7 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, ImagePixe
         subresourceRange.setLayerCount(imageCopy.imageSubresource.layerCount);
         subresourceRange.setBaseMipLevel(0);
         subresourceRange.setLevelCount(dstImage->getMipLevelCount());
-        ImageUtil::transitionLayout(transferCommandBuffer, dstImage->getImage(), subresourceRange, ImageTransition::FromAny(), dstState);
+        ImageUtil::transitionLayout(transferCommandBuffer, dstImage->getImage(), subresourceRange, srcState, dstState);
     }
 
     ImageUtil::endTransferCommands(transferCommandBuffer, **Engine::graphics()->getQueue(QUEUE_TRANSFER_MAIN), true, nullptr);
@@ -513,25 +513,25 @@ bool ImageCube::uploadEquirectangular(ImageCube* dstImage, void* data, ImagePixe
     return success;
 }
 
-bool ImageCube::uploadFace(ImageCubeFace face, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
-    return ImageCube::uploadFace(this, face, data, pixelLayout, pixelFormat, aspectMask, imageRegion, dstState);
+bool ImageCube::uploadFace(ImageCubeFace face, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& srcState, const ImageTransitionState& dstState) {
+    return ImageCube::uploadFace(this, face, data, pixelLayout, pixelFormat, aspectMask, imageRegion, srcState, dstState);
 }
 
-bool ImageCube::uploadEquirectangular(void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
-    return ImageCube::uploadEquirectangular(this, data, pixelLayout, pixelFormat, aspectMask, imageRegion, dstState);
+bool ImageCube::uploadEquirectangular(void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& srcState, const ImageTransitionState& dstState) {
+    return ImageCube::uploadEquirectangular(this, data, pixelLayout, pixelFormat, aspectMask, imageRegion, srcState, dstState);
 }
 
-bool ImageCube::generateMipmap(ImageCube* image, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& dstState) {
+bool ImageCube::generateMipmap(ImageCube* image, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& srcState, const ImageTransitionState& dstState) {
     const vk::CommandBuffer& commandBuffer = ImageUtil::beginTransferCommands();
 
-    bool success = ImageUtil::generateMipmap(commandBuffer, image->getImage(), image->getFormat(), filter, aspectMask, 0, 6, image->getWidth(), image->getHeight(), 1, mipLevels, dstState);
+    bool success = ImageUtil::generateMipmap(commandBuffer, image->getImage(), image->getFormat(), filter, aspectMask, 0, 6, image->getWidth(), image->getHeight(), 1, mipLevels, srcState, dstState, 0);
 
     ImageUtil::endTransferCommands(commandBuffer, **Engine::graphics()->getQueue(QUEUE_GRAPHICS_TRANSFER_MAIN), true, nullptr);
     return success;
 }
 
-bool ImageCube::generateMipmap(vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& dstState) {
-    return ImageCube::generateMipmap(this, filter, aspectMask, mipLevels, dstState);
+bool ImageCube::generateMipmap(vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& srcState, const ImageTransitionState& dstState) {
+    return ImageCube::generateMipmap(this, filter, aspectMask, mipLevels, srcState, dstState);
 }
 
 

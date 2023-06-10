@@ -125,7 +125,7 @@ void EnvironmentMap::update() {
         }
 
         const SharedResource<CommandPool>& commandPool = Engine::graphics()->commandPool();
-        const vk::CommandBuffer& commandBuffer = **commandPool->getOrCreateCommandBuffer("compute_main", { vk::CommandBufferLevel::ePrimary });
+        const vk::CommandBuffer& commandBuffer = **commandPool->getOrCreateNamedCommandBuffer("compute_main", { vk::CommandBufferLevel::ePrimary });
         const vk::Queue& computeQueue = **Engine::graphics()->getQueue(QUEUE_COMPUTE_MAIN);
 
         vk::CommandBufferBeginInfo commandBeginInfo;

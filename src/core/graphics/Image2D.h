@@ -44,17 +44,17 @@ public:
 
     static Image2D* create(const Image2DConfiguration& image2DConfiguration, const std::string& name);
 
-    static bool upload(Image2D* dstImage, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
+    static bool upload(Image2D* dstImage, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& srcState, const ImageTransitionState& dstState, int a);
 
-    bool upload(void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
+    bool upload(void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& srcState, const ImageTransitionState& dstState, int a);
 
-    static bool readPixels(Image2D* srcImage, void* dstPixels, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
+    static bool readPixels(Image2D* srcImage, void* dstPixels, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& srcState, const ImageTransitionState& dstState);
 
-    bool readPixels(void* dstPixels, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState);
+    bool readPixels(void* dstPixels, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& srcState, const ImageTransitionState& dstState);
 
-    static bool generateMipmap(Image2D* image, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& dstState);
+    static bool generateMipmap(Image2D* image, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& srcState, const ImageTransitionState& dstState);
 
-    bool generateMipmap(vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& dstState);
+    bool generateMipmap(vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& srcState, const ImageTransitionState& dstState);
 
     const vk::Image& getImage() const;
 
@@ -62,7 +62,7 @@ public:
 
     uint32_t getHeight() const;
 
-    glm::uvec2 getResolution() const;
+    glm::uvec2 getSize() const;
 
     uint32_t getMipLevelCount() const;
 
@@ -74,8 +74,7 @@ private:
 private:
     vk::Image m_image;
     DeviceMemoryBlock* m_memory;
-    uint32_t m_width;
-    uint32_t m_height;
+    glm::uvec2 m_size;
     uint32_t m_mipLevelCount;
     vk::Format m_format;
 };

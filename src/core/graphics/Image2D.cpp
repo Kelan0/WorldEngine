@@ -35,8 +35,7 @@ Image2D::Image2D(const WeakResource<vkr::Device>& device, const vk::Image& image
         GraphicsResource(ResourceType_Image2D, device, name),
         m_image(image),
         m_memory(memory),
-        m_width(width),
-        m_height(height),
+        m_size(width, height),
         m_mipLevelCount(mipLevelCount),
         m_format(format) {
 }
@@ -146,14 +145,14 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration, const
 
         LOG_INFO("Uploading data for Image2D \"%s\": Size [%d x %d]", name.c_str(), (int32_t)uploadRegion.width, (int32_t)uploadRegion.height);
 
-        if (!returnImage->upload(imageData->getData(), imageData->getPixelLayout(), imageData->getPixelFormat(), vk::ImageAspectFlagBits::eColor, uploadRegion, dstState)) {
+        if (!returnImage->upload(imageData->getData(), imageData->getPixelLayout(), imageData->getPixelFormat(), vk::ImageAspectFlagBits::eColor, uploadRegion, ImageTransition::FromAny(), dstState, 0)) {
             LOG_ERROR("Failed to create Image2D \"%s\": Failed to upload buffer data", name.c_str());
             delete returnImage;
             return nullptr;
         }
 
         if (generateMipmap) {
-            returnImage->generateMipmap(vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor, image2DConfiguration.mipLevels, dstState);
+            returnImage->generateMipmap(vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor, image2DConfiguration.mipLevels, ImageTransition::FromAny(), dstState);
         }
     } else if (generateMipmap) {
         LOG_WARN("GenerateMipmap requested for Image2D \"%s\", but no source data was uploaded to generate from", name.c_str());
@@ -162,7 +161,7 @@ Image2D* Image2D::create(const Image2DConfiguration& image2DConfiguration, const
     return returnImage;
 }
 
-bool Image2D::upload(Image2D* dstImage, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
+bool Image2D::upload(Image2D* dstImage, void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& srcState, const ImageTransitionState& dstState, int a) {
 
     assert(dstImage != nullptr);
     assert(data != nullptr);
@@ -206,7 +205,7 @@ bool Image2D::upload(Image2D* dstImage, void* data, ImagePixelLayout pixelLayout
 
     const vk::CommandBuffer& transferCommandBuffer = ImageUtil::beginTransferCommands();
 
-    bool success = ImageUtil::upload(transferCommandBuffer, dstImage->getImage(), uploadData, bytesPerPixel, aspectMask, imageRegion, dstState);
+    bool success = ImageUtil::upload(transferCommandBuffer, dstImage->getImage(), uploadData, bytesPerPixel, aspectMask, imageRegion, srcState, dstState);
 
     if (dstImage->getMipLevelCount() > 1) {
         // Transition all other mip levels to dstState, since transferBuffer only transitions imageCopy.imageSubresource.mipLevel
@@ -225,11 +224,11 @@ bool Image2D::upload(Image2D* dstImage, void* data, ImagePixelLayout pixelLayout
     return success;
 }
 
-bool Image2D::upload(void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
-    return Image2D::upload(this, data, pixelLayout, pixelFormat, aspectMask, imageRegion, dstState);
+bool Image2D::upload(void* data, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& srcState, const ImageTransitionState& dstState, int a) {
+    return Image2D::upload(this, data, pixelLayout, pixelFormat, aspectMask, imageRegion, srcState, dstState, a);
 }
 
-bool Image2D::readPixels(Image2D* srcImage, void* dstPixels, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
+bool Image2D::readPixels(Image2D* srcImage, void* dstPixels, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& srcState, const ImageTransitionState& dstState) {
     assert(srcImage != nullptr);
     assert(dstPixels != nullptr);
 
@@ -280,7 +279,7 @@ bool Image2D::readPixels(Image2D* srcImage, void* dstPixels, ImagePixelLayout pi
 
     Buffer* buffer = ImageUtil::getImageStagingBuffer(imageRegion, bytesPerPixel);
 
-    bool success = ImageUtil::transferImageToBuffer(transferCommandBuffer, buffer->getBuffer(), srcImage->getImage(), imageCopy, dstState);
+    bool success = ImageUtil::transferImageToBuffer(transferCommandBuffer, buffer->getBuffer(), srcImage->getImage(), imageCopy, srcState, dstState, 0);
 
     ImageUtil::endTransferCommands(transferCommandBuffer, **Engine::graphics()->getQueue(QUEUE_TRANSFER_MAIN), true, nullptr);
 
@@ -296,21 +295,21 @@ bool Image2D::readPixels(Image2D* srcImage, void* dstPixels, ImagePixelLayout pi
     return success;
 }
 
-bool Image2D::readPixels(void* dstPixels, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& dstState) {
-    return Image2D::readPixels(this, dstPixels, pixelLayout, pixelFormat, aspectMask, imageRegion, dstState);
+bool Image2D::readPixels(void* dstPixels, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, vk::ImageAspectFlags aspectMask, ImageRegion imageRegion, const ImageTransitionState& srcState, const ImageTransitionState& dstState) {
+    return Image2D::readPixels(this, dstPixels, pixelLayout, pixelFormat, aspectMask, imageRegion, srcState, dstState);
 }
 
-bool Image2D::generateMipmap(Image2D* image, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& dstState) {
+bool Image2D::generateMipmap(Image2D* image, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& srcState, const ImageTransitionState& dstState) {
     const vk::CommandBuffer& commandBuffer = ImageUtil::beginTransferCommands();
 
-    bool success = ImageUtil::generateMipmap(commandBuffer, image->getImage(), image->getFormat(), filter, aspectMask, 0, 1, image->getWidth(), image->getHeight(), 1, mipLevels, dstState);
+    bool success = ImageUtil::generateMipmap(commandBuffer, image->getImage(), image->getFormat(), filter, aspectMask, 0, 1, image->getWidth(), image->getHeight(), 1, mipLevels, srcState, dstState, 0);
 
     ImageUtil::endTransferCommands(commandBuffer, **Engine::graphics()->getQueue(QUEUE_GRAPHICS_TRANSFER_MAIN), true, nullptr);
     return success;
 }
 
-bool Image2D::generateMipmap(vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& dstState) {
-    return Image2D::generateMipmap(this, filter, aspectMask, mipLevels, dstState);
+bool Image2D::generateMipmap(vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t mipLevels, const ImageTransitionState& srcState, const ImageTransitionState& dstState) {
+    return Image2D::generateMipmap(this, filter, aspectMask, mipLevels, srcState, dstState);
 }
 
 const vk::Image& Image2D::getImage() const {
@@ -318,15 +317,15 @@ const vk::Image& Image2D::getImage() const {
 }
 
 uint32_t Image2D::getWidth() const {
-    return m_width;
+    return m_size.y;
 }
 
 uint32_t Image2D::getHeight() const {
-    return m_height;
+    return m_size.x;
 }
 
-glm::uvec2 Image2D::getResolution() const {
-    return glm::uvec2(m_width, m_height);
+glm::uvec2 Image2D::getSize() const {
+    return m_size;
 }
 
 uint32_t Image2D::getMipLevelCount() const {

@@ -44,6 +44,12 @@ struct ImageRegion {
     size_type depth = WHOLE_SIZE;
     size_type layerCount = WHOLE_SIZE;
     size_type mipLevelCount = WHOLE_SIZE;
+
+    ImageRegion& setOffset(offset_type x, offset_type y, offset_type z);
+    ImageRegion& setOffset(const glm::uvec3& offset);
+
+    ImageRegion& setSize(size_type width, size_type height, size_type depth);
+    ImageRegion& setSize(const glm::uvec3& size);
 };
 
 class ComputePipeline;
@@ -159,7 +165,7 @@ struct ImageTransitionState {
     vk::PipelineStageFlags pipelineStages; // The pipeline stages that this synchronization scope covers
     uint32_t queueFamilyIndex = VK_QUEUE_FAMILY_IGNORED; // Queue family ownership transfer
 
-    ImageTransitionState(vk::ImageLayout layout, vk::AccessFlagBits accessMask, vk::PipelineStageFlags pipelineStages, uint32_t queueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
+    ImageTransitionState(vk::ImageLayout layout, vk::AccessFlags accessMask, vk::PipelineStageFlags pipelineStages, uint32_t queueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
 
     bool operator==(const ImageTransitionState& other) const;
 };
@@ -192,13 +198,13 @@ namespace ImageUtil {
 
     bool transitionLayout(const vk::CommandBuffer& commandBuffer, const vk::Image& image, const vk::ImageSubresourceRange& subresourceRange, const ImageTransitionState& srcState, const ImageTransitionState& dstState);
 
-    bool upload(const vk::CommandBuffer& commandBuffer, const vk::Image& dstImage, void* data, uint32_t bytesPerPixel, vk::ImageAspectFlags aspectMask, const ImageRegion& imageRegion, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
+    bool upload(const vk::CommandBuffer& commandBuffer, const vk::Image& dstImage, void* data, uint32_t bytesPerPixel, vk::ImageAspectFlags aspectMask, const ImageRegion& imageRegion, const ImageTransitionState& srcState, const ImageTransitionState& dstState);
 
-    bool transferBufferToImage(const vk::CommandBuffer& commandBuffer, const vk::Image& dstImage, const vk::Buffer& srcBuffer, const vk::BufferImageCopy& imageCopy, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
+    bool transferBufferToImage(const vk::CommandBuffer& commandBuffer, const vk::Image& dstImage, const vk::Buffer& srcBuffer, const vk::BufferImageCopy& imageCopy, const ImageTransitionState& srcState, const ImageTransitionState& dstState);
 
-    bool transferImageToBuffer(const vk::CommandBuffer& commandBuffer, const vk::Buffer& dstBuffer, const vk::Image& srcImage, const vk::BufferImageCopy& imageCopy, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
+    bool transferImageToBuffer(const vk::CommandBuffer& commandBuffer, const vk::Buffer& dstBuffer, const vk::Image& srcImage, const vk::BufferImageCopy& imageCopy, const ImageTransitionState& srcState, const ImageTransitionState& dstState, int a);
 
-    bool generateMipmap(const vk::CommandBuffer& commandBuffer, const vk::Image& image, vk::Format format, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t baseLayer, uint32_t layerCount, ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth, uint32_t mipLevels, const ImageTransitionState& dstState, const ImageTransitionState& srcState = ImageTransition::FromAny());
+    bool generateMipmap(const vk::CommandBuffer& commandBuffer, const vk::Image& image, vk::Format format, vk::Filter filter, vk::ImageAspectFlags aspectMask, uint32_t baseLayer, uint32_t layerCount, ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth, uint32_t mipLevels, const ImageTransitionState& srcState, const ImageTransitionState& dstState, int a);
 
     uint32_t getMaxMipLevels(ImageRegion::size_type width, ImageRegion::size_type height, ImageRegion::size_type depth);
 
