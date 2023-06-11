@@ -41,6 +41,8 @@ struct TileData {
     float* heightData;
     glm::uvec2 heightDataResolution;
     Time::moment_t timeLastUsed;
+    Time::moment_t timeRequested;
+    Time::moment_t timeProcessed;
     float cameraDistance;
     union {
         uint8_t _flags;
@@ -176,10 +178,11 @@ private:
     struct RequestTexture {
         Image2D* heightRangeTempImage;
         std::vector<ImageView*> heightRangeTempImageViews;
-        std::vector<std::pair<uint32_t, uint32_t>> heightRangeTempImageDescriptorRanges;
+        DescriptorSet* descriptorSet;
         vk::CommandBuffer commandBuffer;
         Fence* fence;
         bool debugUsed;
+        glm::uvec4 id;
     };
 
     struct TextureData {
@@ -209,11 +212,11 @@ private:
     std::vector<std::pair<vk::CommandBuffer, Fence*>> m_availableCommandBuffers;
 
     bool m_initialized;
-    DescriptorSet* m_heightRangeComputeDescriptorSet;
-    std::vector<std::pair<uint32_t, uint32_t>> m_unusedHeightRangeComputeDescriptors;
-    uint32_t m_numAvailableHeightRangeComputeDescriptors;
+    DescriptorSet* m_tileComputeSharedDescriptorSet;
+    uint32_t m_numUsedRequestTextureDescriptors;
 
-    static SharedResource<DescriptorSetLayout> s_heightRangeComputeDescriptorSetLayout;
+    static SharedResource<DescriptorSetLayout> s_tileComputeSharedDescriptorSetLayout;
+    static SharedResource<DescriptorSetLayout> s_tileComputeDescriptorSetLayout;
     static ComputePipeline* s_heightRangeComputePipeline;
     static Sampler* s_heightRangeComputeSampler;
 };

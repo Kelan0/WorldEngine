@@ -189,6 +189,22 @@ TerrainTileQuadtree::Visibility TerrainTileQuadtree::calculateNodeVisibility(con
 void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector<size_t>& deletedNodeIndices, std::vector<TraversalInfo>& traversalStack) {
     PROFILE_SCOPE("TerrainTileQuadtree::updateSubdivisions")
 
+#if DEBUG_RENDER_BOUNDING_VOLUMES
+    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_Projection);
+    Engine::instance()->getImmediateRenderer()->pushMatrix();
+    Engine::instance()->getImmediateRenderer()->loadMatrix(Engine::scene()->getMainCameraEntity().getComponent<Camera>().getProjectionMatrix());
+    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_ModelView);
+    Engine::instance()->getImmediateRenderer()->pushMatrix();
+    Engine::instance()->getImmediateRenderer()->loadMatrix(glm::inverse(glm::mat4(Engine::scene()->getMainCameraEntity().getComponent<Transform>().getMatrix())));
+
+    Engine::instance()->getImmediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
+    Engine::instance()->getImmediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
+
+    Engine::instance()->getImmediateRenderer()->setLineWidth(1.0F);
+    Engine::instance()->getImmediateRenderer()->setBlendEnabled(false);
+    Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(false);
+#endif
+
     glm::dvec3 localCameraOrigin = glm::dvec3(glm::inverse(m_transform.getMatrix()) * glm::dvec4(frustum->getOrigin(), 1.0));
     localCameraOrigin.x += m_size.x * 0.5;
     localCameraOrigin.z += m_size.y * 0.5;
@@ -259,6 +275,18 @@ void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector
             }
         } else {
 
+#if DEBUG_RENDER_BOUNDING_VOLUMES
+            Engine::instance()->getImmediateRenderer()->setBlendEnabled(false);
+            Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(true);
+            Engine::instance()->getImmediateRenderer()->colour(0.2F, 0.2F, 1.0F, 1.0F);
+            getNodeBoundingBox(node.nodeIndex, node.treePosition, node.treeDepth).drawLines();
+
+            Engine::instance()->getImmediateRenderer()->setBlendEnabled(true);
+            Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(false);
+            Engine::instance()->getImmediateRenderer()->colour(0.2F, 0.2F, 0.8F, 0.25F);
+            getNodeBoundingBox(node.nodeIndex, node.treePosition, node.treeDepth).drawFill();
+#endif
+
 //            if (m_nodeTileData[node.nodeIndex] == nullptr) {
 //                glm::dvec2 tileOffset = glm::dvec2(node.treePosition * 2u + QUAD_OFFSETS[node.quadIndex]) * normalizedNodeSize;
 //                m_tileSupplier->getTile(tileOffset, glm::dvec2(normalizedNodeSize));
@@ -275,21 +303,21 @@ void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector
 void TerrainTileQuadtree::updateVisibility(const Frustum* frustum, std::vector<TraversalInfo>& traversalStack, std::vector<size_t>& fullyVisibleSubtrees) {
     PROFILE_SCOPE("TerrainTileQuadtree::updateVisibility")
 
-#if DEBUG_RENDER_BOUNDING_VOLUMES
-    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_Projection);
-    Engine::instance()->getImmediateRenderer()->pushMatrix();
-    Engine::instance()->getImmediateRenderer()->loadMatrix(Engine::scene()->getMainCameraEntity().getComponent<Camera>().getProjectionMatrix());
-    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_ModelView);
-    Engine::instance()->getImmediateRenderer()->pushMatrix();
-    Engine::instance()->getImmediateRenderer()->loadMatrix(glm::inverse(glm::mat4(Engine::scene()->getMainCameraEntity().getComponent<Transform>().getMatrix())));
-
-    Engine::instance()->getImmediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
-    Engine::instance()->getImmediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
-
-    Engine::instance()->getImmediateRenderer()->setLineWidth(1.0F);
-    Engine::instance()->getImmediateRenderer()->setBlendEnabled(false);
-    Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(false);
-#endif
+//#if DEBUG_RENDER_BOUNDING_VOLUMES
+//    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_Projection);
+//    Engine::instance()->getImmediateRenderer()->pushMatrix();
+//    Engine::instance()->getImmediateRenderer()->loadMatrix(Engine::scene()->getMainCameraEntity().getComponent<Camera>().getProjectionMatrix());
+//    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_ModelView);
+//    Engine::instance()->getImmediateRenderer()->pushMatrix();
+//    Engine::instance()->getImmediateRenderer()->loadMatrix(glm::inverse(glm::mat4(Engine::scene()->getMainCameraEntity().getComponent<Transform>().getMatrix())));
+//
+//    Engine::instance()->getImmediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
+//    Engine::instance()->getImmediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
+//
+//    Engine::instance()->getImmediateRenderer()->setLineWidth(1.0F);
+//    Engine::instance()->getImmediateRenderer()->setBlendEnabled(false);
+//    Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(false);
+//#endif
 
     Frustum localFrustum = Frustum::transform(*frustum, glm::inverse(m_transform.getMatrix()));
 
@@ -302,15 +330,15 @@ void TerrainTileQuadtree::updateVisibility(const Frustum* frustum, std::vector<T
         Visibility visibility = calculateNodeVisibility(&localFrustum, traversalInfo.nodeIndex, traversalInfo.treePosition, traversalInfo.treeDepth);
         node.visible = visibility != Visibility_NotVisible;
 
-#if DEBUG_RENDER_BOUNDING_VOLUMES
-        if (visibility == Visibility_FullyVisible)
-            Engine::instance()->getImmediateRenderer()->colour(0.2F, 1.0F, 0.2F, 1.0F);
-        else if (visibility == Visibility_PartiallyVisible)
-            Engine::instance()->getImmediateRenderer()->colour(1.0F, 1.0F, 0.2F, 1.0F);
-        else if (visibility == Visibility_NotVisible)
-            Engine::instance()->getImmediateRenderer()->colour(1.0F, 0.2F, 0.2F, 1.0F);
-        getNodeBoundingBox(traversalInfo.nodeIndex, traversalInfo.treePosition, traversalInfo.treeDepth).drawLines();
-#endif
+//#if DEBUG_RENDER_BOUNDING_VOLUMES
+//        if (visibility == Visibility_FullyVisible)
+//            Engine::instance()->getImmediateRenderer()->colour(0.2F, 1.0F, 0.2F, 1.0F);
+//        else if (visibility == Visibility_PartiallyVisible)
+//            Engine::instance()->getImmediateRenderer()->colour(1.0F, 1.0F, 0.2F, 1.0F);
+//        else if (visibility == Visibility_NotVisible)
+//            Engine::instance()->getImmediateRenderer()->colour(1.0F, 0.2F, 0.2F, 1.0F);
+//        getNodeBoundingBox(traversalInfo.nodeIndex, traversalInfo.treePosition, traversalInfo.treeDepth).drawLines();
+//#endif
 
         if (visibility == Visibility_FullyVisible)
             fullyVisibleSubtrees.emplace_back(traversalInfo.nodeIndex);

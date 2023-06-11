@@ -15,8 +15,8 @@ layout(push_constant) uniform PC1 {
 };
 
 layout(set = 0, binding = 0) uniform sampler2D baseImage;
-layout(set = 0, binding = 1, rg32f) uniform readonly image2D srcHeightmapImage[];
-layout(set = 0, binding = 2, rg32f) uniform writeonly image2D dstHeightmapImage[];
+layout(set = 1, binding = 0, rg32f) uniform readonly image2D srcHeightmapImage[];
+layout(set = 1, binding = 1, rg32f) uniform writeonly image2D dstHeightmapImage[];
 
 void main() {
     ivec2 dstPos = ivec2(gl_GlobalInvocationID.xy);
