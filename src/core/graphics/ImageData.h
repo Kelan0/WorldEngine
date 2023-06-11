@@ -171,7 +171,7 @@ struct ImageTransitionState {
 };
 
 namespace ImageTransition {
-    struct FromAny : public ImageTransitionState { FromAny(vk::PipelineStageFlagBits shaderPipelineStages = vk::PipelineStageFlagBits::eTopOfPipe); };
+    struct FromAny : public ImageTransitionState { FromAny(vk::PipelineStageFlagBits shaderPipelineStages = vk::PipelineStageFlagBits::eTopOfPipe); }; // Shouldn't this be eBottomOfPipe ? Will changing it break something? This is a problem for future me....
     struct General : public ImageTransitionState { General(vk::PipelineStageFlagBits shaderPipelineStages = vk::PipelineStageFlagBits::eTopOfPipe); };
     struct TransferSrc : public ImageTransitionState { TransferSrc(); };
     struct TransferDst : public ImageTransitionState { TransferDst(); };

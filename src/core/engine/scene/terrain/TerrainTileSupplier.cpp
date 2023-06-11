@@ -349,45 +349,27 @@ void HeightmapTerrainTileSupplier::update() {
         vk::CommandBufferBeginInfo commandBeginInfo{};
         commandBeginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
-        auto [commandBuffer, fence] = getComputeCommandBuffer();
-        commandBuffer.begin(commandBeginInfo);
+        while (!m_requestedTilesQueue.empty()) {
+            TileData* tile = m_requestedTilesQueue.back();
 
-        // From the end of the request queue, assign the needed descriptors for each tile until we cannot do so.
-        int32_t i = (int32_t)(m_requestedTilesQueue.size() - 1);
-        for (; i >= 0; --i) {
-            TileData* tile = m_requestedTilesQueue[i];
-            if (!updateTerrainTileHeightRangeDescriptors(commandBuffer, tile))
+            if (!assignRequestTexture(tile))
                 break;
-            m_tileTextures[m_requestedTilesQueue[i]->tileTextureIndex].requestTexture->id = getTileId(tile->tileOffset, tile->tileSize);
-        }
 
-        ++i; // The last iteration overstepped
+            m_requestedTilesQueue.pop_back();
 
-        auto it = std::next(m_requestedTilesQueue.begin(), i);
-        LOG_DEBUG("Computing %zu of %zu requested tiles", (size_t)std::distance(it, m_requestedTilesQueue.end()), m_requestedTilesQueue.size());
-
-        // For each tile that has a descriptor assigned, dispatch the compute commands
-        for (auto it1 = it; it1 != m_requestedTilesQueue.end(); ++it1) {
-            TileData* tile = *it1;
             tile->timeProcessed = Time::now();
 
-            if (!commandBuffer) {
-                std::tie(commandBuffer, fence) = getComputeCommandBuffer();
-                commandBuffer.begin(commandBeginInfo);
-            }
-            computeTerrainTileHeightRange(commandBuffer, *it1, fence);
+            auto [commandBuffer, fence] = getComputeCommandBuffer();
+            commandBuffer.begin(commandBeginInfo);
+
+            computeTerrainTileHeightRange(commandBuffer, tile, fence);
+
             commandBuffer.end();
 
             queueSubmitInfo.setPCommandBuffers(&commandBuffer);
             vk::Result result = queue.submit(1, &queueSubmitInfo, fence->getFence());
             assert(result == vk::Result::eSuccess);
-            commandBuffer = nullptr;
         }
-
-
-        // Pop this many items from the end of the request queue.
-        m_requestedTilesQueue.erase(it, m_requestedTilesQueue.end());
-
     }
 
     std::set<Fence*> signaledFences;
@@ -538,6 +520,14 @@ void HeightmapTerrainTileSupplier::requestTileData(TileData* tileData) {
         tileData->state = TileData::State_Requested;
 }
 
+
+glm::uvec2 HeightmapTerrainTileSupplier::getTileTextureSize(const glm::dvec2& normalizedSize) const {
+    if (m_heightmapImage == nullptr)
+        return glm::uvec2(0);
+    return glm::uvec2((uint32_t)glm::ceil((double)m_heightmapImage->getWidth() * normalizedSize.x),
+                      (uint32_t)glm::ceil((double)m_heightmapImage->getHeight() * normalizedSize.y));
+}
+
 glm::uvec2 HeightmapTerrainTileSupplier::getLowerTexelCoord(const glm::dvec2& normalizedCoord) const {
     if (m_heightmapImage == nullptr)
         return glm::uvec2(0);
@@ -622,7 +612,7 @@ bool HeightmapTerrainTileSupplier::init() {
 }
 
 
-HeightmapTerrainTileSupplier::RequestTexture* HeightmapTerrainTileSupplier::createRequestTexture(const vk::CommandBuffer& commandBuffer, uint32_t width, uint32_t height, uint32_t mipLevels) {
+HeightmapTerrainTileSupplier::RequestTexture* HeightmapTerrainTileSupplier::createRequestTexture(uint32_t width, uint32_t height, uint32_t mipLevels) {
 
     uint32_t requiredDescriptors = mipLevels;
 
@@ -661,12 +651,22 @@ HeightmapTerrainTileSupplier::RequestTexture* HeightmapTerrainTileSupplier::crea
         requestTexture->heightRangeTempImageViews[i] = ImageView::create(imageViewConfig, "HeightmapTerrainTileSupplier-HeightRangeComputeTempMipImageView");
     }
 
+    const SharedResource<DescriptorPool>& descriptorPool = Engine::graphics()->descriptorPool();
+    requestTexture->descriptorSet = DescriptorSet::create(s_tileComputeDescriptorSetLayout, descriptorPool, "HeightmapTerrainTileSupplier-TileComputeDescriptorSet");
+
+    requestTexture->writeDescriptors = true;
+    requestTexture->debugUsed = false;
+
+    m_numUsedRequestTextureDescriptors += requiredDescriptors;
+    return requestTexture;
+}
+
+void HeightmapTerrainTileSupplier::writeRequestTextureDescriptors(const vk::CommandBuffer& commandBuffer, RequestTexture* requestTexture) {
+
+    uint32_t mipLevels = requestTexture->heightRangeTempImage->getMipLevelCount();
     vk::ImageSubresourceRange subresourceRange(vk::ImageAspectFlagBits::eColor, 0, mipLevels, 0, 1);
     ImageTransitionState dstState(vk::ImageLayout::eGeneral, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::PipelineStageFlagBits::eComputeShader);
     ImageUtil::transitionLayout(commandBuffer, requestTexture->heightRangeTempImage->getImage(), subresourceRange, ImageTransition::FromAny(vk::PipelineStageFlagBits::eComputeShader), dstState);
-
-    const SharedResource<DescriptorPool>& descriptorPool = Engine::graphics()->descriptorPool();
-    requestTexture->descriptorSet = DescriptorSet::create(s_tileComputeDescriptorSetLayout, descriptorPool, "HeightmapTerrainTileSupplier-TileComputeDescriptorSet");
 
     uint32_t maxArrayCount = 16;
     uint32_t arrayCount = glm::min(maxArrayCount, (uint32_t)requestTexture->heightRangeTempImageViews.size());
@@ -679,11 +679,55 @@ HeightmapTerrainTileSupplier::RequestTexture* HeightmapTerrainTileSupplier::crea
         writer.writeImage(1, s_heightRangeComputeSampler, requestTexture->heightRangeTempImageViews[0], vk::ImageLayout::eGeneral, arrayCount, maxArrayCount - arrayCount);
     }
     writer.write();
+}
 
-    requestTexture->debugUsed = false;
+bool HeightmapTerrainTileSupplier::assignRequestTexture(TileData* tileData) {
+    TextureData& textureData = m_tileTextures[tileData->tileTextureIndex];
 
-    m_numUsedRequestTextureDescriptors += requiredDescriptors;
-    return requestTexture;
+    glm::uvec2 imageSize = getTileTextureSize(tileData->tileSize) / 2u;
+    uint32_t mipLevels = ImageUtil::getMaxMipLevels(imageSize.x, imageSize.y, 1);
+
+    if (textureData.requestTexture != nullptr) {
+        // We already have a texture assigned. Make sure it is large enough.
+        RequestTexture* requestTexture = textureData.requestTexture;
+
+        if (glm::any(glm::lessThan(requestTexture->heightRangeTempImage->getSize(), imageSize)) || requestTexture->heightRangeTempImage->getMipLevelCount() < mipLevels) {
+            // Exiting image is not big enough.
+
+            textureData.requestTexture = nullptr;
+            makeRequestTextureAvailable(requestTexture);
+        }
+    }
+
+    if (textureData.requestTexture == nullptr) {
+        // We don't have a texture, so find the smallest allocated texture that we can reuse for this tile.
+
+        auto it = std::lower_bound(m_availableRequestTextures.begin(), m_availableRequestTextures.end(), imageSize, [](const RequestTexture* lhs, const glm::uvec2& rhs) {
+            if (lhs->heightRangeTempImage->getWidth() != rhs.x) return lhs->heightRangeTempImage->getWidth() < rhs.x;
+            return lhs->heightRangeTempImage->getHeight() < rhs.y;
+        });
+
+        size_t idx = std::distance(m_availableRequestTextures.begin(), it);
+
+        if (it != m_availableRequestTextures.end()) {
+            assert(it >= m_availableRequestTextures.begin() && it < m_availableRequestTextures.end());
+            textureData.requestTexture = *it;
+            m_availableRequestTextures.erase(it);
+            assert(glm::all(glm::greaterThanEqual(textureData.requestTexture->heightRangeTempImage->getSize(), imageSize)) && textureData.requestTexture->heightRangeTempImage->getMipLevelCount() >= mipLevels);
+        }
+    }
+
+    if (textureData.requestTexture == nullptr) {
+        // We failed to assign an existing texture, try to allocate a new one
+        textureData.requestTexture = createRequestTexture(imageSize.x, imageSize.y, mipLevels);
+    }
+
+    if (textureData.requestTexture != nullptr) {
+        textureData.requestTexture->id = getTileId(tileData->tileOffset, tileData->tileSize);
+        return true;
+    }
+
+    return false;
 }
 
 void HeightmapTerrainTileSupplier::deleteRequestTexture(RequestTexture* requestTexture) {
@@ -710,61 +754,6 @@ void HeightmapTerrainTileSupplier::makeRequestTextureAvailable(RequestTexture* r
     }), requestTexture);
 }
 
-bool HeightmapTerrainTileSupplier::updateTerrainTileHeightRangeDescriptors(const vk::CommandBuffer& commandBuffer, TileData* tileData) {
-
-    glm::uvec2 tileCoordMin = getLowerTexelCoord(tileData->tileOffset);
-    glm::uvec2 tileCoordMax = getUpperTexelCoords(tileData->tileOffset + tileData->tileSize);
-
-    glm::uvec2 tileSize = tileCoordMax - tileCoordMin;
-
-    TextureData& textureData = m_tileTextures[tileData->tileTextureIndex];
-
-    glm::uvec2 imageSize = tileSize / 2u;
-    uint32_t mipLevels = ImageUtil::getMaxMipLevels(imageSize.x, imageSize.y, 1);
-
-    if (textureData.requestTexture != nullptr) {
-        RequestTexture* requestTexture = textureData.requestTexture;
-
-        if (glm::any(glm::lessThan(requestTexture->heightRangeTempImage->getSize(), imageSize)) || requestTexture->heightRangeTempImage->getMipLevelCount() < mipLevels) {
-            // Exiting image is not big enough.
-            textureData.requestTexture = nullptr;
-
-            makeRequestTextureAvailable(requestTexture);
-        }
-    }
-
-    if (textureData.requestTexture != nullptr) {
-        return true;
-    }
-
-    // Find the smallest allocated texture that we can use for this tile.
-    auto it = std::lower_bound(m_availableRequestTextures.begin(), m_availableRequestTextures.end(), imageSize, [](const RequestTexture* lhs, const glm::uvec2& rhs) {
-        if (lhs->heightRangeTempImage->getWidth() != rhs.x) return lhs->heightRangeTempImage->getWidth() < rhs.x;
-        return lhs->heightRangeTempImage->getHeight() < rhs.y;
-    });
-
-    size_t idx = std::distance(m_availableRequestTextures.begin(), it);
-
-    if (it != m_availableRequestTextures.end()) {
-        assert(it >= m_availableRequestTextures.begin() && it < m_availableRequestTextures.end());
-        textureData.requestTexture = *it;
-        m_availableRequestTextures.erase(it);
-        assert(glm::all(glm::greaterThanEqual(textureData.requestTexture->heightRangeTempImage->getSize(), imageSize)) && textureData.requestTexture->heightRangeTempImage->getMipLevelCount() >= mipLevels);
-    }
-    if (textureData.requestTexture != nullptr) {
-        return true;
-    }
-
-    // We still don't have a texture. We want to try to allocate one.
-
-    textureData.requestTexture = createRequestTexture(commandBuffer, imageSize.x, imageSize.y, mipLevels);
-    if (textureData.requestTexture != nullptr) {
-        return true;
-    }
-
-    return false;
-}
-
 bool HeightmapTerrainTileSupplier::computeTerrainTileHeightRange(const vk::CommandBuffer& commandBuffer, TileData* tileData, Fence* fence) {
 
     assert(tileData->tileTextureIndex != UINT32_MAX);
@@ -781,6 +770,11 @@ bool HeightmapTerrainTileSupplier::computeTerrainTileHeightRange(const vk::Comma
     requestTexture->commandBuffer = commandBuffer;
     requestTexture->fence = fence;
     requestTexture->debugUsed = true;
+
+    if (requestTexture->writeDescriptors) {
+        requestTexture->writeDescriptors = false;
+        writeRequestTextureDescriptors(commandBuffer, textureData.requestTexture);
+    }
 
     m_pendingTilesQueue.emplace_back(tileData);
     tileData->state = TileData::State_Pending;
@@ -831,8 +825,9 @@ bool HeightmapTerrainTileSupplier::computeTerrainTileHeightRange(const vk::Comma
 
         // All shader writes for the previous mip level must be complete before we perform any reads from it for this mip level
         subresourceRange.baseMipLevel = i;
-        ImageTransitionState srcState(vk::ImageLayout::eGeneral, vk::AccessFlagBits::eMemoryWrite, vk::PipelineStageFlagBits::eComputeShader);
-        ImageTransitionState dstState(vk::ImageLayout::eGeneral, vk::AccessFlagBits::eMemoryRead, vk::PipelineStageFlagBits::eComputeShader);
+        ImageTransitionState srcState(vk::ImageLayout::eGeneral, vk::AccessFlagBits::eMemoryWrite, vk::PipelineStageFlagBits::eBottomOfPipe);
+        ImageTransitionState dstState(vk::ImageLayout::eGeneral, vk::AccessFlagBits::eMemoryRead, vk::PipelineStageFlagBits::eTopOfPipe);
+        ImageTransition::FromAny();
         ImageUtil::transitionLayout(commandBuffer, requestTexture->heightRangeTempImage->getImage(), subresourceRange, srcState, dstState);
     }
 

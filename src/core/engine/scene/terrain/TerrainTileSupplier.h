@@ -158,6 +158,8 @@ private:
 
     void requestTileData(TileData* tileData);
 
+    glm::uvec2 getTileTextureSize(const glm::dvec2& normalizedSize) const;
+
     glm::uvec2 getLowerTexelCoord(const glm::dvec2& normalizedCoord) const;
 
     glm::uvec2 getUpperTexelCoords(const glm::dvec2& normalizedCoord) const;
@@ -167,8 +169,6 @@ private:
     static void onCleanupGraphics(ShutdownGraphicsEvent* event);
 
     bool init();
-
-    bool updateTerrainTileHeightRangeDescriptors(const vk::CommandBuffer& commandBuffer, TileData* tileData);
 
     bool computeTerrainTileHeightRange(const vk::CommandBuffer& commandBuffer, TileData* tileData, Fence* fence);
 
@@ -181,6 +181,7 @@ private:
         DescriptorSet* descriptorSet;
         vk::CommandBuffer commandBuffer;
         Fence* fence;
+        bool writeDescriptors;
         bool debugUsed;
         glm::uvec4 id;
     };
@@ -189,7 +190,11 @@ private:
         RequestTexture* requestTexture = nullptr;
     };
 
-    RequestTexture* createRequestTexture(const vk::CommandBuffer& commandBuffer, uint32_t width, uint32_t height, uint32_t mipLevels);
+    RequestTexture* createRequestTexture(uint32_t width, uint32_t height, uint32_t mipLevels);
+
+    void writeRequestTextureDescriptors(const vk::CommandBuffer& commandBuffer, RequestTexture* requestTexture);
+
+    bool assignRequestTexture(TileData* tileData);
 
     void deleteRequestTexture(RequestTexture* requestTexture);
 

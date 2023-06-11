@@ -141,11 +141,11 @@ AxisAlignedBoundingBox TerrainTileQuadtree::getNodeBoundingBox(size_t nodeIndex,
     double minElevation = m_nodeTileData[nodeIndex].minElevation * m_heightScale;
     double maxElevation = m_nodeTileData[nodeIndex].maxElevation * m_heightScale;
 
-//    if (m_tileSupplier != nullptr) {
-//        TileDataReference tile = m_tileSupplier->getTile(glm::dvec2(treePosition) * normalizedNodeSize, glm::dvec2(normalizedNodeSize));
-//        minElevation = tile.getMinHeight() * m_heightScale;
-//        maxElevation = tile.getMaxHeight() * m_heightScale;
-//    }
+    if (m_tileSupplier != nullptr) {
+        TileDataReference tile = m_tileSupplier->getTile(glm::dvec2(treePosition) * normalizedNodeSize, glm::dvec2(normalizedNodeSize));
+        minElevation = tile.getMinHeight() * m_heightScale;
+        maxElevation = tile.getMaxHeight() * m_heightScale;
+    }
 
     double centerX = ((((double)treePosition.x + 0.5) * normalizedNodeSize) - 0.5) * m_size.x;
     double centerZ = ((((double)treePosition.y + 0.5) * normalizedNodeSize) - 0.5) * m_size.x;
@@ -286,15 +286,6 @@ void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector
 //            Engine::instance()->getImmediateRenderer()->colour(0.2F, 0.2F, 0.8F, 0.25F);
 //            getNodeBoundingBox(node.nodeIndex, node.treePosition, node.treeDepth).drawFill();
 #endif
-
-//            if (m_nodeTileData[node.nodeIndex] == nullptr) {
-//                glm::dvec2 tileOffset = glm::dvec2(node.treePosition * 2u + QUAD_OFFSETS[node.quadIndex]) * normalizedNodeSize;
-//                m_tileSupplier->getTile(tileOffset, glm::dvec2(normalizedNodeSize));
-//                m_nodeTileData[node.nodeIndex] = m_tileSupplier->getTile(tileOffset, glm::dvec2(normalizedNodeSize));
-//            }
-//            if (m_nodeTileData[node.nodeIndex] != nullptr) {
-//                m_nodeTileData[node.nodeIndex].notifyUsed();
-//            }
         }
         return false; // Traverse subtree
     });
