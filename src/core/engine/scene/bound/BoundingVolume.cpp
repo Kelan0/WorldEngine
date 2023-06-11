@@ -605,7 +605,7 @@ void AxisAlignedBoundingBox::drawFill() const {
     renderer->translate(m_center);
     renderer->scale(m_halfExtents);
 
-    renderer->begin(PrimitiveType_Line);
+    renderer->begin(PrimitiveType_Triangle);
 
     for (auto index : indices) {
         const Vertex& v0 = vertices[index];

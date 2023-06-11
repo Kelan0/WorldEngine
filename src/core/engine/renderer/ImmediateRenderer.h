@@ -91,6 +91,11 @@ private:
         uint32_t indexOffset = 0;
         uint32_t vertexCount = 0;
         uint32_t indexCount = 0;
+        glm::vec3 boundMin;
+        glm::vec3 boundMax;
+        glm::vec3 boundAvg;
+        float closestDepth;
+        float furthestDepth;
     };
 
     struct RenderResources {

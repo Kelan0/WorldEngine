@@ -16,6 +16,7 @@
 #include "core/util/Profiler.h"
 #include "core/util/Util.h"
 #include "core/util/Logger.h"
+#include "core/engine/scene/bound/BoundingVolume.h"
 
 
 ImmediateRenderer::ColouredVertex::ColouredVertex():
@@ -156,6 +157,10 @@ void ImmediateRenderer::render(double dt, const vk::CommandBuffer& commandBuffer
 
     m_renderPass->begin(commandBuffer, m_resources->framebuffer, vk::SubpassContents::eInline);
 
+//    std::sort(m_renderCommands.begin(), m_renderCommands.end(), [](const RenderCommand& lhs, const RenderCommand& rhs) {
+//        return lhs.closestDepth > rhs.closestDepth;
+//    });
+
     for (size_t index = 0; index < m_renderCommands.size(); ++index) {
 
         const auto& command = m_renderCommands[index];
@@ -215,6 +220,7 @@ void ImmediateRenderer::begin(MeshPrimitiveType primitiveType) {
         return;
     }
 
+
     m_currentCommand = &m_renderCommands.emplace_back();
     m_currentCommand->primitiveType = primitiveType;
     m_currentCommand->vertexOffset = m_vertexCount;
@@ -222,6 +228,12 @@ void ImmediateRenderer::begin(MeshPrimitiveType primitiveType) {
     m_currentCommand->vertexCount = 0;
     m_currentCommand->indexCount = 0;
     m_currentCommand->state = m_renderState;
+    m_currentCommand->boundMin = glm::vec3(INFINITY);
+    m_currentCommand->boundMax = glm::vec3(-INFINITY);
+    m_currentCommand->boundAvg = glm::vec3(0.0F);
+    m_currentCommand->closestDepth = INFINITY;
+    m_currentCommand->furthestDepth = -INFINITY;
+
     UniformBufferData& uniformBufferData = m_uniformBufferData.emplace_back();
     uniformBufferData.modelViewMatrix = m_modelMatrixStack.top();
     uniformBufferData.projectionMatrix = m_projectionMatrixStack.top();
@@ -247,6 +259,22 @@ void ImmediateRenderer::end() {
 
     if (m_currentCommand->primitiveType == PrimitiveType_LineLoop) {
         addIndex(0); // Loop back to the first vertex
+    }
+
+
+    if (m_currentCommand->vertexCount > 0) {
+        UniformBufferData& uniformBufferData = m_uniformBufferData.back();
+
+        AxisAlignedBoundingBox aabb(m_currentCommand->boundAvg, (m_currentCommand->boundMax - m_currentCommand->boundMin) * 0.5F);
+        std::array<glm::dvec3, 8> corners = aabb.getCorners();
+
+        for (size_t i = 0; i < corners.size(); ++i) {
+            glm::vec4 projCorner = uniformBufferData.projectionMatrix * uniformBufferData.modelViewMatrix * glm::vec4(corners[i], 1.0);
+            float depth = projCorner.z;
+
+            m_currentCommand->closestDepth = glm::min(m_currentCommand->closestDepth, depth);
+            m_currentCommand->furthestDepth = glm::max(m_currentCommand->furthestDepth, depth);
+        }
     }
 
     m_currentCommand = nullptr;
@@ -490,6 +518,10 @@ void ImmediateRenderer::addVertex(const ColouredVertex& vertex) {
 
     ++m_currentCommand->vertexCount;
     ++m_vertexCount;
+
+    m_currentCommand->boundMin = glm::min(m_currentCommand->boundMin, vertex.position);
+    m_currentCommand->boundMax = glm::max(m_currentCommand->boundMax, vertex.position);
+    m_currentCommand->boundAvg += (vertex.position - m_currentCommand->boundAvg) / (float)(m_currentCommand->vertexCount); // Cumulative moving average
 }
 
 void ImmediateRenderer::addIndex(uint32_t index) {

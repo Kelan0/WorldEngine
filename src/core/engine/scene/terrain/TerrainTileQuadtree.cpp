@@ -281,10 +281,10 @@ void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector
             Engine::instance()->getImmediateRenderer()->colour(0.2F, 0.2F, 1.0F, 1.0F);
             getNodeBoundingBox(node.nodeIndex, node.treePosition, node.treeDepth).drawLines();
 
-            Engine::instance()->getImmediateRenderer()->setBlendEnabled(true);
-            Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(false);
-            Engine::instance()->getImmediateRenderer()->colour(0.2F, 0.2F, 0.8F, 0.25F);
-            getNodeBoundingBox(node.nodeIndex, node.treePosition, node.treeDepth).drawFill();
+//            Engine::instance()->getImmediateRenderer()->setBlendEnabled(true);
+//            Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(false);
+//            Engine::instance()->getImmediateRenderer()->colour(0.2F, 0.2F, 0.8F, 0.25F);
+//            getNodeBoundingBox(node.nodeIndex, node.treePosition, node.treeDepth).drawFill();
 #endif
 
 //            if (m_nodeTileData[node.nodeIndex] == nullptr) {
