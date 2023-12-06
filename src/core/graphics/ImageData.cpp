@@ -42,7 +42,7 @@ ImageRegion& ImageRegion::setSize(const glm::uvec3& size) {
     return setSize((size_type)size.x, (size_type)size.y, (size_type)size.z);
 }
 
-ImageData::ImageData(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, AllocationType allocationType):
+ImageData::ImageData(void* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, AllocationType allocationType):
         m_data(data),
         m_width(width),
         m_height(height),
@@ -57,7 +57,7 @@ ImageData::ImageData(uint8_t* data, ImageRegion::size_type width, ImageRegion::s
 //        m_data = static_cast<uint8_t*>(malloc(allocSize));
 //}
 
-ImageData::ImageData(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat):
+ImageData::ImageData(void* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat):
         ImageData(data, width, height, pixelLayout, pixelFormat, AllocationType_External) {
 }
 
@@ -65,7 +65,7 @@ ImageData::ImageData(ImageRegion::size_type width, ImageRegion::size_type height
         ImageData(nullptr, width, height, pixelLayout, pixelFormat, AllocationType_Internal) {
 
     size_t pixelSize = ImageData::getChannels(pixelLayout) * ImageData::getChannelSize(pixelFormat);
-    m_data = static_cast<uint8_t*>(malloc(width * height * pixelSize));
+    m_data = malloc(width * height * pixelSize);
 }
 
 ImageData::~ImageData() {
@@ -98,7 +98,7 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
     }
 
     int width, height, channels;
-    uint8_t* data;
+    void* data;
 
     std::string absFilePath = Application::instance()->getAbsoluteResourceFilePath(filePath);
 
@@ -106,11 +106,11 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
     auto t0 = Time::now();
 
     if (channelSize == 1) {
-        data = reinterpret_cast<uint8_t*>(stbi_load(absFilePath.c_str(), &width, &height, &channels, desiredChannelCount));
+        data = stbi_load(absFilePath.c_str(), &width, &height, &channels, desiredChannelCount);
     } else if (channelSize == 2) {
-        data = reinterpret_cast<uint8_t*>(stbi_load_16(absFilePath.c_str(), &width, &height, &channels, desiredChannelCount));
+        data = stbi_load_16(absFilePath.c_str(), &width, &height, &channels, desiredChannelCount);
     } else if (channelSize == 4) {
-        data = reinterpret_cast<uint8_t*>(stbi_loadf(absFilePath.c_str(), &width, &height, &channels, desiredChannelCount));
+        data = stbi_loadf(absFilePath.c_str(), &width, &height, &channels, desiredChannelCount);
     } else {
         LOG_ERROR("Unable to load image \"%s\": Invalid image data format", absFilePath.c_str());
         return nullptr;
@@ -172,8 +172,8 @@ void ImageData::clearCache() {
     s_imageCache.clear();
 }
 
-ImageData* ImageData::mutate(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout srcLayout, ImagePixelFormat srcFormat, ImagePixelLayout dstLayout, ImagePixelFormat dstFormat) {
-    uint8_t* mutatedPixels;
+ImageData* ImageData::mutate(void* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout srcLayout, ImagePixelFormat srcFormat, ImagePixelLayout dstLayout, ImagePixelFormat dstFormat) {
+    void* mutatedPixels;
 
     if (srcLayout == ImagePixelLayout::Invalid || dstLayout == ImagePixelLayout::Invalid || srcLayout >= ImagePixelLayout::Count || dstLayout >= ImagePixelLayout::Count) {
         LOG_ERROR("Unable to mutate image pixels: Invalid pixel layout");
@@ -187,7 +187,7 @@ ImageData* ImageData::mutate(uint8_t* data, ImageRegion::size_type width, ImageR
 
     if (srcLayout == dstLayout && srcFormat == dstFormat) {
         size_t size = (size_t)width * (size_t)height * ImageData::getChannels(srcLayout) * ImageData::getChannelSize(srcFormat);
-        mutatedPixels = static_cast<uint8_t*>(malloc(size));
+        mutatedPixels = malloc(size);
         memcpy(mutatedPixels, data, size);
 
     } else {
@@ -200,10 +200,10 @@ ImageData* ImageData::mutate(uint8_t* data, ImageRegion::size_type width, ImageR
         int dstStride = dstChannels * ImageData::getChannelSize(dstFormat);
         assert(dstStride != 0);
 
-        mutatedPixels = static_cast<uint8_t*>(malloc((size_t)width * (size_t)height * dstStride));
+        mutatedPixels = malloc((size_t)width * (size_t)height * dstStride);
 
-        uint8_t* srcPixel = data;
-        uint8_t* dstPixel = mutatedPixels;
+        char* srcPixel = static_cast<char*>(data);
+        char* dstPixel = static_cast<char*>(mutatedPixels);
 
         uint32_t zero, one;
 
@@ -302,40 +302,92 @@ ImageData* ImageData::transform(const ImageData* imageData, const ImageTransform
     return transform(imageData->getData(), imageData->getWidth(), imageData->getHeight(), imageData->getPixelLayout(), imageData->getPixelFormat(), transformation);
 }
 
-ImageData* ImageData::transform(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format, const ImageTransform& transformation) {
+ImageData* ImageData::transform(void* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format, const ImageTransform& transformation) {
     return transformation.apply(data, width, height, layout, format);
 }
 
-int64_t ImageData::getChannel(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex) {
+float ImageData::getChannelf(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex) const {
+    assert(m_pixelFormat == ImagePixelFormat::Float32 || m_pixelFormat == ImagePixelFormat::Float16);
+
     size_t channelOffset = ImageData::getChannelOffset(x, y, channelIndex, m_width, m_height, m_pixelLayout, m_pixelFormat);
-    uint8_t* data = &m_data[channelOffset];
+    void* data = static_cast<char*>(m_data) + channelOffset;
+
+    return *static_cast<float*>(data);
+}
+
+int64_t ImageData::getChannel(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex) const {
+    size_t channelOffset = ImageData::getChannelOffset(x, y, channelIndex, m_width, m_height, m_pixelLayout, m_pixelFormat);
+    char* data = static_cast<char*>(m_data) + channelOffset;
+
+    union {
+        int64_t value;
+        int8_t s8;
+        uint8_t u8;
+        int16_t s16;
+        uint16_t u16;
+        int32_t s32;
+        uint32_t u32;
+        uint16_t f16;
+        float f32;
+    } channel{};
 
     switch (m_pixelFormat) {
         case ImagePixelFormat::UInt8:
-            return (int64_t)(*(uint8_t*)(data));
+            channel.u8 = (*(uint8_t*)data);
+            break;
         case ImagePixelFormat::SInt8:
-            return (int64_t)(*(int8_t*)(data));
+            channel.s8 = (*(int8_t*)data);
+            break;
         case ImagePixelFormat::UInt16:
-            return (int64_t)(*(uint16_t*)(data));
+            channel.u16 = (*(uint16_t*)data);
+            break;
         case ImagePixelFormat::SInt16:
-            return (int64_t)(*(int16_t*)(data));
+            channel.s16 = (*(int16_t*)data);
+            break;
         case ImagePixelFormat::UInt32:
-            return (int64_t)(*(uint32_t*)(data));
+            channel.u32 = (*(uint32_t*)data);
+            break;
         case ImagePixelFormat::SInt32:
-            return (int64_t)(*(int32_t*)(data));
+            channel.s32 = (*(int32_t*)data);
+            break;
         case ImagePixelFormat::Float16:
-            return (int64_t)(*(uint16_t*)(data)); // No c++ representation
+            channel.f16 = (*(uint16_t*)data);
+            break;
         case ImagePixelFormat::Float32:
-            return (int64_t)(*(float*)(data));
+            channel.f32 = (*(float*)data);
+            break;
         default:
             assert(false);
-            return 0;
     }
+
+    return channel.value;
+
+//    switch (m_pixelFormat) {
+//        case ImagePixelFormat::UInt8:
+//            return (int64_t)(*(uint8_t*)(data));
+//        case ImagePixelFormat::SInt8:
+//            return (int64_t)(*(int8_t*)(data));
+//        case ImagePixelFormat::UInt16:
+//            return (int64_t)(*(uint16_t*)(data));
+//        case ImagePixelFormat::SInt16:
+//            return (int64_t)(*(int16_t*)(data));
+//        case ImagePixelFormat::UInt32:
+//            return (int64_t)(*(uint32_t*)(data));
+//        case ImagePixelFormat::SInt32:
+//            return (int64_t)(*(int32_t*)(data));
+//        case ImagePixelFormat::Float16:
+//            return (int64_t)(*(uint16_t*)(data)); // No c++ representation
+//        case ImagePixelFormat::Float32:
+//            return (int64_t)(*(float*)(data));
+//        default:
+//            assert(false);
+//            return 0;
+//    }
 }
 
 void ImageData::setChannel(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex, int64_t value) {
     size_t channelOffset = ImageData::getChannelOffset(x, y, channelIndex, m_width, m_height, m_pixelLayout, m_pixelFormat);
-    uint8_t* data = &m_data[channelOffset];
+    char* data = static_cast<char*>(m_data) + channelOffset;
 
     union {
         int64_t value;
@@ -445,7 +497,7 @@ void ImageData::setPixelf(ImageRegion::offset_type x, ImageRegion::offset_type y
     }
 }
 
-uint8_t* ImageData::getData() const {
+void* ImageData::getData() const {
     return m_data;
 }
 
@@ -756,13 +808,13 @@ size_t ImageData::getChannelOffset(ImageRegion::offset_type x, ImageRegion::offs
 }
 
 
-ImageData* ImageData::ImageTransform::apply(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format) const {
+ImageData* ImageData::ImageTransform::apply(void* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format) const {
     // No-op implementation - The image just gets copied.
 
     size_t pixelStride = ImageData::getChannels(layout) * ImageData::getChannelSize(format);
     assert(pixelStride != 0);
 
-    uint8_t* dstPixels = static_cast<uint8_t*>(malloc(height * width * pixelStride));
+    void* dstPixels = malloc(height * width * pixelStride);
     memcpy(dstPixels, data, height * width * pixelStride);
 
     return new ImageData(dstPixels, width, height, layout, format, AllocationType_Internal);
@@ -792,7 +844,7 @@ ImageData::Flip::Flip(const Flip& copy):
         flip_y(copy.flip_y) {
 }
 
-ImageData* ImageData::Flip::apply(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format) const {
+ImageData* ImageData::Flip::apply(void* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format) const {
     // TODO: use compute shader for this
 
     if (isNoOp())
@@ -813,10 +865,10 @@ ImageData* ImageData::Flip::apply(uint8_t* data, ImageRegion::size_type width, I
     size_t rowStride = pixelStride * width;
     size_t numPixels = height * width;
     size_t numBytes = numPixels * pixelStride;
-    uint8_t* srcPixels = data;
-    uint8_t* dstPixels = static_cast<uint8_t*>(malloc(numBytes));
+    char* srcPixels = static_cast<char*>(data);
+    char* dstPixels = static_cast<char*>(malloc(numBytes));
 
-    uint8_t* src, * dst;
+    char *src, *dst;
 
     for (size_t y = 0; y < height; ++y) {
         src = &srcPixels[y * rowStride];

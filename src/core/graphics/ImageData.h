@@ -70,7 +70,7 @@ public:
         ImageTransform() = default;
         ImageTransform(const ImageTransform& copy) = default;
 
-        virtual ImageData* apply(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format) const;
+        virtual ImageData* apply(void* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format) const;
 
         virtual bool isNoOp() const;
 
@@ -87,7 +87,7 @@ public:
         Flip(bool x, bool y);
         Flip(const Flip& copy);
 
-        virtual ImageData* apply(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format) const override;
+        virtual ImageData* apply(void* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format) const override;
 
         virtual bool isNoOp() const override;
 
@@ -95,12 +95,12 @@ public:
     };
 
 private:
-    ImageData(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, AllocationType allocationType);
+    ImageData(void* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat, AllocationType allocationType);
 
 public:
 //    ImageData(ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat);
 
-    ImageData(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat);
+    ImageData(void* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat);
 
     ImageData(ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat);
 
@@ -112,19 +112,21 @@ public:
 
     static void clearCache();
 
-    static ImageData* mutate(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout srcLayout, ImagePixelFormat srcFormat, ImagePixelLayout dstLayout, ImagePixelFormat dstFormat);
+    static ImageData* mutate(void* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout srcLayout, ImagePixelFormat srcFormat, ImagePixelLayout dstLayout, ImagePixelFormat dstFormat);
 
     static ImageData* transform(const ImageData* imageData, const ImageTransform& transformation);
 
-    static ImageData* transform(uint8_t* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format, const ImageTransform& transformation);
+    static ImageData* transform(void* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format, const ImageTransform& transformation);
 
-    int64_t getChannel(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex);
+    float getChannelf(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex) const;
+
+    int64_t getChannel(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex) const;
     void setChannel(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex, int64_t value);
 
     void setPixel(ImageRegion::offset_type x, ImageRegion::offset_type y, int64_t r, int64_t g, int64_t b, int64_t a);
     void setPixelf(ImageRegion::offset_type x, ImageRegion::offset_type y, float r, float g, float b, float a);
 
-    uint8_t* getData() const;
+    void* getData() const;
 
     ImageRegion::size_type getWidth() const;
 
@@ -146,7 +148,7 @@ private:
     static size_t getChannelOffset(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout pixelLayout, ImagePixelFormat pixelFormat);
 
 private:
-    uint8_t* m_data;
+    void* m_data;
     ImageRegion::size_type m_width;
     ImageRegion::size_type m_height;
     ImagePixelLayout m_pixelLayout;

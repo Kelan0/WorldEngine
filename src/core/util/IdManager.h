@@ -5,6 +5,7 @@
 #include <deque>
 #include <type_traits>
 #include <mutex>
+#include <algorithm>
 
 template<typename ID, bool ThreadSafe = false>
 class IdManager {

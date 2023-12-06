@@ -5,11 +5,11 @@
 #include <iostream>
 #include <vector>
 
-#define LOG_DEBUG(format, ...) Logger::instance()->debug(format, __VA_ARGS__)
-#define LOG_INFO(format, ...) Logger::instance()->info(format, __VA_ARGS__)
-#define LOG_WARN(format, ...) Logger::instance()->warn(format, __VA_ARGS__)
-#define LOG_ERROR(format, ...) Logger::instance()->error(format, __VA_ARGS__)
-#define LOG_FATAL(format, ...) Logger::instance()->fatal(format, __VA_ARGS__)
+#define LOG_DEBUG(...) Logger::instance()->debug(__VA_ARGS__)
+#define LOG_INFO(...) Logger::instance()->info(__VA_ARGS__)
+#define LOG_WARN(...) Logger::instance()->warn(__VA_ARGS__)
+#define LOG_ERROR(...) Logger::instance()->error(__VA_ARGS__)
+#define LOG_FATAL(...) Logger::instance()->fatal(__VA_ARGS__)
 
 class Logger {
 public:
