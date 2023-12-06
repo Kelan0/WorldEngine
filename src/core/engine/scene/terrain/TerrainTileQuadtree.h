@@ -100,6 +100,8 @@ private:
 
     void updateVisibility(const Frustum* frustum, std::vector<TraversalInfo>& traversalStack, std::vector<size_t>& fullyVisibleSubtrees);
 
+    void updatePriorities(std::vector<TraversalInfo>& traversalStack);
+
     void markVisibleSubtrees(std::vector<size_t>& visibleNodeIndices, std::vector<size_t>& unvisitedNodesStack);
 
     void markDeletedSubtrees(std::vector<size_t>& deletedNodeIndices, std::vector<size_t>& unvisitedNodesStack);

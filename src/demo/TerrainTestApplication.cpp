@@ -11,7 +11,8 @@
 #include "core/engine/scene/bound/Frustum.h"
 #include "core/engine/scene/terrain/QuadtreeTerrainComponent.h"
 #include "core/engine/scene/terrain/TerrainTileQuadtree.h"
-#include "core/engine/scene/terrain/TerrainTileSupplier.h"
+#include "core/engine/scene/terrain/tileSupplier/TestTerrainTileSupplier.h"
+#include "core/engine/scene/terrain/tileSupplier/HeightmapTerrainTileSupplier.h"
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/Mesh.h"
 #include "core/application/InputHandler.h"
@@ -28,7 +29,7 @@ void TerrainTestApplication::init() {
 
     MeshData<Vertex> testMeshData;
 
-    Engine::scene()->getMainCameraEntity().getComponent<Camera>().setClippingPlanes(0.1, 2500.0);
+    Engine::scene()->getMainCameraEntity().getComponent<Camera>().setClippingPlanes(0.1, 15000.0);
     Engine::scene()->getMainCameraEntity().getComponent<Transform>().setTranslation(0.0F, 2.0F, 0.0F);
 
     ImageCubeConfiguration imageCubeConfig{};
@@ -44,12 +45,15 @@ void TerrainTestApplication::init() {
     skyboxEnvironmentMap->update();
     Engine::instance()->getDeferredRenderer()->setEnvironmentMap(skyboxEnvironmentMap);
 
-    ImageData* heightmapImageData = ImageData::load("terrain/heightmap_1/heightmap2.hdr", ImagePixelLayout::R, ImagePixelFormat::Float32);
-    std::shared_ptr<TerrainTileSupplier> tileSupplier = std::make_shared<HeightmapTerrainTileSupplier>(heightmapImageData);
+//    std::string heightmapFilePath = "terrain/heightmap_1/heightmap2.hdr";
+    std::string heightmapFilePath = "terrain/botw.png";
+    ImageData* heightmapImageData = ImageData::load(heightmapFilePath, ImagePixelLayout::R, ImagePixelFormat::Float32);
+//    std::shared_ptr<TerrainTileSupplier> tileSupplier = std::make_shared<HeightmapTerrainTileSupplier>(heightmapImageData);
+    std::shared_ptr<TerrainTileSupplier> tileSupplier = std::make_shared<TestTerrainTileSupplier>(heightmapImageData);
 
     Entity terrainEntity0 = EntityHierarchy::create(Engine::scene(), "terrainEntity0");
     terrainEntity0.addComponent<Transform>().translate(0.0, 0.0, 0.0);
-    QuadtreeTerrainComponent& terrain0 = terrainEntity0.addComponent<QuadtreeTerrainComponent>().setTileSupplier(tileSupplier).setSize(glm::dvec2(1000.0, 1000.0)).setHeightScale(250.0).setMaxQuadtreeDepth(12);
+    QuadtreeTerrainComponent& terrain0 = terrainEntity0.addComponent<QuadtreeTerrainComponent>().setTileSupplier(tileSupplier).setSize(glm::dvec2(10000.0, 10000.0)).setHeightScale(1000.0).setMaxQuadtreeDepth(12);
 
 //    Entity terrainEntity1 = EntityHierarchy::create(Engine::scene(), "terrainEntity1");
 //    terrainEntity1.addComponent<Transform>().translate(400.0, -30.0, 0.0).rotate(1.0F, 0.0F, 0.0F, glm::pi<float>() * 0.5F);
@@ -193,7 +197,7 @@ void TerrainTestApplication::handleUserInput(double dt) {
             int speedIncr = input()->getMouseScrollAmount().y > 0 ? 1 : input()->getMouseScrollAmount().y < 0 ? -1 : 0;
             if (speedIncr != 0) {
                 playerMovementSpeed *= glm::pow(1.15F, (float)speedIncr);
-                float maxPlayerMovementSpeed = glm::pow(1.15F, 32.0F);
+                float maxPlayerMovementSpeed = glm::pow(1.15F, 120.0F);
                 float minPlayerMovementSpeed = glm::pow(1.15F, -20.0F);
                 playerMovementSpeed = glm::clamp(playerMovementSpeed, minPlayerMovementSpeed, maxPlayerMovementSpeed);
             }

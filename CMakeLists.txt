@@ -48,7 +48,7 @@ else()
     message(STATUS "Found Intel VTune API at ${VTUNE_DIR}")
 endif()
 
-find_package(Vulkan REQUIRED FATAL_ERROR)
+find_package(Vulkan REQUIRED)
 if (NOT ${Vulkan_FOUND})
     message(FATAL_ERROR "Vulkan not found")
 endif()
@@ -293,7 +293,11 @@ add_executable(${PROJECT_NAME}
         src/core/engine/ConfigManager.cpp
         src/core/engine/ConfigManager.h
         src/core/engine/physics/RigidBody.cpp
-        src/core/engine/physics/RigidBody.h src/core/engine/physics/PhysicsSystem.cpp src/core/engine/physics/PhysicsSystem.h src/demo/BloomTestApplication.cpp src/demo/BloomTestApplication.h src/demo/RenderStressTestApplication.cpp src/demo/RenderStressTestApplication.h src/core/engine/scene/bound/BoundingVolume.cpp src/core/engine/scene/bound/BoundingVolume.h src/core/util/Logger.cpp src/core/util/Logger.h src/demo/TerrainTestApplication.cpp src/demo/TerrainTestApplication.h src/core/engine/renderer/TerrainRenderer.cpp src/core/engine/renderer/TerrainRenderer.h src/core/engine/scene/terrain/QuadtreeTerrainComponent.cpp src/core/engine/scene/terrain/QuadtreeTerrainComponent.h src/core/engine/scene/terrain/TerrainTileQuadtree.cpp src/core/engine/scene/terrain/TerrainTileQuadtree.h src/core/engine/scene/terrain/TerrainTileSupplier.cpp src/core/engine/scene/terrain/TerrainTileSupplier.h src/core/util/IdManager.cpp src/core/util/IdManager.h src/core/util/Time.cpp src/core/util/Time.h src/core/graphics/Fence.cpp src/core/graphics/Fence.h)
+        src/core/engine/physics/RigidBody.h src/core/engine/physics/PhysicsSystem.cpp src/core/engine/physics/PhysicsSystem.h src/demo/BloomTestApplication.cpp src/demo/BloomTestApplication.h src/demo/RenderStressTestApplication.cpp src/demo/RenderStressTestApplication.h src/core/engine/scene/bound/BoundingVolume.cpp src/core/engine/scene/bound/BoundingVolume.h src/core/util/Logger.cpp src/core/util/Logger.h src/demo/TerrainTestApplication.cpp src/demo/TerrainTestApplication.h src/core/engine/renderer/TerrainRenderer.cpp src/core/engine/renderer/TerrainRenderer.h src/core/engine/scene/terrain/QuadtreeTerrainComponent.cpp src/core/engine/scene/terrain/QuadtreeTerrainComponent.h src/core/engine/scene/terrain/TerrainTileQuadtree.cpp src/core/engine/scene/terrain/TerrainTileQuadtree.h src/core/engine/scene/terrain/TerrainTileSupplier.cpp src/core/engine/scene/terrain/TerrainTileSupplier.h src/core/util/IdManager.cpp src/core/util/IdManager.h src/core/util/Time.cpp src/core/util/Time.h src/core/graphics/Fence.cpp src/core/graphics/Fence.h
+        src/core/engine/scene/terrain/tileSupplier/HeightmapTerrainTileSupplier.cpp
+        src/core/engine/scene/terrain/tileSupplier/HeightmapTerrainTileSupplier.h
+        src/core/engine/scene/terrain/tileSupplier/TestTerrainTileSupplier.cpp
+        src/core/engine/scene/terrain/tileSupplier/TestTerrainTileSupplier.h)
 
 target_link_libraries(${PROJECT_NAME}
         ${Vulkan_LIBRARIES}

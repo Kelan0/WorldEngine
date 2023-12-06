@@ -58,6 +58,8 @@ void TerrainTileQuadtree::update(const Frustum* frustum) {
     updateVisibility(frustum, traversalStack, tempNodeIndices);
     markVisibleSubtrees(tempNodeIndices, unvisitedNodesStack);
 
+    updatePriorities(traversalStack);
+
     if (m_tileSupplier != nullptr)
         m_tileSupplier->update();
 }
@@ -141,11 +143,11 @@ AxisAlignedBoundingBox TerrainTileQuadtree::getNodeBoundingBox(size_t nodeIndex,
     double minElevation = m_nodeTileData[nodeIndex].minElevation * m_heightScale;
     double maxElevation = m_nodeTileData[nodeIndex].maxElevation * m_heightScale;
 
-    if (m_tileSupplier != nullptr) {
-        TileDataReference tile = m_tileSupplier->getTile(glm::dvec2(treePosition) * normalizedNodeSize, glm::dvec2(normalizedNodeSize));
-        minElevation = tile.getMinHeight() * m_heightScale;
-        maxElevation = tile.getMaxHeight() * m_heightScale;
-    }
+//    if (m_tileSupplier != nullptr) {
+//        TileDataReference tile = m_tileSupplier->getTile(glm::dvec2(treePosition) * normalizedNodeSize, glm::dvec2(normalizedNodeSize));
+//        minElevation = tile.getMinHeight() * m_heightScale;
+//        maxElevation = tile.getMaxHeight() * m_heightScale;
+//    }
 
     double centerX = ((((double)treePosition.x + 0.5) * normalizedNodeSize) - 0.5) * m_size.x;
     double centerZ = ((((double)treePosition.y + 0.5) * normalizedNodeSize) - 0.5) * m_size.x;
@@ -216,20 +218,41 @@ void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector
 
     traverseTreeNodes(traversalStack, [&](TerrainTileQuadtree*, const TraversalInfo& node) {
 
-        // TODO: check distance to closest AABB point, or maybe just check distance to center vertical line-segment?
+        double normalizedNodeSize = getNormalizedNodeSizeForTreeDepth(node.treeDepth);
+
+        glm::dvec2 tileOffset = glm::dvec2(node.treePosition) * normalizedNodeSize;
+        TileDataReference tile = m_tileSupplier->getTile(tileOffset, glm::dvec2(normalizedNodeSize));
+        tile.notifyUsed();
+
+        if (tile.isAvailable()) {
+            m_nodeTileData[node.nodeIndex].minElevation = tile.getMinHeight();
+            m_nodeTileData[node.nodeIndex].maxElevation = tile.getMaxHeight();
+        } else {
+            m_nodeTileData[node.nodeIndex].minElevation = 0.0F;
+            m_nodeTileData[node.nodeIndex].maxElevation = 1.0F;
+        }
+
+//        // TODO: check distance to closest AABB point, or maybe just check distance to center vertical line-segment?
 //        AxisAlignedBoundingBox aabb = getNodeBoundingBox(node.nodeIndex, node.treePosition, node.treeDepth);
-//        aabb.calculateClosestPoint(localCameraOrigin);
+//        glm::dvec3 nodeClosestCameraPos = aabb.calculateClosestPoint(localCameraOrigin);
 
         float minElevation = m_nodeTileData[node.nodeIndex].minElevation;
         float maxElevation = m_nodeTileData[node.nodeIndex].maxElevation;
         float midElevation = (maxElevation + minElevation) * 0.5F;
 
-        double normalizedNodeSize = getNormalizedNodeSizeForTreeDepth(node.treeDepth);
         glm::dvec2 normalizedNodeCenterCoord = (glm::dvec2(node.treePosition) + glm::dvec2(0.5)) * normalizedNodeSize;
         glm::dvec3 nodeCenterPos(normalizedNodeCenterCoord.x * m_size.x, midElevation * m_heightScale, normalizedNodeCenterCoord.y * m_size.y);
 
-        glm::dvec3 cameraToNodePosition = nodeCenterPos - localCameraOrigin;
+        glm::dvec3 nodeClosestCameraPos = nodeCenterPos;
+
+//        localCameraOrigin.y = nodeClosestCameraPos.y;
+
+        glm::dvec3 cameraToNodePosition = nodeClosestCameraPos - localCameraOrigin;
+
         double cameraDistanceSq = glm::dot(cameraToNodePosition, cameraToNodePosition);
+//        uint32_t priority = *reinterpret_cast<uint32_t*>(&cameraDistanceSq); // Should preserve the order.
+        double levelPriority = 1.0 - ((double)(1 << node.treeDepth) / (double)(1 << m_maxQuadtreeDepth));
+        tile.setPriority(1.0 / (1.0 + (cameraDistanceSq - levelPriority)));
 
         double edgeSize = normalizedNodeSize * maxSize;
         double splitDistance = edgeSize * m_splitThreshold;
@@ -237,7 +260,7 @@ void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector
         if (cameraDistanceSq < splitDistance * splitDistance) {
             // Close enough to split
 
-            if (!hasChildren(node.nodeIndex) && node.treeDepth < m_maxQuadtreeDepth) {
+            if (!hasChildren(node.nodeIndex) && node.treeDepth < m_maxQuadtreeDepth && tile.isAvailable()) {
                 // NOTE: splitNode here will grow the list, and potentially invalidate the node reference above.
                 splitNode(node.nodeIndex, node.treePosition, node.treeDepth);
             }
@@ -251,18 +274,6 @@ void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector
                 for (int i = 0; i < 4; ++i)
                     deletedNodeIndices.emplace_back(deletedChildIndex + i);
             }
-        }
-
-        glm::dvec2 tileOffset = glm::dvec2(node.treePosition) * normalizedNodeSize;
-        TileDataReference tile = m_tileSupplier->getTile(tileOffset, glm::dvec2(normalizedNodeSize));
-        tile.notifyUsed();
-
-        if (tile.isAvailable()) {
-            m_nodeTileData[node.nodeIndex].minElevation = tile.getMinHeight();
-            m_nodeTileData[node.nodeIndex].maxElevation = tile.getMaxHeight();
-        } else {
-            m_nodeTileData[node.nodeIndex].minElevation = 0.0F;
-            m_nodeTileData[node.nodeIndex].maxElevation = 1.0F;
         }
 
         // node reference above may have been invalidated here, so we must index the nodes array directly
@@ -341,6 +352,22 @@ void TerrainTileQuadtree::updateVisibility(const Frustum* frustum, std::vector<T
     Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_ModelView);
     Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_Projection);
 #endif
+}
+
+void TerrainTileQuadtree::updatePriorities(std::vector<TraversalInfo>& traversalStack) {
+
+    // Distance-based priority already assigned in the updateSubdivisions function...
+    // Here we need to adjust the priorities to be higher for visible nodes.
+
+    traverseTreeNodes(traversalStack, [&](TerrainTileQuadtree*, const TraversalInfo& traversalInfo) {
+        double normalizedNodeSize = getNormalizedNodeSizeForTreeDepth(traversalInfo.treeDepth);
+        glm::dvec2 tileOffset = glm::dvec2(traversalInfo.treePosition) * normalizedNodeSize;
+        TileDataReference tile = m_tileSupplier->getTile(tileOffset, glm::dvec2(normalizedNodeSize));
+
+        if (m_nodes[traversalInfo.nodeIndex].visible) {
+            tile.setPriority(tile.getPriority() + 1.0F);
+        }
+    });
 }
 
 void TerrainTileQuadtree::markVisibleSubtrees(std::vector<size_t>& visibleNodeIndices, std::vector<size_t>& unvisitedNodesStack) {
@@ -508,10 +535,17 @@ size_t TerrainTileQuadtree::splitNode(size_t nodeIndex, const glm::uvec2& treePo
         TileDataReference tile = m_tileSupplier->getTile(tileOffset, tileSize);
         tile.notifyUsed();
 
-        m_nodeTileData.emplace_back(NodeData{
+        NodeData nodeTileData{
             .minElevation = 0.0F,
             .maxElevation = 1.0F
-        });
+        };
+
+        if (tile.isAvailable()) {
+            nodeTileData.minElevation = tile.getMinHeight();
+            nodeTileData.maxElevation = tile.getMaxHeight();
+        }
+
+        m_nodeTileData.emplace_back(nodeTileData);
         m_parentOffsets.emplace_back((uint32_t)(m_nodes.size() - nodeIndex)); // Offset to subtract from this child nodes index to reach its parent.
         m_nodes.emplace_back(childNode);
     }
