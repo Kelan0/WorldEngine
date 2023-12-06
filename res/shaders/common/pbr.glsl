@@ -57,12 +57,13 @@ float geometrySmith(in float NdotV, in float NdotL, in float k) {
 }
 
 vec3 importanceSampleGGX(in vec2 Xi, in vec3 N, in float roughnessSquared) {
-    float a = roughnessSquared * roughnessSquared;
+    float a = roughnessSquared;// * roughnessSquared;
+    float a2 = a * a;
 	
     float phi = 2.0 * PI * Xi.x;
     float cosPhi = cos(phi);
     float sinPhi = sin(phi);
-    float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a - 1.0) * Xi.y));
+    float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a2 - 1.0) * Xi.y));
     float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
 	
     // from spherical coordinates to cartesian coordinates

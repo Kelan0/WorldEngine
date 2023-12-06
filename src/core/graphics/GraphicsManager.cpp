@@ -310,7 +310,7 @@ bool GraphicsManager::createDebugUtilsMessenger() {
 
             if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
                 if (Engine::graphics()->doAbortOnVulkanError()) {
-                    throw std::exception(pCallbackData->pMessage);
+                    throw std::runtime_error(pCallbackData->pMessage);
                     return true; // Abort erroneous method call, Method will return eErrorValidationFailed and throw an exception
                 }
             }

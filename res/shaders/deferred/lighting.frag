@@ -319,16 +319,17 @@ void main() {
         vec3 ambient = (kD * diffuse + specular) * surface.ambientOcclusion;// * shadow;
 
          finalColour = ambient + Lo;
-//         finalColour = vec3(surface.viewNormal);
+//         finalColour = vec3(integratedBRDF[0], integratedBRDF[1], 0.0);
     }
 
 //     vec2 testPos = vec2(fs_texture.x, 1.0 - fs_texture.y);
 //     vec2 testOffset = vec2(0.05);
-//     vec2 testSize = vec2(0.45);
+//     vec2 testSize = vec2(0.2, 0.2 * (float(resolution.x) / float(resolution.y)));
 //     if (testPos.x >= testOffset.x && testPos.x < testOffset.x + testSize.x && testPos.y >= testOffset.y && testPos.y < testOffset.y + testSize.y) {
 //         testPos = vec2(linstep(testOffset.x, testOffset.x + testSize.x, testPos.x), linstep(testOffset.y, testOffset.y + testSize.y, testPos.y));
 ////         finalColour = vec3(fract(testPos.xy), 0.0);
-//         finalColour = vec3(linstep(0.43, 0.56, texture(shadowDepthTextures[0], testPos).r));
+//         finalColour = vec3(texture(BRDFIntegrationMap, testPos).rgb);
+////         finalColour = vec3(linstep(0.43, 0.56, texture(shadowDepthTextures[0], testPos).r));
 ////         finalColour = vec3(texture(shadowDepthTextures[0], testPos).r);
 //
 ////         vec3 shadowMapCoord = calculateShadowMapCoord(surface, 0);
@@ -347,6 +348,11 @@ void main() {
             finalColour = mix(finalColour, debugColour, debugShadowCascadeOpacity);
         }
     }
+
+//    if (surface.exists) {
+////        finalColour = vec3(surface.roughness, surface.metallic, dot(surface.albedo, vec3(0.299, 0.587, 0.114)));
+//        finalColour = vec3(surface.worldNormal);
+//    }
 
 //    if (surface.exists) {
 //        finalColour = vec3(normalize(surface.viewNormal.xyz) * 0.5 + 0.5);

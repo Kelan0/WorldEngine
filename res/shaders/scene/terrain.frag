@@ -36,15 +36,25 @@ layout(set = 1, binding = 2) uniform sampler2D heightmapTextures[];
 
 void main() {
 
+    ivec2 texSize = textureSize(heightmapTextures[fs_heightmapTextureIndex], 0).xy;
     const float elevationScale = terrainScale.z;
     const ivec3 off = ivec3(1, 1, 0);
-    float hL = textureOffset(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord, ivec2(-1, 0)).r * elevationScale;
-    float hR = textureOffset(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord, ivec2(+1, 0)).r * elevationScale;
-    float hD = textureOffset(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord, ivec2(0, -1)).r * elevationScale;
-    float hU = textureOffset(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord, ivec2(0, +1)).r * elevationScale;
+    float h = texture(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord).r;
+    float hL = textureOffset(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord, ivec2(-1, 0)).r;
+    float hR = textureOffset(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord, ivec2(+1, 0)).r;
+    float hD = textureOffset(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord, ivec2(0, -1)).r;
+    float hU = textureOffset(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord, ivec2(0, +1)).r;
+//    hL = (floor(hL * 100.0) / 100.0);
+//    hR = (floor(hR * 100.0) / 100.0);
+//    hD = (floor(hD * 100.0) / 100.0);
+//    hU = (floor(hU * 100.0) / 100.0);
+    hL *= elevationScale;
+    hR *= elevationScale;
+    hD *= elevationScale;
+    hU *= elevationScale;
     vec3 N;
     N.x = hL - hR;
-    N.y = hD - hU;
+    N.y = hU - hD;
     N.z = 2.0;
 
     mat3 TBN = mat3(fs_tangent, fs_bitangent, fs_normal);
@@ -53,7 +63,9 @@ void main() {
     N = normalize(N);
 
     out_AlbedoRGB_Roughness.rgb = vec3(0.1, 0.6, 0.1);
-//    out_AlbedoRGB_Roughness.rgb = vec3(fract(fs_textureCoord * 1), 0.0);
+//    out_AlbedoRGB_Roughness.rgb = vec3(0.0, 0.0, 0.0);
+//    out_AlbedoRGB_Roughness.rgb = vec3(fract(fs_textureCoord * texSize), 0.0);
+//    out_AlbedoRGB_Roughness.rgb = vec3(fract(h * 100) / 100);
 //    out_AlbedoRGB_Roughness.rgb = vec3(fs_normal * 0.5 + 0.5);
     out_AlbedoRGB_Roughness.w = 1.0;
     out_NormalXYZ_Metallic.xyz = N;

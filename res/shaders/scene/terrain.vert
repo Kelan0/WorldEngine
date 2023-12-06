@@ -58,16 +58,17 @@ void main() {
 
     float vertexDistance = 1.0 / 17.0;
     vec2 localTex = tileData.textureOffset + textureCoord.xy * tileData.textureSize;
-    vec3 localNorm = normal;
 
     if (heightmapTextureIndex[0] != UINT_MAX) {
         float elevationScale = terrainScale.z;//1.0;
-        float elevation = texture(heightmapTextures[heightmapTextureIndex[0]], localTex.xy).r * elevationScale;
+        float elevation = texture(heightmapTextures[heightmapTextureIndex[0]], localTex.xy).r;
+//        elevation = (floor(elevation * 100.0) / 100.0);
+        elevation *= elevationScale;
         localPos.y += elevation;
     }
 
     vec4 worldPos = modelMatrix * localPos;
-    vec3 worldNormal = normalize(normalMatrix * localNorm);
+    vec3 worldNormal = normalize(normalMatrix * normal);
     vec3 worldTangent = normalize(normalMatrix * tangent);
     vec3 worldBitangent = cross(worldNormal, worldTangent);
 
