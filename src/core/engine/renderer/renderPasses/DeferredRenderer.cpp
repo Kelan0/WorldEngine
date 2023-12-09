@@ -526,8 +526,10 @@ bool DeferredRenderer::createTerrainGeometryGraphicsPipeline() {
     pipelineConfig.depthTestEnabled = true;
     pipelineConfig.vertexShader = "shaders/scene/terrain.vert";
     pipelineConfig.fragmentShader = "shaders/scene/terrain.frag";
-    pipelineConfig.vertexInputBindings = MeshUtils::getVertexBindingDescriptions<Vertex>();
-    pipelineConfig.vertexInputAttributes = MeshUtils::getVertexAttributeDescriptions<Vertex>();
+    pipelineConfig.primitiveTopology = vk::PrimitiveTopology::eTriangleStrip;
+    // No vertex input bindings, vertices are generated in the vertex shader.
+//    pipelineConfig.vertexInputBindings = MeshUtils::getVertexBindingDescriptions<Vertex>();
+//    pipelineConfig.vertexInputAttributes = MeshUtils::getVertexAttributeDescriptions<Vertex>();
     pipelineConfig.setAttachmentBlendState(0, AttachmentBlendState(false, 0b1111));
     pipelineConfig.setAttachmentBlendState(1, AttachmentBlendState(false, 0b1111));
     pipelineConfig.addDescriptorSetLayout(m_globalDescriptorSetLayout->getDescriptorSetLayout());

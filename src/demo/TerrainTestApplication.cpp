@@ -16,6 +16,8 @@
 #include "core/graphics/GraphicsManager.h"
 #include "core/graphics/Mesh.h"
 #include "core/application/InputHandler.h"
+#include "core/engine/renderer/LightComponent.h"
+#include "core/engine/renderer/RenderLight.h"
 
 TerrainTestApplication::TerrainTestApplication() {
 }
@@ -45,9 +47,16 @@ void TerrainTestApplication::init() {
     skyboxEnvironmentMap->update();
     Engine::instance()->getDeferredRenderer()->setEnvironmentMap(skyboxEnvironmentMap);
 
+    Entity sunLightEntity = EntityHierarchy::create(Engine::scene(), "sunLightEntity");
+    sunLightEntity.addComponent<Transform>().setRotation(glm::vec3(-1.333F, -0.90F, -1.0F), glm::vec3(0.0F, 1.0F, 0.0F), false);
+    glm::vec3 sunIntensity = glm::vec3(100.0F);
+    sunLightEntity.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(sunIntensity).setAngularSize(glm::radians(0.52F)).setShadowCaster(true).setShadowCascadeDistances({3.0F, 6.0F, 12.0F, 24.0F});
+
 //    std::string heightmapFilePath = "terrain/heightmap_1/heightmap2.hdr";
+//    std::string heightmapFilePath = "terrain/UK.tif";
     std::string heightmapFilePath = "terrain/botw.png";
-    ImageData* heightmapImageData = ImageData::load(heightmapFilePath, ImagePixelLayout::R, ImagePixelFormat::Float32);
+//    std::string heightmapFilePath = "environment_maps/rustig_koppie_puresky_8k.hdr";
+    ImageData* heightmapImageData = ImageData::load(heightmapFilePath, ImagePixelLayout::RGBA, ImagePixelFormat::Float32);
 //    std::shared_ptr<TerrainTileSupplier> tileSupplier = std::make_shared<HeightmapTerrainTileSupplier>(heightmapImageData);
     std::shared_ptr<TerrainTileSupplier> tileSupplier = std::make_shared<TestTerrainTileSupplier>(heightmapImageData);
 

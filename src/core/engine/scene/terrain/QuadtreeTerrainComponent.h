@@ -16,6 +16,8 @@ public:
 
     QuadtreeTerrainComponent& setTileResolution(uint32_t tileResolution);
 
+    QuadtreeTerrainComponent& setTileGridSize(uint32_t tileGridSize);
+
     QuadtreeTerrainComponent& setSize(const glm::dvec2& size);
 
     QuadtreeTerrainComponent& setHeightScale(double heightScale);
@@ -25,6 +27,8 @@ public:
     uint32_t getMaxQuadtreeDepth() const;
 
     uint32_t getTileResolution() const;
+
+    uint32_t getTileGridSize() const;
 
     const glm::dvec2& getSize() const;
 
@@ -36,6 +40,7 @@ public:
 
 private:
     uint32_t m_tileResolution;
+    uint32_t m_tileGridSize;
     std::unique_ptr<TerrainTileQuadtree> m_tileQuadtree;
 };
 

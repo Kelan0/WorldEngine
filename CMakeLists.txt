@@ -297,7 +297,9 @@ add_executable(${PROJECT_NAME}
         src/core/engine/scene/terrain/tileSupplier/HeightmapTerrainTileSupplier.cpp
         src/core/engine/scene/terrain/tileSupplier/HeightmapTerrainTileSupplier.h
         src/core/engine/scene/terrain/tileSupplier/TestTerrainTileSupplier.cpp
-        src/core/engine/scene/terrain/tileSupplier/TestTerrainTileSupplier.h)
+        src/core/engine/scene/terrain/tileSupplier/TestTerrainTileSupplier.h
+        src/core/util/Float16.cpp
+        src/core/util/Float16.h)
 
 target_link_libraries(${PROJECT_NAME}
         ${Vulkan_LIBRARIES}

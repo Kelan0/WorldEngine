@@ -4,7 +4,8 @@
 
 QuadtreeTerrainComponent::QuadtreeTerrainComponent():
         m_tileQuadtree(new TerrainTileQuadtree(8, glm::dvec2(1000.0, 1000.0), 100.0)),
-        m_tileResolution(64) {
+        m_tileResolution(64),
+        m_tileGridSize(16) {
 }
 
 QuadtreeTerrainComponent::~QuadtreeTerrainComponent() {
@@ -18,6 +19,13 @@ QuadtreeTerrainComponent& QuadtreeTerrainComponent::setMaxQuadtreeDepth(uint32_t
 
 QuadtreeTerrainComponent& QuadtreeTerrainComponent::setTileResolution(uint32_t tileResolution) {
     m_tileResolution = tileResolution;
+    return *this;
+}
+
+QuadtreeTerrainComponent& QuadtreeTerrainComponent::setTileGridSize(uint32_t tileGridSize) {
+    if (tileGridSize < 1)
+        tileGridSize = 1;
+    m_tileGridSize = tileGridSize;
     return *this;
 }
 
@@ -42,6 +50,10 @@ uint32_t QuadtreeTerrainComponent::getMaxQuadtreeDepth() const {
 
 uint32_t QuadtreeTerrainComponent::getTileResolution() const {
     return m_tileResolution;
+}
+
+uint32_t QuadtreeTerrainComponent::getTileGridSize() const {
+    return m_tileGridSize;
 }
 
 const glm::dvec2& QuadtreeTerrainComponent::getSize() const {

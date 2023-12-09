@@ -120,6 +120,8 @@ void TerrainRenderer::drawTerrain(double dt, const vk::CommandBuffer& commandBuf
 
     size_t numTerrains = 0;
 
+    const uint32_t tileGridSize = 16;
+
     for (auto it = terrainEntities.begin(); it != terrainEntities.end(); ++it, ++numTerrains) {
         Entity entity(m_scene, *it);
 
@@ -134,6 +136,7 @@ void TerrainRenderer::drawTerrain(double dt, const vk::CommandBuffer& commandBuf
         uniformData.terrainScale.y = (float)quadtreeTerrain.getSize().y;
         uniformData.terrainScale.z = (float)quadtreeTerrain.getHeightScale();
         uniformData.heightmapTextureIndex = UINT32_MAX;
+        uniformData.tileGridSize = tileGridSize;//quadtreeTerrain.getTileGridSize();
 
         std::shared_ptr<TerrainTileSupplier> tileSupplier = quadtreeTerrain.getTileSupplier();
         if (tileSupplier != nullptr) {
@@ -179,13 +182,17 @@ void TerrainRenderer::drawTerrain(double dt, const vk::CommandBuffer& commandBuf
 
         graphicsPipeline->bind(commandBuffer);
 
+        uint32_t verticesPerStrip = 2 + (tileGridSize * 2) + 1;
+        uint32_t vertexCount = (verticesPerStrip + 1) * tileGridSize;
+
         for (int i = 0; i < globalTerrainInstances.size(); ++i) {
             const InstanceInfo& instanceInfo = globalTerrainInstances[i];
 
             dynamicOffsets[0] = sizeof(GPUTerrainUniformData) * i;
 
             commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
-            m_terrainTileMesh->draw(commandBuffer, instanceInfo.instanceCount, instanceInfo.firstInstance);
+            commandBuffer.draw(vertexCount, instanceInfo.instanceCount, 0, instanceInfo.firstInstance);
+//            m_terrainTileMesh->draw(commandBuffer, instanceInfo.instanceCount, instanceInfo.firstInstance);
         }
     }
 }

@@ -29,30 +29,36 @@ layout(std140, set = 0, binding = 0) uniform UBO1 {
 layout(std140, set = 1, binding = 0) uniform UBO2 {
     mat4 terrainTransformMatrix;
     vec4 terrainScale;
-    uvec4 heightmapTextureIndex;
+    uvec4 heightmapTextureIndex_tileGridSize;
 };
 
 layout(set = 1, binding = 2) uniform sampler2D heightmapTextures[];
 
 void main() {
 
-    ivec2 texSize = textureSize(heightmapTextures[fs_heightmapTextureIndex], 0).xy;
     const float elevationScale = terrainScale.z;
     const ivec3 off = ivec3(1, 1, 0);
-    float h = texture(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord).r;
-    float hL = textureOffset(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord, ivec2(-1, 0)).r;
-    float hR = textureOffset(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord, ivec2(+1, 0)).r;
-    float hD = textureOffset(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord, ivec2(0, -1)).r;
-    float hU = textureOffset(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord, ivec2(0, +1)).r;
-//    hL = (floor(hL * 100.0) / 100.0);
-//    hR = (floor(hR * 100.0) / 100.0);
-//    hD = (floor(hD * 100.0) / 100.0);
-//    hU = (floor(hU * 100.0) / 100.0);
+
+    vec3 N;
+//    N = normalize(fs_normal);
+
+//    float h = texture(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord).r;
+//    N.x = dFdx(h);
+//    N.y = dFdy(h);
+//    N.z = 2.0;
+
+    vec2 texSize = vec2(textureSize(heightmapTextures[fs_heightmapTextureIndex], 0).xy);
+    vec2 offset = 0.1 / texSize;
+
+    float hL = texture(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord + vec2(-offset.x, 0)).r;
+    float hR = texture(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord + vec2(+offset.x, 0)).r;
+    float hD = texture(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord + vec2(0, -offset.y)).r;
+    float hU = texture(heightmapTextures[fs_heightmapTextureIndex], fs_textureCoord + vec2(0, +offset.y)).r;
     hL *= elevationScale;
     hR *= elevationScale;
     hD *= elevationScale;
     hU *= elevationScale;
-    vec3 N;
+
     N.x = hL - hR;
     N.y = hU - hD;
     N.z = 2.0;
@@ -62,11 +68,13 @@ void main() {
 
     N = normalize(N);
 
+
     out_AlbedoRGB_Roughness.rgb = vec3(0.1, 0.6, 0.1);
 //    out_AlbedoRGB_Roughness.rgb = vec3(0.0, 0.0, 0.0);
 //    out_AlbedoRGB_Roughness.rgb = vec3(fract(fs_textureCoord * texSize), 0.0);
 //    out_AlbedoRGB_Roughness.rgb = vec3(fract(h * 100) / 100);
-//    out_AlbedoRGB_Roughness.rgb = vec3(fs_normal * 0.5 + 0.5);
+
+//    out_AlbedoRGB_Roughness.rgb = vec3(N * 0.5 + 0.5);
     out_AlbedoRGB_Roughness.w = 1.0;
     out_NormalXYZ_Metallic.xyz = N;
     out_NormalXYZ_Metallic.w = 0.0;

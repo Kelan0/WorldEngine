@@ -14,7 +14,7 @@ private:
     using TileIterator = std::unordered_map<glm::uvec4, TileData*>::iterator;
 
 public:
-    TestTerrainTileSupplier(const ImageData* heightmapImageData);
+    TestTerrainTileSupplier(ImageData* heightmapImageData);
 
     virtual ~TestTerrainTileSupplier() override;
 
@@ -42,8 +42,11 @@ private:
 
     void computeTerrainTileHeightRange(TileData* tileData);
 
+    void computeTerrainTileMipLevel(glm::uvec2 minCoord, glm::uvec2 maxCoord, uint32_t level);
+
 private:
-    const ImageData* m_heightmapImageData;
+
+    ImageData* m_heightmapImageData;
     std::shared_ptr<Image2D> m_heightmapImage;
     std::shared_ptr<ImageView> m_heightmapImageView;
     std::vector<ImageView*> m_loadedTileImageViews;

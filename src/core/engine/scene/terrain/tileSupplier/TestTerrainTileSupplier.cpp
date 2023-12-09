@@ -5,16 +5,36 @@
 #include "core/thread/ThreadUtils.h"
 #include "core/util/Logger.h"
 
-TestTerrainTileSupplier::TestTerrainTileSupplier(const ImageData* heightmapImageData):
+TestTerrainTileSupplier::TestTerrainTileSupplier(ImageData* heightmapImageData):
     TerrainTileSupplier(),
     m_heightmapImageData(heightmapImageData),
     m_heightmapImageView(nullptr) {
+
+    float minValue = +INFINITY;
+    float maxValue = -INFINITY;
+    std::map<int32_t, double> counts;
+    for (int y = 0; y < heightmapImageData->getHeight(); ++y) {
+        for (int x = 0; x < heightmapImageData->getWidth(); ++x) {
+            float f = (float)heightmapImageData->getChannelf(x, y, 0);
+            minValue = glm::min(minValue, f);
+            maxValue = glm::max(maxValue, f);
+//            f = glm::clamp(f, 0.0, 1.0);
+//            uint32_t h = (uint32_t)(f * UINT32_MAX);
+            int32_t h = (int32_t)(f * 25600);
+            ++counts[h];
+        }
+    }
+
+    LOG_INFO("Heightmap has %zu unique heights, max=%f, min=%f\n", counts.size(), maxValue, minValue);
+
 
     Image2DConfiguration heightmapImageConfig{};
     heightmapImageConfig.device = Engine::graphics()->getDevice();
     heightmapImageConfig.imageData = heightmapImageData;
     heightmapImageConfig.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage;
-    heightmapImageConfig.format = vk::Format::eR32Sfloat;
+//    heightmapImageConfig.format = vk::Format::eR32Sfloat;
+    heightmapImageConfig.format = vk::Format::eR32G32B32A32Sfloat;
+    heightmapImageConfig.mipLevels = UINT32_MAX;
     m_heightmapImage = std::shared_ptr<Image2D>(Image2D::create(heightmapImageConfig, "HeightmapTerrainTileSupplier-TerrainHeightmapImage"));
 
     ImageViewConfiguration heightmapImageViewConfig{};
@@ -27,23 +47,6 @@ TestTerrainTileSupplier::TestTerrainTileSupplier(const ImageData* heightmapImage
 
     m_tileIdleTimeoutSeconds = 10.0F; // 30 seconds
     m_tileExpireTimeoutSeconds = 30.0F; // 3 minutes
-
-    std::map<int32_t, double> counts;
-    for (int y = 0; y < heightmapImageData->getHeight(); ++y) {
-        for (int x = 0; x < heightmapImageData->getWidth(); ++x) {
-            double f = (double)heightmapImageData->getChannelf(x, y, 0);
-//            f = glm::clamp(f, 0.0, 1.0);
-//            uint32_t h = (uint32_t)(f * UINT32_MAX);
-            int32_t h = (int32_t)(f * 25600);
-            ++counts[h];
-        }
-    }
-
-    for (auto it = counts.begin(); it != counts.end(); ++it) {
-        it->second /= (heightmapImageData->getWidth() * heightmapImageData->getHeight() * 0.01);
-    }
-
-    LOG_INFO("Heightmap has %zu unique heights\n", counts.size());
 }
 
 TestTerrainTileSupplier::~TestTerrainTileSupplier() {
@@ -265,4 +268,23 @@ void TestTerrainTileSupplier::computeTerrainTileHeightRange(TileData* tileData) 
     tileData->maxHeight = maxHeight;
     tileData->state = TileData::State_Available;
 //    LOG_INFO("Took %.2f msec to generate tile [%u,%u : %ux%u]", Time::milliseconds(t0), minCoord.x, minCoord.y, maxCoord.x - minCoord.x, maxCoord.y - minCoord.y);
+}
+
+void TestTerrainTileSupplier::computeTerrainTileMipLevel(glm::uvec2 minCoord, glm::uvec2 maxCoord, uint32_t level) {
+    if (level == 0) {
+        return; // Nothing to do at the base mip level
+    }
+
+    minCoord = minCoord >> level;
+    maxCoord = (maxCoord + glm::uvec2(1)) >> level;
+
+    for (uint32_t y = minCoord.y; y < maxCoord.y; ++y) {
+        uint32_t y1 = y >> 1;
+
+        for (uint32_t x = minCoord.x; x < maxCoord.x; ++x) {
+            uint32_t x1 = x >> 1;
+
+
+        }
+    }
 }

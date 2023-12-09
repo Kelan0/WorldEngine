@@ -61,7 +61,8 @@ private:
         glm::mat4 terrainTransformMatrix;
         glm::vec4 terrainScale;
         uint32_t heightmapTextureIndex;
-        uint32_t _pad0[3];
+        uint32_t tileGridSize;
+        uint32_t _pad0[2];
     };
 
     struct RenderResources {

@@ -640,3 +640,7 @@ FodyWeavers.xsd
 *.xcf
 
 *.dep
+
+*.tif
+
+*.spv
