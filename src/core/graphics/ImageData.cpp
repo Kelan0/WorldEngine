@@ -12,6 +12,7 @@
 #include "core/engine/event/EventDispatcher.h"
 #include "core/engine/event/GraphicsEvents.h"
 #include "core/application/Application.h"
+#include "core/util/Float16.h"
 
 std::unordered_map<std::string, ImageData*> ImageData::s_imageCache;
 std::unordered_map<std::string, ComputePipeline*> ImageData::ImageTransform::s_transformComputePipelines;
@@ -138,11 +139,18 @@ ImageData* ImageData::load(const std::string& filePath, ImagePixelLayout desired
         return nullptr;
     }
 
-    ImagePixelFormat format =
-            channelSize == 1 ? ImagePixelFormat::UInt8 :
-            channelSize == 2 ? ImagePixelFormat::UInt16 :
-            channelSize == 4 ? ImagePixelFormat::Float32 :
-            ImagePixelFormat::Invalid;
+    ImagePixelFormat format;
+
+    if (desiredFormat == ImagePixelFormat::Float32 || desiredFormat == ImagePixelFormat::Float16) {
+        format = channelSize == 4 ? ImagePixelFormat::Float32 :
+                channelSize == 2 ? ImagePixelFormat::Float16 :
+                ImagePixelFormat::Invalid;
+    } else {
+        format = channelSize == 1 ? ImagePixelFormat::UInt8 :
+                channelSize == 2 ? ImagePixelFormat::UInt16 :
+                channelSize == 4 ? ImagePixelFormat::UInt32 :
+                ImagePixelFormat::Invalid;
+    }
 
     if (format == ImagePixelFormat::Invalid) {
         LOG_ERROR("Failed to load image \"%s\": Invalid pixel format for %d bytes per channel", absFilePath.c_str(), channelSize);
@@ -308,11 +316,34 @@ ImageData* ImageData::transform(void* data, ImageRegion::size_type width, ImageR
 
 float ImageData::getChannelf(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex) const {
     assert(m_pixelFormat == ImagePixelFormat::Float32 || m_pixelFormat == ImagePixelFormat::Float16);
-
     size_t channelOffset = ImageData::getChannelOffset(x, y, channelIndex, m_width, m_height, m_pixelLayout, m_pixelFormat);
     void* data = static_cast<char*>(m_data) + channelOffset;
+    if (m_pixelFormat == ImagePixelFormat::Float16) {
+        return (float)(*static_cast<Float16*>(data));
+    } else {
+        return *static_cast<float*>(data);
+    }
+}
 
-    return *static_cast<float*>(data);
+uint32_t ImageData::getChannelu8(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex) const {
+    assert(m_pixelFormat == ImagePixelFormat::UInt8);
+    size_t channelOffset = ImageData::getChannelOffset(x, y, channelIndex, m_width, m_height, m_pixelLayout, m_pixelFormat);
+    void* data = static_cast<char*>(m_data) + channelOffset;
+    return *static_cast<uint8_t*>(data);
+}
+
+uint32_t ImageData::getChannelu16(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex) const {
+    assert(m_pixelFormat == ImagePixelFormat::UInt16);
+    size_t channelOffset = ImageData::getChannelOffset(x, y, channelIndex, m_width, m_height, m_pixelLayout, m_pixelFormat);
+    void* data = static_cast<char*>(m_data) + channelOffset;
+    return *static_cast<uint16_t*>(data);
+}
+
+uint32_t ImageData::getChannelu32(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex) const {
+    assert(m_pixelFormat == ImagePixelFormat::UInt32);
+    size_t channelOffset = ImageData::getChannelOffset(x, y, channelIndex, m_width, m_height, m_pixelLayout, m_pixelFormat);
+    void* data = static_cast<char*>(m_data) + channelOffset;
+    return *static_cast<uint32_t*>(data);
 }
 
 int64_t ImageData::getChannel(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex) const {
@@ -383,6 +414,16 @@ int64_t ImageData::getChannel(ImageRegion::offset_type x, ImageRegion::offset_ty
 //            assert(false);
 //            return 0;
 //    }
+}
+
+void ImageData::setChannelf(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex, float value) {
+    union {
+        int64_t i64;
+        float f;
+    } channel{};
+    channel.f = value;
+
+    setChannel(x, y, channelIndex, channel.i64);
 }
 
 void ImageData::setChannel(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex, int64_t value) {

@@ -119,8 +119,12 @@ public:
     static ImageData* transform(void* data, ImageRegion::size_type width, ImageRegion::size_type height, ImagePixelLayout layout, ImagePixelFormat format, const ImageTransform& transformation);
 
     float getChannelf(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex) const;
-
+    uint32_t getChannelu8(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex) const;
+    uint32_t getChannelu16(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex) const;
+    uint32_t getChannelu32(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex) const;
     int64_t getChannel(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex) const;
+
+    void setChannelf(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex, float value);
     void setChannel(ImageRegion::offset_type x, ImageRegion::offset_type y, size_t channelIndex, int64_t value);
 
     void setPixel(ImageRegion::offset_type x, ImageRegion::offset_type y, int64_t r, int64_t g, int64_t b, int64_t a);

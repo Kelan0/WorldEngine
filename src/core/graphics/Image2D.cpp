@@ -317,11 +317,11 @@ const vk::Image& Image2D::getImage() const {
 }
 
 uint32_t Image2D::getWidth() const {
-    return m_size.y;
+    return m_size.x;
 }
 
 uint32_t Image2D::getHeight() const {
-    return m_size.x;
+    return m_size.y;
 }
 
 glm::uvec2 Image2D::getSize() const {

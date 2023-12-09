@@ -33,6 +33,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
+#include "core/util/Float16.h"
 
 //#define USE_VOLK
 
