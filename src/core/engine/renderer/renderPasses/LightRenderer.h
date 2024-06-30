@@ -67,6 +67,10 @@ private:
 
     size_t getNumInactiveShadowMaps() const;
 
+    void updateVisibleShadowMaps(const RenderCamera* renderCamera);
+
+    void renderShadowMap(double dt, const vk::CommandBuffer& commandBuffer, ShadowMap* shadowMap, std::vector<const ImageView*>& shadowMapImages);
+
     void updateCameraInfoBuffer(size_t maxShadowLights);
 
     void updateLightInfoBuffer(size_t maxLights);
@@ -84,6 +88,11 @@ private:
     void calculateDirectionalShadowCascadeRenderCamera(const RenderCamera* viewerRenderCamera, const Transform& lightTransform, double cascadeStartDist, double cascadeEndDist, double shadowNearPlane, double shadowFarPlane, RenderCamera* outShadowRenderCamera);
 
 private:
+    struct CameraInfoUniformBuffer {
+        uint32_t cameraIndex;
+        // remainder of allocated bytes is an array of GPUCamera
+    };
+
     struct VSMBlurResources {
 //        DescriptorSet* descriptorSet;
         std::vector<DescriptorSet*> descriptorSetsBlurX;
@@ -102,7 +111,8 @@ private:
         Buffer* uniformBuffer;
     };
 
-    std::shared_ptr<GraphicsPipeline> m_shadowGraphicsPipeline;
+    std::shared_ptr<GraphicsPipeline> m_shadowEntityGraphicsPipeline;
+    std::shared_ptr<GraphicsPipeline> m_shadowTerrainGraphicsPipeline;
     SharedResource<RenderPass> m_shadowRenderPass;
     SharedResource<DescriptorSetLayout> m_shadowRenderPassDescriptorSetLayout;
     SharedResource<DescriptorSetLayout> m_lightingRenderPassDescriptorSetLayout;
@@ -125,6 +135,7 @@ private:
     Image2D* m_vsmBlurIntermediateImage;
     ImageView* m_vsmBlurIntermediateImageView;
 
+    std::vector<RenderCamera> m_visibleShadowRenderCameras;
     std::vector<ShadowMap*> m_visibleShadowMaps;
     std::unordered_map<ShadowMap*, bool> m_activeShadowMaps;
     std::unordered_map<ShadowMap::ShadowType, std::vector<ShadowMap*>> m_inactiveShadowMaps;

@@ -1,6 +1,7 @@
 #ifndef _COMMON_GLSL
 #define _COMMON_GLSL
 
+#define UINT_MAX 0xFFFFFFFF
 
 const float PI = 3.14159265359;
 const float SQRT2 = 1.4142135623730951;

@@ -16,6 +16,9 @@ set(CREATE_RESOURCE_SYMLINK 1)
 
 set(VULKAN_DIR "C:\\VulkanSDK\\1.2.198.1")
 
+add_compile_definitions(PROFILING_ENABLED=1)
+
+
 if ("$ENV{VULKAN_SDK}" STREQUAL "")
     message(FATAL_ERROR "VULKAN_SDK environment variable is not defined. Please install the Vulkan SDK")
 elseif(NOT EXISTS "$ENV{VULKAN_SDK}")
