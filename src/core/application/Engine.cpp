@@ -319,14 +319,26 @@ void Engine::render(double dt) {
         EnvironmentMap::getEmptyEnvironmentMap();
     }
 
-    m_lightRenderer->render(dt, commandBuffer, m_renderCamera);
+    m_terrainRenderer->resetVisibility();
+    m_sceneRenderer->resetVisibility();
+
+    uint32_t terrainVisibility = m_terrainRenderer->updateVisibility(dt, m_renderCamera, m_viewFrustum);
+    m_sceneRenderer->updateVisibility(dt, m_renderCamera, m_viewFrustum);
+    m_lightRenderer->updateVisibleShadowMaps(dt, m_renderCamera);
+
+    uint32_t sceneVisibility = m_sceneRenderer->updateVisibility(dt, m_renderCamera, m_viewFrustum);
+
+    m_terrainRenderer->applyVisibility();
+    m_sceneRenderer->applyVisibility();
+
+    m_lightRenderer->renderShadowMaps(dt, commandBuffer, m_renderCamera);
 
     m_deferredRenderer->updateCamera(dt, m_renderCamera);
     m_deferredRenderer->beginRenderPass(commandBuffer, vk::SubpassContents::eInline);
 
     m_deferredRenderer->beginGeometrySubpass(commandBuffer, vk::SubpassContents::eInline);
-    m_terrainRenderer->renderGeometryPass(dt, commandBuffer, m_renderCamera, m_viewFrustum);
-    m_sceneRenderer->renderGeometryPass(dt, commandBuffer, m_renderCamera, m_viewFrustum);
+    m_terrainRenderer->renderGeometryPass(dt, commandBuffer, terrainVisibility);
+    m_sceneRenderer->renderGeometryPass(dt, commandBuffer, sceneVisibility);
 
     m_deferredRenderer->beginLightingSubpass(commandBuffer, vk::SubpassContents::eInline);
     m_deferredRenderer->renderLightingPass(dt, commandBuffer, m_renderCamera, m_viewFrustum);

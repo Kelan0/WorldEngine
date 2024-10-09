@@ -3,10 +3,12 @@
 
 #include "core/core.h"
 #include "core/engine/scene/Transform.h"
+#include "core/engine/scene/bound/Visibility.h"
 
 class Frustum;
 class TerrainTileSupplier;
 class AxisAlignedBoundingBox;
+class BoundingSphere;
 class TileDataReference;
 
 class TerrainTileQuadtree {
@@ -18,12 +20,6 @@ public:
         QuadIndex_BottomLeft = 1,  // 0b01
         QuadIndex_TopRight = 2,    // 0b10
         QuadIndex_BottomRight = 3, // 0b11
-    };
-
-    enum Visibility {
-        Visibility_NotVisible = 0,
-        Visibility_PartiallyVisible = 1,
-        Visibility_FullyVisible = 2,
     };
 
     static std::array<glm::uvec2, 4> QUAD_OFFSETS;
@@ -92,6 +88,8 @@ public:
     size_t getChildIndex(size_t nodeIndex, QuadIndex quadIndex);
 
     AxisAlignedBoundingBox getNodeBoundingBox(size_t nodeIndex, const glm::uvec2& treePosition, uint8_t treeDepth) const;
+
+    BoundingSphere getNodeBoundingSphere(size_t nodeIndex, const glm::uvec2& treePosition, uint8_t treeDepth) const;
 
     Visibility calculateNodeVisibility(const Frustum* frustum, size_t nodeIndex, const glm::uvec2& treePosition, uint8_t treeDepth) const;
 

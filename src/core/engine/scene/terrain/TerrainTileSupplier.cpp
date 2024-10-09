@@ -28,7 +28,7 @@ TileData::TileData(TerrainTileSupplier* tileSupplier, uint32_t tileTextureIndex,
         heightDataResolution(0, 0),
         heightData(nullptr),
         timeLastUsed(Time::now()),
-        priority(UINT32_MAX),
+        priority(std::numeric_limits<float>::max()),
         state(State_None),
         idle(false),
         deleted(false) {

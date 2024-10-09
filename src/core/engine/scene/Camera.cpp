@@ -110,6 +110,26 @@ bool Camera::isOrtho() const {
     return m_isOrtho;
 }
 
+double Camera::calculateProjectedSize(double radius, double distance) const {
+    return calculateProjectedSize(radius, distance, m_isOrtho, getFov(), m_top, m_bottom);
+}
+
+double Camera::calculateProjectedSize(double radius, double distance, bool isOrtho, double fov, double top, double bottom) {
+    if (isOrtho) {
+        return calculateProjectedOrthographicSize(radius, top, bottom);
+    } else {
+        return calculateProjectedPerspectiveSize(radius, distance, fov, top, bottom);
+    }
+}
+
+double Camera::calculateProjectedPerspectiveSize(double radius, double distance, double fov, double top, double bottom) {
+    return (radius / (glm::tan(fov * 0.5) * distance));// * glm::abs(top - bottom) * 0.5;
+}
+
+double Camera::calculateProjectedOrthographicSize(double radius, double top, double bottom) {
+    return radius / glm::abs(top - bottom) * 0.5;
+}
+
 Camera& Camera::operator=(const Camera& other) {
     set(other.m_left, other.m_right, other.m_bottom, other.m_top, other.m_near, other.m_far, other.m_isOrtho);
     return *this;

@@ -203,8 +203,8 @@ float calculateShadow(in SurfacePoint surface, in LightInfo lightInfo) {
     float currentDepth = shadowMapCoord.z;
     float shadow = sampleShadowVSM(shadowDepthTextures[lightInfo.shadowMapIndex + cascadeIndex], shadowMapCoord.xy, currentDepth);
     
-    // float closestDepth = texture(shadowDepthTextures[lightInfo.shadowMapIndex], shadowMapCoord.xy).r;
-    // float shadow = currentDepth > closestDepth ? 0.0 : 1.0;
+//     float closestDepth = texture(shadowDepthTextures[lightInfo.shadowMapIndex], shadowMapCoord.xy).r;
+//     float shadow = currentDepth > closestDepth ? 0.0 : 1.0;
 
     return shadow * NdotL;
 }
@@ -322,20 +322,6 @@ void main() {
 //         finalColour = vec3(integratedBRDF[0], integratedBRDF[1], 0.0);
     }
 
-//     vec2 testPos = vec2(fs_texture.x, 1.0 - fs_texture.y);
-//     vec2 testOffset = vec2(0.05);
-//     vec2 testSize = vec2(0.2, 0.2 * (float(resolution.x) / float(resolution.y)));
-//     if (testPos.x >= testOffset.x && testPos.x < testOffset.x + testSize.x && testPos.y >= testOffset.y && testPos.y < testOffset.y + testSize.y) {
-//         testPos = vec2(linstep(testOffset.x, testOffset.x + testSize.x, testPos.x), linstep(testOffset.y, testOffset.y + testSize.y, testPos.y));
-////         finalColour = vec3(fract(testPos.xy), 0.0);
-//         finalColour = vec3(texture(BRDFIntegrationMap, testPos).rgb);
-////         finalColour = vec3(linstep(0.43, 0.56, texture(shadowDepthTextures[0], testPos).r));
-////         finalColour = vec3(texture(shadowDepthTextures[0], testPos).r);
-//
-////         vec3 shadowMapCoord = calculateShadowMapCoord(surface, 0);
-////         finalColour = vec3(shadowMapCoord);
-//     }
-
 
     // finalColour = vec3(surface.emission / 32.0);
 
@@ -348,6 +334,34 @@ void main() {
             finalColour = mix(finalColour, debugColour, debugShadowCascadeOpacity);
         }
     }
+
+//    vec2 testPos = vec2(fs_texture.x, 1.0 - fs_texture.y);
+//    vec2 testOffset = vec2(0.05);
+//    vec2 testSize = vec2(0.35, 0.35 * (float(resolution.x) / float(resolution.y)));
+//    if (testPos.x >= testOffset.x && testPos.x < testOffset.x + testSize.x && testPos.y >= testOffset.y && testPos.y < testOffset.y + testSize.y) {
+//        testPos = vec2(linstep(testOffset.x, testOffset.x + testSize.x, testPos.x), linstep(testOffset.y, testOffset.y + testSize.y, testPos.y));
+//        finalColour = vec3(fract(testPos.xy), 0.0);
+////         finalColour = vec3(texture(BRDFIntegrationMap, testPos).rgb);
+////         finalColour = vec3(linstep(0.43, 0.56, texture(shadowDepthTextures[0], testPos).r));
+//
+//         float s1 = 0.0;
+//         float s2 = 0.0;
+//         for (int i = 0; i < 4; ++i) {
+//             vec2 d = texture(shadowDepthTextures[i], testPos).rg;
+//
+//             d.x = length(depthToViewSpacePosition(d.x, testPos, inverse(shadowMaps[i].viewProjectionMatrix)).zzz);
+//             d.x = 1.0 / (1.0 + max(0.0, d.x));;
+//             s1 = max(s1, d.x);
+//
+//             d.y = length(depthToViewSpacePosition(d.y, testPos, inverse(shadowMaps[i].viewProjectionMatrix)).zzz);
+//             d.y = 1.0 / (1.0 + max(0.0, d.y));
+//             s2 = max(s2, d.y);
+//         }
+//         finalColour = vec3(s1);
+//
+////         vec3 shadowMapCoord = surface.exists ? calculateShadowMapCoord(surface, 0) : vec3(0);
+////         finalColour = vec3(shadowMapCoord);
+//    }
 
 //    if (surface.exists) {
 ////        finalColour = vec3(surface.roughness, surface.metallic, dot(surface.albedo, vec3(0.299, 0.587, 0.114)));

@@ -9,6 +9,6 @@ int main(int argc, char* argv[]) {
     setvbuf(stdout, buffer, _IOFBF, sizeof(buffer));
 
 //    return Application::create<RenderStressTestApplication>(argc, argv);
-//    return Application::create<BloomTestApplication>(argc, argv);
-    return Application::create<TerrainTestApplication>(argc, argv);
+    return Application::create<BloomTestApplication>(argc, argv);
+//    return Application::create<TerrainTestApplication>(argc, argv);
 }

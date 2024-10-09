@@ -27,9 +27,17 @@ public:
 
     void preRender(double dt);
 
-    void renderGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum);
+    void resetVisibility();
 
-    void drawEntities(double dt, const vk::CommandBuffer& commandBuffer, const Frustum* frustum);
+    void applyVisibility();
+
+    uint32_t updateVisibility(double dt, const RenderCamera* renderCamera, const Frustum* frustum);
+
+    void renderGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, uint32_t visibilityIndex);
+
+    void renderShadowPass(double dt, const vk::CommandBuffer& commandBuffer, uint32_t visibilityIndex);
+
+    void drawEntities(double dt, const vk::CommandBuffer& commandBuffer, uint32_t visibilityIndex);
 
     void setScene(Scene* scene);
 
@@ -56,7 +64,7 @@ private:
 
     void recordRenderCommands(double dt, const vk::CommandBuffer& commandBuffer);
 
-    void applyFrustumCulling(const Frustum* frustum);
+    uint32_t applyFrustumCulling(const Frustum* frustum);
 
     void sortRenderEntities();
 
@@ -154,6 +162,11 @@ private:
         glm::vec3 aabbMax;
     };
 
+    struct VisibilityIndices {
+        uint32_t firstInstance;
+        uint32_t instanceCount;
+    };
+
 private:
     Scene* m_scene;
 
@@ -167,6 +180,8 @@ private:
 
     uint32_t m_numRenderEntities;
 
+    bool m_visibilityApplied;
+    std::vector<VisibilityIndices> m_visibilityIndices;
     std::unordered_map<ResourceId, uint32_t> m_materialIndices;
     std::unordered_map<ResourceId, uint32_t> m_textureIndices;
     std::vector<ResourceId> m_objectMaterials;

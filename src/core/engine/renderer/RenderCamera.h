@@ -65,6 +65,9 @@ public:
 
     size_t uploadCameraData(Buffer* buffer, size_t offset) const;
 
+    bool operator==(const RenderCamera& other) const;
+
+    bool operator!=(const RenderCamera& other) const;
 private:
     Transform m_transform;
     Transform m_prevTransform;
@@ -83,6 +86,17 @@ private:
     glm::mat4 m_prevProjectionMatrix;
     glm::mat4 m_prevViewProjectionMatrix;
 };
+
+namespace std {
+    template<> struct hash<RenderCamera> {
+        size_t operator()(const RenderCamera& camera) const {
+            size_t seed = 0;
+            std::hash_combine(seed, camera.getTransform());
+            std::hash_combine(seed, camera.getProjection());
+            return seed;
+        }
+    };
+}
 
 
 #endif //WORLDENGINE_RENDERCAMERA_H

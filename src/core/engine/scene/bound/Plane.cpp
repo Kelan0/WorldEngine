@@ -30,6 +30,14 @@ Plane& Plane::operator=(Plane&& move)  noexcept {
     return *this;
 }
 
+bool Plane::operator==(const Plane& plane) const {
+    return glm::epsilonEqual(offset, plane.offset, 1e-6) && glm::all(glm::epsilonEqual(normal, plane.normal, 1e-6));
+}
+
+bool Plane::operator!=(const Plane& plane) const {
+    return !(*this == plane);
+}
+
 bool Plane::isDegenerate() const {
     return lengthSquared() < 1e-12; // Effectively zero-length normal
 }
@@ -98,6 +106,10 @@ double const& Plane::operator[](glm::length_t index) const {
         case 2: return normal.z;
         case 3: return offset;
     }
+}
+
+Plane::operator glm::dvec4() const {
+    return glm::dvec4(normal.x, normal.y, normal.z, offset);
 }
 
 double Plane::calculateSignedDistance(const glm::dvec3& point) const {
@@ -187,4 +199,49 @@ Plane Plane::transform(const Plane& plane, const glm::dmat4& matrix, bool skewMa
     }
 
     return Plane(origin, normal);
+}
+
+double Plane::angle(const Plane& a, const Plane& b) {
+    // https://www.geeksforgeeks.org/angle-between-two-planes-in-3d/
+    double a1 = a.normal.x;
+    double b1 = a.normal.y;
+    double c1 = a.normal.z;
+    double a2 = b.normal.x;
+    double b2 = b.normal.y;
+    double c2 = b.normal.z;
+    double d = (a1 * a2 + b1 * b2 + c1 * c2);
+    double e1 = glm::sqrt(a1 * a1 + b1 * b1 + c1 * c1);
+    double e2 = glm::sqrt(a2 * a2 + b2 * b2 + c2 * c2);
+    d = d / (e1 * e2);
+    return glm::acos(d);
+}
+
+double Plane::distanceSq(const Plane& a, const Plane& b) {
+    // https://www.geeksforgeeks.org/distance-between-two-parallel-planes-in-3-d/
+    double a1 = a.normal.x;
+    double b1 = a.normal.y;
+    double c1 = a.normal.z;
+    double d1 = a.offset;
+    double a2 = b.normal.x;
+    double b2 = b.normal.y;
+    double c2 = b.normal.z;
+    double d2 = b.offset;
+
+    if (isParallel(a, b)) {
+        double z1 = -d1 / c1;
+        return glm::abs((c2 * z1 + d2)) / (glm::sqrt(a2 * a2 + b2 * b2 + c2 * c2));
+    } else {
+        // Planes are not parallel. They will therefor intersect and the real shortest distance is zero. We return -1 to indicate that they are not parallel though.
+        return -1.0;
+    }
+}
+
+double Plane::distance(const Plane& a, const Plane& b) {
+    double distSq = distanceSq(a, b);
+    return distSq < 0.0 ? distSq : glm::sqrt(distSq);
+}
+
+bool Plane::isParallel(const Plane& a, const Plane& b, double eps) {
+    glm::dvec3 v = glm::cross(a.normal, b.normal);
+    return glm::dot(v, v) <= eps;
 }

@@ -131,3 +131,11 @@ size_t RenderCamera::uploadCameraData(Buffer* buffer, size_t offset) const {
     buffer->upload(offset, sizeof(GPUCamera), &cameraInfoUBO);
     return offset + sizeof(GPUCamera);
 }
+
+bool RenderCamera::operator==(const RenderCamera& other) const {
+    return m_transform == other.m_transform && m_projection == other.m_projection;
+}
+
+bool RenderCamera::operator!=(const RenderCamera& other) const {
+    return !(*this == other);
+}

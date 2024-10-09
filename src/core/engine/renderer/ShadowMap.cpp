@@ -91,6 +91,11 @@ const Framebuffer* CascadedShadowMap::getCascadeFramebuffer(size_t cascadeIndex)
     return m_cascades[cascadeIndex].shadowMapFramebuffer;
 }
 
+const ImageView* CascadedShadowMap::getCascadeShadowDepthImageView(size_t cascadeIndex) {
+    assert(cascadeIndex < m_cascades.size());
+    return m_cascades[cascadeIndex].shadowDepthImageView;
+}
+
 const ImageView* CascadedShadowMap::getCascadeShadowVarianceImageView(size_t cascadeIndex) {
     assert(cascadeIndex < m_cascades.size());
     return m_cascades[cascadeIndex].shadowVarianceImageView;

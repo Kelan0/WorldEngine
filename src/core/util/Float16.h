@@ -81,6 +81,7 @@ inline Float16::operator float() const {
 
 inline Float16& Float16::operator=(const Float16& val) {
     m_value = val.m_value;
+    return *this;
 }
 
 inline Float16& Float16::operator+=(const Float16& val) {

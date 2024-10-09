@@ -9,6 +9,7 @@
 #include "core/engine/scene/terrain/TerrainTileQuadtree.h"
 #include "core/engine/scene/terrain/TerrainTileSupplier.h"
 #include "core/engine/renderer/renderPasses/DeferredRenderer.h"
+#include "core/engine/renderer/renderPasses/LightRenderer.h"
 #include "core/engine/renderer/Material.h"
 #include "core/graphics/GraphicsPipeline.h"
 #include "core/graphics/GraphicsManager.h"
@@ -23,6 +24,8 @@
 #define TERRAIN_UNIFORM_BUFFER_BINDING 0
 #define TERRAIN_TILE_DATA_BUFFER_BINDING 1
 #define TERRAIN_HEIGHTMAP_TEXTURES_BINDING 2
+
+const uint32_t tileGridSize = 16;
 
 TerrainRenderer::TerrainRenderer() :
         m_scene(nullptr),
@@ -86,43 +89,46 @@ bool TerrainRenderer::init() {
 
 void TerrainRenderer::preRender(double dt) {
     PROFILE_SCOPE("TerrainRenderer::preRender")
+
+    resetVisibility();
 }
 
-void TerrainRenderer::renderGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum) {
-    PROFILE_SCOPE("TerrainRenderer::renderGeometryPass");
-    PROFILE_BEGIN_GPU_CMD("TerrainRenderer::renderGeometryPass", commandBuffer);
+void TerrainRenderer::renderGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, uint32_t visibilityIndex) {
+    PROFILE_SCOPE("TerrainRenderer::renderGeometryPass")
 
-    drawTerrain(dt, commandBuffer, frustum);
+//    updateVisibility(dt, renderCamera, frustum);
 
-    PROFILE_END_GPU_CMD("TerrainRenderer::renderGeometryPass", commandBuffer);
+    if (m_globalTerrainInstances.empty()) {
+        return;
+    }
+
+    auto graphicsPipeline = Engine::instance()->getDeferredRenderer()->getTerrainGeometryGraphicsPipeline();
+    graphicsPipeline->bind(commandBuffer);
+    drawTerrain(dt, commandBuffer, visibilityIndex);
 }
 
-void TerrainRenderer::drawTerrain(double dt, const vk::CommandBuffer& commandBuffer, const Frustum* frustum) {
-    PROFILE_SCOPE("TerrainRenderer::drawTerrain")
+void TerrainRenderer::renderShadowPass(double dt, const vk::CommandBuffer& commandBuffer, uint32_t visibilityIndex) {
+    PROFILE_SCOPE("TerrainRenderer::renderShadowPass")
+
+    if (m_globalTerrainInstances.empty()) {
+        return;
+    }
+}
+
+void TerrainRenderer::resetVisibility() {
+
+    m_terrainTileDataBuffer.clear();
+    m_terrainUniformData.clear();
+    m_globalTerrainInstances.clear();
+    m_heightmapImageViews.clear();
+    m_visibilityIndices.clear();
+    m_visibilityApplied = false;
 
     const auto& terrainEntities = m_scene->registry()->view<QuadtreeTerrainComponent>();
 
-    // Presumably there will not normally be a large number of terrain entities. It is best to have one entity with the terrain component containing global terrain settings.
-    // Multiple terrain entities may be used in situations where the world is enormous, and chunked up, or in the case of planet rendering, each planet might have its own global terrain component.
-
-    m_terrainTileDataBuffer.clear();
-
-    struct InstanceInfo {
-        uint32_t firstInstance;
-        uint32_t instanceCount;
-    };
-
-    std::vector<InstanceInfo> globalTerrainInstances;
-    std::vector<GPUTerrainUniformData> terrainUniformData;
-    std::vector<ImageView*> heightmapImageViews;
-
     Transform identityTransform = Transform();
 
-    size_t numTerrains = 0;
-
-    const uint32_t tileGridSize = 16;
-
-    for (auto it = terrainEntities.begin(); it != terrainEntities.end(); ++it, ++numTerrains) {
+    for (auto it = terrainEntities.begin(); it != terrainEntities.end(); ++it) {
         Entity entity(m_scene, *it);
 
         const QuadtreeTerrainComponent& quadtreeTerrain = terrainEntities.get<QuadtreeTerrainComponent>(*it);
@@ -140,61 +146,149 @@ void TerrainRenderer::drawTerrain(double dt, const vk::CommandBuffer& commandBuf
 
         std::shared_ptr<TerrainTileSupplier> tileSupplier = quadtreeTerrain.getTileSupplier();
         if (tileSupplier != nullptr) {
-            uniformData.heightmapTextureIndex = 0;
+            uniformData.heightmapTextureIndex = (uint32_t)m_heightmapImageViews.size();
             const std::vector<ImageView*>& loadedTileImageViews = tileSupplier->getLoadedTileImageViews();
-            heightmapImageViews.insert(heightmapImageViews.end(), loadedTileImageViews.begin(), loadedTileImageViews.end());
+            m_heightmapImageViews.insert(m_heightmapImageViews.end(), loadedTileImageViews.begin(), loadedTileImageViews.end());
         }
+
+        m_terrainUniformData.emplace_back(uniformData);
+    }
+
+    if (!m_heightmapImageViews.empty()) {
+        uint32_t maxArrayCount = m_terrainDescriptorSetLayout->getBinding(TERRAIN_HEIGHTMAP_TEXTURES_BINDING).descriptorCount;
+        DescriptorSetWriter(m_resources->terrainDescriptorSet)
+                .writeImage(TERRAIN_HEIGHTMAP_TEXTURES_BINDING, m_defaultHeightmapSampler.get(), m_heightmapImageViews.data(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, glm::min((uint32_t)m_heightmapImageViews.size(), maxArrayCount))
+                .write();
+    }
+}
+
+void TerrainRenderer::applyVisibility() {
+    assert(m_visibilityApplied == false);
+
+    if (!m_globalTerrainInstances.empty()) {
+        if (!m_terrainUniformData.empty()) {
+            GPUTerrainUniformData* mappedTerrainUniformBuffer = static_cast<GPUTerrainUniformData*>(mapTerrainUniformBuffer(m_terrainUniformData.size()));
+            memcpy(&mappedTerrainUniformBuffer[0], &m_terrainUniformData[0], m_terrainUniformData.size() * sizeof(GPUTerrainUniformData));
+        }
+
+        if (!m_terrainTileDataBuffer.empty()) {
+            GPUTerrainTileData* mappedTerrainTileDataBuffer = static_cast<GPUTerrainTileData*>(mapTerrainTileDataBuffer(m_terrainTileDataBuffer.capacity()));
+            memcpy(&mappedTerrainTileDataBuffer[0], &m_terrainTileDataBuffer[0], m_terrainTileDataBuffer.size() * sizeof(GPUTerrainTileData));
+        }
+    }
+    m_visibilityApplied = true;
+}
+
+uint32_t TerrainRenderer::updateVisibility(double dt, const RenderCamera* renderCamera, const Frustum* frustum) {
+    assert(m_visibilityApplied == false);
+    const auto& terrainEntities = m_scene->registry()->view<QuadtreeTerrainComponent>();
+
+    // Presumably there will not normally be a large number of terrain entities. It is best to have one entity with the terrain component containing global terrain settings.
+    // Multiple terrain entities may be used in situations where the world is enormous, and chunked up, or in the case of planet rendering, each planet might have its own global terrain component.
+
+    uint32_t visibilityIndex = (uint32_t)m_visibilityIndices.size();
+    VisibilityIndices& visibility = m_visibilityIndices.emplace_back();
+    visibility.firstInstance = (uint32_t)m_globalTerrainInstances.size();
+
+    Transform identityTransform = Transform();
+
+    for (auto it = terrainEntities.begin(); it != terrainEntities.end(); ++it) {
+        Entity entity(m_scene, *it);
+
+        const QuadtreeTerrainComponent& quadtreeTerrain = terrainEntities.get<QuadtreeTerrainComponent>(*it);
+        const Transform* transform = entity.tryGetComponent<Transform>();
+        if (transform == nullptr)
+            transform = &identityTransform;
 
         InstanceInfo instanceInfo{};
         instanceInfo.firstInstance = (uint32_t)m_terrainTileDataBuffer.size();
 
         updateQuadtreeTerrainTiles(quadtreeTerrain, *transform, dt, frustum);
         instanceInfo.instanceCount = (uint32_t)(m_terrainTileDataBuffer.size() - instanceInfo.firstInstance);
-
-        if (instanceInfo.instanceCount > 0) {
-            globalTerrainInstances.emplace_back(instanceInfo);
-            terrainUniformData.emplace_back(uniformData);
-        }
+        m_globalTerrainInstances.emplace_back(instanceInfo);
     }
 
-    if (!heightmapImageViews.empty()) {
-        uint32_t maxArrayCount = m_terrainDescriptorSetLayout->getBinding(TERRAIN_HEIGHTMAP_TEXTURES_BINDING).descriptorCount;
-        DescriptorSetWriter(m_resources->terrainDescriptorSet)
-                .writeImage(TERRAIN_HEIGHTMAP_TEXTURES_BINDING, m_defaultHeightmapSampler.get(), heightmapImageViews.data(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, glm::min((uint32_t)heightmapImageViews.size(), maxArrayCount))
-                .write();
+    visibility.instanceCount = (uint32_t)(m_globalTerrainInstances.size() - visibility.firstInstance);
+    return visibilityIndex;
+}
+
+void TerrainRenderer::drawTerrain(double dt, const vk::CommandBuffer& commandBuffer, uint32_t visibilityIndex) {
+    PROFILE_SCOPE("TerrainRenderer::drawTerrain")
+    PROFILE_BEGIN_GPU_CMD("TerrainRenderer::renderGeometryPass", commandBuffer);
+
+    // Presumably there will not normally be a large number of terrain entities. It is best to have one entity with the terrain component containing global terrain settings.
+    // Multiple terrain entities may be used in situations where the world is enormous, and chunked up, or in the case of planet rendering, each planet might have its own global terrain component.
+
+    if (m_visibilityIndices.empty()) {
+        // There are no viewpoints to render the terrain for.
+        return;
     }
 
-    if (!globalTerrainInstances.empty()) {
-        GPUTerrainUniformData* mappedTerrainUniformBuffer = static_cast<GPUTerrainUniformData*>(mapTerrainUniformBuffer(numTerrains));
-        memcpy(&mappedTerrainUniformBuffer[0], &terrainUniformData[0], terrainUniformData.size() * sizeof(GPUTerrainUniformData));
+    assert(visibilityIndex < m_visibilityIndices.size());
 
-        GPUTerrainTileData* mappedTerrainTileDataBuffer = static_cast<GPUTerrainTileData*>(mapTerrainTileDataBuffer(m_terrainTileDataBuffer.capacity()));
-        memcpy(&mappedTerrainTileDataBuffer[0], &m_terrainTileDataBuffer[0], m_terrainTileDataBuffer.size() * sizeof(GPUTerrainTileData));
+    const VisibilityIndices& visibility = m_visibilityIndices[visibilityIndex];
+    if (visibility.instanceCount == 0) {
+        // No terrain is visible from this viewpoint.
+        return;
+    }
 
-        auto graphicsPipeline = Engine::instance()->getDeferredRenderer()->getTerrainGeometryGraphicsPipeline();
+    assert(visibility.firstInstance < m_globalTerrainInstances.size() && visibility.firstInstance + visibility.instanceCount <= m_globalTerrainInstances.size());
 
-        std::array<vk::DescriptorSet, 2> descriptorSets = {
-                Engine::instance()->getDeferredRenderer()->getGlobalDescriptorSet()->getDescriptorSet(),
-                m_resources->terrainDescriptorSet->getDescriptorSet()
-        };
+    std::array<vk::DescriptorSet, 2> descriptorSets = {
+            Engine::instance()->getDeferredRenderer()->getGlobalDescriptorSet()->getDescriptorSet(),
+            m_resources->terrainDescriptorSet->getDescriptorSet()
+    };
 
-        std::array<uint32_t, 1> dynamicOffsets{};
+    std::array<uint32_t, 1> dynamicOffsets{};
 
-        graphicsPipeline->bind(commandBuffer);
+    uint32_t vertexCount = getTileVertexCount(tileGridSize);
 
-        uint32_t verticesPerStrip = 2 + (tileGridSize * 2) + 1;
-        uint32_t vertexCount = (verticesPerStrip + 1) * tileGridSize;
+    auto graphicsPipeline = Engine::instance()->getDeferredRenderer()->getTerrainGeometryGraphicsPipeline();
 
-        for (int i = 0; i < globalTerrainInstances.size(); ++i) {
-            const InstanceInfo& instanceInfo = globalTerrainInstances[i];
+    for (uint32_t i = visibility.firstInstance; i < visibility.firstInstance + visibility.instanceCount; ++i) {
+        const InstanceInfo& instanceInfo = m_globalTerrainInstances[i];
 
-            dynamicOffsets[0] = sizeof(GPUTerrainUniformData) * i;
+        vk::DeviceSize alignedUniformBufferSize = Engine::graphics()->getAlignedUniformBufferOffset(sizeof(GPUTerrainUniformData));
+        dynamicOffsets[0] = (uint32_t)(alignedUniformBufferSize * i);
 
-            commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
-            commandBuffer.draw(vertexCount, instanceInfo.instanceCount, 0, instanceInfo.firstInstance);
+        commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
+        commandBuffer.draw(vertexCount, instanceInfo.instanceCount, 0, instanceInfo.firstInstance);
 //            m_terrainTileMesh->draw(commandBuffer, instanceInfo.instanceCount, instanceInfo.firstInstance);
-        }
     }
+
+    PROFILE_END_GPU_CMD("TerrainRenderer::renderGeometryPass", commandBuffer);
+}
+
+void TerrainRenderer::recordRenderCommands(double dt, const vk::CommandBuffer& commandBuffer, uint32_t visibilityIndex) {
+    PROFILE_SCOPE("TerrainRenderer::recordRenderCommands")
+    PROFILE_BEGIN_GPU_CMD("TerrainRenderer::recordRenderCommands", commandBuffer);
+
+    if (m_visibilityIndices.empty()) {
+        // There are no viewpoints to render the terrain for.
+        return;
+    }
+
+    assert(visibilityIndex < m_visibilityIndices.size());
+
+    const VisibilityIndices& visibility = m_visibilityIndices[visibilityIndex];
+    if (visibility.instanceCount == 0) {
+        // No terrain is visible from this viewpoint.
+        return;
+    }
+
+    assert(visibility.firstInstance < m_globalTerrainInstances.size() && visibility.firstInstance + visibility.instanceCount < m_globalTerrainInstances.size());
+
+    uint32_t vertexCount = getTileVertexCount(tileGridSize);
+
+    for (uint32_t i = visibility.firstInstance; i < visibility.firstInstance + visibility.instanceCount; ++i) {
+        const InstanceInfo& instanceInfo = m_globalTerrainInstances[i];
+
+        commandBuffer.draw(vertexCount, instanceInfo.instanceCount, 0, instanceInfo.firstInstance);
+//        m_terrainTileMesh->draw(commandBuffer, instanceInfo.instanceCount, instanceInfo.firstInstance);
+    }
+
+    PROFILE_END_GPU_CMD("TerrainRenderer::recordRenderCommands", commandBuffer);
+
 }
 
 void TerrainRenderer::updateQuadtreeTerrainTiles(const QuadtreeTerrainComponent& quadtreeTerrain, const Transform& transform, double dt, const Frustum* frustum) {
@@ -252,6 +346,16 @@ DescriptorSet* TerrainRenderer::getTerrainDescriptorSet() const {
     return m_resources->terrainDescriptorSet;
 }
 
+uint32_t TerrainRenderer::getTileVertexCount(uint32_t tileSize) {
+    uint32_t verticesPerStrip = 2 + (tileGridSize * 2) + 1;
+    uint32_t vertexCount = (verticesPerStrip + 1) * tileGridSize;
+    return vertexCount;
+}
+
+const std::vector<TerrainRenderer::InstanceInfo>& TerrainRenderer::getGlobalTerrainInstances() const {
+    return m_globalTerrainInstances;
+}
+
 void* TerrainRenderer::mapTerrainTileDataBuffer(size_t maxObjects) {
 
     vk::DeviceSize newBufferSize = sizeof(GPUTerrainTileData) * maxObjects;
@@ -278,8 +382,8 @@ void* TerrainRenderer::mapTerrainTileDataBuffer(size_t maxObjects) {
 
 
 void* TerrainRenderer::mapTerrainUniformBuffer(size_t maxObjects) {
-
-    vk::DeviceSize newBufferSize = sizeof(GPUTerrainUniformData) * maxObjects;
+    vk::DeviceSize alignedSize = Engine::graphics()->getAlignedUniformBufferOffset(sizeof(GPUTerrainUniformData));
+    vk::DeviceSize newBufferSize = alignedSize * maxObjects;
 
     if (m_resources->terrainUniformBuffer == nullptr || newBufferSize > m_resources->terrainUniformBuffer->getSize()) {
 
@@ -293,7 +397,7 @@ void* TerrainRenderer::mapTerrainUniformBuffer(size_t maxObjects) {
         m_resources->terrainUniformBuffer = Buffer::create(terrainUniformBufferConfig, "SceneRenderer-TerrainUniformBuffer");
 
         DescriptorSetWriter(m_resources->terrainDescriptorSet)
-                .writeBuffer(TERRAIN_UNIFORM_BUFFER_BINDING, m_resources->terrainUniformBuffer, 0, sizeof(GPUTerrainUniformData))
+                .writeBuffer(TERRAIN_UNIFORM_BUFFER_BINDING, m_resources->terrainUniformBuffer, 0, alignedSize)
                 .write();
     }
 

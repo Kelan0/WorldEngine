@@ -345,7 +345,7 @@ void BoundingSphere::drawLines() const {
     const auto& vertices = discMesh.getVertices();
     const auto& indices = discMesh.getIndices();
 
-    renderer->pushMatrix();
+    renderer->pushMatrix("BoundingSphere::drawLines/Transform");
     renderer->translate(m_center);
     renderer->scale((float)m_radius);
 
@@ -358,7 +358,7 @@ void BoundingSphere::drawLines() const {
     }
 
     renderer->end();
-    renderer->popMatrix();
+    renderer->popMatrix("BoundingSphere::drawLines/Transform");
 }
 
 void BoundingSphere::drawFill() const {
@@ -372,7 +372,7 @@ void BoundingSphere::drawFill() const {
     const auto& vertices = discMesh.getVertices();
     const auto& indices = discMesh.getIndices();
 
-    renderer->pushMatrix();
+    renderer->pushMatrix("BoundingSphere::drawFill/Transform");
     renderer->translate(m_center);
     renderer->scale((float)m_radius);
 
@@ -385,7 +385,7 @@ void BoundingSphere::drawFill() const {
     }
 
     renderer->end();
-    renderer->popMatrix();
+    renderer->popMatrix("BoundingSphere::drawFill/Transform");
 }
 
 
@@ -573,7 +573,7 @@ void AxisAlignedBoundingBox::drawLines() const {
     const auto& vertices = boxMesh.getVertices();
     const auto& indices = boxMesh.getIndices();
 
-    renderer->pushMatrix();
+    renderer->pushMatrix("AxisAlignedBoundingBox::drawLines/Transform");
     renderer->translate(m_center);
     renderer->scale(m_halfExtents);
 
@@ -586,7 +586,7 @@ void AxisAlignedBoundingBox::drawLines() const {
     }
 
     renderer->end();
-    renderer->popMatrix();
+    renderer->popMatrix("AxisAlignedBoundingBox::drawLines/Transform");
 }
 
 void AxisAlignedBoundingBox::drawFill() const {
@@ -601,7 +601,7 @@ void AxisAlignedBoundingBox::drawFill() const {
     const auto& vertices = boxMesh.getVertices();
     const auto& indices = boxMesh.getIndices();
 
-    renderer->pushMatrix();
+    renderer->pushMatrix("AxisAlignedBoundingBox::drawFill/Transform");
     renderer->translate(m_center);
     renderer->scale(m_halfExtents);
 
@@ -614,5 +614,5 @@ void AxisAlignedBoundingBox::drawFill() const {
     }
 
     renderer->end();
-    renderer->popMatrix();
+    renderer->popMatrix("AxisAlignedBoundingBox::drawFill/Transform");
 }

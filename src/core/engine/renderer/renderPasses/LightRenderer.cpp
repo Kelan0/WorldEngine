@@ -145,20 +145,20 @@ bool LightRenderer::init() {
 
     attachments[0].setFormat(vk::Format::eR32G32B32A32Sfloat);
     attachments[0].setSamples(samples);
-    attachments[0].setLoadOp(vk::AttachmentLoadOp::eClear);
+    attachments[0].setLoadOp(vk::AttachmentLoadOp::eLoad);
     attachments[0].setStoreOp(vk::AttachmentStoreOp::eStore);
     attachments[0].setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
     attachments[0].setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    attachments[0].setInitialLayout(vk::ImageLayout::eUndefined);
+    attachments[0].setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
     attachments[0].setFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 
     attachments[1].setFormat(vk::Format::eD32Sfloat);
     attachments[1].setSamples(samples);
-    attachments[1].setLoadOp(vk::AttachmentLoadOp::eClear);
+    attachments[1].setLoadOp(vk::AttachmentLoadOp::eLoad);
     attachments[1].setStoreOp(vk::AttachmentStoreOp::eStore);
     attachments[1].setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
     attachments[1].setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    attachments[1].setInitialLayout(vk::ImageLayout::eUndefined);
+    attachments[1].setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
     attachments[1].setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
     SubpassConfiguration subpassConfiguration{};
@@ -270,19 +270,13 @@ void LightRenderer::preRender(double dt) {
     LightingRenderPassUBO uniformData{};
     uniformData.lightCount = m_numLightEntities;
     m_lightingRenderPassResources->uniformBuffer->upload(0, sizeof(LightingRenderPassUBO), &uniformData);
-}
-
-void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera) {
-    PROFILE_SCOPE("LightRenderer::render");
-
-
-    PROFILE_REGION("Update shadow GPU buffers");
 
     m_shadowCameraInfoBufferData.clear();
     m_shadowMapBufferData.clear();
+}
 
-    updateVisibleShadowMaps(renderCamera);
-
+void LightRenderer::renderShadowMaps(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera) {
+    PROFILE_SCOPE("LightRenderer::renderShadowMaps");
 
     // We must call these methods in order to initialize the descriptor set used by the lighting render pass.
     updateLightInfoBuffer(m_visibleShadowMaps.size());
@@ -293,13 +287,11 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, co
 
     updateCameraInfoBuffer(m_shadowCameraInfoBufferData.size());
 
-    CameraInfoUniformBuffer cameraInfoUniformBuffer{};
-    cameraInfoUniformBuffer.cameraIndex = 0;
     m_shadowRenderPassResources->cameraInfoBuffer->upload(0, sizeof(GPUCamera) * m_shadowCameraInfoBufferData.size(), m_shadowCameraInfoBufferData.data());
     m_lightingRenderPassResources->shadowMapBuffer->upload(0, sizeof(GPUShadowMap) * m_shadowMapBufferData.size(), m_shadowMapBufferData.data());
 
     PROFILE_REGION("Render shadows");
-    PROFILE_BEGIN_GPU_CMD("LightRenderer::render", commandBuffer);
+    PROFILE_BEGIN_GPU_CMD("LightRenderer::renderShadowMaps", commandBuffer);
 
     std::vector<const ImageView*> shadowMapImages;
     shadowMapImages.reserve(m_visibleShadowRenderCameras.size());
@@ -308,7 +300,6 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, co
         ShadowMap* shadowMap = m_visibleShadowMaps[i];
 
         renderShadowMap(dt, commandBuffer, shadowMap, shadowMapImages);
-
     }
 
     vsmBlurActiveShadowMaps(commandBuffer);
@@ -317,7 +308,83 @@ void LightRenderer::render(double dt, const vk::CommandBuffer& commandBuffer, co
             .writeImage(LIGHTING_RENDER_PASS_SHADOW_DEPTH_TEXTURES_BINDING, m_vsmShadowMapSampler.get(), shadowMapImages.data(), vk::ImageLayout::eShaderReadOnlyOptimal, 0, (uint32_t)shadowMapImages.size())
             .write();
 
-    PROFILE_END_GPU_CMD("LightRenderer::render", commandBuffer);
+    PROFILE_END_GPU_CMD("LightRenderer::renderShadowMaps", commandBuffer);
+}
+
+void LightRenderer::updateVisibleShadowMaps(double dt, const RenderCamera* renderCamera) {
+    PROFILE_SCOPE("LightRenderer::updateVisibleShadowMaps");
+
+    const auto& lightEntities = Engine::scene()->registry()->group<LightComponent>(entt::get<Transform>);
+
+    Frustum frustum;
+
+    m_visibleShadowRenderCameras.clear();
+    m_visibleShadowMaps.clear();
+
+    for (const auto& id : lightEntities) {
+        const LightComponent& lightComponent = lightEntities.get<LightComponent>(id);
+
+        if (!lightComponent.isShadowCaster())
+            continue;
+
+        ShadowMap* shadowMap = lightComponent.getShadowMap();
+        if (shadowMap == nullptr) {
+#if _DEBUG
+            LOG_DEBUG("Error: shadow-casting light has null shadow map");
+#endif
+            continue;
+        }
+
+        shadowMap->update();
+
+        const Transform& transform = lightEntities.get<Transform>(id);
+
+        // TODO: only render shadows if they are cast onto anything within renderCamera's view
+        // Frustum culling of sphere around point lights
+        // Occlusion culling for directional lights???
+
+
+        if (shadowMap->getShadowType() == ShadowMap::ShadowType_CascadedShadowMap) {
+            CascadedShadowMap* cascadedShadowMap = dynamic_cast<CascadedShadowMap*>(shadowMap);
+
+            shadowMap->m_index = (uint32_t)m_visibleShadowRenderCameras.size();
+
+            double cascadeStartDistance = 0.0;
+            for (size_t i = 0; i < cascadedShadowMap->getNumCascades(); ++i) {
+                double cascadeEndDistance = cascadedShadowMap->getCascadeSplitDistance(i);
+                RenderCamera& shadowRenderCamera = m_visibleShadowRenderCameras.emplace_back();
+                const double nearPlane = -64.0F;
+                const double farPlane = +64.0F;
+                calculateDirectionalShadowCascadeRenderCamera(renderCamera, transform, cascadeStartDistance, cascadeEndDistance, nearPlane, farPlane, &shadowRenderCamera);
+                shadowRenderCamera.copyCameraData(&m_shadowCameraInfoBufferData.emplace_back());
+                GPUShadowMap& gpuShadowMap = m_shadowMapBufferData.emplace_back();
+                gpuShadowMap.viewProjectionMatrix = shadowRenderCamera.getViewProjectionMatrix();
+                gpuShadowMap.cascadeStartZ = (float)cascadeStartDistance;
+                gpuShadowMap.cascadeEndZ = (float)cascadeEndDistance;
+
+                cascadeStartDistance = cascadeEndDistance;
+
+                frustum.set(shadowRenderCamera);
+                Engine::instance()->getTerrainRenderer()->updateVisibility(dt, &shadowRenderCamera, &frustum);
+            }
+        } else {
+            continue;
+        }
+
+//        if (lightComponent.getType() == LightType_Directional) {
+//            calculateDirectionalShadowCascadeRenderCamera(renderCamera, transform, 0.0F, 5.0F, -64.0, +64.0, &shadowRenderCamera);
+//        } else {
+//            continue;
+//        }
+//
+//        shadowRenderCamera.copyCameraData(&m_shadowCameraInfoBufferData.emplace_back());
+//        GPUShadowMap& gpuShadowMap = m_shadowMapBufferData.emplace_back();
+//        gpuShadowMap.viewProjectionMatrix = shadowRenderCamera.getViewProjectionMatrix();
+//        shadowMap->m_index = (uint32_t)m_visibleShadowMaps.size();
+//        m_visibleShadowRenderCameras.emplace_back(shadowRenderCamera);
+
+        m_visibleShadowMaps.emplace_back(shadowMap);
+    }
 }
 
 const SharedResource<RenderPass>& LightRenderer::getRenderPass() const {
@@ -342,6 +409,10 @@ const SharedResource<DescriptorSetLayout>& LightRenderer::getVsmBlurComputeDescr
 
 const std::shared_ptr<Sampler>& LightRenderer::getVsmShadowMapSampler() const {
     return m_vsmShadowMapSampler;
+}
+
+const std::shared_ptr<GraphicsPipeline>& LightRenderer::getTerrainShadowGraphicsPipeline() const {
+    return m_shadowTerrainGraphicsPipeline;
 }
 
 void LightRenderer::initEmptyShadowMap() {
@@ -483,76 +554,6 @@ size_t LightRenderer::getNumInactiveShadowMaps() const {
     return count;
 }
 
-void LightRenderer::updateVisibleShadowMaps(const RenderCamera* renderCamera) {
-
-    const auto& lightEntities = Engine::scene()->registry()->group<LightComponent>(entt::get<Transform>);
-
-    m_visibleShadowRenderCameras.clear();
-    m_visibleShadowMaps.clear();
-
-    for (const auto& id : lightEntities) {
-        const LightComponent& lightComponent = lightEntities.get<LightComponent>(id);
-
-        if (!lightComponent.isShadowCaster())
-            continue;
-
-        ShadowMap* shadowMap = lightComponent.getShadowMap();
-        if (shadowMap == nullptr) {
-#if _DEBUG
-            LOG_DEBUG("Error: shadow-casting light has null shadow map");
-#endif
-            continue;
-        }
-
-        shadowMap->update();
-
-        const Transform& transform = lightEntities.get<Transform>(id);
-
-        // TODO: only render shadows if they are cast onto anything within renderCamera's view
-        // Frustum culling of sphere around point lights
-        // Occlusion culling for directional lights???
-
-
-        if (shadowMap->getShadowType() == ShadowMap::ShadowType_CascadedShadowMap) {
-            CascadedShadowMap* cascadedShadowMap = dynamic_cast<CascadedShadowMap*>(shadowMap);
-
-            shadowMap->m_index = (uint32_t)m_visibleShadowRenderCameras.size();
-
-            double cascadeStartDistance = 0.0;
-            for (size_t i = 0; i < cascadedShadowMap->getNumCascades(); ++i) {
-                double cascadeEndDistance = cascadedShadowMap->getCascadeSplitDistance(i);
-                RenderCamera& shadowRenderCamera = m_visibleShadowRenderCameras.emplace_back();
-                const double nearPlane = -64.0F;
-                const double farPlane = +64.0F;
-                calculateDirectionalShadowCascadeRenderCamera(renderCamera, transform, cascadeStartDistance, cascadeEndDistance, nearPlane, farPlane, &shadowRenderCamera);
-                shadowRenderCamera.copyCameraData(&m_shadowCameraInfoBufferData.emplace_back());
-                GPUShadowMap& gpuShadowMap = m_shadowMapBufferData.emplace_back();
-                gpuShadowMap.viewProjectionMatrix = shadowRenderCamera.getViewProjectionMatrix();
-                gpuShadowMap.cascadeStartZ = (float)cascadeStartDistance;
-                gpuShadowMap.cascadeEndZ = (float)cascadeEndDistance;
-
-                cascadeStartDistance = cascadeEndDistance;
-            }
-        } else {
-            continue;
-        }
-
-//        if (lightComponent.getType() == LightType_Directional) {
-//            calculateDirectionalShadowCascadeRenderCamera(renderCamera, transform, 0.0F, 5.0F, -64.0, +64.0, &shadowRenderCamera);
-//        } else {
-//            continue;
-//        }
-//
-//        shadowRenderCamera.copyCameraData(&m_shadowCameraInfoBufferData.emplace_back());
-//        GPUShadowMap& gpuShadowMap = m_shadowMapBufferData.emplace_back();
-//        gpuShadowMap.viewProjectionMatrix = shadowRenderCamera.getViewProjectionMatrix();
-//        shadowMap->m_index = (uint32_t)m_visibleShadowMaps.size();
-//        m_visibleShadowRenderCameras.emplace_back(shadowRenderCamera);
-
-        m_visibleShadowMaps.emplace_back(shadowMap);
-    }
-}
-
 void LightRenderer::renderShadowMap(double dt, const vk::CommandBuffer& commandBuffer, ShadowMap* shadowMap, std::vector<const ImageView*>& shadowMapImages) {
     PROFILE_BEGIN_GPU_CMD("LightRenderer::renderShadowMap", commandBuffer);
 
@@ -564,62 +565,98 @@ void LightRenderer::renderShadowMap(double dt, const vk::CommandBuffer& commandB
 
     Frustum frustum;
 
+    bool isRendered = false;
 
-//    m_shadowEntityGraphicsPipeline->bind(commandBuffer);
-//    if (shadowMap->getShadowType() == ShadowMap::ShadowType_CascadedShadowMap) {
-//        CascadedShadowMap* cascadedShadowMap = dynamic_cast<CascadedShadowMap*>(shadowMap);
-//        for (size_t j = 0; j < cascadedShadowMap->getNumCascades(); ++j) {
-//            PROFILE_BEGIN_GPU_CMD("LightRenderer::renderShadowMap/ShadowMapCascadeRenderPass - entities", commandBuffer);
-//
-//            RenderCamera& shadowRenderCamera = m_visibleShadowRenderCameras[shadowMap->m_index + j];
-//            frustum.set(shadowRenderCamera);
-//
-//            size_t shadowMapImageIndex = firstShadowMapImageIndex + shadowMapImageCount++;
-//            std::array<uint32_t, 1> dynamicOffsets = { (uint32_t)(sizeof(GPUCamera) * shadowMapImageIndex) };
-//            std::array<vk::DescriptorSet, 2> descriptorSets{
-//                    m_shadowRenderPassResources->descriptorSet->getDescriptorSet(), // dynamic
-//                    Engine::instance()->getSceneRenderer()->getObjectDescriptorSet()->getDescriptorSet()
-//            };
-//
-//            commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_shadowEntityGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
-//
-//            m_shadowRenderPass->begin(commandBuffer, cascadedShadowMap->getCascadeFramebuffer(j), vk::SubpassContents::eInline);
-//            Engine::instance()->getSceneRenderer()->drawEntities(dt, commandBuffer, &frustum);
-//            commandBuffer.endRenderPass();
-//
-//            shadowMapImages.emplace_back(cascadedShadowMap->getCascadeShadowVarianceImageView(j));
-//
-//            PROFILE_END_GPU_CMD("LightRenderer::renderShadowMap/ShadowMapCascadeRenderPass - entities", commandBuffer);
-//        }
-//    }
 
-    shadowMapImageCount = 0;
-    m_shadowTerrainGraphicsPipeline->bind(commandBuffer);
+    m_shadowEntityGraphicsPipeline->bind(commandBuffer);
+
+    vk::ClearRect clearRect(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(shadowMap->getResolution().x, shadowMap->getResolution().y)), 0, 1);
+
+
     if (shadowMap->getShadowType() == ShadowMap::ShadowType_CascadedShadowMap) {
         CascadedShadowMap* cascadedShadowMap = dynamic_cast<CascadedShadowMap*>(shadowMap);
         for (size_t j = 0; j < cascadedShadowMap->getNumCascades(); ++j) {
-            PROFILE_BEGIN_GPU_CMD("LightRenderer::renderShadowMap/ShadowMapCascadeRenderPass - terrain", commandBuffer);
+            PROFILE_BEGIN_GPU_CMD("LightRenderer::renderShadowMap/ShadowMapCascadeRenderPass - entities", commandBuffer);
 
             RenderCamera& shadowRenderCamera = m_visibleShadowRenderCameras[shadowMap->m_index + j];
             frustum.set(shadowRenderCamera);
 
+            ImageUtil::transitionLayout(commandBuffer, cascadedShadowMap->getCascadeShadowDepthImageView(j)->getImage(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1), ImageTransition::FromAny(), ImageTransition::DepthStencilAttachmentOptimal(vk::PipelineStageFlagBits::eFragmentShader));
+            ImageUtil::transitionLayout(commandBuffer, cascadedShadowMap->getCascadeShadowVarianceImageView(j)->getImage(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1), ImageTransition::FromAny(), ImageTransition::ColourAttachmentOptimal(vk::PipelineStageFlagBits::eFragmentShader));
+
+//            Engine::instance()->getSceneRenderer()->renderShadowPass(dt, commandBuffer, &shadowRenderCamera, &frustum);
+
             size_t shadowMapImageIndex = firstShadowMapImageIndex + shadowMapImageCount++;
-            std::array<uint32_t, 1> dynamicOffsets = { 0 };//(uint32_t)(sizeof(GPUCamera) * shadowMapImageIndex) };
-            std::array<vk::DescriptorSet, 1> descriptorSets{
-                    m_shadowRenderPassResources->descriptorSet->getDescriptorSet() // dynamic
+            std::array<uint32_t, 1> dynamicOffsets = { (uint32_t)(sizeof(GPUCamera) * shadowMapImageIndex) };
+            std::array<vk::DescriptorSet, 2> descriptorSets{
+                    m_shadowRenderPassResources->descriptorSet->getDescriptorSet(), // dynamic
+                    Engine::instance()->getSceneRenderer()->getObjectDescriptorSet()->getDescriptorSet()
             };
-            commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_shadowTerrainGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
 
             m_shadowRenderPass->begin(commandBuffer, cascadedShadowMap->getCascadeFramebuffer(j), vk::SubpassContents::eInline);
-            Engine::instance()->getTerrainRenderer()->drawTerrain(dt, commandBuffer, &frustum);
+
+            commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_shadowEntityGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
+
+            commandBuffer.clearAttachments({
+                       vk::ClearAttachment(vk::ImageAspectFlagBits::eColor, 0, vk::ClearValue(vk::ClearColorValue(0, 0, 0, 0))),
+                       vk::ClearAttachment(vk::ImageAspectFlagBits::eDepth, 1, vk::ClearValue(vk::ClearDepthStencilValue(1.0F, 0)))
+               }, { clearRect, clearRect });
+
+            Engine::instance()->getSceneRenderer()->drawEntities(dt, commandBuffer, &frustum);
             commandBuffer.endRenderPass();
 
-            shadowMapImages.emplace_back(cascadedShadowMap->getCascadeShadowVarianceImageView(j));
+            isRendered = true;
 
-            PROFILE_END_GPU_CMD("LightRenderer::renderShadowMap/ShadowMapCascadeRenderPass - terrain", commandBuffer);
+            PROFILE_END_GPU_CMD("LightRenderer::renderShadowMap/ShadowMapCascadeRenderPass - entities", commandBuffer);
         }
     }
 
+//    shadowMapImageCount = 0;
+//    m_shadowTerrainGraphicsPipeline->bind(commandBuffer);
+//    if (shadowMap->getShadowType() == ShadowMap::ShadowType_CascadedShadowMap) {
+//        CascadedShadowMap* cascadedShadowMap = dynamic_cast<CascadedShadowMap*>(shadowMap);
+//        for (size_t j = 0; j < cascadedShadowMap->getNumCascades(); ++j) {
+//            PROFILE_BEGIN_GPU_CMD("LightRenderer::renderShadowMap/ShadowMapCascadeRenderPass - terrain", commandBuffer);
+//
+//            if (Engine::instance()->getTerrainRenderer()->getGlobalTerrainInstances().empty()) {
+//                continue;
+//            }
+//            ImageUtil::transitionLayout(commandBuffer, cascadedShadowMap->getCascadeShadowDepthImageView(j)->getImage(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1), ImageTransition::FromAny(), ImageTransition::DepthStencilAttachmentOptimal(vk::PipelineStageFlagBits::eFragmentShader));
+//            ImageUtil::transitionLayout(commandBuffer, cascadedShadowMap->getCascadeShadowVarianceImageView(j)->getImage(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1), ImageTransition::FromAny(), ImageTransition::ColourAttachmentOptimal(vk::PipelineStageFlagBits::eFragmentShader));
+//
+//            size_t shadowMapImageIndex = firstShadowMapImageIndex + shadowMapImageCount++;
+//            std::array<uint32_t, 2> dynamicOffsets = {
+//                    (uint32_t)(sizeof(GPUCamera) * shadowMapImageIndex), 0
+//            };
+//            std::array<vk::DescriptorSet, 2> descriptorSets{
+//                    m_shadowRenderPassResources->descriptorSet->getDescriptorSet(), // dynamic
+//                    Engine::instance()->getTerrainRenderer()->getTerrainDescriptorSet()->getDescriptorSet() // dynamic
+//            };
+//            commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_shadowTerrainGraphicsPipeline->getPipelineLayout(), 0, descriptorSets, dynamicOffsets);
+//
+//            m_shadowRenderPass->begin(commandBuffer, cascadedShadowMap->getCascadeFramebuffer(j), vk::SubpassContents::eInline);
+////            Engine::instance()->getTerrainRenderer()->drawTerrain(dt, commandBuffer);
+//            commandBuffer.draw(TerrainRenderer::getTileVertexCount(16), 1, 0, 0);
+//            commandBuffer.endRenderPass();
+//
+//            isRendered = true;
+//
+//            PROFILE_END_GPU_CMD("LightRenderer::renderShadowMap/ShadowMapCascadeRenderPass - terrain", commandBuffer);
+//        }
+//    }
+
+
+    if (isRendered) {
+        if (shadowMap->getShadowType() == ShadowMap::ShadowType_CascadedShadowMap) {
+            CascadedShadowMap* cascadedShadowMap = dynamic_cast<CascadedShadowMap*>(shadowMap);
+            for (size_t j = 0; j < cascadedShadowMap->getNumCascades(); ++j) {
+//                ImageUtil::transitionLayout(commandBuffer, cascadedShadowMap->getCascadeShadowDepthImageView(j)->getImage(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1), ImageTransition::DepthStencilAttachmentOptimal(vk::PipelineStageFlagBits::eFragmentShader), ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader));
+                ImageUtil::transitionLayout(commandBuffer, cascadedShadowMap->getCascadeShadowVarianceImageView(j)->getImage(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1), ImageTransition::FromAny(), ImageTransition::ShaderReadOnly(vk::PipelineStageFlagBits::eFragmentShader));
+
+                shadowMapImages.emplace_back(cascadedShadowMap->getCascadeShadowVarianceImageView(j));
+            }
+        }
+    }
 
     PROFILE_END_GPU_CMD("LightRenderer::renderShadowMap", commandBuffer);
 }
@@ -631,7 +668,7 @@ void LightRenderer::updateCameraInfoBuffer(size_t maxShadowLights) {
         maxShadowLights = 1;
     }
 
-    vk::DeviceSize newBufferSize = sizeof(CameraInfoUniformBuffer) + sizeof(GPUCamera) * maxShadowLights;
+    vk::DeviceSize newBufferSize = sizeof(GPUCamera) * maxShadowLights;
 
     if (m_shadowRenderPassResources->cameraInfoBuffer == nullptr || newBufferSize > m_shadowRenderPassResources->cameraInfoBuffer->getSize()) {
         PROFILE_SCOPE("Allocate CameraInfoBuffer");

@@ -119,12 +119,45 @@ void SceneRenderer::preRender(double dt) {
     m_numAddedRenderEntities = 0;
 }
 
-void SceneRenderer::renderGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera, const Frustum* frustum) {
+void SceneRenderer::resetVisibility() {
+    PROFILE_SCOPE("SceneRenderer::resetVisibility")
+    m_visibilityApplied = false;
+
+
+    m_objectIndicesBuffer.clear();
+}
+
+void SceneRenderer::applyVisibility() {
+    PROFILE_SCOPE("SceneRenderer::applyVisibility")
+    assert(!m_visibilityApplied);
+    m_visibilityApplied = true;
+
+
+
+    PROFILE_REGION("Upload visible indices")
+
+    if (!m_objectIndicesBuffer.empty()) {
+        uint32_t* mappedObjectIndicesBuffer = static_cast<uint32_t*>(mapObjectIndicesBuffer(m_objectIndicesBuffer.size()));
+        memcpy(&mappedObjectIndicesBuffer[0], &m_objectIndicesBuffer[0], m_objectIndicesBuffer.size() * sizeof(uint32_t));
+    }
+}
+
+uint32_t SceneRenderer::updateVisibility(double dt, const RenderCamera* renderCamera, const Frustum* frustum) {
+    PROFILE_SCOPE("SceneRenderer::updateVisibility")
+    assert(!m_visibilityApplied);
+
+    uint32_t visibilityIndex = (uint32_t)m_visibilityIndices.size();
+    return visibilityIndex;
+}
+
+void SceneRenderer::renderGeometryPass(double dt, const vk::CommandBuffer& commandBuffer, uint32_t visibilityIndex) {
     PROFILE_SCOPE("SceneRenderer::renderGeometryPass");
     PROFILE_BEGIN_GPU_CMD("SceneRenderer::renderGeometryPass", commandBuffer);
 
+
     auto graphicsPipeline = Engine::instance()->getDeferredRenderer()->getEntityGeometryGraphicsPipeline();
 
+    // bindDescriptorSetsForView(...);
     std::array<vk::DescriptorSet, 3> descriptorSets = {
             Engine::instance()->getDeferredRenderer()->getGlobalDescriptorSet()->getDescriptorSet(),
             Engine::instance()->getSceneRenderer()->getObjectDescriptorSet()->getDescriptorSet(),
@@ -140,11 +173,33 @@ void SceneRenderer::renderGeometryPass(double dt, const vk::CommandBuffer& comma
     PROFILE_END_GPU_CMD("SceneRenderer::renderGeometryPass", commandBuffer);
 }
 
-void SceneRenderer::drawEntities(double dt, const vk::CommandBuffer& commandBuffer, const Frustum* frustum) {
+void SceneRenderer::renderShadowPass(double dt, const vk::CommandBuffer& commandBuffer, uint32_t visibilityIndex) {
+    PROFILE_SCOPE("SceneRenderer::renderShadowPass");
+    PROFILE_BEGIN_GPU_CMD("SceneRenderer::renderShadowPass", commandBuffer);
+
+
+
+    PROFILE_END_GPU_CMD("SceneRenderer::renderShadowPass", commandBuffer);
+}
+
+void SceneRenderer::drawEntities(double dt, const vk::CommandBuffer& commandBuffer, uint32_t visibilityIndex) {
     PROFILE_SCOPE("SceneRenderer::drawEntities")
     PROFILE_BEGIN_GPU_CMD("SceneRenderer::drawEntities", commandBuffer);
 
-    applyFrustumCulling(frustum);
+    if (m_visibilityIndices.empty()) {
+        // There are no viewpoints to render the scene for.
+        return;
+    }
+
+    assert(visibilityIndex < m_visibilityIndices.size());
+
+    const VisibilityIndices& visibility = m_visibilityIndices[visibilityIndex];
+    if (visibility.instanceCount == 0) {
+        // No terrain is visible from this viewpoint.
+        return;
+    }
+
+//    applyFrustumCulling(frustum);
     recordRenderCommands(dt, commandBuffer);
 
     PROFILE_END_GPU_CMD("SceneRenderer::drawEntities", commandBuffer);
@@ -338,10 +393,10 @@ void SceneRenderer::recordRenderCommands(double dt, const vk::CommandBuffer& com
     PROFILE_END_REGION()
 }
 
-void SceneRenderer::applyFrustumCulling(const Frustum* frustum) {
+uint32_t SceneRenderer::applyFrustumCulling(const Frustum* frustum) {
     PROFILE_SCOPE("SceneRenderer::applyFrustumCulling");
 
-    m_objectIndicesBuffer.clear();
+    uint32_t startIndex = (uint32_t)m_objectIndicesBuffer.size();
 
     PROFILE_REGION("Update visible indices")
     constexpr bool frustumCullingEnabled = false;
@@ -373,12 +428,7 @@ void SceneRenderer::applyFrustumCulling(const Frustum* frustum) {
         }
     }
 
-    PROFILE_REGION("Upload visible indices")
-
-    if (!m_objectIndicesBuffer.empty()) {
-        uint32_t* mappedObjectIndicesBuffer = static_cast<uint32_t*>(mapObjectIndicesBuffer(m_numRenderEntities));
-        memcpy(&mappedObjectIndicesBuffer[0], &m_objectIndicesBuffer[0], m_objectIndicesBuffer.size() * sizeof(uint32_t));
-    }
+    return startIndex;
 }
 
 void SceneRenderer::sortRenderEntities() {

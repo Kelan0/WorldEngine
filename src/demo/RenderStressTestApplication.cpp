@@ -107,10 +107,10 @@ void RenderStressTestApplication::render(double dt) {
     if (Engine::instance()->isViewFrustumPaused()) {
 
         Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_Projection);
-        Engine::instance()->getImmediateRenderer()->pushMatrix();
+        Engine::instance()->getImmediateRenderer()->pushMatrix("RenderStressTestApplication::render/Projection");
         Engine::instance()->getImmediateRenderer()->loadMatrix(Engine::instance()->getRenderCamera()->getProjectionMatrix());
         Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_ModelView);
-        Engine::instance()->getImmediateRenderer()->pushMatrix();
+        Engine::instance()->getImmediateRenderer()->pushMatrix("RenderStressTestApplication::render/ModelView");
         Engine::instance()->getImmediateRenderer()->loadMatrix(Engine::instance()->getRenderCamera()->getViewMatrix());
 //        Engine::instance()->getImmediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
 
@@ -128,8 +128,8 @@ void RenderStressTestApplication::render(double dt) {
         Engine::instance()->getImmediateRenderer()->colour(1.0F, 1.0F, 1.0F, 1.0F);
         Engine::instance()->getViewFrustum()->drawLines();
 
-        Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_ModelView);
-        Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_Projection);
+        Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_ModelView, "RenderStressTestApplication::render/ModelView");
+        Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_Projection, "RenderStressTestApplication::render/Projection");
     }
 }
 

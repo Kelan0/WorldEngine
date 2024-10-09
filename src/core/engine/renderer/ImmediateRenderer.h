@@ -142,11 +142,11 @@ public:
     void colour(float r, float g, float b, float a);
     void colour(float r, float g, float b);
 
-    void pushMatrix(MatrixMode matrixMode);
-    void pushMatrix();
+    void pushMatrix(MatrixMode matrixMode, const char* debugIdentifier);
+    void pushMatrix(const char* debugIdentifier);
 
-    void popMatrix(MatrixMode matrixMode);
-    void popMatrix();
+    void popMatrix(MatrixMode matrixMode, const char* debugIdentifier);
+    void popMatrix(const char* debugIdentifier);
 
     void translate(const glm::vec3& translation);
     void translate(float x, float y, float z);
@@ -190,6 +190,10 @@ private:
     glm::mat4& currentMatrix(MatrixMode matrixMode);
     std::stack<glm::mat4>& matrixStack(MatrixMode matrixMode);
 
+#if _DEBUG
+    std::stack<const char*>& matrixDebugStack(MatrixMode matrixMode);
+#endif
+
     glm::mat4& currentMatrix();
     std::stack<glm::mat4>& matrixStack();
 
@@ -217,8 +221,12 @@ private:
     RenderState m_renderState;
 
     std::stack<glm::mat4> m_modelMatrixStack;
-
     std::stack<glm::mat4> m_projectionMatrixStack;
+
+#if _DEBUG
+    std::stack<const char*> m_modelMatrixDebugStack;
+    std::stack<const char*> m_projectionMatrixDebugStack;
+#endif
 
     MatrixMode m_matrixMode;
 

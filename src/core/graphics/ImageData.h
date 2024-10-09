@@ -185,6 +185,8 @@ namespace ImageTransition {
     struct ShaderReadOnly : public ShaderAccess { ShaderReadOnly(vk::PipelineStageFlags shaderPipelineStages); };
     struct ShaderWriteOnly : public ShaderAccess { ShaderWriteOnly(vk::PipelineStageFlags shaderPipelineStages); };
     struct ShaderReadWrite : public ShaderAccess { ShaderReadWrite(vk::PipelineStageFlags shaderPipelineStages); };
+    struct ColourAttachmentOptimal : public ImageTransitionState { ColourAttachmentOptimal(vk::PipelineStageFlags shaderPipelineStages = vk::PipelineStageFlagBits::eTopOfPipe); };
+    struct DepthStencilAttachmentOptimal : public ImageTransitionState { DepthStencilAttachmentOptimal(vk::PipelineStageFlags shaderPipelineStages = vk::PipelineStageFlagBits::eTopOfPipe); };
     struct PresentSrc  : public ImageTransitionState { PresentSrc(); };
 };
 

@@ -375,10 +375,10 @@ void BloomTestApplication::render(double dt) {
     }
 
     Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_Projection);
-    Engine::instance()->getImmediateRenderer()->pushMatrix();
+    Engine::instance()->getImmediateRenderer()->pushMatrix("BloomTestApplication::render/Projection");
     Engine::instance()->getImmediateRenderer()->loadMatrix(cameraProjection.getProjectionMatrix());
     Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_ModelView);
-    Engine::instance()->getImmediateRenderer()->pushMatrix();
+    Engine::instance()->getImmediateRenderer()->pushMatrix("BloomTestApplication::render/ModelView");
     Engine::instance()->getImmediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
 
     Engine::instance()->getImmediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
@@ -406,8 +406,8 @@ void BloomTestApplication::render(double dt) {
         frustum->drawLines();
     }
 
-    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_ModelView);
-    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_Projection);
+    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_ModelView, "BloomTestApplication::render/ModelView");
+    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_Projection, "BloomTestApplication::render/Projection");
 }
 
 void BloomTestApplication::tick(double dt) {

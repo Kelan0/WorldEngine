@@ -96,6 +96,8 @@ public:
 private:
     const Framebuffer* getCascadeFramebuffer(size_t cascadeIndex);
 
+    const ImageView* getCascadeShadowDepthImageView(size_t cascadeIndex);
+
     const ImageView* getCascadeShadowVarianceImageView(size_t cascadeIndex);
 
     const ImageView* getCascadeVsmBlurIntermediateImageView(size_t cascadeIndex);

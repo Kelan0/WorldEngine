@@ -22,6 +22,13 @@ Frustum::Frustum(const Transform& transform, const Camera& camera) {
     this->set(transform, camera);
 }
 
+Frustum::Frustum(const Frustum& frustum) :
+        m_origin(frustum.m_origin),
+        m_planes(frustum.m_planes),
+        m_corners(frustum.m_corners),
+        m_camera(frustum.m_camera) {
+}
+
 Frustum& Frustum::set(const glm::dvec3& origin, const glm::dmat4& viewProjection) {
     m_origin = origin;
 
@@ -61,11 +68,14 @@ Frustum& Frustum::set(const glm::dvec3& origin, const glm::dmat4& viewProjection
     for (size_t i = 0; i < NumCorners; ++i)
         m_corners[i].x = NAN; // Invalidate corners. Recalculated whenever getCorner is called.
 
+    m_camera.m_near = NAN;
+
     return *this;
 }
 
 Frustum& Frustum::set(const RenderCamera& renderCamera) {
-    this->set(renderCamera.getTransform().getTranslation(), renderCamera.getViewProjectionMatrix());
+//    this->set(renderCamera.getTransform().getTranslation(), renderCamera.getViewProjectionMatrix());
+    this->set(renderCamera.getTransform(), renderCamera.getProjection());
     return *this;
 }
 
@@ -74,6 +84,7 @@ Frustum& Frustum::set(const Transform& transform, const Camera& camera) {
     glm::dmat4 viewMatrix = glm::inverse(transform.getMatrix());
     glm::dmat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
     this->set(transform.getTranslation(), viewProjectionMatrix);
+    m_camera = camera;
     return *this;
 }
 
@@ -126,6 +137,28 @@ const glm::dvec3& Frustum::getCorner(size_t cornerIndex) const {
         }
     }
     return m_corners[cornerIndex];
+}
+
+const std::array<glm::dvec3, Frustum::NumCorners>& Frustum::getCorners() const {
+    for (int i = 0; i < NumCorners; ++i) {
+        getCorner(i);
+    }
+    return m_corners;
+}
+
+Camera Frustum::getCamera() const {
+    if (glm::isnan(m_camera.getNear())) {
+        const std::array<glm::dvec3, NumCorners> corners = getCorners();
+        double near = m_planes[Plane_Near].calculateSignedDistance(m_origin);
+        double far = m_planes[Plane_Far].calculateSignedDistance(m_origin);
+        glm::dvec3 center = m_planes[Plane_Near].normal * near;
+        double top = glm::distance(center, (corners[Corner_Left_Top_Near] + corners[Corner_Right_Top_Near]) * 0.5);
+        double bottom = glm::distance(center, (corners[Corner_Left_Bottom_Near] + corners[Corner_Right_Bottom_Near]) * 0.5);
+        double left = glm::distance(center, (corners[Corner_Left_Top_Near] + corners[Corner_Left_Bottom_Near]) * 0.5);
+        double right = glm::distance(center, (corners[Corner_Right_Top_Near] + corners[Corner_Right_Bottom_Near]) * 0.5);
+        m_camera = Camera(left, right, bottom, top, near, far, isOrtho());
+    }
+    return m_camera;
 }
 
 std::array<glm::dvec3, Frustum::NumCorners> Frustum::getCornersNDC() {
@@ -218,26 +251,113 @@ void Frustum::getRenderCorners(glm::dvec3* corners) const {
     corners[Corner_Left_Bottom_Far] = corners[Corner_Left_Bottom_Near] + vBL * 0.75;
 }
 
+Visibility Frustum::intersectsAABB(const AxisAlignedBoundingBox& boundingBox) const {
+    // https://iquilezles.org/articles/frustumcorrect/
+
+    glm::dvec4 plane;
+
+    int in = 0;
+    // check box outside/inside of frustum
+    for (int i = 0; i < NumPlanes; ++i) {
+        int out = 0;
+        plane = (glm::dvec4)m_planes[i];
+        out += ((dot(plane, glm::dvec4(boundingBox.getBoundMinX(), boundingBox.getBoundMinY(), boundingBox.getBoundMinZ(), 1.0)) < 0.0) ? 1 : 0);
+        out += ((dot(plane, glm::dvec4(boundingBox.getBoundMaxX(), boundingBox.getBoundMinY(), boundingBox.getBoundMinZ(), 1.0)) < 0.0) ? 1 : 0);
+        out += ((dot(plane, glm::dvec4(boundingBox.getBoundMinX(), boundingBox.getBoundMaxY(), boundingBox.getBoundMinZ(), 1.0)) < 0.0) ? 1 : 0);
+        out += ((dot(plane, glm::dvec4(boundingBox.getBoundMaxX(), boundingBox.getBoundMaxY(), boundingBox.getBoundMinZ(), 1.0)) < 0.0) ? 1 : 0);
+        out += ((dot(plane, glm::dvec4(boundingBox.getBoundMinX(), boundingBox.getBoundMinY(), boundingBox.getBoundMaxZ(), 1.0)) < 0.0) ? 1 : 0);
+        out += ((dot(plane, glm::dvec4(boundingBox.getBoundMaxX(), boundingBox.getBoundMinY(), boundingBox.getBoundMaxZ(), 1.0)) < 0.0) ? 1 : 0);
+        out += ((dot(plane, glm::dvec4(boundingBox.getBoundMinX(), boundingBox.getBoundMaxY(), boundingBox.getBoundMaxZ(), 1.0)) < 0.0) ? 1 : 0);
+        out += ((dot(plane, glm::dvec4(boundingBox.getBoundMaxX(), boundingBox.getBoundMaxY(), boundingBox.getBoundMaxZ(), 1.0)) < 0.0) ? 1 : 0);
+        if (out == 8) return Visibility_NotVisible; // All corners of the AABB are outside this frustum plane. The AABB is not visible.
+        if (out == 0) ++in; // The AABB was fully inside this frustum plane.
+    }
+
+    if (in == NumPlanes) {
+        return Visibility_FullyVisible; // The AABB was fully inside all checked frustum planes. It is fully visible.
+    }
+
+    // check frustum outside/inside box
+    const std::array<glm::dvec3, NumCorners>& corners = getCorners();
+    int i, out;
+    for (i = 0, out = 0; i < NumCorners; ++i) out += ((corners[i].x > boundingBox.getBoundMaxX()) ? 1 : 0);
+    if (out == 8) return Visibility_NotVisible;
+    for (i = 0, out = 0; i < NumCorners; ++i) out += ((corners[i].x < boundingBox.getBoundMinX()) ? 1 : 0);
+    if (out == 8) return Visibility_NotVisible;
+    for (i = 0, out = 0; i < NumCorners; ++i) out += ((corners[i].y > boundingBox.getBoundMaxY()) ? 1 : 0);
+    if (out == 8) return Visibility_NotVisible;
+    for (i = 0, out = 0; i < NumCorners; ++i) out += ((corners[i].y < boundingBox.getBoundMinY()) ? 1 : 0);
+    if (out == 8) return Visibility_NotVisible;
+    for (i = 0, out = 0; i < NumCorners; ++i) out += ((corners[i].z > boundingBox.getBoundMaxZ()) ? 1 : 0);
+    if (out == 8) return Visibility_NotVisible;
+    for (i = 0, out = 0; i < NumCorners; ++i) out += ((corners[i].z < boundingBox.getBoundMinZ()) ? 1 : 0);
+    if (out == 8) return Visibility_NotVisible;
+
+    return Visibility_PartiallyVisible;
+}
+
 bool Frustum::intersects(const BoundingVolume& boundingVolume) const {
-    for (size_t i = 0; i < NumPlanes; ++i)
-        if (m_planes[i].calculateMaxSignedDistance(boundingVolume) < 0.0F)
+    for (const auto& m_plane : m_planes)
+        if (m_plane.calculateMaxSignedDistance(boundingVolume) < 0.0F)
             return false; // The most positive coordinate of this bounding volume is on the negative side of the plane (volume fully outside frustum)
     return true;
 }
 
 bool Frustum::contains(const BoundingVolume& boundingVolume) const {
-    for (size_t i = 0; i < NumPlanes; ++i)
-        if (m_planes[i].calculateMinSignedDistance(boundingVolume) < 0.0F)
+    for (const auto& m_plane : m_planes)
+        if (m_plane.calculateMinSignedDistance(boundingVolume) < 0.0F)
             return false; // The most negative coordinate of this bounding volume is on the negative side of the plane (volume at least partially outside frustum, not fully contained)
     return true;
 }
 
 bool Frustum::contains(const glm::dvec3& point) const {
-    for (size_t i = 0; i < NumPlanes; ++i) {
-        if (m_planes[i].calculateSignedDistance(point) < 0.0)
+    for (const auto& m_plane : m_planes) {
+        if (m_plane.calculateSignedDistance(point) < 0.0)
             return false;
     }
     return true; // Point is on the positive side of all 6 frustum planes.
+}
+
+bool Frustum::isOrtho() const {
+    return Plane::isParallel(m_planes[Plane_Top], m_planes[Plane_Bottom]);
+}
+
+double Frustum::calculateVerticalFov() const {
+    return Plane::angle(m_planes[Plane_Top], m_planes[Plane_Bottom]);
+}
+
+double Frustum::calculateProjectedSize(double radius, double distance) const {
+    double top = m_planes[Plane_Top].offset;
+    double bottom = m_planes[Plane_Bottom].offset;
+
+    if (isOrtho()) {
+        return Camera::calculateProjectedOrthographicSize(radius, top, bottom);
+    } else {
+        return Camera::calculateProjectedPerspectiveSize(radius, distance, calculateVerticalFov(), top, bottom);
+    }
+}
+
+Frustum& Frustum::operator=(const Frustum& copy) {
+    if (this == &copy) {
+        return *this;
+    }
+    m_origin = copy.m_origin;
+    m_planes = copy.m_planes;
+    m_corners = copy.m_corners;
+    return *this;
+}
+
+bool Frustum::operator==(const Frustum& frustum) const {
+    for (int i = 0; i < NumPlanes; ++i) {
+        if (m_planes[i] != frustum.m_planes[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool Frustum::operator!=(const Frustum& frustum) const {
+    return !(*this == frustum);
 }
 
 Frustum Frustum::transform(const Frustum& frustum, const glm::dmat4& matrix) {

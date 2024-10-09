@@ -177,7 +177,7 @@ void Application::renderInternal(double dt) {
 
     Engine::instance()->preRender(dt);
 
-    PROFILE_REGION("Application::render - Implementation")
+    PROFILE_REGION("Application::renderInternal - Implementation")
     render(dt);
     PROFILE_END_REGION()
 

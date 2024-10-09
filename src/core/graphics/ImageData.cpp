@@ -1451,6 +1451,14 @@ ImageTransition::ShaderReadWrite::ShaderReadWrite(vk::PipelineStageFlags shaderP
         ShaderAccess(shaderPipelineStages, true, true) {
 }
 
+ImageTransition::ColourAttachmentOptimal::ColourAttachmentOptimal(vk::PipelineStageFlags shaderPipelineStages):
+        ImageTransitionState(vk::ImageLayout::eColorAttachmentOptimal, vk::AccessFlagBits::eShaderRead, shaderPipelineStages) {
+}
+
+ImageTransition::DepthStencilAttachmentOptimal::DepthStencilAttachmentOptimal(vk::PipelineStageFlags shaderPipelineStages):
+        ImageTransitionState(vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::AccessFlagBits::eShaderRead, shaderPipelineStages) {
+}
+
 ImageTransition::PresentSrc::PresentSrc():
         ImageTransitionState(vk::ImageLayout::ePresentSrcKHR, {}, vk::PipelineStageFlagBits::eBottomOfPipe) {
 }

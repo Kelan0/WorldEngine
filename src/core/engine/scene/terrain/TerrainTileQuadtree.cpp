@@ -9,7 +9,9 @@
 #include "core/util/Logger.h"
 #include "core/util/Profiler.h"
 
-#define DEBUG_RENDER_BOUNDING_VOLUMES 1
+#define DEBUG_RENDER_ENABLED 0
+#define DEBUG_RENDER_BOUNDING_VOLUMES 0
+#define DEBUG_RENDER_VISIBILITY_COLOURS 0
 
 
 // These must match the order of the QuadIndex enum
@@ -160,44 +162,65 @@ AxisAlignedBoundingBox TerrainTileQuadtree::getNodeBoundingBox(size_t nodeIndex,
     return AxisAlignedBoundingBox(glm::dvec3(centerX, centerY, centerZ), glm::dvec3(halfExtentX, halfExtentY, halfExtentZ));
 }
 
-TerrainTileQuadtree::Visibility TerrainTileQuadtree::calculateNodeVisibility(const Frustum* frustum, size_t nodeIndex, const glm::uvec2& treePosition, uint8_t treeDepth) const {
+BoundingSphere TerrainTileQuadtree::getNodeBoundingSphere(size_t nodeIndex, const glm::uvec2& treePosition, uint8_t treeDepth) const {
+    double normalizedNodeSize = getNormalizedNodeSizeForTreeDepth(treeDepth);
+
+    double minElevation = m_nodeTileData[nodeIndex].minElevation * m_heightScale;
+    double maxElevation = m_nodeTileData[nodeIndex].maxElevation * m_heightScale;
+
+    double centerX = ((((double)treePosition.x + 0.5) * normalizedNodeSize) - 0.5) * m_size.x;
+    double centerZ = ((((double)treePosition.y + 0.5) * normalizedNodeSize) - 0.5) * m_size.x;
+    double centerY = (maxElevation + minElevation) * 0.5;
+
+    double halfExtentX = normalizedNodeSize * m_size.x * 0.5;
+    double halfExtentZ = normalizedNodeSize * m_size.y * 0.5;
+    double halfExtentY = (maxElevation - minElevation) * 0.5;
+
+    return BoundingSphere(centerX, centerY, centerZ, glm::length(glm::dvec3(halfExtentX, halfExtentY, halfExtentZ)));
+}
+
+Visibility TerrainTileQuadtree::calculateNodeVisibility(const Frustum* frustum, size_t nodeIndex, const glm::uvec2& treePosition, uint8_t treeDepth) const {
     AxisAlignedBoundingBox aabb = getNodeBoundingBox(nodeIndex, treePosition, treeDepth);
 
-    Visibility result = Visibility_FullyVisible;
+    return frustum->intersectsAABB(aabb);
 
-    glm::dvec3 corner;
-
-    for (int i = 0; i < Frustum::NumPlanes; ++i) {
-        const Plane& plane = frustum->getPlane(i);
-
-        corner.x = plane.normal.x > 0 ? aabb.getBoundMaxX() : aabb.getBoundMinX();
-        corner.y = plane.normal.y > 0 ? aabb.getBoundMaxY() : aabb.getBoundMinY();
-        corner.z = plane.normal.z > 0 ? aabb.getBoundMaxZ() : aabb.getBoundMinZ();
-
-        if (plane.calculateSignedDistance(corner) < 0.0)
-            return Visibility_NotVisible;
-
-        corner.x = plane.normal.x > 0 ? aabb.getBoundMinX() : aabb.getBoundMaxX();
-        corner.y = plane.normal.y > 0 ? aabb.getBoundMinY() : aabb.getBoundMaxY();
-        corner.z = plane.normal.z > 0 ? aabb.getBoundMinZ() : aabb.getBoundMaxZ();
-
-        if (plane.calculateSignedDistance(corner) < 0.0)
-            return Visibility_PartiallyVisible;
-    }
-
-    return result;
+//    Visibility result = Visibility_FullyVisible;
+//
+//    glm::dvec3 corner;
+//
+//    for (int i = 0; i < Frustum::NumPlanes; ++i) {
+//        const Plane& plane = frustum->getPlane(i);
+//
+//        corner.x = plane.normal.x > 0 ? aabb.getBoundMaxX() : aabb.getBoundMinX();
+//        corner.y = plane.normal.y > 0 ? aabb.getBoundMaxY() : aabb.getBoundMinY();
+//        corner.z = plane.normal.z > 0 ? aabb.getBoundMaxZ() : aabb.getBoundMinZ();
+//
+//        if (plane.calculateSignedDistance(corner) < 0.0)
+//            return Visibility_NotVisible;
+//
+//        corner.x = plane.normal.x > 0 ? aabb.getBoundMinX() : aabb.getBoundMaxX();
+//        corner.y = plane.normal.y > 0 ? aabb.getBoundMinY() : aabb.getBoundMaxY();
+//        corner.z = plane.normal.z > 0 ? aabb.getBoundMinZ() : aabb.getBoundMaxZ();
+//
+//        if (plane.calculateSignedDistance(corner) < 0.0)
+//            return Visibility_PartiallyVisible;
+//    }
+//
+//    return result;
 }
 
 void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector<size_t>& deletedNodeIndices, std::vector<TraversalInfo>& traversalStack) {
     PROFILE_SCOPE("TerrainTileQuadtree::updateSubdivisions")
 
-#if DEBUG_RENDER_BOUNDING_VOLUMES
+#if DEBUG_RENDER_ENABLED
+    glm::mat4 modelMatrix = glm::mat4(m_transform.getMatrix());
+    glm::mat4 viewMatrix = glm::inverse(glm::mat4(Engine::scene()->getMainCameraEntity().getComponent<Transform>().getMatrix()));
     Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_Projection);
-    Engine::instance()->getImmediateRenderer()->pushMatrix();
+    Engine::instance()->getImmediateRenderer()->pushMatrix("TerrainTileQuadtree::updateSubdivisions/Projection");
     Engine::instance()->getImmediateRenderer()->loadMatrix(Engine::scene()->getMainCameraEntity().getComponent<Camera>().getProjectionMatrix());
     Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_ModelView);
-    Engine::instance()->getImmediateRenderer()->pushMatrix();
-    Engine::instance()->getImmediateRenderer()->loadMatrix(glm::inverse(glm::mat4(Engine::scene()->getMainCameraEntity().getComponent<Transform>().getMatrix())));
+    Engine::instance()->getImmediateRenderer()->pushMatrix("TerrainTileQuadtree::updateSubdivisions/ModelView");
+    Engine::instance()->getImmediateRenderer()->loadMatrix(viewMatrix * modelMatrix);
 
     Engine::instance()->getImmediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
     Engine::instance()->getImmediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
@@ -211,13 +234,24 @@ void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector
     localCameraOrigin.x += m_size.x * 0.5;
     localCameraOrigin.z += m_size.y * 0.5;
 
+    Camera cam = frustum->getCamera();
+    double height = cam.getTop() - cam.getBottom();
+    bool isOrtho = cam.isOrtho();
+    double fov = isOrtho ? 0.0 : cam.getFov();
+    double frustumNear = cam.getNear();
+    double frustumTop = cam.getTop();
+    double frustumBottom = cam.getBottom();
+    double fovDeg = cam.getFovDegrees();
+
+//    printf("Frustum: FOV %f deg, near: %f, top: %f, bottom: %f, height: %f\n", glm::degrees(fov), frustumNear, frustumTop, frustumBottom, glm::abs(frustumTop - frustumBottom));
+
     double maxSize = glm::max(m_size.x, m_size.y);
 
     m_parentOffsets.clear();
     m_parentOffsets.resize(m_nodes.size(), UINT32_MAX);
 
-    traverseTreeNodes(traversalStack, [&](TerrainTileQuadtree*, const TraversalInfo& node) {
 
+    traverseTreeNodes(traversalStack, [&](TerrainTileQuadtree*, const TraversalInfo& node) {
         double normalizedNodeSize = getNormalizedNodeSizeForTreeDepth(node.treeDepth);
 
         glm::dvec2 tileOffset = glm::dvec2(node.treePosition) * normalizedNodeSize;
@@ -247,17 +281,36 @@ void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector
 
 //        localCameraOrigin.y = nodeClosestCameraPos.y;
 
-        glm::dvec3 cameraToNodePosition = nodeClosestCameraPos - localCameraOrigin;
-
-        double cameraDistanceSq = glm::dot(cameraToNodePosition, cameraToNodePosition);
-//        uint32_t priority = *reinterpret_cast<uint32_t*>(&cameraDistanceSq); // Should preserve the order.
-        double levelPriority = 1.0 - ((double)(1 << node.treeDepth) / (double)(1 << m_maxQuadtreeDepth));
-        tile.setPriority(1.0 / (1.0 + (cameraDistanceSq - levelPriority)));
 
         double edgeSize = normalizedNodeSize * maxSize;
-        double splitDistance = edgeSize * m_splitThreshold;
+//        double splitDistance;
 
-        if (cameraDistanceSq < splitDistance * splitDistance) {
+        double projectedSize;
+        double splitThresholdSize = 1.0 / m_splitThreshold;
+
+        if (isOrtho) {
+            projectedSize = Camera::calculateProjectedOrthographicSize(edgeSize, frustumTop, frustumBottom);
+
+            // Priority scaled based on size. Larger tiles have a higher priority.
+            tile.setPriority((float) projectedSize);
+
+        } else {
+//            splitDistance = edgeSize * m_splitThreshold;
+            glm::dvec3 cameraToNodePosition = nodeClosestCameraPos - localCameraOrigin;
+            double cameraDistanceSq = glm::dot(cameraToNodePosition, cameraToNodePosition);
+
+            projectedSize = cam.calculateProjectedSize(edgeSize, glm::sqrt(cameraDistanceSq));
+
+            // Priority scaled based on distance. Closer tiles have a higher priority.
+            double levelPriority = 1.0 - ((double)(1 << node.treeDepth) / (double)(1 << m_maxQuadtreeDepth));
+            tile.setPriority((float)(1.0 / (1.0 + (cameraDistanceSq - levelPriority))));
+        }
+
+
+//        uint32_t priority = *reinterpret_cast<uint32_t*>(&cameraDistanceSq); // Should preserve the order.
+
+
+        if (projectedSize > splitThresholdSize) {
             // Close enough to split
 
             if (!hasChildren(node.nodeIndex) && node.treeDepth < m_maxQuadtreeDepth && tile.isAvailable()) {
@@ -265,7 +318,7 @@ void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector
                 splitNode(node.nodeIndex, node.treePosition, node.treeDepth);
             }
 
-        } else if (cameraDistanceSq > splitDistance * splitDistance) {
+        } else if (projectedSize < splitThresholdSize) {
             // Far enough to merge
 
             if (hasChildren(node.nodeIndex)) {
@@ -286,7 +339,8 @@ void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector
             }
         } else {
 
-#if DEBUG_RENDER_BOUNDING_VOLUMES
+
+#if DEBUG_RENDER_ENABLED && DEBUG_RENDER_BOUNDING_VOLUMES
             Engine::instance()->getImmediateRenderer()->setBlendEnabled(false);
             Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(true);
             Engine::instance()->getImmediateRenderer()->colour(0.2F, 0.2F, 1.0F, 1.0F);
@@ -300,28 +354,40 @@ void TerrainTileQuadtree::updateSubdivisions(const Frustum* frustum, std::vector
         }
         return false; // Traverse subtree
     });
+
+#if DEBUG_RENDER_ENABLED
+    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_ModelView, "TerrainTileQuadtree::updateSubdivisions/ModelView");
+    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_Projection, "TerrainTileQuadtree::updateSubdivisions/Projection");
+#endif
 }
 
 void TerrainTileQuadtree::updateVisibility(const Frustum* frustum, std::vector<TraversalInfo>& traversalStack, std::vector<size_t>& fullyVisibleSubtrees) {
     PROFILE_SCOPE("TerrainTileQuadtree::updateVisibility")
 
-//#if DEBUG_RENDER_BOUNDING_VOLUMES
-//    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_Projection);
-//    Engine::instance()->getImmediateRenderer()->pushMatrix();
-//    Engine::instance()->getImmediateRenderer()->loadMatrix(Engine::scene()->getMainCameraEntity().getComponent<Camera>().getProjectionMatrix());
-//    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_ModelView);
-//    Engine::instance()->getImmediateRenderer()->pushMatrix();
-//    Engine::instance()->getImmediateRenderer()->loadMatrix(glm::inverse(glm::mat4(Engine::scene()->getMainCameraEntity().getComponent<Transform>().getMatrix())));
-//
-//    Engine::instance()->getImmediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
-//    Engine::instance()->getImmediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
-//
-//    Engine::instance()->getImmediateRenderer()->setLineWidth(1.0F);
-//    Engine::instance()->getImmediateRenderer()->setBlendEnabled(false);
-//    Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(false);
-//#endif
+//    Frustum localFrustum = Frustum::transform(*frustum, glm::inverse(m_transform.getMatrix()));
+    Frustum localFrustum(*frustum);
+    glm::dmat4 transform = glm::dmat4(glm::inverse(m_transform.getRotationMatrix()));
+    transform = glm::translate(transform, m_transform.getTranslation());
+    localFrustum = Frustum::transform(localFrustum, transform);
 
-    Frustum localFrustum = Frustum::transform(*frustum, glm::inverse(m_transform.getMatrix()));
+#if DEBUG_RENDER_ENABLED
+    glm::mat4 modelMatrix = glm::mat4(m_transform.getMatrix());
+    glm::mat4 viewMatrix = glm::inverse(glm::mat4(Engine::scene()->getMainCameraEntity().getComponent<Transform>().getMatrix()));
+    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_Projection);
+    Engine::instance()->getImmediateRenderer()->pushMatrix("TerrainTileQuadtree::updateVisibility/Projection");
+    Engine::instance()->getImmediateRenderer()->loadMatrix(Engine::scene()->getMainCameraEntity().getComponent<Camera>().getProjectionMatrix());
+    Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_ModelView);
+    Engine::instance()->getImmediateRenderer()->pushMatrix("TerrainTileQuadtree::updateVisibility/ModelView");
+    Engine::instance()->getImmediateRenderer()->loadMatrix(viewMatrix * modelMatrix);
+
+    Engine::instance()->getImmediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
+    Engine::instance()->getImmediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
+
+    Engine::instance()->getImmediateRenderer()->setLineWidth(1.0F);
+    Engine::instance()->getImmediateRenderer()->setBlendEnabled(false);
+    Engine::instance()->getImmediateRenderer()->setDepthTestEnabled(false);
+#endif
+
 
     for (auto& node : m_nodes)
         node.visible = false;
@@ -332,15 +398,17 @@ void TerrainTileQuadtree::updateVisibility(const Frustum* frustum, std::vector<T
         Visibility visibility = calculateNodeVisibility(&localFrustum, traversalInfo.nodeIndex, traversalInfo.treePosition, traversalInfo.treeDepth);
         node.visible = visibility != Visibility_NotVisible;
 
-//#if DEBUG_RENDER_BOUNDING_VOLUMES
-//        if (visibility == Visibility_FullyVisible)
-//            Engine::instance()->getImmediateRenderer()->colour(0.2F, 1.0F, 0.2F, 1.0F);
-//        else if (visibility == Visibility_PartiallyVisible)
-//            Engine::instance()->getImmediateRenderer()->colour(1.0F, 1.0F, 0.2F, 1.0F);
-//        else if (visibility == Visibility_NotVisible)
-//            Engine::instance()->getImmediateRenderer()->colour(1.0F, 0.2F, 0.2F, 1.0F);
-//        getNodeBoundingBox(traversalInfo.nodeIndex, traversalInfo.treePosition, traversalInfo.treeDepth).drawLines();
-//#endif
+#if DEBUG_RENDER_ENABLED && DEBUG_RENDER_VISIBILITY_COLOURS
+        if (visibility == Visibility_FullyVisible) {
+            Engine::instance()->getImmediateRenderer()->colour(0.2F, 0.2F, 1.0F, 0.3F);
+            getNodeBoundingBox(traversalInfo.nodeIndex, traversalInfo.treePosition, traversalInfo.treeDepth).drawLines();
+        } else if (visibility == Visibility_PartiallyVisible) {
+            Engine::instance()->getImmediateRenderer()->colour(1.0F, 1.0F, 0.2F, 1.0F);
+//            getNodeBoundingBox(traversalInfo.nodeIndex, traversalInfo.treePosition, traversalInfo.treeDepth).drawLines();
+        } else if (visibility == Visibility_NotVisible) {
+            Engine::instance()->getImmediateRenderer()->colour(1.0F, 0.2F, 0.2F, 1.0F);
+        }
+#endif
 
         if (visibility == Visibility_FullyVisible)
             fullyVisibleSubtrees.emplace_back(traversalInfo.nodeIndex);
@@ -348,9 +416,9 @@ void TerrainTileQuadtree::updateVisibility(const Frustum* frustum, std::vector<T
         return visibility != Visibility_PartiallyVisible; // Skip subtrees that are fully visible or fully invisible
     });
 
-#if DEBUG_RENDER_BOUNDING_VOLUMES
-    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_ModelView);
-    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_Projection);
+#if DEBUG_RENDER_ENABLED
+    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_ModelView, "TerrainTileQuadtree::updateVisibility/ModelView");
+    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_Projection, "TerrainTileQuadtree::updateVisibility/Projection");
 #endif
 }
 
@@ -507,6 +575,7 @@ void TerrainTileQuadtree::cleanupDeletedNodes() {
 }
 
 size_t TerrainTileQuadtree::splitNode(size_t nodeIndex, const glm::uvec2& treePosition, uint8_t treeDepth) {
+    PROFILE_SCOPE("TerrainTileQuadtree::splitNode");
     assert(nodeIndex < m_nodes.size() && "TerrainTileQuadtree::splitNode - node index out of range");
 
     TileTreeNode& node = m_nodes[nodeIndex];

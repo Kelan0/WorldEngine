@@ -25,14 +25,22 @@ TerrainTestApplication::TerrainTestApplication() {
 TerrainTestApplication::~TerrainTestApplication() {
 }
 
+bool startOrtho = false;
+float orthoSize = 3000.0F;
+
 void TerrainTestApplication::init() {
 
     setTickrate(60.0);
 
     MeshData<Vertex> testMeshData;
 
-    Engine::scene()->getMainCameraEntity().getComponent<Camera>().setClippingPlanes(0.1, 15000.0);
-    Engine::scene()->getMainCameraEntity().getComponent<Transform>().setTranslation(0.0F, 2.0F, 0.0F);
+    if (startOrtho) {
+        Engine::scene()->getMainCameraEntity().getComponent<Camera>().setOrtho(-orthoSize, orthoSize, -orthoSize, orthoSize, 1, 35000);
+        Engine::scene()->getMainCameraEntity().getComponent<Transform>().setTranslation(5000.0F, 5000.0F, 5000.0F).setRotation(glm::vec3(-1.333F, -0.90F, -1.0F), glm::vec3(0.0F, 1.0F, 0.0F), false);
+    } else {
+        Engine::scene()->getMainCameraEntity().getComponent<Camera>().setClippingPlanes(0.6, 35000.0);
+        Engine::scene()->getMainCameraEntity().getComponent<Transform>().setTranslation(0.0F, 2.0F, 0.0F);
+    }
 
     ImageCubeConfiguration imageCubeConfig{};
     imageCubeConfig.device = Engine::graphics()->getDevice();
@@ -50,7 +58,7 @@ void TerrainTestApplication::init() {
     Entity sunLightEntity = EntityHierarchy::create(Engine::scene(), "sunLightEntity");
     sunLightEntity.addComponent<Transform>().setRotation(glm::vec3(-1.333F, -0.90F, -1.0F), glm::vec3(0.0F, 1.0F, 0.0F), false);
     glm::vec3 sunIntensity = glm::vec3(100.0F);
-    sunLightEntity.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(sunIntensity).setAngularSize(glm::radians(0.52F)).setShadowCaster(true).setShadowCascadeDistances({3.0F, 6.0F, 12.0F, 24.0F});
+    sunLightEntity.addComponent<LightComponent>().setType(LightType_Directional).setIntensity(sunIntensity).setAngularSize(glm::radians(0.52F)).setShadowCaster(false).setShadowCascadeDistances({128.0F});
 
 //    std::string heightmapFilePath = "terrain/heightmap_1/heightmap2.hdr";
 //    std::string heightmapFilePath = "terrain/UK.tif";
@@ -59,14 +67,15 @@ void TerrainTestApplication::init() {
     ImageData* heightmapImageData = ImageData::load(heightmapFilePath, ImagePixelLayout::RGBA, ImagePixelFormat::Float32);
 //    std::shared_ptr<TerrainTileSupplier> tileSupplier = std::make_shared<HeightmapTerrainTileSupplier>(heightmapImageData);
     std::shared_ptr<TerrainTileSupplier> tileSupplier = std::make_shared<TestTerrainTileSupplier>(heightmapImageData);
+    std::shared_ptr<TerrainTileSupplier> tileSupplier2 = std::make_shared<TestTerrainTileSupplier>(heightmapImageData);
 
     Entity terrainEntity0 = EntityHierarchy::create(Engine::scene(), "terrainEntity0");
-    terrainEntity0.addComponent<Transform>().translate(0.0, 0.0, 0.0);
+    terrainEntity0.addComponent<Transform>().translate(2000.0, 0.0, 0.0).rotate(0, 1, 0, glm::radians(22.5F));
     QuadtreeTerrainComponent& terrain0 = terrainEntity0.addComponent<QuadtreeTerrainComponent>().setTileSupplier(tileSupplier).setSize(glm::dvec2(10000.0, 10000.0)).setHeightScale(1000.0).setMaxQuadtreeDepth(12);
 
 //    Entity terrainEntity1 = EntityHierarchy::create(Engine::scene(), "terrainEntity1");
-//    terrainEntity1.addComponent<Transform>().translate(400.0, -30.0, 0.0).rotate(1.0F, 0.0F, 0.0F, glm::pi<float>() * 0.5F);
-//    QuadtreeTerrainComponent& terrain1 = terrainEntity1.addComponent<QuadtreeTerrainComponent>().setSize(glm::dvec2(1000.0, 1000.0)).setMaxQuadtreeDepth(12);
+//    terrainEntity1.addComponent<Transform>().translate(0.0, 5000.0, -5000.0).rotate(1.0F, 0.0F, 0.0F, glm::pi<float>() * 0.5F);
+//    QuadtreeTerrainComponent& terrain1 = terrainEntity1.addComponent<QuadtreeTerrainComponent>().setTileSupplier(tileSupplier2).setSize(glm::dvec2(10000.0, 10000.0)).setHeightScale(1000.0).setMaxQuadtreeDepth(12);
 
 
     testMeshData.clear();
@@ -109,22 +118,36 @@ void TerrainTestApplication::render(double dt) {
     PROFILE_SCOPE("TerrainTestApplication::render")
     handleUserInput(dt);
 
+    Entity terrainEntity1 = Engine::scene()->findNamedEntity("terrainEntity0");
+    Transform& terrainEntityTransform = terrainEntity1.getComponent<Transform>();
+
+//    terrainEntityTransform.rotate(0, 1, 0, (float)(glm::pi<double>() * dt * 0.01F));
+
     Entity mainCamera = Engine::scene()->getMainCameraEntity();
     Transform& cameraTransform = mainCamera.getComponent<Transform>();
     Camera& cameraProjection = mainCamera.getComponent<Camera>();
 
     Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_Projection);
-    Engine::instance()->getImmediateRenderer()->pushMatrix();
+    Engine::instance()->getImmediateRenderer()->pushMatrix("TerrainTestApplication::render/Projection");
     Engine::instance()->getImmediateRenderer()->loadMatrix(cameraProjection.getProjectionMatrix());
     Engine::instance()->getImmediateRenderer()->matrixMode(MatrixMode_ModelView);
-    Engine::instance()->getImmediateRenderer()->pushMatrix();
+    Engine::instance()->getImmediateRenderer()->pushMatrix("TerrainTestApplication::render/ModelView");
     Engine::instance()->getImmediateRenderer()->loadMatrix(glm::inverse(glm::mat4(cameraTransform.getMatrix())));
 
     Engine::instance()->getImmediateRenderer()->setCullMode(vk::CullModeFlagBits::eNone);
     Engine::instance()->getImmediateRenderer()->setColourBlendMode(vk::BlendFactor::eSrcAlpha, vk::BlendFactor::eOneMinusSrcAlpha, vk::BlendOp::eAdd);
 
+    double aspect = Application::instance()->getWindowAspectRatio();
+
     if (input()->keyPressed(SDL_SCANCODE_F)) {
         Engine::instance()->setViewFrustumPaused(!Engine::instance()->isViewFrustumPaused());
+        if (startOrtho) {
+            if (!Engine::instance()->isViewFrustumPaused()) {
+                cameraProjection.setOrtho(-orthoSize * aspect, orthoSize * aspect, -orthoSize, orthoSize, 1, 35000);
+            } else {
+                cameraProjection.setPerspective(90.0F, aspect, 1.0F, 35000.0F);
+            }
+        }
     }
 
     if (Engine::instance()->isViewFrustumPaused()) {
@@ -149,8 +172,8 @@ void TerrainTestApplication::render(double dt) {
 //        bs.drawLines();
     }
 
-    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_ModelView);
-    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_Projection);
+    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_ModelView, "TerrainTestApplication::render/ModelView");
+    Engine::instance()->getImmediateRenderer()->popMatrix(MatrixMode_Projection, "TerrainTestApplication::render/Projection");
 }
 
 void TerrainTestApplication::tick(double dt) {
@@ -227,6 +250,13 @@ void TerrainTestApplication::handleUserInput(double dt) {
     currentZoomFactor = glm::lerp(currentZoomFactor, targetZoomFactor, glm::min(1.0F, (float)((targetZoomFactor > currentZoomFactor ? zoomInSpeed : zoomOutSpeed) * dt)));
 
     Camera& camera = Engine::scene()->getMainCameraEntity().getComponent<Camera>();
-    double fov = glm::radians(90.0);
-    camera.setFov(fov / currentZoomFactor);
+    double aspect = Application::instance()->getWindowAspectRatio();
+
+    if (camera.isOrtho()) {
+        camera.setOrtho(-orthoSize * aspect / currentZoomFactor, orthoSize * aspect / currentZoomFactor, -orthoSize / currentZoomFactor, orthoSize / currentZoomFactor, 1.0F, 35000.0F);
+    } else {
+        double fov = glm::radians(90.0);
+        camera.setPerspective(fov / currentZoomFactor, aspect, 1.0F, 35000.0F);
+//        camera.setFov(fov / currentZoomFactor);
+    }
 }

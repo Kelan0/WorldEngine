@@ -41,7 +41,9 @@ public:
 
     void preRender(double dt);
 
-    void render(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera);
+    void renderShadowMaps(double dt, const vk::CommandBuffer& commandBuffer, const RenderCamera* renderCamera);
+
+    void updateVisibleShadowMaps(double dt, const RenderCamera* renderCamera);
 
     const SharedResource<RenderPass>& getRenderPass() const;
 
@@ -55,6 +57,8 @@ public:
 
     const std::shared_ptr<Sampler>& getVsmShadowMapSampler() const;
 
+    const std::shared_ptr<GraphicsPipeline>& getTerrainShadowGraphicsPipeline() const;
+
 
 private:
     void initEmptyShadowMap();
@@ -66,8 +70,6 @@ private:
     ShadowMap* getShadowMap(uint32_t width, uint32_t height, ShadowMap::ShadowType shadowType, ShadowMap::RenderType renderType);
 
     size_t getNumInactiveShadowMaps() const;
-
-    void updateVisibleShadowMaps(const RenderCamera* renderCamera);
 
     void renderShadowMap(double dt, const vk::CommandBuffer& commandBuffer, ShadowMap* shadowMap, std::vector<const ImageView*>& shadowMapImages);
 
@@ -88,11 +90,6 @@ private:
     void calculateDirectionalShadowCascadeRenderCamera(const RenderCamera* viewerRenderCamera, const Transform& lightTransform, double cascadeStartDist, double cascadeEndDist, double shadowNearPlane, double shadowFarPlane, RenderCamera* outShadowRenderCamera);
 
 private:
-    struct CameraInfoUniformBuffer {
-        uint32_t cameraIndex;
-        // remainder of allocated bytes is an array of GPUCamera
-    };
-
     struct VSMBlurResources {
 //        DescriptorSet* descriptorSet;
         std::vector<DescriptorSet*> descriptorSetsBlurX;

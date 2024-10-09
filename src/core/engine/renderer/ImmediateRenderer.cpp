@@ -140,6 +140,8 @@ void ImmediateRenderer::render(double dt, const vk::CommandBuffer& commandBuffer
     PROFILE_SCOPE("ImmediateRenderer::render");
     PROFILE_BEGIN_GPU_CMD("ImmediateRenderer::render", commandBuffer)
 
+//    assert(m_modelMatrixStack.empty() && m_projectionMatrixStack.empty());
+
     if (m_resources->updateDescriptors && m_resources->descriptorSet != nullptr) {
         m_resources->updateDescriptors = false;
         DescriptorSetWriter(m_resources->descriptorSet)
@@ -359,8 +361,9 @@ void ImmediateRenderer::colour(float r, float g, float b) {
     m_colour.a = (uint8_t)(255);
 }
 
-void ImmediateRenderer::pushMatrix(MatrixMode matrixMode) {
+void ImmediateRenderer::pushMatrix(MatrixMode matrixMode, const char* debugIdentifier) {
     auto& stack = matrixStack(matrixMode);
+//    printf("pushMatrix %zu %s\n", stack.size(), matrixMode == MatrixMode_ModelView ? "MatrixMode_ModelView" : "MatrixMode_Projection");
 
 #if _DEBUG || IMMEDIATE_MODE_VALIDATION
     if (stack.size() > 256) {
@@ -370,18 +373,23 @@ void ImmediateRenderer::pushMatrix(MatrixMode matrixMode) {
     }
 #endif
 
+#if _DEBUG
+    matrixDebugStack(matrixMode).push(debugIdentifier);
+#endif
+
     validateCompleteCommand();
 
     // Duplicate top of stack
     stack.push(stack.top());
 }
 
-void ImmediateRenderer::pushMatrix() {
-    pushMatrix(m_matrixMode);
+void ImmediateRenderer::pushMatrix(const char* debugIdentifier) {
+    pushMatrix(m_matrixMode, debugIdentifier);
 }
 
-void ImmediateRenderer::popMatrix(MatrixMode matrixMode) {
+void ImmediateRenderer::popMatrix(MatrixMode matrixMode, const char* debugIdentifier) {
     auto& stack = matrixStack(matrixMode);
+//    printf("popMatrix %zu %s\n", stack.size(), matrixMode == MatrixMode_ModelView ? "MatrixMode_ModelView" : "MatrixMode_Projection");
 
 #if _DEBUG || IMMEDIATE_MODE_VALIDATION
     if (stack.size() == 1) {
@@ -391,12 +399,19 @@ void ImmediateRenderer::popMatrix(MatrixMode matrixMode) {
     }
 #endif
 
+#if _DEBUG
+    auto& debugStack = matrixDebugStack(matrixMode);
+    const char* pushedDebugIdentifier = debugStack.top();
+    assert(strcmp(pushedDebugIdentifier, debugIdentifier) == 0 && "Popped matrix does not match pushed matrix");
+    debugStack.pop();
+#endif
+
     validateCompleteCommand();
     stack.pop();
 }
 
-void ImmediateRenderer::popMatrix() {
-    popMatrix(m_matrixMode);
+void ImmediateRenderer::popMatrix(const char* debugIdentifier) {
+    popMatrix(m_matrixMode, debugIdentifier);
 }
 
 void ImmediateRenderer::translate(const glm::vec3& translation) {
@@ -551,6 +566,17 @@ std::stack<glm::mat4>& ImmediateRenderer::matrixStack(MatrixMode matrixMode) {
     }
     return m_modelMatrixStack; // We shouldn't reach here, but need to return something by default.
 }
+
+#if _DEBUG
+std::stack<const char*>& ImmediateRenderer::matrixDebugStack(MatrixMode matrixMode) {
+    switch (matrixMode) {
+        case MatrixMode_ModelView: return m_modelMatrixDebugStack;
+        case MatrixMode_Projection: return m_projectionMatrixDebugStack;
+        default: assert(false); break;
+    }
+    return m_modelMatrixDebugStack; // We shouldn't reach here, but need to return something by default.
+}
+#endif
 
 glm::mat4& ImmediateRenderer::currentMatrix() {
     return currentMatrix(m_matrixMode);

@@ -74,6 +74,7 @@ public:
 
     bool release();
 
+    // Priority for loading this tile. Higher priority tiles are loaded before lower priority tiles.
     void setPriority(float priority);
 
     float getPriority() const;

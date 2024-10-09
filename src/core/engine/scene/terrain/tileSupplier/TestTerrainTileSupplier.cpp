@@ -13,8 +13,8 @@ TestTerrainTileSupplier::TestTerrainTileSupplier(ImageData* heightmapImageData):
     float minValue = +INFINITY;
     float maxValue = -INFINITY;
     std::map<int32_t, double> counts;
-    for (int y = 0; y < heightmapImageData->getHeight(); ++y) {
-        for (int x = 0; x < heightmapImageData->getWidth(); ++x) {
+    for (auto y = 0; y < heightmapImageData->getHeight(); ++y) {
+        for (auto x = 0; x < heightmapImageData->getWidth(); ++x) {
             float f = (float)heightmapImageData->getChannelf(x, y, 0);
             minValue = glm::min(minValue, f);
             maxValue = glm::max(maxValue, f);

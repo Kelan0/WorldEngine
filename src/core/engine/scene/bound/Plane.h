@@ -26,6 +26,10 @@ public:
 
     Plane& operator=(Plane&& move) noexcept;
 
+    bool operator==(const Plane& plane) const;
+
+    bool operator!=(const Plane& plane) const;
+
     bool isDegenerate() const;
 
     static Plane normalize(const Plane& plane);
@@ -50,6 +54,8 @@ public:
 
     double const& operator[](glm::length_t index) const;
 
+    explicit operator glm::dvec4() const;
+
     double calculateSignedDistance(const glm::dvec3& point) const;
 
     double calculateMinSignedDistance(const BoundingVolume& boundingVolume) const;
@@ -64,10 +70,30 @@ public:
 
     static Plane transform(const Plane& plane, const glm::dmat4& matrix, bool skewMatrix = false);
 
+    static double angle(const Plane& a, const Plane& b);
+
+    static double distanceSq(const Plane& a, const Plane& b);
+
+    static double distance(const Plane& a, const Plane& b);
+
+    static bool isParallel(const Plane& a, const Plane& b, double eps = 1e-8);
+
 public:
     glm::dvec3 normal;
     double offset;
 };
+
+namespace std {
+    template<> struct hash<Plane> {
+        size_t operator()(const Plane& plane) const {
+            size_t seed = 0;
+            std::hash_combine(seed, plane.normal);
+            std::hash_combine(seed, plane.offset);
+            return seed;
+        }
+    };
+}
+
 
 
 #endif //WORLDENGINE_PLANE_H
