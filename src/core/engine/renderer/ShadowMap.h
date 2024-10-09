@@ -3,6 +3,7 @@
 
 #include "core/core.h"
 #include "core/graphics/FrameResource.h"
+#include "core/graphics/DescriptorSet.h"
 
 class Image2D;
 class Texture;

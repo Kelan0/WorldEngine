@@ -133,12 +133,20 @@ inline const FrameResource<T, is_ptr>::Type& FrameResource<T, is_ptr>::get() con
     return ArrayType::at(Engine::instance()->getSwapchainFrameIndex());
 }
 
+template<class T>
+inline void checked_delete(T* x) {
+    // intentionally complex - simplification causes regressions
+    typedef char type_must_be_complete[ sizeof(T)? 1: -1 ];
+    (void) sizeof(type_must_be_complete);
+    delete x;
+}
+
 template<typename T, bool is_ptr>
 inline void FrameResource<T, is_ptr>::set(size_t index, const Type& resource) {
     if (get(index) == resource)
         return;
     if constexpr (is_ptr)
-        delete ArrayType::at(index);
+        checked_delete(ArrayType::at(index));
 //    ArrayType::at(index) = std::exchange(resource, nullptr);
     ArrayType::at(index) = resource;
 }
